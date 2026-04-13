@@ -5,6 +5,9 @@ from datasets import load_dataset
 import faiss
 import numpy as np
 import os
+import base64
+from PIL import Image
+import io
 
 st.set_page_config(
     page_title="MediChat — Clinical AI Assistant",
@@ -82,13 +85,23 @@ st.markdown("""
         color: #00c9a7;
         font-size: 0.75rem;
         text-align: center;
+        margin-bottom: 0.5rem;
+    }
+    .vision-badge {
+        background: rgba(139, 92, 246, 0.1);
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        border-radius: 8px;
+        padding: 0.3rem 0.8rem;
+        color: #a78bfa;
+        font-size: 0.75rem;
+        text-align: center;
         margin-bottom: 1rem;
     }
     .stats-row {
         display: flex;
         justify-content: center;
         gap: 2rem;
-        margin: 0.5rem 0 1.5rem 0;
+        margin: 0.5rem 0 1rem 0;
     }
     .stat-item { text-align: center; }
     .stat-num { color: #00c9a7; font-size: 1.2rem; font-weight: 700; }
@@ -122,11 +135,21 @@ st.markdown("""
         padding: 2rem;
         font-style: italic;
     }
+    .image-msg {
+        background: rgba(139, 92, 246, 0.1);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        border-radius: 10px;
+        padding: 0.5rem;
+        margin: 0.3rem 0;
+        color: #a78bfa;
+        font-size: 0.8rem;
+        text-align: center;
+    }
     div[data-testid="stMarkdownContainer"] p { color: #e2e8f0; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Load API Key ─────────────────────────────────────────────────────
+# ── Load API Key ──────────────────────────────────────────────────────
 GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", os.environ.get("GROQ_API_KEY", ""))
 if not GROQ_API_KEY:
     st.error("API key not found. Please check your secrets configuration.")
@@ -134,7 +157,7 @@ if not GROQ_API_KEY:
 
 groq_client = Groq(api_key=GROQ_API_KEY)
 
-# ── Load RAG Components (cached so they only load once) ───────────────
+# ── Load RAG System ───────────────────────────────────────────────────
 @st.cache_resource
 def load_rag_system():
     embedder = SentenceTransformer("all-MiniLM-L6-v2")
@@ -152,7 +175,16 @@ def load_rag_system():
 with st.spinner("Loading MediChat knowledge base... first load takes ~30 seconds"):
     embedder, index, documents = load_rag_system()
 
-# ── RAG Function ─────────────────────────────────────────────────────
+# ── Helper: encode image to base64 ───────────────────────────────────
+def encode_image(image_file):
+    img = Image.open(image_file)
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+    buffer = io.BytesIO()
+    img.save(buffer, format="JPEG")
+    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+# ── RAG Text Response ─────────────────────────────────────────────────
 def medichat_rag(user_question, chat_history):
     question_embedding = embedder.encode([user_question]).astype('float32')
     distances, indices = index.search(question_embedding, k=3)
@@ -172,12 +204,47 @@ def medichat_rag(user_question, chat_history):
         }
     ]
     for msg in chat_history:
-        messages.append({"role": msg["role"], "content": msg["content"]})
+        if msg.get("type") == "text":
+            messages.append({"role": msg["role"], "content": msg["content"]})
+
     messages.append({"role": "user", "content": user_question})
 
     response = groq_client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=messages,
+        temperature=0.5,
+        max_tokens=1024,
+    )
+    return response.choices[0].message.content
+
+# ── Vision Image Response ─────────────────────────────────────────────
+def medichat_vision(user_question, image_b64):
+    prompt = user_question if user_question.strip() else "Please analyse this medical image and describe what you observe in clinical terms."
+
+    response = groq_client.chat.completions.create(
+        model="meta-llama/llama-4-scout-17b-16e-instruct",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "You are MediChat, a clinical AI assistant. "
+                            "Analyse this medical image carefully and provide observations in clear clinical language. "
+                            "Note: This is for informational purposes only — always recommend consulting a doctor.\n\n"
+                            f"User question: {prompt}"
+                        )
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{image_b64}"
+                        }
+                    }
+                ]
+            }
+        ],
         temperature=0.5,
         max_tokens=1024,
     )
@@ -211,6 +278,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="rag-badge">🔬 RAG Pipeline Active — Answers grounded in real PubMed research</div>', unsafe_allow_html=True)
+st.markdown('<div class="vision-badge">👁️ Vision Active — Upload medical images for AI analysis</div>', unsafe_allow_html=True)
 
 st.markdown("""
 <div class="disclaimer">
@@ -218,35 +286,78 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Chat Display ──────────────────────────────────────────────────────
+# ── Chat History Display ──────────────────────────────────────────────
 if not st.session_state.messages:
     st.markdown("""
     <div class="welcome-msg">
-        👋 Welcome to MediChat! Ask me any medical question.<br><br>
-        Try: "What causes high blood pressure?" or "How does diabetes affect the body?"
+        👋 Welcome to MediChat!<br><br>
+        💬 Ask any medical question below<br>
+        🖼️ Or upload a medical image for AI analysis
     </div>
     """, unsafe_allow_html=True)
 else:
     for msg in st.session_state.messages:
         if msg["role"] == "user":
-            st.markdown(f'<div class="user-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
+            if msg.get("type") == "image":
+                st.markdown(f'<div class="image-msg">🖼️ Medical image uploaded for analysis</div>', unsafe_allow_html=True)
+                if msg.get("content"):
+                    st.markdown(f'<div class="user-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="user-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="bot-name">🏥 MediChat</div><div class="bot-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
 
-# ── Input ─────────────────────────────────────────────────────────────
+# ── Input Area ────────────────────────────────────────────────────────
 st.markdown("<br>", unsafe_allow_html=True)
+
+uploaded_image = st.file_uploader(
+    "📎 Upload a medical image (X-ray, scan, rash, etc.)",
+    type=["jpg", "jpeg", "png"],
+    help="Upload any medical image for AI-powered analysis"
+)
+
+if uploaded_image:
+    st.image(uploaded_image, caption="Image ready for analysis", use_column_width=True)
+
 with st.form(key="chat_form", clear_on_submit=True):
-    user_input = st.text_input("", placeholder="Ask MediChat a medical question...", label_visibility="collapsed")
+    user_input = st.text_input(
+        "",
+        placeholder="Ask MediChat a medical question... or describe the image above",
+        label_visibility="collapsed"
+    )
     submit = st.form_submit_button("Send Message 💬")
 
-if submit and user_input.strip():
-    st.session_state.messages.append({"role": "user", "content": user_input})
+# ── Handle Submission ─────────────────────────────────────────────────
+if submit and (user_input.strip() or uploaded_image):
     st.session_state.question_count += 1
-    with st.spinner("MediChat is searching medical literature..."):
-        reply = medichat_rag(user_input, st.session_state.messages[:-1])
-    st.session_state.messages.append({"role": "assistant", "content": reply})
+
+    if uploaded_image:
+        st.session_state.messages.append({
+            "role": "user",
+            "type": "image",
+            "content": user_input.strip()
+        })
+        with st.spinner("MediChat is analysing the image..."):
+            uploaded_image.seek(0)
+            image_b64 = encode_image(uploaded_image)
+            reply = medichat_vision(user_input, image_b64)
+    else:
+        st.session_state.messages.append({
+            "role": "user",
+            "type": "text",
+            "content": user_input.strip()
+        })
+        with st.spinner("MediChat is searching medical literature..."):
+            reply = medichat_rag(user_input, st.session_state.messages[:-1])
+
+    st.session_state.messages.append({
+        "role": "assistant",
+        "type": "text",
+        "content": reply
+    })
     st.rerun()
 
+# ── Clear Button ──────────────────────────────────────────────────────
 if st.session_state.messages:
     if st.button("🗑️ Clear Conversation"):
         st.session_state.messages = []
