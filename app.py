@@ -332,10 +332,27 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 @st.cache_resource
 def load_rag_system():
     embedder = SentenceTransformer("all-MiniLM-L6-v2")
-    dataset = load_dataset("qiaojin/PubMedQA", "pqa_labeled", split="train[:300]")
-    documents = []
-    for item in dataset:
-        documents.append(f"Question: {item['question']}\nAnswer: {item['long_answer']}")
+
+    # Dataset 1 — PubMedQA (medical research papers)
+    pubmed = load_dataset("qiaojin/PubMedQA", "pqa_labeled", split="train[:500]")
+    pubmed_docs = []
+    for item in pubmed:
+        pubmed_docs.append(
+            f"[PubMed Research]\nQuestion: {item['question']}\nAnswer: {item['long_answer']}"
+        )
+
+    # Dataset 2 — MedDialog (real doctor-patient conversations)
+    meddialog = load_dataset("BinKhoaLe1812/MedDialog-EN-100k", split="train[:500]")
+    dialog_docs = []
+    for item in meddialog:
+        dialog_docs.append(
+            f"[Doctor-Patient Conversation]\nPatient: {item['input']}\nDoctor: {item['output']}"
+        )
+
+    # Combine both datasets
+    documents = pubmed_docs + dialog_docs
+
+    # Build FAISS index
     embeddings = embedder.encode(documents)
     idx = faiss.IndexFlatL2(embeddings.shape[1])
     idx.add(embeddings.astype('float32'))
@@ -501,8 +518,7 @@ st.markdown(f"""
 <div class="stats-row">
     <span class="stat-pill green">🔬 RAG Active — PubMed Grounded</span>
     <span class="stat-pill purple">👁️ Vision Active — Image Analysis</span>
-    <span class="stat-pill blue">📚 300 Medical Documents</span>
-</div>
+    <span class="stat-pill blue">📚 1000 Medical Documents</span></div>
 """, unsafe_allow_html=True)
 
 # Disclaimer
