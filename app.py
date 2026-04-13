@@ -495,7 +495,7 @@ with st.sidebar:
 
     st.markdown("""
     <div style="color:#334155;font-size:0.72rem;text-align:center;margin-top:1rem;">
-    ICT654 — Group 3 — SISTC Melbourne
+    ICT654 — Group 7 — SISTC Melbourne
     </div>
     """, unsafe_allow_html=True)
 
