@@ -170,7 +170,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── API Setup ────────────────────────────────────────────────────────
-GROQ_API_KEY = "GROQ_API_KEY"
+import os
+GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", os.environ.get("GROQ_API_KEY", ""))
+if not GROQ_API_KEY:
+    st.error("API key not found. Please check your secrets configuration.")
+    st.stop()
 client = Groq(api_key=GROQ_API_KEY)
 
 SYSTEM_PROMPT = """You are MediChat, a professional and empathetic clinical AI assistant designed to help patients and healthcare professionals with medical information.
