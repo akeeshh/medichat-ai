@@ -8,386 +8,327 @@ import os
 import base64
 from PIL import Image
 import io
-import random
-import time
 
 st.set_page_config(
-    page_title="MediChat — Clinical AI Assistant",
+    page_title="MediChat — Your Health Assistant",
     page_icon="🏥",
-    layout="wide"
+    layout="centered"
 )
 
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
 
-    * { font-family: 'Inter', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+    * { font-family: 'Inter', sans-serif; }
 
-    .stApp { background: #040d1a; }
-
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #060f1e 0%, #080d1a 100%) !important;
-        border-right: 1px solid rgba(0,201,167,0.12) !important;
+    .stApp {
+        background: linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 40%, #f0fdf4 100%);
+        min-height: 100vh;
     }
 
-    section[data-testid="stSidebar"] * { color: #e2e8f0 !important; }
-
-    .main .block-container { padding: 0.8rem 1rem; max-width: 100%; }
-
-    /* Top badges */
-    .badges-top {
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 0.8rem;
-        flex-wrap: wrap;
+    .main .block-container {
+        padding: 1.5rem 2rem 2rem 2rem;
+        max-width: 820px;
     }
-    .badge {
-        padding: 0.28rem 0.85rem;
+
+    /* Header */
+    .header-card {
+        background: white;
         border-radius: 20px;
-        font-size: 0.72rem;
+        padding: 1.8rem 2rem;
+        margin-bottom: 1.2rem;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+        border: 1px solid rgba(255,255,255,0.8);
+    }
+    .header-icon {
+        font-size: 3rem;
+        line-height: 1;
+    }
+    .header-title {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #0f766e;
+        margin: 0;
+        line-height: 1.1;
+    }
+    .header-subtitle {
+        color: #64748b;
+        font-size: 0.88rem;
+        margin: 0.2rem 0 0 0;
+        font-weight: 400;
+    }
+
+    /* Stats row */
+    .stats-row {
+        display: flex;
+        gap: 0.8rem;
+        margin-bottom: 1rem;
+    }
+    .stat-pill {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 50px;
+        padding: 0.35rem 0.9rem;
+        font-size: 0.75rem;
         font-weight: 600;
+        color: #475569;
         display: inline-flex;
         align-items: center;
-        gap: 0.3rem;
-        letter-spacing: 0.01em;
+        gap: 0.35rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
     }
-    .badge-rag { background: rgba(0,201,167,0.1); border: 1px solid rgba(0,201,167,0.3); color: #00c9a7; }
-    .badge-vision { background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.3); color: #a78bfa; }
-    .badge-live { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #22c55e; }
+    .stat-pill.green { color: #0f766e; border-color: #99f6e4; background: #f0fdfa; }
+    .stat-pill.blue { color: #0369a1; border-color: #bae6fd; background: #f0f9ff; }
+    .stat-pill.purple { color: #7c3aed; border-color: #ddd6fe; background: #faf5ff; }
 
-    /* Panel cards */
-    .panel-card {
-        background: linear-gradient(135deg, rgba(8,18,38,0.95), rgba(6,14,30,0.95));
-        border: 1px solid rgba(255,255,255,0.07);
+    /* Disclaimer */
+    .disclaimer {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
         border-radius: 12px;
-        padding: 0.9rem;
-        height: 100%;
-        position: relative;
-        overflow: hidden;
-    }
-    .panel-card::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, #00c9a7, #0b7b8b, transparent);
-    }
-    .panel-title {
+        padding: 0.65rem 1rem;
+        color: #92400e;
         font-size: 0.78rem;
-        font-weight: 700;
-        color: #e2e8f0;
-        margin-bottom: 0.6rem;
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-    }
-    .panel-title .new-tag {
-        background: rgba(0,201,167,0.15);
-        border: 1px solid rgba(0,201,167,0.25);
-        color: #00c9a7;
-        font-size: 0.6rem;
-        padding: 0.1rem 0.4rem;
-        border-radius: 4px;
-        font-weight: 600;
-    }
-
-    /* Knowledge graph simulation */
-    .kg-node {
-        display: inline-block;
-        background: rgba(0,201,167,0.12);
-        border: 1px solid rgba(0,201,167,0.25);
-        border-radius: 50%;
-        padding: 0.2rem 0.5rem;
-        font-size: 0.6rem;
-        color: #00c9a7;
-        margin: 0.15rem;
-        font-family: 'JetBrains Mono', monospace;
-    }
-    .kg-node.purple { background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.25); color: #a78bfa; }
-    .kg-node.blue { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.25); color: #60a5fa; }
-    .kg-node.orange { background: rgba(251,146,60,0.12); border-color: rgba(251,146,60,0.25); color: #fb923c; }
-    .kg-center {
+        margin-bottom: 1rem;
         text-align: center;
-        font-size: 0.7rem;
-        color: #00c9a7;
-        font-weight: 700;
-        padding: 0.4rem;
-        background: rgba(0,201,167,0.08);
-        border: 1px solid rgba(0,201,167,0.2);
-        border-radius: 8px;
-        margin-bottom: 0.4rem;
-        font-family: 'JetBrains Mono', monospace;
-    }
-
-    /* Data stream */
-    .stream-line {
-        font-size: 0.65rem;
-        color: #334155;
-        font-family: 'JetBrains Mono', monospace;
-        padding: 0.12rem 0;
-        border-bottom: 1px solid rgba(255,255,255,0.03);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .stream-line.active { color: #00c9a7; }
-    .stream-line.mid { color: #475569; }
-
-    /* Citation panel */
-    .citation-item {
-        background: rgba(255,255,255,0.03);
-        border-left: 2px solid #0b7b8b;
-        padding: 0.35rem 0.5rem;
-        margin-bottom: 0.3rem;
-        border-radius: 0 6px 6px 0;
-        font-size: 0.65rem;
-        color: #64748b;
-        line-height: 1.3;
-    }
-    .citation-count {
-        font-size: 0.6rem;
-        color: #00c9a7;
-        font-weight: 700;
-    }
-
-    /* Vitals */
-    .vital-card {
-        background: rgba(8,18,38,0.9);
-        border: 1px solid rgba(255,255,255,0.07);
-        border-radius: 8px;
-        padding: 0.5rem 0.7rem;
-        margin-bottom: 0.4rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .vital-label { font-size: 0.65rem; color: #64748b; font-weight: 500; }
-    .vital-value { font-size: 0.75rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
-    .vital-trend { font-size: 0.6rem; padding: 0.1rem 0.3rem; border-radius: 4px; }
-    .trend-up { background: rgba(34,197,94,0.1); color: #22c55e; }
-    .trend-stable { background: rgba(59,130,246,0.1); color: #60a5fa; }
-    .trend-fluctuating { background: rgba(251,191,36,0.1); color: #fbbf24; }
-    .trend-pending { background: rgba(139,92,246,0.1); color: #a78bfa; }
-    .simulated-tag {
-        font-size: 0.55rem;
-        color: #1e3a5f;
-        text-align: right;
-        margin-top: 0.3rem;
     }
 
     /* Welcome card */
     .welcome-card {
-        background: linear-gradient(135deg, rgba(8,18,38,0.7), rgba(6,14,30,0.8));
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 14px;
-        padding: 1.8rem 2rem;
-        text-align: center;
-        margin: 0.5rem 0;
-    }
-    .welcome-title { color: #e2e8f0; font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; }
-    .welcome-text { color: #64748b; font-size: 0.85rem; line-height: 1.6; margin-bottom: 1rem; }
-    .chip {
-        display: inline-block;
-        background: rgba(0,201,167,0.08);
-        border: 1px solid rgba(0,201,167,0.2);
+        background: white;
         border-radius: 20px;
-        padding: 0.3rem 0.85rem;
-        color: #00c9a7;
-        font-size: 0.75rem;
-        margin: 0.2rem;
+        padding: 2.5rem 2rem;
+        text-align: center;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+        margin: 0.5rem 0 1rem 0;
+        border: 1px solid rgba(255,255,255,0.9);
+    }
+    .welcome-emoji { font-size: 3.5rem; margin-bottom: 0.8rem; }
+    .welcome-title { font-size: 1.4rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem; }
+    .welcome-text { color: #64748b; font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.2rem; }
+    .chip-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+    .chip {
+        background: #f0fdf4;
+        border: 1px solid #86efac;
+        border-radius: 50px;
+        padding: 0.35rem 0.9rem;
+        color: #166534;
+        font-size: 0.78rem;
+        font-weight: 500;
     }
 
-    /* Chat bubbles */
-    .user-row { display: flex; justify-content: flex-end; align-items: flex-end; gap: 0.5rem; margin: 0.6rem 0; }
-    .bot-row { display: flex; justify-content: flex-start; align-items: flex-start; gap: 0.5rem; margin: 0.6rem 0; }
-    .avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; flex-shrink: 0; }
-    .avatar-user { background: linear-gradient(135deg, #0b7b8b, #00897b); }
-    .avatar-bot { background: linear-gradient(135deg, #1e3a5f, #0d2b55); border: 1px solid rgba(0,201,167,0.3); }
+    /* Chat messages */
+    .msg-wrap { margin: 0.7rem 0; }
+
+    .user-wrap {
+        display: flex;
+        justify-content: flex-end;
+        align-items: flex-end;
+        gap: 0.5rem;
+        margin: 0.7rem 0;
+    }
+    .bot-wrap {
+        display: flex;
+        justify-content: flex-start;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin: 0.7rem 0;
+    }
+
+    .av {
+        width: 34px; height: 34px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem; flex-shrink: 0;
+    }
+    .av-user { background: linear-gradient(135deg, #0d9488, #059669); }
+    .av-bot {
+        background: white;
+        border: 2px solid #99f6e4;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
     .user-bubble {
-        background: linear-gradient(135deg, #0b7b8b, #00897b);
+        background: linear-gradient(135deg, #0d9488, #059669);
         color: white;
-        padding: 0.75rem 1rem;
-        border-radius: 16px 16px 4px 16px;
-        max-width: 72%;
-        font-size: 0.88rem;
-        line-height: 1.5;
-        box-shadow: 0 4px 16px rgba(0,201,167,0.15);
+        padding: 0.8rem 1.1rem;
+        border-radius: 18px 18px 4px 18px;
+        max-width: 75%;
+        font-size: 0.92rem;
+        line-height: 1.55;
+        box-shadow: 0 4px 16px rgba(13,148,136,0.2);
     }
+
     .bot-bubble {
-        background: linear-gradient(135deg, rgba(8,20,45,0.95), rgba(6,14,30,0.95));
-        border: 1px solid rgba(255,255,255,0.07);
-        color: #e2e8f0;
-        padding: 0.75rem 1rem;
-        border-radius: 16px 16px 16px 4px;
+        background: white;
+        border: 1px solid #e2e8f0;
+        color: #1e293b;
+        padding: 0.8rem 1.1rem;
+        border-radius: 18px 18px 18px 4px;
         max-width: 78%;
-        font-size: 0.88rem;
+        font-size: 0.92rem;
         line-height: 1.65;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.06);
     }
-    .bot-bubble strong { color: #00c9a7; }
+    .bot-bubble strong { color: #0f766e; }
+    .bot-bubble ul { padding-left: 1.2rem; margin: 0.4rem 0; }
+    .bot-bubble li { margin-bottom: 0.3rem; color: #334155; }
+
+    .bot-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #0f766e;
+        margin-bottom: 0.3rem;
+        margin-left: 42px;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
     .image-tag {
-        background: rgba(139,92,246,0.1);
-        border: 1px solid rgba(139,92,246,0.2);
-        border-radius: 8px;
-        padding: 0.3rem 0.7rem;
-        color: #a78bfa;
-        font-size: 0.73rem;
+        background: #faf5ff;
+        border: 1px solid #ddd6fe;
+        border-radius: 10px;
+        padding: 0.35rem 0.75rem;
+        color: #7c3aed;
+        font-size: 0.75rem;
         text-align: center;
         margin-bottom: 0.3rem;
+        display: inline-block;
     }
 
-    /* Input area */
-    .input-section {
-        background: linear-gradient(135deg, rgba(8,18,38,0.9), rgba(6,14,30,0.9));
-        border: 1px solid rgba(255,255,255,0.07);
-        border-radius: 14px;
-        padding: 0.9rem 1rem;
-        margin-top: 0.6rem;
+    /* Input card */
+    .input-card {
+        background: white;
+        border-radius: 20px;
+        padding: 1.2rem 1.4rem;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+        margin-top: 1rem;
+        border: 1px solid #e2e8f0;
     }
+
     .stTextInput > div > div > input {
-        background: rgba(255,255,255,0.04) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 10px !important;
-        color: #e2e8f0 !important;
-        padding: 0.75rem 1rem !important;
-        font-size: 0.88rem !important;
-        font-family: 'Inter', sans-serif !important;
-    }
-    .stTextInput > div > div > input:focus {
-        border-color: #00c9a7 !important;
-        box-shadow: 0 0 0 2px rgba(0,201,167,0.1) !important;
-    }
-    .stTextInput > div > div > input::placeholder { color: #334155 !important; }
-    .stButton > button {
-        background: linear-gradient(135deg, #00c9a7, #0b7b8b) !important;
-        color: white !important; border: none !important;
-        border-radius: 10px !important; padding: 0.6rem 1.4rem !important;
-        font-weight: 600 !important; font-size: 0.88rem !important;
+        background: #f8fafc !important;
+        border: 1.5px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        color: #1e293b !important;
+        padding: 0.8rem 1rem !important;
+        font-size: 0.92rem !important;
         transition: all 0.2s ease !important;
     }
-    .stButton > button:hover { transform: translateY(-1px) !important; box-shadow: 0 6px 20px rgba(0,201,167,0.25) !important; }
+    .stTextInput > div > div > input:focus {
+        border-color: #0d9488 !important;
+        background: white !important;
+        box-shadow: 0 0 0 3px rgba(13,148,136,0.1) !important;
+    }
+    .stTextInput > div > div > input::placeholder {
+        color: #94a3b8 !important;
+    }
 
-    /* Upload area */
-    .upload-bar {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.07);
+    .stButton > button {
+        background: linear-gradient(135deg, #0d9488, #059669) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 0.7rem 1.5rem !important;
+        font-weight: 600 !important;
+        font-size: 0.92rem !important;
+        width: 100% !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 4px 12px rgba(13,148,136,0.25) !important;
+    }
+    .stButton > button:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 20px rgba(13,148,136,0.35) !important;
+    }
+
+    .stFileUploader > div {
+        background: #f8fafc !important;
+        border: 1.5px dashed #cbd5e1 !important;
+        border-radius: 12px !important;
+        transition: all 0.2s ease !important;
+    }
+    .stFileUploader > div:hover {
+        border-color: #0d9488 !important;
+        background: #f0fdfa !important;
+    }
+
+    .section-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748b;
+        margin-bottom: 0.4rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .clear-btn-wrap { text-align: center; margin-top: 0.8rem; }
+
+    div[data-testid="stMarkdownContainer"] p { color: #334155; }
+    div[data-testid="column"] { padding: 0 0.3rem !important; }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background: white !important;
+        border-right: 1px solid #e2e8f0 !important;
+    }
+    section[data-testid="stSidebar"] * { color: #1e293b !important; }
+
+    .sb-section { margin-bottom: 1.2rem; }
+    .sb-title { font-size: 0.7rem; font-weight: 700; color: #94a3b8 !important; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .sb-stat-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
         border-radius: 10px;
         padding: 0.6rem 0.8rem;
-        margin-bottom: 0.6rem;
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
+        margin-bottom: 0.4rem;
     }
-    .upload-progress {
-        flex: 1;
-        height: 4px;
-        background: rgba(255,255,255,0.06);
-        border-radius: 2px;
-        overflow: hidden;
-    }
-    .upload-progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #00c9a7, #0b7b8b);
-        border-radius: 2px;
-    }
-    .img-thumb {
-        width: 42px; height: 42px;
-        border-radius: 6px;
-        object-fit: cover;
-        border: 1px solid rgba(255,255,255,0.1);
-        background: rgba(255,255,255,0.05);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-    }
+    .sb-stat-num { font-size: 1.4rem; font-weight: 800; color: #0f766e !important; line-height: 1; }
+    .sb-stat-label { font-size: 0.65rem; color: #94a3b8 !important; font-weight: 500; margin-top: 0.1rem; }
 
-    /* Advanced tools */
-    .tools-bar {
-        background: linear-gradient(135deg, rgba(8,18,38,0.9), rgba(6,14,30,0.9));
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 12px;
-        padding: 0.7rem 0.9rem;
-        margin-top: 0.6rem;
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        flex-wrap: wrap;
+    .sb-feature {
+        display: flex; align-items: center; gap: 0.5rem;
+        background: #f8fafc; border: 1px solid #e2e8f0;
+        border-radius: 8px; padding: 0.45rem 0.7rem;
+        margin-bottom: 0.3rem;
     }
-    .tools-label { font-size: 0.72rem; font-weight: 700; color: #64748b; margin-right: 0.3rem; }
-    .tool-btn {
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 6px;
-        padding: 0.25rem 0.7rem;
-        color: #94a3b8;
-        font-size: 0.7rem;
-        font-weight: 500;
+    .sb-feature-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .sb-feature-name { font-size: 0.75rem; font-weight: 600; color: #334155 !important; }
+    .sb-feature-status { font-size: 0.65rem; color: #22c55e !important; margin-left: auto; font-weight: 600; }
+
+    .sb-tip {
+        font-size: 0.73rem;
+        color: #64748b !important;
+        padding: 0.3rem 0;
+        border-bottom: 1px solid #f1f5f9;
+        line-height: 1.4;
         cursor: pointer;
     }
-    .tool-btn.active { background: rgba(0,201,167,0.1); border-color: rgba(0,201,167,0.25); color: #00c9a7; }
+    .sb-tip:hover { color: #0f766e !important; }
 
-    /* Vitals inline */
-    .vitals-inline {
-        background: rgba(8,18,38,0.9);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 10px;
-        padding: 0.6rem 0.8rem;
-        margin-top: 0.5rem;
+    .sb-footer {
+        font-size: 0.65rem;
+        color: #cbd5e1 !important;
+        text-align: center;
+        padding-top: 1rem;
+        border-top: 1px solid #f1f5f9;
+        line-height: 1.5;
     }
-    .vital-inline-item { font-size: 0.7rem; margin-bottom: 0.25rem; }
-    .vital-inline-key { color: #00c9a7; font-weight: 600; }
-    .vital-inline-val { color: #e2e8f0; font-family: 'JetBrains Mono', monospace; }
-    .vital-inline-trend { font-size: 0.62rem; }
-
-    /* Sidebar stats */
-    .sb-stat { margin-bottom: 0.25rem; font-size: 0.75rem; color: #64748b; }
-    .sb-stat span { color: #e2e8f0; font-weight: 600; }
-    .sb-keyphrase {
-        background: rgba(0,201,167,0.08);
-        border: 1px solid rgba(0,201,167,0.15);
-        border-radius: 6px;
-        padding: 0.3rem 0.6rem;
-        font-size: 0.7rem;
-        color: #00c9a7;
-        font-family: 'JetBrains Mono', monospace;
-        margin-top: 0.4rem;
-    }
-    .sb-feature {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.07);
-        border-radius: 8px;
-        padding: 0.45rem 0.7rem;
-        margin-bottom: 0.3rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .sb-feature-name { font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
-    .sb-feature-graph { font-size: 0.6rem; color: #00c9a7; font-family: 'JetBrains Mono', monospace; letter-spacing: -1px; }
-    .sb-feature-live { font-size: 0.6rem; color: #22c55e; }
-    .sb-suggestion { font-size: 0.72rem; color: #475569; padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); line-height: 1.4; }
-    .sb-user { display: flex; align-items: center; gap: 0.5rem; padding-top: 0.8rem; }
-    .sb-avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #0b7b8b, #00897b); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; }
-    .sb-username { font-size: 0.72rem; color: #64748b; }
-
-    div[data-testid="stMarkdownContainer"] p { color: #e2e8f0; }
-    div[data-testid="column"] { padding: 0 0.25rem !important; }
-    .disclaimer { background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.15); border-radius: 8px; padding: 0.5rem 0.8rem; color: #fbbf24; font-size: 0.72rem; text-align: center; margin-bottom: 0.6rem; }
-
-    .stFileUploader { background: transparent !important; border: none !important; }
-    .stFileUploader > div { background: rgba(255,255,255,0.03) !important; border: 1px dashed rgba(255,255,255,0.1) !important; border-radius: 8px !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── API + RAG ─────────────────────────────────────────────────────────
+# ── API Setup ─────────────────────────────────────────────────────────
 GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", os.environ.get("GROQ_API_KEY", ""))
 if not GROQ_API_KEY:
-    st.error("⚠️ API key not found.")
+    st.error("⚠️ API key not found. Please check your secrets configuration.")
     st.stop()
 
 groq_client = Groq(api_key=GROQ_API_KEY)
 
+# ── RAG System ────────────────────────────────────────────────────────
 @st.cache_resource
 def load_rag_system():
     embedder = SentenceTransformer("all-MiniLM-L6-v2")
@@ -400,359 +341,276 @@ def load_rag_system():
     idx.add(embeddings.astype('float32'))
     return embedder, idx, documents
 
-with st.spinner("🔬 Loading MediChat knowledge base..."):
+with st.spinner("⏳ Loading MediChat... just a moment!"):
     embedder, index, documents = load_rag_system()
 
 def encode_image(f):
     img = Image.open(f)
-    if img.mode != "RGB": img = img.convert("RGB")
+    if img.mode != "RGB":
+        img = img.convert("RGB")
     buf = io.BytesIO()
     img.save(buf, format="JPEG")
     return base64.b64encode(buf.getvalue()).decode("utf-8")
 
-def medichat_rag(q, history):
-    emb = embedder.encode([q]).astype('float32')
+def medichat_rag(question, history):
+    emb = embedder.encode([question]).astype('float32')
     _, idxs = index.search(emb, k=3)
-    ctx = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
-    msgs = [{"role":"system","content":(
-        "You are MediChat, a professional clinical AI assistant. "
-        "Use this PubMed research context to answer accurately. "
-        "Use **bold** for key terms, bullet points for lists. "
-        "Always recommend consulting a doctor.\n\nCONTEXT:\n"+ctx
-    )}]
+    context = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
+    msgs = [{
+        "role": "system",
+        "content": (
+            "You are MediChat, a warm, friendly, and professional health assistant. "
+            "You help everyday people understand medical topics clearly and compassionately. "
+            "Use simple language — avoid heavy jargon unless you explain it. "
+            "Use the following real PubMed research to support your answer. "
+            "Format your response with **bold** for key terms and bullet points where helpful. "
+            "Always end with a warm reminder to consult a doctor for personal health concerns.\n\n"
+            "PUBMED RESEARCH CONTEXT:\n" + context
+        )
+    }]
     for m in history:
-        if m.get("type")=="text": msgs.append({"role":m["role"],"content":m["content"]})
-    msgs.append({"role":"user","content":q})
-    r = groq_client.chat.completions.create(model="llama-3.3-70b-versatile",messages=msgs,temperature=0.5,max_tokens=1024)
+        if m.get("type") == "text":
+            msgs.append({"role": m["role"], "content": m["content"]})
+    msgs.append({"role": "user", "content": question})
+    r = groq_client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=msgs,
+        temperature=0.6,
+        max_tokens=1024
+    )
     return r.choices[0].message.content
 
-def medichat_vision(q, b64):
-    p = q if q.strip() else "Analyse this medical image with detailed clinical observations."
+def medichat_vision(question, b64):
+    prompt = question.strip() if question.strip() else "Please analyse this medical image and describe what you observe clearly."
     r = groq_client.chat.completions.create(
         model="meta-llama/llama-4-scout-17b-16e-instruct",
-        messages=[{"role":"user","content":[
-            {"type":"text","text":(
-                "You are MediChat, a clinical AI assistant. "
-                "Analyse this image. Provide: 1) **Clinical Observations** 2) **Differential Diagnoses** 3) **Recommendations**. "
-                "Always remind the user to consult a doctor.\n\nQuestion: "+p
-            )},
-            {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{b64}"}}
-        ]}],
-        temperature=0.5, max_tokens=1024
+        messages=[{
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": (
+                        "You are MediChat, a warm and professional clinical AI assistant. "
+                        "Analyse this medical image carefully. "
+                        "Provide: **Clinical Observations**, **Possible Conditions**, and **Recommendations**. "
+                        "Use simple, compassionate language that a patient can understand. "
+                        "Always remind the user to consult a qualified doctor.\n\n"
+                        f"User's question: {prompt}"
+                    )
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{b64}"}
+                }
+            ]
+        }],
+        temperature=0.5,
+        max_tokens=1024
     )
     return r.choices[0].message.content
 
 # ── Session State ─────────────────────────────────────────────────────
-if "messages" not in st.session_state: st.session_state.messages = []
-if "qcount" not in st.session_state: st.session_state.qcount = 0
-if "users" not in st.session_state: st.session_state.users = random.randint(4,8)
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "qcount" not in st.session_state:
+    st.session_state.qcount = 0
 
 # ── SIDEBAR ───────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 🏥 MediChat")
     st.markdown("---")
-    st.markdown("### 📊 Session Stats")
-    st.markdown(f"""
-    <div class="sb-stat">{st.session_state.qcount} Questions, <span>{st.session_state.users} Unique Users</span></div>
-    <div class="sb-stat">300 Docs, <span>7 Journals</span></div>
-    <div class="sb-stat" style="margin-top:0.4rem;font-size:0.68rem;color:#475569;">Top PubMed Keyphrase</div>
-    <div class="sb-keyphrase">CAR-T Therapy</div>
-    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="sb-title">Session Stats</div>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown(f"""
+        <div class="sb-stat-card">
+            <div class="sb-stat-num">{st.session_state.qcount}</div>
+            <div class="sb-stat-label">Questions Asked</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col2:
+        st.markdown("""
+        <div class="sb-stat-card">
+            <div class="sb-stat-num">300</div>
+            <div class="sb-stat-label">PubMed Docs</div>
+        </div>
+        """, unsafe_allow_html=True)
+
     st.markdown("---")
-    st.markdown("### 🎛️ Active Features")
+    st.markdown('<div class="sb-title">Active Features</div>', unsafe_allow_html=True)
     st.markdown("""
     <div class="sb-feature">
-        <div class="sb-feature-name">🔬 RAG Pipeline</div>
-        <div class="sb-feature-graph">▁▂▃▅▆▇▆▅</div>
+        <div class="sb-feature-dot" style="background:#0d9488;"></div>
+        <div class="sb-feature-name">RAG Pipeline</div>
+        <div class="sb-feature-status">● Live</div>
     </div>
     <div class="sb-feature">
-        <div class="sb-feature-name">👁️ Vision AI</div>
-        <div class="sb-feature-graph">▂▃▄▅▃▅▆▄</div>
+        <div class="sb-feature-dot" style="background:#7c3aed;"></div>
+        <div class="sb-feature-name">Vision AI</div>
+        <div class="sb-feature-status">● Live</div>
     </div>
     <div class="sb-feature">
-        <div class="sb-feature-name">🟢 Live</div>
-        <div class="sb-feature-live">● Active</div>
+        <div class="sb-feature-dot" style="background:#0369a1;"></div>
+        <div class="sb-feature-name">PubMed Search</div>
+        <div class="sb-feature-status">● Live</div>
     </div>
     """, unsafe_allow_html=True)
+
     st.markdown("---")
-    st.markdown("### 💡 Try Asking")
-    suggestions = [
-        "CAR-T therapy for glioblastoma variants",
-        "Comparing GLP-1 and SGLT-2 inhibitor efficacy in heart failure",
-        "Guidelines for triple-negative breast cancer (TNBC) immunotherapy",
-        "Metabolic pathways influenced by NAD+ precursors in aging",
+    st.markdown('<div class="sb-title">💡 Try Asking</div>', unsafe_allow_html=True)
+    tips = [
+        "What causes high blood pressure?",
+        "How does diabetes affect the body?",
+        "What are signs of a healthy heart?",
+        "How can I improve my sleep?",
+        "What foods help reduce inflammation?",
     ]
-    for s in suggestions:
-        st.markdown(f'<div class="sb-suggestion">• {s}</div>', unsafe_allow_html=True)
+    for tip in tips:
+        st.markdown(f'<div class="sb-tip">→ {tip}</div>', unsafe_allow_html=True)
+
     st.markdown("---")
-    if st.button("🗑️ Clear Chat"):
+    if st.button("🗑️ Clear Conversation"):
         st.session_state.messages = []
         st.session_state.qcount = 0
         st.rerun()
+
     st.markdown("""
-    <div class="sb-user">
-        <div class="sb-avatar">👤</div>
-        <div class="sb-username">Active Analyst</div>
-    </div>
-    <div style="color:#1e3a5f;font-size:0.65rem;margin-top:0.8rem;text-align:center;">
-    ICT654 — Group 7 — SISTC Melbourne
+    <div class="sb-footer">
+        MediChat v1.0<br>
+        ICT654 — Group 7<br>
+        SISTC Melbourne, 2026
     </div>
     """, unsafe_allow_html=True)
 
 # ── MAIN ──────────────────────────────────────────────────────────────
+
+# Header
 st.markdown("""
-<div class="badges-top">
-    <span class="badge badge-rag">🔬 RAG Active — Grounded in PubMed Research</span>
-    <span class="badge badge-vision">👁️ Vision Active — Medical Image Analysis</span>
-    <span class="badge badge-live">🟢 Live</span>
+<div class="header-card">
+    <div class="header-icon">🏥</div>
+    <div>
+        <div class="header-title">MediChat</div>
+        <div class="header-subtitle">Your friendly AI health assistant — powered by real medical research</div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── TOP PANELS ────────────────────────────────────────────────────────
-col_kg, col_stream, col_cite = st.columns([1, 1, 1])
+# Stats pills
+st.markdown(f"""
+<div class="stats-row">
+    <span class="stat-pill green">🔬 RAG Active — PubMed Grounded</span>
+    <span class="stat-pill purple">👁️ Vision Active — Image Analysis</span>
+    <span class="stat-pill blue">📚 300 Medical Documents</span>
+</div>
+""", unsafe_allow_html=True)
 
-with col_kg:
+# Disclaimer
+st.markdown("""
+<div class="disclaimer">
+    ⚠️ MediChat provides general health information only — not a substitute for professional medical advice.
+    Always consult a qualified doctor for personal health concerns.
+</div>
+""", unsafe_allow_html=True)
+
+# Chat area
+if not st.session_state.messages:
     st.markdown("""
-    <div class="panel-card">
-        <div class="panel-title">Knowledge Graph Visualizer <span class="new-tag">New Module</span></div>
-        <div class="kg-center">Hypertension</div>
-        <div style="text-align:center;line-height:2;">
-            <span class="kg-node">BP Regulator</span>
-            <span class="kg-node purple">ACE Inhibitor</span>
-            <span class="kg-node blue">Diuretics</span>
-            <span class="kg-node orange">Inflammation</span>
-            <span class="kg-node">Nitric Oxide</span>
-            <span class="kg-node purple">Renin</span>
-            <span class="kg-node blue">Endothelin</span>
-            <span class="kg-node">Vasodilation</span>
-            <span class="kg-node orange">ARB</span>
-            <span class="kg-node">Ca Channel</span>
-            <span class="kg-node purple">Beta Blocker</span>
-            <span class="kg-node blue">Aldosterone</span>
+    <div class="welcome-card">
+        <div class="welcome-emoji">👋</div>
+        <div class="welcome-title">Hello! How can I help you today?</div>
+        <div class="welcome-text">
+            I'm MediChat — your friendly AI health assistant.<br>
+            Ask me anything about health, symptoms, or medications.<br>
+            You can also upload a medical image for AI-powered analysis!
+        </div>
+        <div class="chip-row">
+            <span class="chip">💊 Medications</span>
+            <span class="chip">🫀 Heart Health</span>
+            <span class="chip">🧬 Conditions</span>
+            <span class="chip">🥗 Nutrition</span>
+            <span class="chip">🧠 Mental Health</span>
+            <span class="chip">🦠 Infections</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
-
-with col_stream:
-    st.markdown("""
-    <div class="panel-card">
-        <div class="panel-title">Medical Data Stream</div>
-        <div class="stream-line active">► PubMed sync... 300 docs loaded</div>
-        <div class="stream-line mid">► Embedding model: MiniLM-L6-v2</div>
-        <div class="stream-line mid">► FAISS index: 300 vectors</div>
-        <div class="stream-line active">► RAG pipeline: ACTIVE</div>
-        <div class="stream-line mid">► Vision model: Llama-4-Scout</div>
-        <div class="stream-line active">► Groq API: CONNECTED</div>
-        <div class="stream-line mid">► Latency: ~1.2s avg</div>
-        <div class="stream-line active">► Session: LIVE</div>
-        <div class="stream-line mid">► Knowledge base: PubMedQA</div>
-        <div class="stream-line active">► Status: ALL SYSTEMS GO ✓</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col_cite:
-    st.markdown("""
-    <div class="panel-card">
-        <div class="panel-title">PubMed Citation Network</div>
-        <div style="font-size:0.65rem;color:#475569;margin-bottom:0.4rem;">Recent papers · 9,379+ · <span class="citation-count">17 citations</span></div>
-        <div class="citation-item">Abstract snippet... linked to annotation pipeline [node in Knowledge Graph]</div>
-        <div class="citation-item">Abstract snippet... linked to RAG retrieval context</div>
-        <div class="citation-item">PubMed ID: 38291042 · Cell Death · 2024</div>
-        <div class="citation-item">Mitochondrial dynamics in PCD · Nature · 2023</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ── WELCOME OR CHAT ───────────────────────────────────────────────────
-col_vitals_l, col_chat, col_vitals_r = st.columns([1, 3, 1])
-
-with col_vitals_l:
-    st.markdown("""
-    <div class="panel-card" style="margin-top:0.4rem;">
-        <div class="panel-title">Patient Vitals <span class="new-tag">New Module</span></div>
-        <div class="vital-card">
-            <div>
-                <div class="vital-label">Heart Rate</div>
-                <div class="vital-value" style="color:#ef4444;">85 bpm</div>
-            </div>
-            <div class="vital-trend trend-up">Trend: Up</div>
-        </div>
-        <div class="vital-card">
-            <div>
-                <div class="vital-label">Blood Pressure</div>
-                <div class="vital-value" style="color:#60a5fa;">135/88</div>
-            </div>
-            <div class="vital-trend trend-stable">Stable</div>
-        </div>
-        <div class="vital-card">
-            <div>
-                <div class="vital-label">O₂ Saturation</div>
-                <div class="vital-value" style="color:#00c9a7;">96%</div>
-            </div>
-            <div class="vital-trend trend-fluctuating">Fluctuating</div>
-        </div>
-        <div class="vital-card">
-            <div>
-                <div class="vital-label">WBC Count</div>
-                <div class="vital-value" style="color:#fbbf24;">10k</div>
-            </div>
-            <div class="vital-trend trend-pending">Pending Lab</div>
-        </div>
-        <div class="simulated-tag">Simulated Patient Data</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col_chat:
-    if not st.session_state.messages:
-        st.markdown("""
-        <div class="welcome-card">
-            <div style="font-size:2.5rem;margin-bottom:0.6rem;">🏥</div>
-            <div class="welcome-title">Welcome to MediChat</div>
-            <div class="welcome-text">
-                Your intelligent clinical AI assistant powered by real medical research.<br>
-                Ask any medical question or upload a medical image for analysis.
-            </div>
-            <div>
-                <span class="chip">💊 Drug interactions</span>
-                <span class="chip">🫀 Heart conditions</span>
-                <span class="chip">🧬 Genetics</span>
-                <span class="chip">🦠 Infections</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        for msg in st.session_state.messages:
-            if msg["role"] == "user":
-                if msg.get("type") == "image":
-                    st.markdown('<div class="image-tag">🖼️ Medical image uploaded for analysis</div>', unsafe_allow_html=True)
-                    if msg.get("content"):
-                        st.markdown(f'<div class="user-row"><div class="user-bubble">{msg["content"]}</div><div class="avatar avatar-user">👤</div></div>', unsafe_allow_html=True)
-                else:
-                    st.markdown(f'<div class="user-row"><div class="user-bubble">{msg["content"]}</div><div class="avatar avatar-user">👤</div></div>', unsafe_allow_html=True)
+else:
+    for msg in st.session_state.messages:
+        if msg["role"] == "user":
+            if msg.get("type") == "image":
+                st.markdown('<span class="image-tag">🖼️ Medical image uploaded for analysis</span>', unsafe_allow_html=True)
+                if msg.get("content"):
+                    st.markdown(f"""
+                    <div class="user-wrap">
+                        <div class="user-bubble">{msg["content"]}</div>
+                        <div class="av av-user">👤</div>
+                    </div>
+                    """, unsafe_allow_html=True)
             else:
-                st.markdown(f'<div class="bot-row"><div class="avatar avatar-bot">🏥</div><div class="bot-bubble">{msg["content"]}</div></div>', unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class="user-wrap">
+                    <div class="user-bubble">{msg["content"]}</div>
+                    <div class="av av-user">👤</div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="bot-label">🏥 MediChat</div>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="bot-wrap">
+                <div class="av av-bot">🏥</div>
+                <div class="bot-bubble">{msg["content"]}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-with col_vitals_r:
-    st.markdown("""
-    <div class="panel-card" style="margin-top:0.4rem;">
-        <div class="panel-title">Patient Vitals <span class="new-tag">New Module</span></div>
-        <div class="vital-card">
-            <div>
-                <div class="vital-label">Heart Rate</div>
-                <div class="vital-value" style="color:#ef4444;">85 bpm</div>
-            </div>
-            <div class="vital-trend trend-up">Trend: Up</div>
-        </div>
-        <div class="vital-card">
-            <div>
-                <div class="vital-label">Blood Pressure</div>
-                <div class="vital-value" style="color:#60a5fa;">135/88</div>
-            </div>
-            <div class="vital-trend trend-stable">Stable</div>
-        </div>
-        <div class="vital-card">
-            <div>
-                <div class="vital-label">O₂ Saturation</div>
-                <div class="vital-value" style="color:#00c9a7;">96%</div>
-            </div>
-            <div class="vital-trend trend-fluctuating">Fluctuating</div>
-        </div>
-        <div class="vital-card">
-            <div>
-                <div class="vital-label">WBC Count</div>
-                <div class="vital-value" style="color:#fbbf24;">10k</div>
-            </div>
-            <div class="vital-trend trend-pending">Pending Lab</div>
-        </div>
-        <div class="simulated-tag">Simulated Patient Data</div>
-    </div>
-    """, unsafe_allow_html=True)
+# Input card
+st.markdown('<div class="input-card">', unsafe_allow_html=True)
 
-# ── INPUT SECTION ─────────────────────────────────────────────────────
-st.markdown('<div class="disclaimer">⚠️ MediChat provides general medical information only. Always consult a qualified healthcare professional for personal medical advice.</div>', unsafe_allow_html=True)
-
+st.markdown('<div class="section-label">📎 Upload a medical image (optional)</div>', unsafe_allow_html=True)
 uploaded_image = st.file_uploader(
-    "📎 Upload a medical image for analysis",
+    "",
     type=["jpg", "jpeg", "png"],
-    help="Supports X-rays, skin conditions, scans, and other medical images"
+    label_visibility="collapsed",
+    help="Upload an X-ray, skin photo, scan, or any medical image for AI analysis"
 )
 
 if uploaded_image:
     col_a, col_b, col_c = st.columns([1, 2, 1])
     with col_b:
-        st.image(uploaded_image, caption="📎 Ready for analysis", use_column_width=True)
-    st.markdown("""
-    <div class="upload-bar">
-        <span style="font-size:0.7rem;color:#00c9a7;font-weight:600;">📎 Image loaded</span>
-        <div class="upload-progress"><div class="upload-progress-fill" style="width:100%;"></div></div>
-        <span style="font-size:0.7rem;color:#64748b;">100%</span>
-        <span class="img-thumb">🩻</span>
-        <span class="img-thumb">📷</span>
-        <span class="img-thumb" style="border-color:rgba(0,201,167,0.3);color:#00c9a7;">+</span>
-    </div>
-    """, unsafe_allow_html=True)
+        st.image(uploaded_image, caption="✅ Image ready for analysis", use_column_width=True)
+
+st.markdown('<div class="section-label" style="margin-top:0.8rem;">💬 Your question</div>', unsafe_allow_html=True)
 
 with st.form(key="chat_form", clear_on_submit=True):
     user_input = st.text_input(
         "",
-        placeholder="Ask a complex clinical question, or paste an image analysis report for cross-reference...",
+        placeholder="Type your health question here... e.g. What causes headaches?",
         label_visibility="collapsed"
     )
-    col1, col2, col3 = st.columns([2, 1, 2])
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        submit = st.form_submit_button("Send Message 💬")
+        submit = st.form_submit_button("Send to MediChat 💬")
 
-# ── Vitals inline display ─────────────────────────────────────────────
-if st.session_state.messages:
-    st.markdown("""
-    <div class="vitals-inline">
-        <div class="vital-inline-item">
-            <span style="color:#ef4444;">❤️ </span>
-            <span class="vital-inline-key">Heart Rate: </span>
-            <span class="vital-inline-val">85 bpm </span>
-            <span class="vital-inline-trend trend-up">(Trend: Up)</span>
-        </div>
-        <div class="vital-inline-item">
-            <span style="color:#60a5fa;">🩺 </span>
-            <span class="vital-inline-key">Blood Pressure: </span>
-            <span class="vital-inline-val">135/88 </span>
-            <span class="vital-inline-trend trend-stable">(Trend: Stable)</span>
-        </div>
-        <div class="vital-inline-item">
-            <span style="color:#00c9a7;">💨 </span>
-            <span class="vital-inline-key">O₂ Sat: </span>
-            <span class="vital-inline-val">96% </span>
-            <span class="vital-inline-trend trend-fluctuating">(Trend: Fluctuating)</span>
-        </div>
-        <div class="vital-inline-item">
-            <span style="color:#fbbf24;">🔬 </span>
-            <span class="vital-inline-key">WBC Count: </span>
-            <span class="vital-inline-val">10k </span>
-            <span class="vital-inline-trend trend-pending">(Trend: Pending Lab)</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
-# ── Advanced Tools Bar ────────────────────────────────────────────────
-st.markdown("""
-<div class="tools-bar">
-    <span class="tools-label">🛠️ Advanced Query Tools</span>
-    <span class="tool-btn active">Refine by Topic ▾</span>
-    <span class="tool-btn">Cross-reference [Current View]</span>
-    <span class="tool-btn">Generate Report Summary [Download PDF]</span>
-</div>
-""", unsafe_allow_html=True)
-
-# ── Handle Input ──────────────────────────────────────────────────────
+# Handle input
 if submit and (user_input.strip() or uploaded_image):
     st.session_state.qcount += 1
+
     if uploaded_image:
-        st.session_state.messages.append({"role":"user","type":"image","content":user_input.strip()})
-        with st.spinner("🔍 Analysing medical image..."):
+        st.session_state.messages.append({
+            "role": "user", "type": "image", "content": user_input.strip()
+        })
+        with st.spinner("🔍 Analysing your image..."):
             uploaded_image.seek(0)
             reply = medichat_vision(user_input, encode_image(uploaded_image))
     else:
-        st.session_state.messages.append({"role":"user","type":"text","content":user_input.strip()})
-        with st.spinner("🔬 Searching PubMed knowledge base..."):
+        st.session_state.messages.append({
+            "role": "user", "type": "text", "content": user_input.strip()
+        })
+        with st.spinner("🔬 Searching medical research..."):
             reply = medichat_rag(user_input, st.session_state.messages[:-1])
-    st.session_state.messages.append({"role":"assistant","type":"text","content":reply})
+
+    st.session_state.messages.append({
+        "role": "assistant", "type": "text", "content": reply
+    })
     st.rerun()
