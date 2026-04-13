@@ -1,3 +1,6 @@
 streamlit
 groq
+faiss-cpu
+sentence-transformers
+datasets
 pillow
