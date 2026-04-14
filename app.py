@@ -356,42 +356,48 @@ def build_conversation_history(messages):
             })
     return history
 
-# ── RAG + Memory Response ─────────────────────────────────────────────
 def medichat_rag_with_memory(question, all_messages):
     # RAG retrieval
     emb = embedder.encode([question]).astype('float32')
     _, idxs = index.search(emb, k=3)
     context = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
 
-    # Extract patient memory
+    # Extract patient memory from conversation
     memory = extract_patient_memory(all_messages)
     memory_context = build_memory_context(memory)
 
-    # Build conversation history (last 10 messages to avoid token limits)
+    # Build conversation history (last 10 messages only)
     history = build_conversation_history(all_messages[-10:])
 
-    # Build system prompt with memory
+    # System prompt — strict separation of context vs patient history
     system_prompt = (
-        "You are MediChat, a warm, friendly, and professional health assistant. "
-        "You are starting a fresh conversation with a new patient. "
-        "Only reference things the patient has told you IN THIS conversation. "
-        "Never assume prior history. "
-        "IMPORTANT: Always reference what the patient has told you earlier in the conversation "
-        "when it is relevant to their current question. "
-        "Use simple, compassionate language that patients can easily understand. "
-        "Use **bold** for key terms and bullet points where helpful. "
-        "Always recommend consulting a qualified doctor for personal health decisions.\n\n"
+        "You are MediChat, a warm, friendly, and conversational health assistant. "
+        "Talk naturally like a caring human — not robotic or clinical. "
+        "Keep responses clear, simple, and easy for any patient to understand.\n\n"
+
+        "STRICT RULES — follow these exactly:\n"
+        "1. NEVER mention anything the patient has NOT said in THIS conversation.\n"
+        "2. The medical research below is BACKGROUND KNOWLEDGE ONLY — "
+        "do NOT tell the patient you found research, do NOT reference studies, "
+        "just use it to inform your answer naturally.\n"
+        "3. NEVER invent symptoms, conditions, or history the patient did not share.\n"
+        "4. If the patient just says 'Hi' or something casual — respond warmly and ask how you can help. "
+        "Do NOT launch into medical information unprompted.\n"
+        "5. Only reference earlier parts of THIS conversation if the patient actually said it.\n\n"
     )
 
     if memory_context:
         system_prompt += (
-            "PATIENT MEMORY — What this patient has shared in this session:\n"
+            "WHAT THIS PATIENT HAS TOLD YOU IN THIS CONVERSATION:\n"
             f"{memory_context}\n\n"
         )
 
-    system_prompt += f"MEDICAL RESEARCH CONTEXT:\n{context}"
+    system_prompt += (
+        "BACKGROUND MEDICAL KNOWLEDGE (use to inform answers — do NOT quote or reference directly):\n"
+        f"{context}"
+    )
 
-    # Build messages for API
+    # Build messages
     api_messages = [{"role": "system", "content": system_prompt}]
     api_messages += history
     api_messages.append({"role": "user", "content": question})
@@ -403,7 +409,7 @@ def medichat_rag_with_memory(question, all_messages):
         max_tokens=1024
     )
     return response.choices[0].message.content, memory
-
+    
 # ── Vision Response ───────────────────────────────────────────────────
 def medichat_vision(question, b64, all_messages):
     memory = extract_patient_memory(all_messages)
