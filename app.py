@@ -373,7 +373,9 @@ def medichat_rag_with_memory(question, all_messages):
     # Build system prompt with memory
     system_prompt = (
         "You are MediChat, a warm, friendly, and professional health assistant. "
-        "You have been talking with this patient throughout this session. "
+        "You are starting a fresh conversation with a new patient. "
+        "Only reference things the patient has told you IN THIS conversation. "
+        "Never assume prior history. "
         "IMPORTANT: Always reference what the patient has told you earlier in the conversation "
         "when it is relevant to their current question. "
         "Use simple, compassionate language that patients can easily understand. "
@@ -448,15 +450,15 @@ def encode_image(f):
     img.save(buf, format="JPEG")
     return base64.b64encode(buf.getvalue()).decode("utf-8")
 
-# ── Session State ─────────────────────────────────────────────────────
-if "messages" not in st.session_state:
+# ── Session Initialization — fresh for every new browser session ──────
+if "session_started" not in st.session_state:
+    st.session_state.session_started = True
     st.session_state.messages = []
-if "qcount" not in st.session_state:
     st.session_state.qcount = 0
-if "feedback" not in st.session_state:
     st.session_state.feedback = {}
-if "patient_memory" not in st.session_state:
-    st.session_state.patient_memory = {"symptoms": [], "conditions": [], "medications": []}
+    st.session_state.patient_memory = {
+        "symptoms": [], "conditions": [], "medications": []
+    }
 
 # ── SIDEBAR ───────────────────────────────────────────────────────────
 with st.sidebar:
