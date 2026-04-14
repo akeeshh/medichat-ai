@@ -294,43 +294,71 @@ with st.spinner("⏳ Loading MediChat knowledge base... just a moment!"):
 
 # ── Memory Functions ──────────────────────────────────────────────────
 def extract_patient_memory(messages):
-    """Extract key patient information from conversation history."""
+    """Extract key patient information using smarter phrase matching."""
     memory = {
         "symptoms": [],
         "conditions": [],
-        "medications": [],
-        "concerns": []
+        "medications": []
     }
 
-    symptom_keywords = [
-        "pain", "ache", "fever", "cough", "tired", "fatigue", "dizzy",
-        "nausea", "headache", "swelling", "rash", "shortness", "bleeding",
-        "vomit", "diarrhea", "constipation", "anxiety", "depression",
-        "insomnia", "weight", "chest", "back", "stomach", "throat"
+    symptom_phrases = [
+        "i have", "i feel", "i am feeling", "i've been feeling",
+        "i'm experiencing", "i suffer from", "i've had",
+        "my head", "my chest", "my back hurts", "my stomach",
+        "i feel pain", "feeling dizzy", "feeling nauseous",
+        "i have a fever", "i have a cough", "i have a headache",
+        "shortness of breath", "i've been tired", "i feel tired",
+        "i have pain", "i feel sick", "i have been vomiting",
+        "i have swelling", "i have a rash", "i feel anxious",
+        "i feel depressed", "i can't sleep", "i've lost weight"
     ]
-    condition_keywords = [
-        "diabetes", "hypertension", "asthma", "cancer", "arthritis",
-        "thyroid", "heart", "kidney", "liver", "allergy", "infection",
-        "covid", "flu", "pneumonia", "depression", "anxiety", "stroke"
+
+    condition_phrases = [
+        "i have diabetes", "i have hypertension", "i have asthma",
+        "i have cancer", "i have arthritis", "i have thyroid",
+        "i have heart", "i have kidney", "i have liver",
+        "i am diabetic", "i am hypertensive", "i was diagnosed with",
+        "i suffer from", "i have been diagnosed", "my condition is",
+        "i have high blood pressure", "i have low blood pressure",
+        "i have covid", "i have flu", "i have pneumonia",
+        "i have depression", "i have anxiety"
     ]
-    medication_keywords = [
-        "taking", "prescribed", "medication", "tablet", "pill", "drug",
-        "medicine", "mg", "dose", "paracetamol", "ibuprofen", "aspirin",
-        "metformin", "insulin", "antibiotic", "inhaler"
+
+    medication_phrases = [
+        "i am taking", "i take", "i was prescribed", "i use",
+        "i've been taking", "my medication is", "i'm on",
+        "i take tablets", "i take pills", "taking medication",
+        "prescribed me", "i have an inhaler"
     ]
 
     for msg in messages:
         if msg.get("role") == "user" and msg.get("type") == "text":
             content = msg["content"].lower()
-            for kw in symptom_keywords:
-                if kw in content and kw not in memory["symptoms"]:
-                    memory["symptoms"].append(kw)
-            for kw in condition_keywords:
-                if kw in content and kw not in memory["conditions"]:
-                    memory["conditions"].append(kw)
-            for kw in medication_keywords:
-                if kw in content and kw not in memory["medications"]:
-                    memory["medications"].append(kw)
+
+            for phrase in symptom_phrases:
+                if phrase in content:
+                    # Extract what comes after the phrase
+                    idx = content.find(phrase)
+                    snippet = content[idx:idx+60].strip()
+                    if snippet and snippet not in memory["symptoms"]:
+                        memory["symptoms"].append(snippet)
+                    break
+
+            for phrase in condition_phrases:
+                if phrase in content:
+                    idx = content.find(phrase)
+                    snippet = content[idx:idx+60].strip()
+                    if snippet and snippet not in memory["conditions"]:
+                        memory["conditions"].append(snippet)
+                    break
+
+            for phrase in medication_phrases:
+                if phrase in content:
+                    idx = content.find(phrase)
+                    snippet = content[idx:idx+60].strip()
+                    if snippet and snippet not in memory["medications"]:
+                        memory["medications"].append(snippet)
+                    break
 
     return memory
 
