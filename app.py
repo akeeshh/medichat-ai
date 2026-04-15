@@ -628,10 +628,57 @@ else:
         from datetime import datetime
         report_date = datetime.now().strftime("%B %d, %Y at %I:%M %p")
 
-        st.markdown(f"""
-        <div class="report-card">
-            <div class="report-header">📋 MediChat Assessment Report</div>
-            <div class="report-date">Generated: {report_date}</div>
+       # Pre-compute optional fields before the f-string
+other_symptoms_html = f'<div class="report-item">Other: {data.get("other_symptoms", "")}</div>' if data.get("other_symptoms") and data.get("other_symptoms").lower() not in ["no", "none", "n/a"] else ""
+conditions_html = "".join([f'<div class="report-item">{c}</div>' for c in parsed.get("conditions", [])])
+steps_html = "".join([f'<div class="report-item">{s}</div>' for s in parsed.get("next_steps", [])])
+urgency_class, urgency_icon = get_urgency_class(parsed.get("urgency", ""))
+
+from datetime import datetime
+report_date = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+
+report_html = f"""
+<div class="report-card">
+    <div class="report-header">📋 MediChat Assessment Report</div>
+    <div class="report-date">Generated: {report_date}</div>
+
+    <div class="report-section">
+        <div class="report-section-title">🚦 Urgency Level</div>
+        <div class="urgency-badge {urgency_class}">{urgency_icon} {parsed.get("urgency", "See a doctor")}</div>
+    </div>
+
+    <div class="report-section">
+        <div class="report-section-title">📝 Symptoms Reported</div>
+        <div class="report-item">Main symptom: {data.get("main_symptom", "")}</div>
+        <div class="report-item">Duration: {data.get("duration", "")}</div>
+        <div class="report-item">Severity: {data.get("severity", "")}</div>
+        <div class="report-item">Pattern: {data.get("pattern", "")}</div>
+        {other_symptoms_html}
+        <div class="report-item">Age: {data.get("age", "")}</div>
+        <div class="report-item">Sex: {data.get("gender", "")}</div>
+    </div>
+
+    <div class="report-section">
+        <div class="report-section-title">🔬 Possible Conditions</div>
+        {conditions_html}
+    </div>
+
+    <div class="report-section">
+        <div class="report-section-title">✅ What To Do Next</div>
+        {steps_html}
+    </div>
+
+    <div class="report-section">
+        <div class="report-section-title">💬 MediChat Summary</div>
+        <div class="report-summary">{parsed.get("summary", "")}</div>
+    </div>
+
+    <div style="margin-top:1rem;padding:0.6rem 0.8rem;background:#fffbeb;border-radius:10px;border:1px solid #fde68a;font-size:0.75rem;color:#92400e;">
+        ⚠️ This assessment is for information only and is NOT a medical diagnosis. Please consult a qualified healthcare professional for proper evaluation and treatment.
+    </div>
+</div>
+"""
+st.markdown(report_html, unsafe_allow_html=True)
 
             <div class="report-section">
                 <div class="report-section-title">🚦 Urgency Level</div>
