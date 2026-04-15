@@ -493,6 +493,7 @@ if "session_started" not in st.session_state:
     st.session_state.patient_memory = {
         "symptoms": [], "conditions": [], "medications": []
     }
+    st.session_state.uploader_key = 0
 
 # ── SIDEBAR ───────────────────────────────────────────────────────────
 with st.sidebar:
@@ -716,9 +717,9 @@ uploaded_image = st.file_uploader(
     "",
     type=["jpg", "jpeg", "png"],
     label_visibility="collapsed",
-    help="Upload an X-ray, skin photo, scan, or any medical image"
+    help="Upload an X-ray, skin photo, scan, or any medical image",
+    key=f"uploader_{st.session_state.uploader_key}"
 )
-
 if uploaded_image:
     col_a, col_b, col_c = st.columns([1, 2, 1])
     with col_b:
@@ -748,6 +749,7 @@ if clear:
     st.session_state.patient_memory = {
         "symptoms": [], "conditions": [], "medications": []
     }
+    st.session_state.uploader_key += 1
     st.rerun()
 if submit and (user_input.strip() or uploaded_image):
     st.session_state.qcount += 1
