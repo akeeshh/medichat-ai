@@ -569,13 +569,6 @@ with st.sidebar:
         st.markdown(f'<div class="sb-tip">→ {tip}</div>', unsafe_allow_html=True)
 
     st.markdown("---")
-    if st.button("🗑️ Clear Conversation"):
-        st.session_state.messages = []
-        st.session_state.qcount = 0
-        st.session_state.feedback = {}
-        st.session_state.patient_memory = {"symptoms": [], "conditions": [], "medications": []}
-        st.rerun()
-
     st.markdown("""
     <div class="sb-footer">
         MediChat v2.0 — Memory Enabled<br>
@@ -739,13 +732,23 @@ with st.form(key="chat_form", clear_on_submit=True):
         placeholder="Type your health question here...",
         label_visibility="collapsed"
     )
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
         submit = st.form_submit_button("Send to MediChat 💬")
+    with col3:
+        clear = st.form_submit_button("🗑️ Clear")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ── Handle Input ──────────────────────────────────────────────────────
+if clear:
+    st.session_state.messages = []
+    st.session_state.qcount = 0
+    st.session_state.feedback = {}
+    st.session_state.patient_memory = {
+        "symptoms": [], "conditions": [], "medications": []
+    }
+    st.rerun()
 if submit and (user_input.strip() or uploaded_image):
     st.session_state.qcount += 1
 
