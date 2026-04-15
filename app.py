@@ -683,23 +683,37 @@ else:
             </div>
             """, unsafe_allow_html=True)
 
-            # Feedback buttons
-            fb_key = f"fb_{i}"
-            current_fb = st.session_state.feedback.get(fb_key)
-            col_fb1, col_fb2, col_fb3 = st.columns([0.5, 0.5, 8])
-            with col_fb1:
-                if st.button("👍", key=f"up_{i}", help="Helpful"):
-                    st.session_state.feedback[fb_key] = "up"
-                    st.rerun()
-            with col_fb2:
-                if st.button("👎", key=f"dn_{i}", help="Not helpful"):
-                    st.session_state.feedback[fb_key] = "down"
-                    st.rerun()
-            with col_fb3:
-                if current_fb == "up":
-                    st.markdown('<span style="font-size:0.7rem;color:#0f766e;">✓ Marked as helpful</span>', unsafe_allow_html=True)
-                elif current_fb == "down":
-                    st.markdown('<span style="font-size:0.7rem;color:#dc2626;">✓ Feedback noted</span>', unsafe_allow_html=True)
+# ── Single feedback for whole conversation ────────────────────────────
+if st.session_state.messages:
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("""
+    <div style="text-align:center;font-size:0.8rem;color:#64748b;margin-bottom:0.4rem;">
+        Was this conversation helpful?
+    </div>
+    """, unsafe_allow_html=True)
+    col_f1, col_f2, col_f3, col_f4, col_f5 = st.columns([2, 1, 0.5, 1, 2])
+    with col_f2:
+        if st.button("👍 Yes", key="chat_helpful"):
+            st.session_state.feedback["overall"] = "helpful"
+            st.rerun()
+    with col_f4:
+        if st.button("👎 No", key="chat_not_helpful"):
+            st.session_state.feedback["overall"] = "not_helpful"
+            st.rerun()
+
+    overall = st.session_state.feedback.get("overall")
+    if overall == "helpful":
+        st.markdown("""
+        <div style="text-align:center;font-size:0.78rem;color:#0f766e;margin-top:0.3rem;">
+            ✅ Thank you! We're glad MediChat was helpful.
+        </div>
+        """, unsafe_allow_html=True)
+    elif overall == "not_helpful":
+        st.markdown("""
+        <div style="text-align:center;font-size:0.78rem;color:#dc2626;margin-top:0.3rem;">
+            🙏 Thank you for your feedback. We'll keep improving!
+        </div>
+        """, unsafe_allow_html=True)
 
 # ── Input Area ────────────────────────────────────────────────────────
 st.markdown('<div class="input-card">', unsafe_allow_html=True)
