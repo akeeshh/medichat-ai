@@ -691,7 +691,7 @@ else:
         st.markdown(f"""
         <div class="assessment-card">
             <div class="assessment-title">🔍 Symptom Assessment</div>
-            <div class="assessment-subtitle">Answer a few quick questions and MediChat will generate a personalised health assessment — just like Ada Health.</div>
+            <div class="assessment-subtitle">Answer a few quick questions and MediChat will generate a personalised health assessment for you.</div>
             <div class="progress-label">
                 <span>Step {stage + 1} of {total}</span>
                 <span>{progress}% complete</span>
