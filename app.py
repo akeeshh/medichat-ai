@@ -621,63 +621,96 @@ if st.session_state.mode == "chat":
 # ══════════════════════════════════════════════════════════════════════
 else:
     # Show completed report
-    if st.session_state.assessment_complete and st.session_state.assessment_parsed:
-        parsed = st.session_state.assessment_parsed
-        data = st.session_state.assessment_data
-        urgency_class, urgency_icon = get_urgency_class(parsed.get("urgency", ""))
-        from datetime import datetime
-        report_date = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+if st.session_state.assessment_complete and st.session_state.assessment_parsed:
+    parsed = st.session_state.assessment_parsed
+    data = st.session_state.assessment_data
+    from datetime import datetime
+    report_date = datetime.now().strftime("%B %d, %Y at %I:%M %p")
 
-       # Pre-compute optional fields before the f-string
-other_symptoms_html = f'<div class="report-item">Other: {data.get("other_symptoms", "")}</div>' if data.get("other_symptoms") and data.get("other_symptoms").lower() not in ["no", "none", "n/a"] else ""
-conditions_html = "".join([f'<div class="report-item">{c}</div>' for c in parsed.get("conditions", [])])
-steps_html = "".join([f'<div class="report-item">{s}</div>' for s in parsed.get("next_steps", [])])
-urgency_class, urgency_icon = get_urgency_class(parsed.get("urgency", ""))
+    urgency = parsed.get("urgency", "See a doctor soon")
+    urgency_lower = urgency.lower()
 
-from datetime import datetime
-report_date = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+    st.markdown("---")
+    st.markdown("### 📋 MediChat Assessment Report")
+    st.caption(f"Generated: {report_date}")
 
-report_html = f"""
-<div class="report-card">
-    <div class="report-header">📋 MediChat Assessment Report</div>
-    <div class="report-date">Generated: {report_date}</div>
+    # Urgency level
+    if "emergency" in urgency_lower or "now" in urgency_lower:
+        st.error(f"🚨 **URGENCY: {urgency}**")
+    elif "urgent" in urgency_lower or "today" in urgency_lower:
+        st.warning(f"⚠️ **URGENCY: {urgency}**")
+    else:
+        st.success(f"✅ **URGENCY: {urgency}**")
 
-    <div class="report-section">
-        <div class="report-section-title">🚦 Urgency Level</div>
-        <div class="urgency-badge {urgency_class}">{urgency_icon} {parsed.get("urgency", "See a doctor")}</div>
-    </div>
+    st.markdown("---")
 
-    <div class="report-section">
-        <div class="report-section-title">📝 Symptoms Reported</div>
-        <div class="report-item">Main symptom: {data.get("main_symptom", "")}</div>
-        <div class="report-item">Duration: {data.get("duration", "")}</div>
-        <div class="report-item">Severity: {data.get("severity", "")}</div>
-        <div class="report-item">Pattern: {data.get("pattern", "")}</div>
-        {other_symptoms_html}
-        <div class="report-item">Age: {data.get("age", "")}</div>
-        <div class="report-item">Sex: {data.get("gender", "")}</div>
-    </div>
+    # Symptoms reported
+    st.markdown("#### 📝 Symptoms Reported")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.info(f"**Main symptom:** {data.get('main_symptom', '')}")
+        st.info(f"**Duration:** {data.get('duration', '')}")
+        st.info(f"**Severity:** {data.get('severity', '')}")
+    with col2:
+        st.info(f"**Pattern:** {data.get('pattern', '')}")
+        st.info(f"**Age:** {data.get('age', '')}")
+        st.info(f"**Sex:** {data.get('gender', '')}")
 
-    <div class="report-section">
-        <div class="report-section-title">🔬 Possible Conditions</div>
-        {conditions_html}
-    </div>
+    if data.get("other_symptoms") and data.get("other_symptoms", "").lower() not in ["no", "none", "n/a"]:
+        st.info(f"**Other symptoms:** {data.get('other_symptoms', '')}")
 
-    <div class="report-section">
-        <div class="report-section-title">✅ What To Do Next</div>
-        {steps_html}
-    </div>
+    st.markdown("---")
 
-    <div class="report-section">
-        <div class="report-section-title">💬 MediChat Summary</div>
-        <div class="report-summary">{parsed.get("summary", "")}</div>
-    </div>
+    # Possible conditions
+    st.markdown("#### 🔬 Possible Conditions")
+    conditions = parsed.get("conditions", [])
+    if conditions:
+        for condition in conditions:
+            if condition.strip():
+                st.markdown(f"- {condition.strip()}")
+    else:
+        st.markdown("- Please consult a doctor for a proper assessment.")
 
-    <div style="margin-top:1rem;padding:0.6rem 0.8rem;background:#fffbeb;border-radius:10px;border:1px solid #fde68a;font-size:0.75rem;color:#92400e;">
-        ⚠️ This assessment is for information only and is NOT a medical diagnosis. Please consult a qualified healthcare professional for proper evaluation and treatment.
-    </div>
-</div>
-"""
+    st.markdown("---")
+
+    # Next steps
+    st.markdown("#### ✅ What To Do Next")
+    steps = parsed.get("next_steps", [])
+    if steps:
+        for i, step in enumerate(steps, 1):
+            if step.strip():
+                st.markdown(f"**{i}.** {step.strip()}")
+    else:
+        st.markdown("**1.** Consult a qualified healthcare professional.")
+
+    st.markdown("---")
+
+    # Summary
+    st.markdown("#### 💬 MediChat Summary")
+    summary = parsed.get("summary", "")
+    if summary:
+        st.markdown(
+            f'<div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:12px;padding:1rem;font-size:0.92rem;color:#134e4a;line-height:1.6;">{summary}</div>',
+            unsafe_allow_html=True
+        )
+
+    st.markdown("---")
+    st.warning("⚠️ This assessment is for information only and is **NOT a medical diagnosis**. Please consult a qualified healthcare professional for proper evaluation and treatment.")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    col_r1, col_r2 = st.columns(2)
+    with col_r1:
+        if st.button("🔄 Start New Assessment", use_container_width=True):
+            st.session_state.assessment_stage = 0
+            st.session_state.assessment_data = {}
+            st.session_state.assessment_complete = False
+            st.session_state.assessment_report = None
+            st.session_state.assessment_parsed = None
+            st.rerun()
+    with col_r2:
+        if st.button("💬 Switch to Free Chat", use_container_width=True):
+            st.session_state.mode = "chat"
+            st.rerun()
 st.markdown(report_html, unsafe_allow_html=True)
 
             <div class="report-section">
