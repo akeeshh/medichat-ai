@@ -4,3 +4,4 @@ faiss-cpu
 sentence-transformers
 datasets
 pillow
+fpdf2
