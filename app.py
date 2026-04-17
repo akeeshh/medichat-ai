@@ -380,27 +380,39 @@ def generate_assessment_report(assessment_data):
     emb = embedder.encode([assessment_data.get("main_symptom", "")]).astype("float32")
     _, idxs = index.search(emb, k=5)
     context = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
+
     prompt = (
-        "A patient completed a symptom assessment. Here is their data:\n"
+        "You are an experienced clinical AI assistant helping a patient understand their symptoms.\n\n"
+        "A patient completed a symptom assessment. Analyse their responses carefully and generate "
+        "a medically sound, compassionate report.\n\n"
+        "PATIENT RESPONSES:\n"
         "- Main symptom: " + assessment_data.get("main_symptom", "Not specified") + "\n"
         "- Duration: " + assessment_data.get("duration", "Not specified") + "\n"
         "- Severity: " + assessment_data.get("severity", "Not specified") + "\n"
         "- Pattern: " + assessment_data.get("pattern", "Not specified") + "\n"
         "- Other symptoms: " + assessment_data.get("other_symptoms", "None") + "\n"
-        "- Age: " + assessment_data.get("age", "Not specified") + "\n"
+        "- Age group: " + assessment_data.get("age", "Not specified") + "\n"
         "- Biological sex: " + assessment_data.get("gender", "Not specified") + "\n\n"
-        "Using this medical research context:\n" + context + "\n\n"
-        "Provide a structured assessment with EXACTLY this format:\n"
+        "IMPORTANT INSTRUCTIONS:\n"
+        "1. If the main symptom appears to be a typo or unclear word, use clinical reasoning to "
+        "interpret the most likely intended symptom based on context (age, sex, pattern, severity).\n"
+        "2. Consider all symptoms together holistically — not in isolation.\n"
+        "3. Provide realistic, evidence-based possible conditions — not rare or alarming ones unless severity warrants.\n"
+        "4. Urgency must reflect the actual severity and pattern described.\n"
+        "5. Next steps must be specific and actionable.\n\n"
+        "MEDICAL RESEARCH CONTEXT (use to support your reasoning):\n" + context + "\n\n"
+        "Respond in EXACTLY this format — no extra text:\n"
         "URGENCY: [one of: Self-care at home / See a doctor soon / Seek urgent care today / Go to emergency NOW]\n"
         "CONDITIONS: [condition 1] | [condition 2] | [condition 3]\n"
         "NEXT STEPS: [step 1] | [step 2] | [step 3]\n"
-        "SUMMARY: [2-3 sentences in warm simple language]\n\n"
-        "Be helpful, compassionate, and never alarmist. Always recommend professional consultation."
+        "SUMMARY: [2-3 warm, clear sentences summarising the assessment and what the patient should do]\n"
     )
+
     r = groq_client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.4, max_tokens=1024
+        temperature=0.3,
+        max_tokens=1024
     )
     return r.choices[0].message.content
 
