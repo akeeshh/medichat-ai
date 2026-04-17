@@ -88,6 +88,185 @@ if not GROQ_API_KEY:
     st.stop()
 groq_client = Groq(api_key=GROQ_API_KEY)
 
+# ── Language Config ───────────────────────────────────────────────────
+LANGUAGES = {
+    "English": {
+        "flag": "🇦🇺",
+        "greeting": "Hello! How can I help you today?",
+        "welcome_text": "I am MediChat, your friendly AI health assistant.<br>I remember everything you tell me during our conversation.<br><br>Or switch to Symptom Check for a guided assessment!",
+        "placeholder": "Type your health question here...",
+        "send_btn": "Send to MediChat",
+        "clear_btn": "Clear",
+        "upload_label": "Upload a medical image (optional)",
+        "question_label": "Your question",
+        "helpful": "Was this conversation helpful?",
+        "yes": "Yes",
+        "no": "No",
+        "thanks_helpful": "Thank you! Glad MediChat was helpful.",
+        "thanks_not": "Thank you for your feedback. We will keep improving!",
+        "download_chat": "Download your conversation:",
+        "download_chat_btn": "Download Chat as PDF",
+        "download_assess_btn": "Download Assessment Report as PDF",
+        "symptom_title": "Symptom Assessment",
+        "symptom_subtitle": "Answer a few quick questions and MediChat will generate a personalised health assessment.",
+        "quick_select": "Quick select:",
+        "next": "Next",
+        "cancel": "Cancel",
+        "answers_so_far": "Your answers so far",
+        "new_assessment": "Start New Assessment",
+        "switch_chat": "Switch to Free Chat",
+        "report_title": "MediChat Assessment Report",
+        "symptoms_reported": "Symptoms Reported",
+        "possible_conditions": "Possible Conditions",
+        "what_to_do": "What To Do Next",
+        "summary": "MediChat Summary",
+        "disclaimer_short": "This assessment is for information only and is NOT a medical diagnosis. Please consult a qualified healthcare professional.",
+        "free_chat": "Free Chat",
+        "symptom_check": "Symptom Check",
+        "lang_instruction": "IMPORTANT: You MUST respond entirely in English.",
+    },
+    "Tamil": {
+        "flag": "🇱🇰",
+        "greeting": "வணக்கம்! இன்று நான் உங்களுக்கு எப்படி உதவலாம்?",
+        "welcome_text": "நான் MediChat — உங்கள் நட்பான AI சுகாதார உதவியாளர்.<br>உரையாடலில் நீங்கள் சொல்வதை நான் நினைவில் வைத்திருப்பேன்.<br><br>வழிகாட்டப்பட்ட மதிப்பீட்டிற்கு அறிகுறி சரிபார்ப்புக்கு மாறலாம்!",
+        "placeholder": "உங்கள் உடல்நல கேள்வியை இங்கே தட்டச்சு செய்யுங்கள்...",
+        "send_btn": "MediChat க்கு அனுப்பவும்",
+        "clear_btn": "அழிக்கவும்",
+        "upload_label": "மருத்துவ படத்தை பதிவேற்றவும் (விரும்பினால்)",
+        "question_label": "உங்கள் கேள்வி",
+        "helpful": "இந்த உரையாடல் உதவியாக இருந்ததா?",
+        "yes": "ஆம்",
+        "no": "இல்லை",
+        "thanks_helpful": "நன்றி! MediChat உதவியாக இருந்தது மகிழ்ச்சி.",
+        "thanks_not": "உங்கள் கருத்துக்கு நன்றி. நாங்கள் தொடர்ந்து மேம்படுவோம்!",
+        "download_chat": "உரையாடலை பதிவிறக்கவும்:",
+        "download_chat_btn": "அரட்டையை PDF ஆக பதிவிறக்கவும்",
+        "download_assess_btn": "மதிப்பீட்டு அறிக்கையை PDF ஆக பதிவிறக்கவும்",
+        "symptom_title": "அறிகுறி மதிப்பீடு",
+        "symptom_subtitle": "சில விரைவான கேள்விகளுக்கு பதிலளிக்கவும், MediChat உங்களுக்கு தனிப்பயன் சுகாதார மதிப்பீட்டை உருவாக்கும்.",
+        "quick_select": "விரைவு தேர்வு:",
+        "next": "அடுத்து",
+        "cancel": "ரத்து செய்",
+        "answers_so_far": "இதுவரை உங்கள் பதில்கள்",
+        "new_assessment": "புதிய மதிப்பீட்டை தொடங்கவும்",
+        "switch_chat": "இலவச அரட்டைக்கு மாறவும்",
+        "report_title": "MediChat மதிப்பீட்டு அறிக்கை",
+        "symptoms_reported": "தெரிவிக்கப்பட்ட அறிகுறிகள்",
+        "possible_conditions": "சாத்தியமான நிலைமைகள்",
+        "what_to_do": "அடுத்து என்ன செய்வது",
+        "summary": "MediChat சுருக்கம்",
+        "disclaimer_short": "இந்த மதிப்பீடு தகவல் நோக்கங்களுக்காக மட்டுமே. தயவுசெய்து தகுதிவாய்ந்த மருத்துவரை அணுகவும்.",
+        "free_chat": "இலவச அரட்டை",
+        "symptom_check": "அறிகுறி சரிபார்ப்பு",
+        "lang_instruction": "IMPORTANT: You MUST respond entirely in Tamil (தமிழ்). All your responses must be in Tamil language.",
+    },
+    "Sinhala": {
+        "flag": "🇱🇰",
+        "greeting": "ආයුබෝවන්! අද මට ඔබට කෙසේ උදව් කළ හැකිද?",
+        "welcome_text": "මම MediChat — ඔබේ මිත්‍රශීලී AI සෞඛ්‍ය සහායකයා.<br>ඔබ කියන සෑම දෙයක්ම මම මතක තබා ගනිමි.<br><br>මඟ පෙන්වූ තක්සේරු කිරීම සඳහා රෝග ලක්ෂණ පරීක්ෂාවට මාරු වන්න!",
+        "placeholder": "ඔබේ සෞඛ්‍ය ප්‍රශ්නය මෙහි ටයිප් කරන්න...",
+        "send_btn": "MediChat වෙත යවන්න",
+        "clear_btn": "හිස් කරන්න",
+        "upload_label": "වෛද්‍ය රූපයක් උඩුගත කරන්න (විකල්ප)",
+        "question_label": "ඔබේ ප්‍රශ්නය",
+        "helpful": "මෙම සංවාදය ප්‍රයෝජනවත් වූවාද?",
+        "yes": "ඔව්",
+        "no": "නැහැ",
+        "thanks_helpful": "ස්තූතියි! MediChat ප්‍රයෝජනවත් වූ බව සතුටක්.",
+        "thanks_not": "ඔබේ ප්‍රතිචාරයට ස්තූතියි. අපි දිගටම වැඩිදියුණු කරන්නෙමු!",
+        "download_chat": "ඔබේ සංවාදය බාගත කරන්න:",
+        "download_chat_btn": "Chat PDF ලෙස බාගත කරන්න",
+        "download_assess_btn": "තක්සේරු වාර්තාව PDF ලෙස බාගත කරන්න",
+        "symptom_title": "රෝග ලක්ෂණ තක්සේරු කිරීම",
+        "symptom_subtitle": "ප්‍රශ්න කිහිපයකට පිළිතුරු දෙන්න, MediChat ඔබට පෞද්ගලික සෞඛ්‍ය තක්සේරුවක් ජනනය කරනු ඇත.",
+        "quick_select": "ඉක්මන් තේරීම:",
+        "next": "ඊළඟ",
+        "cancel": "අවලංගු කරන්න",
+        "answers_so_far": "මෙතෙක් ඔබේ පිළිතුරු",
+        "new_assessment": "නව තක්සේරු කිරීමක් ආරම්භ කරන්න",
+        "switch_chat": "නිදහස් Chat වෙත මාරු වන්න",
+        "report_title": "MediChat තක්සේරු වාර්තාව",
+        "symptoms_reported": "වාර්තා කළ රෝග ලක්ෂණ",
+        "possible_conditions": "හැකි තත්ත්වයන්",
+        "what_to_do": "ඊළඟට කළ යුතු දේ",
+        "summary": "MediChat සාරාංශය",
+        "disclaimer_short": "මෙම තක්සේරු කිරීම තොරතුරු පමණක් වේ. සුදුසුකම් ලත් වෛද්‍යවරයෙකු හමුවෙන්න.",
+        "free_chat": "නිදහස් Chat",
+        "symptom_check": "රෝග ලක්ෂණ පරීක්ෂාව",
+        "lang_instruction": "IMPORTANT: You MUST respond entirely in Sinhala (සිංහල). All your responses must be in Sinhala language.",
+    },
+    "Hindi": {
+        "flag": "🇮🇳",
+        "greeting": "नमस्ते! आज मैं आपकी कैसे मदद कर सकता हूं?",
+        "welcome_text": "मैं MediChat हूं — आपका मित्रवत AI स्वास्थ्य सहायक.<br>आप जो कुछ भी बताते हैं मैं याद रखता हूं.<br><br>निर्देशित मूल्यांकन के लिए लक्षण जांच पर स्विच करें!",
+        "placeholder": "अपना स्वास्थ्य प्रश्न यहाँ टाइप करें...",
+        "send_btn": "MediChat को भेजें",
+        "clear_btn": "साफ करें",
+        "upload_label": "चिकित्सा छवि अपलोड करें (वैकल्पिक)",
+        "question_label": "आपका प्रश्न",
+        "helpful": "क्या यह बातचीत मददगार थी?",
+        "yes": "हाँ",
+        "no": "नहीं",
+        "thanks_helpful": "धन्यवाद! खुशी है कि MediChat मददगार रहा।",
+        "thanks_not": "आपकी प्रतिक्रिया के लिए धन्यवाद। हम लगातार सुधार करते रहेंगे!",
+        "download_chat": "अपनी बातचीत डाउनलोड करें:",
+        "download_chat_btn": "चैट PDF के रूप में डाउनलोड करें",
+        "download_assess_btn": "मूल्यांकन रिपोर्ट PDF डाउनलोड करें",
+        "symptom_title": "लक्षण मूल्यांकन",
+        "symptom_subtitle": "कुछ त्वरित प्रश्नों का उत्तर दें और MediChat आपका व्यक्तिगत स्वास्थ्य मूल्यांकन तैयार करेगा।",
+        "quick_select": "त्वरित चयन:",
+        "next": "अगला",
+        "cancel": "रद्द करें",
+        "answers_so_far": "अब तक के आपके उत्तर",
+        "new_assessment": "नया मूल्यांकन शुरू करें",
+        "switch_chat": "फ्री चैट पर स्विच करें",
+        "report_title": "MediChat मूल्यांकन रिपोर्ट",
+        "symptoms_reported": "रिपोर्ट किए गए लक्षण",
+        "possible_conditions": "संभावित स्थितियां",
+        "what_to_do": "आगे क्या करें",
+        "summary": "MediChat सारांश",
+        "disclaimer_short": "यह मूल्यांकन केवल सूचना के लिए है। कृपया योग्य चिकित्सक से परामर्श लें।",
+        "free_chat": "फ्री चैट",
+        "symptom_check": "लक्षण जांच",
+        "lang_instruction": "IMPORTANT: You MUST respond entirely in Hindi (हिन्दी). All your responses must be in Hindi language.",
+    },
+    "Malayalam": {
+        "flag": "🇮🇳",
+        "greeting": "നമസ്കാരം! ഇന്ന് ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കാം?",
+        "welcome_text": "ഞാൻ MediChat — നിങ്ങളുടെ സൗഹൃദ AI ആരോഗ്യ സഹായി.<br>നിങ്ങൾ പറയുന്നതെല്ലാം ഞാൻ ഓർത്തിരിക്കും.<br><br>ഗൈഡഡ് അസസ്മെൻ്റിനായി സിംപ്റ്റം ചെക്കിലേക്ക് മാറുക!",
+        "placeholder": "നിങ്ങളുടെ ആരോഗ്യ ചോദ്യം ഇവിടെ ടൈപ്പ് ചെയ്യുക...",
+        "send_btn": "MediChat-ലേക്ക് അയയ്ക്കുക",
+        "clear_btn": "മായ്ക്കുക",
+        "upload_label": "മെഡിക്കൽ ചിത്രം അപ്ലോഡ് ചെയ്യുക (ഐച്ഛികം)",
+        "question_label": "നിങ്ങളുടെ ചോദ്യം",
+        "helpful": "ഈ സംഭാഷണം സഹായകരമായിരുന്നോ?",
+        "yes": "അതെ",
+        "no": "ഇല്ല",
+        "thanks_helpful": "നന്ദി! MediChat സഹായകരമായതിൽ സന്തോഷം.",
+        "thanks_not": "നിങ്ങളുടെ ഫീഡ്‌ബാക്കിന് നന്ദി. ഞങ്ങൾ മെച്ചപ്പെടുത്തുന്നത് തുടരും!",
+        "download_chat": "നിങ്ങളുടെ സംഭാഷണം ഡൗൺലോഡ് ചെയ്യുക:",
+        "download_chat_btn": "ചാറ്റ് PDF ആയി ഡൗൺലോഡ് ചെയ്യുക",
+        "download_assess_btn": "അസസ്മെൻ്റ് റിപ്പോർട്ട് PDF ഡൗൺലോഡ് ചെയ്യുക",
+        "symptom_title": "ലക്ഷണ വിലയിരുത്തൽ",
+        "symptom_subtitle": "ചില ചോദ്യങ്ങൾക്ക് ഉത്തരം നൽകൂ, MediChat നിങ്ങൾക്ക് വ്യക്തിഗത ആരോഗ്യ വിലയിരുത്തൽ തയ്യാറാക്കും.",
+        "quick_select": "വേഗ തിരഞ്ഞെടുക്കൽ:",
+        "next": "അടുത്തത്",
+        "cancel": "റദ്ദാക്കുക",
+        "answers_so_far": "ഇതുവരെ നിങ്ങളുടെ ഉത്തരങ്ങൾ",
+        "new_assessment": "പുതിയ വിലയിരുത്തൽ ആരംഭിക്കുക",
+        "switch_chat": "ഫ്രീ ചാറ്റിലേക്ക് മാറുക",
+        "report_title": "MediChat വിലയിരുത്തൽ റിപ്പോർട്ട്",
+        "symptoms_reported": "റിപ്പോർട്ട് ചെയ്ത ലക്ഷണങ്ങൾ",
+        "possible_conditions": "സാധ്യമായ അവസ്ഥകൾ",
+        "what_to_do": "അടുത്തതായി എന്ത് ചെയ്യണം",
+        "summary": "MediChat സംഗ്രഹം",
+        "disclaimer_short": "ഈ വിലയിരുത്തൽ വിവരങ്ങൾക്ക് മാത്രമുള്ളതാണ്. യോഗ്യതയുള്ള ഡോക്ടറെ സമീപിക്കുക.",
+        "free_chat": "ഫ്രീ ചാറ്റ്",
+        "symptom_check": "ലക്ഷണ പരിശോധന",
+        "lang_instruction": "IMPORTANT: You MUST respond entirely in Malayalam (മലയാളം). All your responses must be in Malayalam language.",
+    },
+}
+
 @st.cache_resource
 def load_rag_system():
     embedder = SentenceTransformer("all-MiniLM-L6-v2")
@@ -153,7 +332,7 @@ def build_memory_context(memory):
         parts.append("Referenced medications: " + ", ".join(memory["medications"]))
     return "\n".join(parts)
 
-def medichat_rag(question, all_messages):
+def medichat_rag(question, all_messages, lang_instruction=""):
     emb = embedder.encode([question]).astype("float32")
     _, idxs = index.search(emb, k=3)
     context = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
@@ -171,6 +350,8 @@ def medichat_rag(question, all_messages):
         "3) Never invent symptoms or history. "
         "4) Respond warmly to casual messages.\n\n"
     )
+    if lang_instruction:
+        system += lang_instruction + "\n\n"
     if memory_context:
         system += "WHAT THIS PATIENT HAS TOLD YOU:\n" + memory_context + "\n\n"
     system += "BACKGROUND MEDICAL KNOWLEDGE:\n" + context
@@ -178,15 +359,16 @@ def medichat_rag(question, all_messages):
     r = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=msgs, temperature=0.6, max_tokens=1024)
     return r.choices[0].message.content, memory
 
-def medichat_vision(question, b64, all_messages):
+def medichat_vision(question, b64, all_messages, lang_instruction=""):
     memory = extract_patient_memory(all_messages)
     memory_context = build_memory_context(memory)
     prompt = question.strip() if question.strip() else "Please analyse this medical image."
     memory_note = ("\n\nPatient context: " + memory_context) if memory_context else ""
+    lang_note = ("\n\n" + lang_instruction) if lang_instruction else ""
     r = groq_client.chat.completions.create(
         model="meta-llama/llama-4-scout-17b-16e-instruct",
         messages=[{"role": "user", "content": [
-            {"type": "text", "text": "You are MediChat, a warm clinical AI assistant. Analyse this medical image. Provide: Clinical Observations, Possible Conditions, Recommendations. Use simple compassionate language. Always recommend consulting a doctor." + memory_note + "\n\nQuestion: " + prompt},
+            {"type": "text", "text": "You are MediChat, a warm clinical AI assistant. Analyse this medical image. Provide: Clinical Observations, Possible Conditions, Recommendations. Use simple compassionate language. Always recommend consulting a doctor." + memory_note + lang_note + "\n\nQuestion: " + prompt},
             {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + b64}}
         ]}],
         temperature=0.5, max_tokens=1024
@@ -246,7 +428,7 @@ def generate_chat_pdf(messages):
     pdf.set_y(-18)
     pdf.set_text_color(148, 163, 184)
     pdf.set_font("Helvetica", "", 7)
-    pdf.cell(0, 5, "MediChat v3.0 - ICT654 Group 3 - SISTC Melbourne 2026", align="C")
+    pdf.cell(0, 5, "MediChat v3.0 - ICT654 Group 7 - SISTC Melbourne 2026", align="C")
     return bytes(pdf.output())
 
 def generate_assessment_pdf(parsed, data, report_date):
@@ -340,7 +522,7 @@ def generate_assessment_pdf(parsed, data, report_date):
     pdf.set_y(-18)
     pdf.set_text_color(148, 163, 184)
     pdf.set_font("Helvetica", "", 7)
-    pdf.cell(0, 5, "MediChat v3.0 - ICT654 Group 3 - SISTC Melbourne 2026", align="C")
+    pdf.cell(0, 5, "MediChat v3.0 - ICT654 Group 7 - SISTC Melbourne 2026", align="C")
     return bytes(pdf.output())
 
 ASSESSMENT_STAGES = [
@@ -353,10 +535,11 @@ ASSESSMENT_STAGES = [
     {"key": "gender", "question": "What is your biological sex? (helps with medical accuracy)", "hint": "", "options": ["Male", "Female", "Prefer not to say"]},
 ]
 
-def generate_assessment_report(assessment_data):
+def generate_assessment_report(assessment_data, lang_instruction=""):
     emb = embedder.encode([assessment_data.get("main_symptom", "")]).astype("float32")
     _, idxs = index.search(emb, k=5)
     context = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
+    lang_note = ("\n" + lang_instruction) if lang_instruction else ""
     prompt = (
         "You are an experienced clinical AI assistant.\n\n"
         "Patient symptom assessment data:\n"
@@ -371,7 +554,8 @@ def generate_assessment_report(assessment_data):
         "1. If the main symptom looks like a typo, interpret the most likely intended symptom.\n"
         "2. Consider all symptoms holistically.\n"
         "3. Provide realistic, evidence-based possible conditions.\n"
-        "4. Urgency must reflect actual severity.\n\n"
+        "4. Urgency must reflect actual severity.\n"
+        + lang_note + "\n\n"
         "Medical research context:\n" + context + "\n\n"
         "Respond in EXACTLY this format:\n"
         "URGENCY: [one of: Self-care at home / See a doctor soon / Seek urgent care today / Go to emergency NOW]\n"
@@ -409,9 +593,25 @@ if "session_started" not in st.session_state:
     st.session_state.assessment_complete = False
     st.session_state.assessment_report = None
     st.session_state.assessment_parsed = None
+    st.session_state.selected_language = "English"
 
 with st.sidebar:
     st.markdown("## MediChat")
+    st.markdown("---")
+
+    # Language selector
+    st.markdown('<div class="sb-title">Language / மொழி / භාෂාව / भाषा</div>', unsafe_allow_html=True)
+    lang_options = list(LANGUAGES.keys())
+    lang_display = [LANGUAGES[l]["flag"] + " " + l for l in lang_options]
+    selected_idx = lang_options.index(st.session_state.selected_language)
+    chosen = st.selectbox("", lang_display, index=selected_idx, label_visibility="collapsed")
+    new_lang = lang_options[lang_display.index(chosen)]
+    if new_lang != st.session_state.selected_language:
+        st.session_state.selected_language = new_lang
+        st.rerun()
+
+    L = LANGUAGES[st.session_state.selected_language]
+
     st.markdown("---")
     st.markdown('<div class="sb-title">Session Stats</div>', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
@@ -439,17 +639,19 @@ with st.sidebar:
     for tip in ["What causes high blood pressure?", "I have chest pain and I am diabetic", "How does stress affect the heart?", "What foods reduce inflammation?", "I have been dizzy since yesterday"]:
         st.markdown('<div class="sb-tip">- ' + tip + '</div>', unsafe_allow_html=True)
     st.markdown("---")
-    st.markdown('<div class="sb-footer">MediChat v3.0<br>ICT654 - Group 3 - SISTC 2026</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sb-footer">MediChat v3.0<br>ICT654 - Group 7 - SISTC 2026</div>', unsafe_allow_html=True)
 
 st.markdown('<div class="header-card"><div style="font-size:2.5rem;">🏥</div><div><div class="header-title">MediChat</div><div class="header-subtitle">Your AI health assistant - chat freely or do a guided symptom check</div></div></div>', unsafe_allow_html=True)
 
+L = LANGUAGES[st.session_state.selected_language]
+
 cm1, cm2 = st.columns(2)
 with cm1:
-    if st.button("Free Chat" + (" (Active)" if st.session_state.mode == "chat" else ""), use_container_width=True):
+    if st.button(L["free_chat"] + (" (Active)" if st.session_state.mode == "chat" else ""), use_container_width=True):
         st.session_state.mode = "chat"
         st.rerun()
 with cm2:
-    if st.button("Symptom Check" + (" (Active)" if st.session_state.mode == "assessment" else ""), use_container_width=True):
+    if st.button(L["symptom_check"] + (" (Active)" if st.session_state.mode == "assessment" else ""), use_container_width=True):
         st.session_state.mode = "assessment"
         st.rerun()
 
@@ -469,7 +671,7 @@ if st.session_state.mode == "chat":
         st.markdown('<div class="memory-card"><div class="memory-title">MediChat remembers from this session:</div>' + "".join(["<div>- " + p + "</div>" for p in mem_parts]) + "</div>", unsafe_allow_html=True)
 
     if not st.session_state.messages:
-        st.markdown('<div class="welcome-card"><div style="font-size:3rem;margin-bottom:0.7rem;">👋</div><div class="welcome-title">Hello! How can I help you today?</div><div class="welcome-text">I am MediChat, your friendly AI health assistant.<br>I remember everything you tell me during our conversation.<br><br>Or switch to Symptom Check for a guided assessment!</div><div class="chip-row"><span class="chip">Medications</span><span class="chip">Heart Health</span><span class="chip">Conditions</span><span class="chip">Nutrition</span><span class="chip">Mental Health</span><span class="chip">Infections</span></div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="welcome-card"><div style="font-size:3rem;margin-bottom:0.7rem;">👋</div><div class="welcome-title">' + L["greeting"] + '</div><div class="welcome-text">' + L["welcome_text"] + '</div><div class="chip-row"><span class="chip">Medications</span><span class="chip">Heart Health</span><span class="chip">Conditions</span><span class="chip">Nutrition</span><span class="chip">Mental Health</span><span class="chip">Infections</span></div></div>', unsafe_allow_html=True)
     else:
         for msg in st.session_state.messages:
             role = msg.get("role", "")
@@ -488,42 +690,42 @@ if st.session_state.mode == "chat":
 
     if st.session_state.messages:
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown('<div style="text-align:center;font-size:0.78rem;color:#64748b;margin-bottom:0.4rem;">Was this conversation helpful?</div>', unsafe_allow_html=True)
+        st.markdown('<div style="text-align:center;font-size:0.78rem;color:#64748b;margin-bottom:0.4rem;">' + L["helpful"] + '</div>', unsafe_allow_html=True)
         cf1, cf2, cf3, cf4, cf5 = st.columns([2, 1, 0.5, 1, 2])
         with cf2:
-            if st.button("Yes", key="chat_helpful"):
+            if st.button(L["yes"], key="chat_helpful"):
                 st.session_state.feedback["overall"] = "helpful"
                 st.rerun()
         with cf4:
-            if st.button("No", key="chat_not_helpful"):
+            if st.button(L["no"], key="chat_not_helpful"):
                 st.session_state.feedback["overall"] = "not_helpful"
                 st.rerun()
         overall = st.session_state.feedback.get("overall")
         if overall == "helpful":
-            st.markdown('<div style="text-align:center;font-size:0.76rem;color:#0f766e;margin-top:0.3rem;">Thank you! Glad MediChat was helpful.</div>', unsafe_allow_html=True)
+            st.markdown('<div style="text-align:center;font-size:0.76rem;color:#0f766e;margin-top:0.3rem;">' + L["thanks_helpful"] + '</div>', unsafe_allow_html=True)
         elif overall == "not_helpful":
-            st.markdown('<div style="text-align:center;font-size:0.76rem;color:#dc2626;margin-top:0.3rem;">Thank you for your feedback. We will keep improving!</div>', unsafe_allow_html=True)
+            st.markdown('<div style="text-align:center;font-size:0.76rem;color:#dc2626;margin-top:0.3rem;">' + L["thanks_not"] + '</div>', unsafe_allow_html=True)
         st.markdown("---")
-        st.markdown("**Download your conversation:**")
-        if st.button("Download Chat as PDF", use_container_width=True):
+        st.markdown("**" + L["download_chat"] + "**")
+        if st.button(L["download_chat_btn"], use_container_width=True):
             pdf_bytes = generate_chat_pdf(st.session_state.messages)
             st.download_button(label="Click here to save your PDF", data=pdf_bytes, file_name="MediChat_Conversation_" + datetime.now().strftime("%Y%m%d_%H%M") + ".pdf", mime="application/pdf", use_container_width=True)
 
     st.markdown('<div class="input-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-label">Upload a medical image (optional)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-label">' + L["upload_label"] + '</div>', unsafe_allow_html=True)
     uploaded_image = st.file_uploader("", type=["jpg", "jpeg", "png"], label_visibility="collapsed", key="uploader_" + str(st.session_state.uploader_key))
     if uploaded_image:
         ia, ib, ic = st.columns([1, 2, 1])
         with ib:
             st.image(uploaded_image, caption="Ready for analysis", use_column_width=True)
-    st.markdown('<div class="section-label" style="margin-top:0.7rem;">Your question</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-label" style="margin-top:0.7rem;">' + L["question_label"] + '</div>', unsafe_allow_html=True)
     with st.form(key="chat_form", clear_on_submit=True):
-        user_input = st.text_input("", placeholder="Type your health question here...", label_visibility="collapsed")
+        user_input = st.text_input("", placeholder=L["placeholder"], label_visibility="collapsed")
         fc1, fc2, fc3 = st.columns([2, 2, 1])
         with fc2:
-            submit = st.form_submit_button("Send to MediChat")
+            submit = st.form_submit_button(L["send_btn"])
         with fc3:
-            clear = st.form_submit_button("Clear")
+            clear = st.form_submit_button(L["clear_btn"])
     st.markdown("</div>", unsafe_allow_html=True)
 
     if clear:
@@ -536,15 +738,16 @@ if st.session_state.mode == "chat":
 
     if submit and (user_input.strip() or uploaded_image):
         st.session_state.qcount += 1
+        lang_instruction = LANGUAGES[st.session_state.selected_language]["lang_instruction"]
         if uploaded_image:
             st.session_state.messages.append({"role": "user", "type": "image", "content": user_input.strip()})
             with st.spinner("Analysing your image..."):
                 uploaded_image.seek(0)
-                reply = medichat_vision(user_input, encode_image(uploaded_image), st.session_state.messages)
+                reply = medichat_vision(user_input, encode_image(uploaded_image), st.session_state.messages, lang_instruction)
         else:
             st.session_state.messages.append({"role": "user", "type": "text", "content": user_input.strip()})
             with st.spinner("Thinking..."):
-                reply, memory = medichat_rag(user_input, st.session_state.messages)
+                reply, memory = medichat_rag(user_input, st.session_state.messages, lang_instruction)
                 st.session_state.patient_memory = memory
         st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply})
         st.rerun()
@@ -558,7 +761,7 @@ else:
         report_date = datetime.now().strftime("%B %d, %Y at %I:%M %p")
 
         st.markdown("---")
-        st.markdown("### MediChat Assessment Report")
+        st.markdown("### " + L["report_title"])
         st.caption("Generated: " + report_date)
 
         if "emergency" in urgency_lower or "now" in urgency_lower:
@@ -569,7 +772,7 @@ else:
             st.success("URGENCY: " + urgency)
 
         st.markdown("---")
-        st.markdown("#### Symptoms Reported")
+        st.markdown("#### " + L["symptoms_reported"])
         rc1, rc2 = st.columns(2)
         with rc1:
             st.info("**Main symptom:** " + data.get("main_symptom", ""))
@@ -585,35 +788,35 @@ else:
             st.info("**Other symptoms:** " + other)
 
         st.markdown("---")
-        st.markdown("#### Possible Conditions")
+        st.markdown("#### " + L["possible_conditions"])
         for c in parsed.get("conditions", []):
             if c.strip():
                 st.markdown("- " + c.strip())
 
         st.markdown("---")
-        st.markdown("#### What To Do Next")
+        st.markdown("#### " + L["what_to_do"])
         for i, s in enumerate(parsed.get("next_steps", []), 1):
             if s.strip():
                 st.markdown("**" + str(i) + ".** " + s.strip())
 
         st.markdown("---")
-        st.markdown("#### MediChat Summary")
+        st.markdown("#### " + L["summary"])
         summary = parsed.get("summary", "")
         if summary:
             st.markdown('<div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:12px;padding:1rem;font-size:0.92rem;color:#134e4a;line-height:1.6;">' + summary + "</div>", unsafe_allow_html=True)
 
         st.markdown("---")
-        st.warning("This assessment is for information only and is NOT a medical diagnosis. Please consult a qualified healthcare professional.")
+        st.warning(L["disclaimer_short"])
 
         st.markdown("---")
-        st.markdown("**Download your assessment report as PDF:**")
+        st.markdown("**" + L["download_chat"] + "**")
         pdf_bytes = generate_assessment_pdf(parsed, data, report_date)
-        st.download_button(label="Download Assessment Report as PDF", data=pdf_bytes, file_name="MediChat_Assessment_" + datetime.now().strftime("%Y%m%d_%H%M") + ".pdf", mime="application/pdf", use_container_width=True)
+        st.download_button(label=L["download_assess_btn"], data=pdf_bytes, file_name="MediChat_Assessment_" + datetime.now().strftime("%Y%m%d_%H%M") + ".pdf", mime="application/pdf", use_container_width=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
         br1, br2 = st.columns(2)
         with br1:
-            if st.button("Start New Assessment", use_container_width=True):
+            if st.button(L["new_assessment"], use_container_width=True):
                 st.session_state.assessment_stage = 0
                 st.session_state.assessment_data = {}
                 st.session_state.assessment_complete = False
@@ -621,19 +824,20 @@ else:
                 st.session_state.assessment_parsed = None
                 st.rerun()
         with br2:
-            if st.button("Switch to Free Chat", use_container_width=True):
+            if st.button(L["switch_chat"], use_container_width=True):
                 st.session_state.mode = "chat"
                 st.rerun()
 
     else:
+        L = LANGUAGES[st.session_state.selected_language]
         stage = st.session_state.assessment_stage
         total = len(ASSESSMENT_STAGES)
         progress = int((stage / total) * 100)
 
-        st.markdown('<div class="assessment-card"><div class="assessment-title">Symptom Assessment</div><div class="assessment-subtitle">Answer a few quick questions and MediChat will generate a personalised health assessment.</div><div class="progress-label"><span>Step ' + str(stage + 1) + ' of ' + str(total) + '</span><span>' + str(progress) + '% complete</span></div><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:' + str(progress) + '%;"></div></div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="assessment-card"><div class="assessment-title">' + L["symptom_title"] + '</div><div class="assessment-subtitle">' + L["symptom_subtitle"] + '</div><div class="progress-label"><span>Step ' + str(stage + 1) + ' of ' + str(total) + '</span><span>' + str(progress) + '% complete</span></div><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:' + str(progress) + '%;"></div></div></div>', unsafe_allow_html=True)
 
         if st.session_state.assessment_data:
-            with st.expander("Your answers so far", expanded=False):
+            with st.expander(L["answers_so_far"], expanded=False):
                 for k, v in st.session_state.assessment_data.items():
                     st.markdown("**" + k.replace("_", " ").title() + ":** " + str(v))
 
@@ -644,7 +848,7 @@ else:
                 st.caption(current["hint"])
 
             if current["options"]:
-                st.markdown("**Quick select:**")
+                st.markdown("**" + L["quick_select"] + "**")
                 num_cols = min(len(current["options"]), 3)
                 ocols = st.columns(num_cols)
                 for i, opt in enumerate(current["options"]):
@@ -653,8 +857,9 @@ else:
                             st.session_state.assessment_data[current["key"]] = opt
                             st.session_state.assessment_stage += 1
                             if st.session_state.assessment_stage >= total:
+                                lang_instruction = LANGUAGES[st.session_state.selected_language]["lang_instruction"]
                                 with st.spinner("Generating your personalised assessment..."):
-                                    report = generate_assessment_report(st.session_state.assessment_data)
+                                    report = generate_assessment_report(st.session_state.assessment_data, lang_instruction)
                                     st.session_state.assessment_report = report
                                     st.session_state.assessment_parsed = parse_report(report)
                                     st.session_state.assessment_complete = True
@@ -664,16 +869,17 @@ else:
                 typed = st.text_input("", placeholder="Or type your own answer here...", label_visibility="collapsed")
                 ac1, ac2, ac3 = st.columns([2, 2, 1])
                 with ac2:
-                    next_btn = st.form_submit_button("Next")
+                    next_btn = st.form_submit_button(L["next"])
                 with ac3:
-                    cancel_btn = st.form_submit_button("Cancel")
+                    cancel_btn = st.form_submit_button(L["cancel"])
 
             if next_btn and typed.strip():
                 st.session_state.assessment_data[current["key"]] = typed.strip()
                 st.session_state.assessment_stage += 1
                 if st.session_state.assessment_stage >= total:
+                    lang_instruction = LANGUAGES[st.session_state.selected_language]["lang_instruction"]
                     with st.spinner("Generating your personalised assessment..."):
-                        report = generate_assessment_report(st.session_state.assessment_data)
+                        report = generate_assessment_report(st.session_state.assessment_data, lang_instruction)
                         st.session_state.assessment_report = report
                         st.session_state.assessment_parsed = parse_report(report)
                         st.session_state.assessment_complete = True
