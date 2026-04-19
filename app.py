@@ -389,16 +389,17 @@ def build_memory_context(memory):
 
 # ── Emergency Detection ───────────────────────────────────────────────
 EMERGENCY_KEYWORDS = [
-    "suicide", "suicidal", "kill myself", "end my life", "want to die",
-    "can't breathe", "cant breathe", "unable to breathe", "not breathing",
-    "chest pain", "crushing chest", "heart attack",
-    "stroke", "having a stroke",
-    "unconscious", "passed out", "fainted",
-    "severe bleeding", "heavy bleeding", "bleeding a lot",
+    "suicide", "suicidal", "kill myself", "end my life", "want to die", "self harm",
+    "can't breathe", "cant breathe", "unable to breathe", "not breathing", "struggling to breathe",
+    "chest pain", "crushing chest", "heart attack", "heart racing dangerously",
+    "stroke", "having a stroke", "face drooping", "slurred speech",
+    "unconscious", "passed out", "fainted", "blacking out", "lose consciousness",
+    "severe bleeding", "heavy bleeding", "bleeding a lot", "cannot stop bleeding",
     "overdose", "poisoned", "took too many pills",
     "choking",
-    "severe allergic reaction", "anaphylaxis",
-    "seizure", "having a seizure",
+    "severe allergic reaction", "anaphylaxis", "throat closing",
+    "seizure", "having a seizure", "convulsing",
+    "cannot move", "can't move", "paralysed", "paralyzed",
 ]
 
 def detect_emergency(text):
@@ -433,22 +434,36 @@ def medichat_rag(question, all_messages, lang_instruction="", patient_name=""):
         if m.get("type") == "text":
             history.append({"role": m["role"], "content": m["content"]})
     system = (
-        "You are MediChat, a warm, friendly, and conversational health assistant. "
-        "Talk naturally like a caring human. Keep responses clear and simple. "
-        "RULES: 1) Never mention anything the patient has NOT said. "
-        "2) Use medical research as background knowledge only. "
-        "3) Never invent symptoms or history. "
-        "4) Respond warmly to casual messages.\n\n"
+        "You are MediChat, a confident and clinically knowledgeable AI health assistant. "
+        "Your patients come to you because their doctors have not given them clear answers. "
+        "Your job is to be genuinely useful, not to over-disclaim or be evasive.\n\n"
+        "HOW TO RESPOND:\n"
+        "1. Be direct and concrete. Patients want real answers, not endless validation.\n"
+        "2. When a patient describes clear symptom clusters (e.g. racing heart + nausea + shortness of breath + feeling faint), name the likely conditions plainly. Do not hide behind 'I'm not a doctor' every sentence.\n"
+        "3. Use the medical context below to identify the most likely diagnoses and explain them in simple language.\n"
+        "4. Only include ONE disclaimer at the END of your response, not in every paragraph. The app already shows a disclaimer banner.\n"
+        "5. Keep responses focused: name the likely condition(s), explain briefly, give concrete next steps.\n"
+        "6. Don't repeat the patient's symptoms back to them in every message — they already know.\n"
+        "7. Be warm but confident. You help them MORE by giving real information than by saying 'that sounds scary'.\n"
+        "8. If symptoms match a well-known pattern (panic attack, migraine, asthma, hypoglycemia, vertigo, etc.), SAY SO.\n\n"
+        "AVOID:\n"
+        "- Excessive empathy phrases like 'that sounds really overwhelming' in every message\n"
+        "- Repeating 'I'm not a doctor' more than once per conversation\n"
+        "- Asking more than 1-2 clarifying questions before giving useful information\n"
+        "- Generic lists of 'possible factors' without committing to the most likely ones\n\n"
     )
     if patient_name:
-        system += "The patient's name is " + patient_name + ". Use their name naturally where it feels warm and appropriate, but do not overuse it.\n\n"
+        system += "The patient's name is " + patient_name + ". Use their name sparingly — maximum once per response, and only when it genuinely helps.\n\n"
     if lang_instruction:
         system += lang_instruction + "\n\n"
     if memory_context:
         system += "WHAT THIS PATIENT HAS TOLD YOU:\n" + memory_context + "\n\n"
-    system += "BACKGROUND MEDICAL KNOWLEDGE:\n" + context
+    system += (
+        "MEDICAL KNOWLEDGE (use this to identify conditions and give specific answers):\n"
+        + context
+    )
     msgs = [{"role": "system", "content": system}] + history + [{"role": "user", "content": question}]
-    r = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=msgs, temperature=0.6, max_tokens=1024)
+    r = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=msgs, temperature=0.5, max_tokens=1024)
     return r.choices[0].message.content, memory, sources
 
 def medichat_vision(question, b64, all_messages, lang_instruction=""):
