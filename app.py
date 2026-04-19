@@ -57,6 +57,61 @@ st.markdown("""
     .image-tag { background: #faf5ff; border: 1px solid #ddd6fe; border-radius: 10px; padding: 0.3rem 0.7rem; color: #7c3aed; font-size: 0.73rem; margin-bottom: 0.3rem; display: inline-block; }
     .memory-card { background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 0.6rem 1rem; margin-bottom: 0.8rem; font-size: 0.76rem; color: #166534; }
     .memory-title { font-weight: 700; margin-bottom: 0.25rem; font-size: 0.78rem; }
+
+    .emergency-banner {
+        background: linear-gradient(135deg, #dc2626, #991b1b);
+        color: white;
+        border-radius: 14px;
+        padding: 1rem 1.3rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 6px 20px rgba(220,38,38,0.35);
+        animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { box-shadow: 0 6px 20px rgba(220,38,38,0.35); }
+        50% { box-shadow: 0 6px 30px rgba(220,38,38,0.65); }
+    }
+    .emergency-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.5rem; }
+    .emergency-text { font-size: 0.85rem; line-height: 1.5; margin-bottom: 0.5rem; }
+    .emergency-number {
+        background: white; color: #991b1b;
+        padding: 0.5rem 1rem; border-radius: 10px;
+        font-size: 1.1rem; font-weight: 800;
+        display: inline-block; margin-top: 0.2rem;
+        letter-spacing: 0.05em;
+    }
+
+    .source-tag {
+        display: inline-block;
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        color: #0369a1;
+        font-size: 0.68rem;
+        font-weight: 600;
+        padding: 0.2rem 0.6rem;
+        border-radius: 50px;
+        margin-right: 0.3rem;
+        margin-top: 0.3rem;
+    }
+    .source-row {
+        margin-left: 42px;
+        margin-bottom: 0.2rem;
+        font-size: 0.7rem;
+        color: #64748b;
+    }
+
+    .name-welcome {
+        background: linear-gradient(135deg, #f0fdfa, #ecfdf5);
+        border: 1px solid #99f6e4;
+        border-radius: 14px;
+        padding: 0.9rem 1.2rem;
+        margin-bottom: 0.8rem;
+    }
+    .name-welcome-text {
+        font-size: 0.92rem;
+        color: #134e4a;
+        font-weight: 500;
+    }
     .input-card { background: white; border-radius: 20px; padding: 1.1rem 1.3rem; box-shadow: 0 4px 24px rgba(0,0,0,0.06); margin-top: 0.8rem; border: 1px solid #e2e8f0; }
     .stTextInput > div > div > input { background: #f8fafc !important; border: 1.5px solid #e2e8f0 !important; border-radius: 12px !important; color: #1e293b !important; padding: 0.75rem 1rem !important; font-size: 0.9rem !important; }
     .stTextInput > div > div > input:focus { border-color: #0d9488 !important; box-shadow: 0 0 0 3px rgba(13,148,136,0.1) !important; }
@@ -332,10 +387,45 @@ def build_memory_context(memory):
         parts.append("Referenced medications: " + ", ".join(memory["medications"]))
     return "\n".join(parts)
 
-def medichat_rag(question, all_messages, lang_instruction=""):
+# ── Emergency Detection ───────────────────────────────────────────────
+EMERGENCY_KEYWORDS = [
+    "suicide", "suicidal", "kill myself", "end my life", "want to die",
+    "can't breathe", "cant breathe", "unable to breathe", "not breathing",
+    "chest pain", "crushing chest", "heart attack",
+    "stroke", "having a stroke",
+    "unconscious", "passed out", "fainted",
+    "severe bleeding", "heavy bleeding", "bleeding a lot",
+    "overdose", "poisoned", "took too many pills",
+    "choking",
+    "severe allergic reaction", "anaphylaxis",
+    "seizure", "having a seizure",
+]
+
+def detect_emergency(text):
+    if not text:
+        return False
+    text_lower = text.lower()
+    for kw in EMERGENCY_KEYWORDS:
+        if kw in text_lower:
+            return True
+    return False
+
+# ── Source Tracking ───────────────────────────────────────────────────
+def get_sources_used(idxs):
+    pubmed_count = sum(1 for i in idxs if i < 500)
+    dialog_count = sum(1 for i in idxs if i >= 500)
+    sources = []
+    if pubmed_count > 0:
+        sources.append("PubMed Research (" + str(pubmed_count) + ")")
+    if dialog_count > 0:
+        sources.append("Doctor-Patient Data (" + str(dialog_count) + ")")
+    return sources
+
+def medichat_rag(question, all_messages, lang_instruction="", patient_name=""):
     emb = embedder.encode([question]).astype("float32")
     _, idxs = index.search(emb, k=3)
     context = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
+    sources = get_sources_used(idxs[0])
     memory = extract_patient_memory(all_messages)
     memory_context = build_memory_context(memory)
     history = []
@@ -350,6 +440,8 @@ def medichat_rag(question, all_messages, lang_instruction=""):
         "3) Never invent symptoms or history. "
         "4) Respond warmly to casual messages.\n\n"
     )
+    if patient_name:
+        system += "The patient's name is " + patient_name + ". Use their name naturally where it feels warm and appropriate, but do not overuse it.\n\n"
     if lang_instruction:
         system += lang_instruction + "\n\n"
     if memory_context:
@@ -357,7 +449,7 @@ def medichat_rag(question, all_messages, lang_instruction=""):
     system += "BACKGROUND MEDICAL KNOWLEDGE:\n" + context
     msgs = [{"role": "system", "content": system}] + history + [{"role": "user", "content": question}]
     r = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=msgs, temperature=0.6, max_tokens=1024)
-    return r.choices[0].message.content, memory
+    return r.choices[0].message.content, memory, sources
 
 def medichat_vision(question, b64, all_messages, lang_instruction=""):
     memory = extract_patient_memory(all_messages)
@@ -594,6 +686,9 @@ if "session_started" not in st.session_state:
     st.session_state.assessment_report = None
     st.session_state.assessment_parsed = None
     st.session_state.selected_language = "English"
+    st.session_state.patient_name = ""
+    st.session_state.emergency_detected = False
+    st.session_state.last_sources = []
 
 with st.sidebar:
     st.markdown("## MediChat")
@@ -611,6 +706,13 @@ with st.sidebar:
         st.rerun()
 
     L = LANGUAGES[st.session_state.selected_language]
+
+    st.markdown("---")
+    st.markdown('<div class="sb-title">Your Name (Optional)</div>', unsafe_allow_html=True)
+    name_input = st.text_input("", value=st.session_state.patient_name, placeholder="First name", label_visibility="collapsed", key="name_input")
+    if name_input != st.session_state.patient_name:
+        st.session_state.patient_name = name_input.strip()
+        st.rerun()
 
     st.markdown("---")
     st.markdown('<div class="sb-title">Session Stats</div>', unsafe_allow_html=True)
@@ -631,7 +733,16 @@ with st.sidebar:
             st.markdown('<div class="sb-memory-item">Medications: ' + ", ".join(mem["medications"][:2]) + '</div>', unsafe_allow_html=True)
         st.markdown("---")
     st.markdown('<div class="sb-title">Active Features</div>', unsafe_allow_html=True)
-    features = [("#0d9488", "RAG Pipeline"), ("#7c3aed", "Vision AI"), ("#0369a1", "Chat Memory"), ("#059669", "Symptom Check"), ("#dc2626", "PDF Export")]
+    features = [
+        ("#dc2626", "Emergency Detection"),
+        ("#0d9488", "RAG Pipeline"),
+        ("#7c3aed", "Vision AI"),
+        ("#0369a1", "Chat Memory"),
+        ("#059669", "Symptom Check"),
+        ("#d97706", "PDF Export"),
+        ("#0ea5e9", "Source Transparency"),
+        ("#8b5cf6", "Multilingual (5)"),
+    ]
     for color, name in features:
         st.markdown('<div class="sb-feature"><div class="sb-feature-dot" style="background:' + color + ';"></div><div class="sb-feature-name">' + name + '</div><div class="sb-feature-status">Live</div></div>', unsafe_allow_html=True)
     st.markdown("---")
@@ -639,7 +750,7 @@ with st.sidebar:
     for tip in ["What causes high blood pressure?", "I have chest pain and I am diabetic", "How does stress affect the heart?", "What foods reduce inflammation?", "I have been dizzy since yesterday"]:
         st.markdown('<div class="sb-tip">- ' + tip + '</div>', unsafe_allow_html=True)
     st.markdown("---")
-    st.markdown('<div class="sb-footer">MediChat v3.0<br>ICT654 - Group 7 - SISTC 2026</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sb-footer">MediChat v4.0<br>ICT654 - Group 7 - SISTC 2026</div>', unsafe_allow_html=True)
 
 st.markdown('<div class="header-card"><div style="font-size:2.5rem;">🏥</div><div><div class="header-title">MediChat</div><div class="header-subtitle">Your AI health assistant - chat freely or do a guided symptom check</div></div></div>', unsafe_allow_html=True)
 
@@ -655,11 +766,36 @@ with cm2:
         st.session_state.mode = "assessment"
         st.rerun()
 
-st.markdown('<div class="stats-row"><span class="stat-pill green">RAG - PubMed + MedDialog</span><span class="stat-pill purple">Vision AI Active</span><span class="stat-pill blue">1000 Medical Docs</span><span class="stat-pill orange">Memory Active</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="stats-row"><span class="stat-pill green">RAG - PubMed + MedDialog</span><span class="stat-pill purple">Vision AI Active</span><span class="stat-pill blue">1000 Medical Docs</span><span class="stat-pill orange">Memory Active</span><span class="stat-pill" style="color:#dc2626;border-color:#fecaca;background:#fef2f2;">Emergency Detection</span></div>', unsafe_allow_html=True)
 st.markdown('<div class="disclaimer">MediChat provides general health information only - not a substitute for professional medical advice. Always consult a qualified doctor for personal health concerns.</div>', unsafe_allow_html=True)
+
+# Emergency banner - shown whenever emergency keywords detected in this session
+if st.session_state.emergency_detected:
+    st.markdown(
+        '<div class="emergency-banner">'
+        '<div class="emergency-title">🚨 This May Be a Medical Emergency</div>'
+        '<div class="emergency-text">Based on what you described, you may need immediate medical attention. Please stop and call emergency services now. Do not wait.</div>'
+        '<div class="emergency-number">📞 Call 000 (Australia)</div>'
+        '<div style="font-size:0.75rem;margin-top:0.5rem;opacity:0.9;">Other countries: 911 (USA) | 999 (UK) | 112 (EU) | 119 (Sri Lanka) | 102 (India)</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+    cols = st.columns([3, 1])
+    with cols[1]:
+        if st.button("Dismiss alert", key="dismiss_emergency"):
+            st.session_state.emergency_detected = False
+            st.rerun()
 
 if st.session_state.mode == "chat":
     mem = st.session_state.patient_memory
+
+    # Patient name welcome
+    if st.session_state.patient_name and not st.session_state.messages:
+        st.markdown(
+            '<div class="name-welcome"><div class="name-welcome-text">👋 Hi <strong>' + st.session_state.patient_name + '</strong>! MediChat will personalise responses for you throughout this session.</div></div>',
+            unsafe_allow_html=True
+        )
+
     if any([mem.get("symptoms"), mem.get("conditions"), mem.get("medications")]) and st.session_state.messages:
         mem_parts = []
         if mem.get("symptoms"):
@@ -687,6 +823,11 @@ if st.session_state.mode == "chat":
             else:
                 st.markdown('<div class="bot-label">MediChat</div>', unsafe_allow_html=True)
                 st.markdown('<div class="bot-wrap"><div class="av av-bot">M</div><div class="bot-bubble">' + content + '</div></div>', unsafe_allow_html=True)
+                # Show source tags
+                msg_sources = msg.get("sources", [])
+                if msg_sources:
+                    source_tags = "".join(['<span class="source-tag">📚 ' + s + '</span>' for s in msg_sources])
+                    st.markdown('<div class="source-row">Grounded in: ' + source_tags + '</div>', unsafe_allow_html=True)
 
     if st.session_state.messages:
         st.markdown("<br>", unsafe_allow_html=True)
@@ -734,22 +875,31 @@ if st.session_state.mode == "chat":
         st.session_state.feedback = {}
         st.session_state.patient_memory = {"symptoms": [], "conditions": [], "medications": []}
         st.session_state.uploader_key += 1
+        st.session_state.emergency_detected = False
+        st.session_state.last_sources = []
         st.rerun()
 
     if submit and (user_input.strip() or uploaded_image):
         st.session_state.qcount += 1
         lang_instruction = LANGUAGES[st.session_state.selected_language]["lang_instruction"]
+
+        # Emergency detection on user input
+        if user_input.strip() and detect_emergency(user_input):
+            st.session_state.emergency_detected = True
+
         if uploaded_image:
             st.session_state.messages.append({"role": "user", "type": "image", "content": user_input.strip()})
             with st.spinner("Analysing your image..."):
                 uploaded_image.seek(0)
                 reply = medichat_vision(user_input, encode_image(uploaded_image), st.session_state.messages, lang_instruction)
+            st.session_state.last_sources = ["Vision AI (Llama-4-Scout)"]
         else:
             st.session_state.messages.append({"role": "user", "type": "text", "content": user_input.strip()})
             with st.spinner("Thinking..."):
-                reply, memory = medichat_rag(user_input, st.session_state.messages, lang_instruction)
+                reply, memory, sources = medichat_rag(user_input, st.session_state.messages, lang_instruction, st.session_state.patient_name)
                 st.session_state.patient_memory = memory
-        st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply})
+                st.session_state.last_sources = sources
+        st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources})
         st.rerun()
 
 else:
@@ -855,6 +1005,8 @@ else:
                     with ocols[i % num_cols]:
                         if st.button(opt, key="opt_" + str(stage) + "_" + str(i), use_container_width=True):
                             st.session_state.assessment_data[current["key"]] = opt
+                            if current["key"] == "main_symptom" and detect_emergency(opt):
+                                st.session_state.emergency_detected = True
                             st.session_state.assessment_stage += 1
                             if st.session_state.assessment_stage >= total:
                                 lang_instruction = LANGUAGES[st.session_state.selected_language]["lang_instruction"]
@@ -875,6 +1027,8 @@ else:
 
             if next_btn and typed.strip():
                 st.session_state.assessment_data[current["key"]] = typed.strip()
+                if current["key"] == "main_symptom" and detect_emergency(typed):
+                    st.session_state.emergency_detected = True
                 st.session_state.assessment_stage += 1
                 if st.session_state.assessment_stage >= total:
                     lang_instruction = LANGUAGES[st.session_state.selected_language]["lang_instruction"]
