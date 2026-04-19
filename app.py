@@ -100,6 +100,37 @@ st.markdown("""
         color: #64748b;
     }
 
+    .confidence-row {
+        margin-left: 42px;
+        margin-bottom: 0.6rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.68rem;
+    }
+    .confidence-pill {
+        padding: 0.15rem 0.6rem;
+        border-radius: 50px;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+    }
+    .conf-high { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .conf-medium { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .conf-low { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .confidence-bar {
+        display: inline-block;
+        width: 80px;
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 50px;
+        overflow: hidden;
+    }
+    .confidence-fill {
+        display: block;
+        height: 100%;
+        border-radius: 50px;
+    }
+
     .name-welcome {
         background: linear-gradient(135deg, #f0fdfa, #ecfdf5);
         border: 1px solid #99f6e4;
@@ -387,7 +418,7 @@ def build_memory_context(memory):
         parts.append("Referenced medications: " + ", ".join(memory["medications"]))
     return "\n".join(parts)
 
-# ── Emergency Detection ───────────────────────────────────────────────
+# ── Advanced Emergency Detection ──────────────────────────────────────
 EMERGENCY_KEYWORDS = [
     "suicide", "suicidal", "kill myself", "end my life", "want to die", "self harm",
     "can't breathe", "cant breathe", "unable to breathe", "not breathing", "struggling to breathe",
@@ -402,14 +433,144 @@ EMERGENCY_KEYWORDS = [
     "cannot move", "can't move", "paralysed", "paralyzed",
 ]
 
-def detect_emergency(text):
-    if not text:
-        return False
-    text_lower = text.lower()
+# Symptom clusters that together indicate emergency (even if individual words are mild)
+EMERGENCY_SYMPTOM_CLUSTERS = [
+    {
+        "name": "Possible cardiac event",
+        "required": [["chest", "chest pressure", "chest tight"]],
+        "any_of": [["breath", "breathless", "out of breath"], ["arm pain", "jaw pain", "left arm"], ["sweat", "sweating"], ["nausea", "vomit"]],
+        "min_any": 2,
+    },
+    {
+        "name": "Possible stroke",
+        "required": [],
+        "any_of": [["face droop", "drooping"], ["slurred", "speech"], ["weakness one side", "numb one side"], ["sudden confusion"], ["sudden severe headache"]],
+        "min_any": 2,
+    },
+    {
+        "name": "Possible severe allergic reaction",
+        "required": [],
+        "any_of": [["swelling"], ["throat", "tongue"], ["hives", "rash all over"], ["difficulty breathing", "trouble breathing"]],
+        "min_any": 3,
+    },
+    {
+        "name": "Possible syncope/pre-syncope episode",
+        "required": [],
+        "any_of": [["faint", "faintish", "feel faint"], ["dizzy", "lightheaded"], ["blank", "going blank"], ["nausea"], ["heart racing", "heartbeat raises", "palpitations"], ["breath", "breathless"]],
+        "min_any": 3,
+    },
+    {
+        "name": "Possible severe asthma exacerbation",
+        "required": [["asthma", "asthmatic"]],
+        "any_of": [["can't breathe", "cant breathe", "struggling to breathe"], ["inhaler not working", "inhaler isn't helping"], ["blue lips", "blue fingers"], ["cannot speak", "can't talk"]],
+        "min_any": 1,
+    },
+    {
+        "name": "Possible hyperglycemic crisis",
+        "required": [["diabetes", "diabetic"]],
+        "any_of": [["excessive thirst"], ["frequent urination"], ["confusion"], ["fruity breath"], ["vomiting"], ["extreme fatigue"]],
+        "min_any": 3,
+    },
+]
+
+def detect_emergency(text, conversation_text=""):
+    """Detect emergency via keywords OR symptom cluster pattern matching."""
+    if not text and not conversation_text:
+        return False, None
+    combined = (text + " " + conversation_text).lower()
+
+    # Direct keyword match
     for kw in EMERGENCY_KEYWORDS:
-        if kw in text_lower:
-            return True
-    return False
+        if kw in combined:
+            return True, "Emergency keyword detected"
+
+    # Symptom cluster match
+    for cluster in EMERGENCY_SYMPTOM_CLUSTERS:
+        required_met = True
+        for req_group in cluster["required"]:
+            if not any(term in combined for term in req_group):
+                required_met = False
+                break
+        if not required_met:
+            continue
+        matches = 0
+        for any_group in cluster["any_of"]:
+            if any(term in combined for term in any_group):
+                matches += 1
+        if matches >= cluster["min_any"]:
+            return True, cluster["name"]
+    return False, None
+
+# ── Drug-Condition Interaction Safety ─────────────────────────────────
+DRUG_INTERACTIONS = {
+    "antihistamine": {
+        "drugs": ["dramamine", "dimenhydrinate", "bonine", "meclizine", "benadryl", "diphenhydramine", "chlorpheniramine", "promethazine"],
+        "conditions": ["asthma", "copd", "glaucoma", "bph", "enlarged prostate"],
+        "warning": "Antihistamines can dry respiratory secretions (worsening asthma/COPD), raise intraocular pressure (glaucoma), or cause urinary retention (BPH)."
+    },
+    "nsaid": {
+        "drugs": ["ibuprofen", "advil", "nurofen", "naproxen", "aleve", "aspirin", "diclofenac", "voltaren"],
+        "conditions": ["hypertension", "high blood pressure", "kidney", "renal", "ulcer", "gastritis", "asthma", "heart failure", "anticoagulant", "warfarin", "blood thinner"],
+        "warning": "NSAIDs can raise blood pressure, worsen kidney function, cause GI bleeding (especially with ulcers or blood thinners), and trigger bronchospasm in some asthmatics."
+    },
+    "decongestant": {
+        "drugs": ["pseudoephedrine", "sudafed", "phenylephrine", "oxymetazoline"],
+        "conditions": ["hypertension", "high blood pressure", "heart disease", "arrhythmia", "thyroid", "hyperthyroid", "diabetes", "glaucoma", "bph"],
+        "warning": "Decongestants raise blood pressure and heart rate, destabilise cardiac rhythm, worsen hyperthyroidism, and can affect glaucoma or urinary retention."
+    },
+    "paracetamol_high_dose": {
+        "drugs": ["paracetamol", "acetaminophen", "panadol", "tylenol"],
+        "conditions": ["liver", "hepatitis", "cirrhosis", "heavy alcohol", "alcoholic"],
+        "warning": "High-dose or chronic paracetamol use can cause severe liver damage, especially with pre-existing liver disease or heavy alcohol use."
+    },
+    "bismuth": {
+        "drugs": ["pepto-bismol", "bismuth subsalicylate"],
+        "conditions": ["aspirin allergy", "kidney", "renal", "bleeding disorder", "anticoagulant", "warfarin"],
+        "warning": "Bismuth subsalicylate contains salicylate (aspirin-like), unsafe with aspirin allergy, kidney disease, or blood thinners."
+    },
+    "ppi_h2": {
+        "drugs": ["omeprazole", "esomeprazole", "pantoprazole", "ranitidine", "famotidine", "zantac"],
+        "conditions": ["osteoporosis", "kidney", "c. diff", "magnesium deficiency"],
+        "warning": "Long-term PPI use can reduce calcium/magnesium absorption (bone risk), affect kidney function, and increase C. diff infection risk."
+    },
+}
+
+def check_drug_interactions(response_text, memory):
+    """Scan MediChat's response for drug mentions and cross-check with stated patient conditions."""
+    if not response_text:
+        return []
+    text_lower = response_text.lower()
+    conditions_text = " ".join(memory.get("conditions", [])).lower() + " " + " ".join(memory.get("medications", [])).lower()
+    if not conditions_text.strip():
+        return []
+
+    alerts = []
+    for class_name, info in DRUG_INTERACTIONS.items():
+        drug_hit = next((d for d in info["drugs"] if d in text_lower), None)
+        if not drug_hit:
+            continue
+        condition_hits = [c for c in info["conditions"] if c in conditions_text]
+        if condition_hits:
+            alerts.append({
+                "drug": drug_hit.title(),
+                "conditions": condition_hits,
+                "warning": info["warning"]
+            })
+    return alerts
+
+# ── Response Confidence Scoring ───────────────────────────────────────
+def calculate_confidence(distances):
+    """Convert FAISS L2 distances into a simple confidence indicator."""
+    if not distances or len(distances) == 0:
+        return "low", 0
+    avg_dist = sum(distances) / len(distances)
+    # FAISS L2 with MiniLM: ~0.5 is close match, ~1.5 is moderate, >2 is weak
+    if avg_dist < 0.8:
+        return "high", round((1 - avg_dist / 2) * 100)
+    elif avg_dist < 1.3:
+        return "medium", round((1 - avg_dist / 2) * 100)
+    else:
+        return "low", max(20, round((1 - avg_dist / 2.5) * 100))
 
 # ── Source Tracking ───────────────────────────────────────────────────
 def get_sources_used(idxs):
@@ -424,9 +585,10 @@ def get_sources_used(idxs):
 
 def medichat_rag(question, all_messages, lang_instruction="", patient_name=""):
     emb = embedder.encode([question]).astype("float32")
-    _, idxs = index.search(emb, k=3)
+    distances, idxs = index.search(emb, k=3)
     context = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
     sources = get_sources_used(idxs[0])
+    confidence_level, confidence_pct = calculate_confidence(distances[0].tolist())
     memory = extract_patient_memory(all_messages)
     memory_context = build_memory_context(memory)
     history = []
@@ -517,7 +679,7 @@ def medichat_rag(question, all_messages, lang_instruction="", patient_name=""):
         temperature=0.4,
         max_tokens=1024
     )
-    return r.choices[0].message.content, memory, sources
+    return r.choices[0].message.content, memory, sources, confidence_level, confidence_pct
 
 def medichat_vision(question, b64, all_messages, lang_instruction=""):
     memory = extract_patient_memory(all_messages)
@@ -756,6 +918,7 @@ if "session_started" not in st.session_state:
     st.session_state.selected_language = "English"
     st.session_state.patient_name = ""
     st.session_state.emergency_detected = False
+    st.session_state.emergency_reason = ""
     st.session_state.last_sources = []
 
 with st.sidebar:
@@ -832,10 +995,11 @@ st.markdown('<div class="disclaimer">MediChat provides general health informatio
 
 # Emergency banner - shown whenever emergency keywords detected in this session
 if st.session_state.emergency_detected:
+    reason = st.session_state.get("emergency_reason", "Emergency indicators detected")
     st.markdown(
         '<div class="emergency-banner">'
         '<div class="emergency-title">🚨 This May Be a Medical Emergency</div>'
-        '<div class="emergency-text">Based on what you described, you may need immediate medical attention. Please stop and call emergency services now. Do not wait.</div>'
+        '<div class="emergency-text"><strong>Detected pattern:</strong> ' + reason + '. Based on what you described, you may need immediate medical attention. Please stop and call emergency services now. Do not wait.</div>'
         '<div class="emergency-number">📞 Call 000 (Australia)</div>'
         '<div style="font-size:0.75rem;margin-top:0.5rem;opacity:0.9;">Other countries: 911 (USA) | 999 (UK) | 112 (EU) | 119 (Sri Lanka) | 102 (India)</div>'
         '</div>',
@@ -928,6 +1092,20 @@ if st.session_state.mode == "chat":
                 if msg_sources:
                     source_tags = "".join(['<span class="source-tag">📚 ' + s + '</span>' for s in msg_sources])
                     st.markdown('<div class="source-row">Grounded in: ' + source_tags + '</div>', unsafe_allow_html=True)
+                # Show confidence indicator
+                conf_level = msg.get("confidence")
+                conf_pct = msg.get("confidence_pct")
+                if conf_level and conf_pct:
+                    conf_label = {"high": "High Confidence", "medium": "Medium Confidence", "low": "Low Confidence"}.get(conf_level, "")
+                    conf_color = {"high": "#22c55e", "medium": "#f59e0b", "low": "#ef4444"}.get(conf_level, "#64748b")
+                    st.markdown(
+                        '<div class="confidence-row">'
+                        '<span class="confidence-pill conf-' + conf_level + '">' + conf_label + '</span>'
+                        '<span class="confidence-bar"><span class="confidence-fill" style="width:' + str(conf_pct) + '%;background:' + conf_color + ';"></span></span>'
+                        '<span style="color:#64748b;">' + str(conf_pct) + '% RAG match quality</span>'
+                        '</div>',
+                        unsafe_allow_html=True
+                    )
 
     if st.session_state.messages:
         st.markdown("<br>", unsafe_allow_html=True)
@@ -976,6 +1154,7 @@ if st.session_state.mode == "chat":
         st.session_state.patient_memory = {"symptoms": [], "conditions": [], "medications": []}
         st.session_state.uploader_key += 1
         st.session_state.emergency_detected = False
+        st.session_state.emergency_reason = ""
         st.session_state.last_sources = []
         st.session_state.patient_name = ""
         st.rerun()
@@ -984,9 +1163,13 @@ if st.session_state.mode == "chat":
         st.session_state.qcount += 1
         lang_instruction = LANGUAGES[st.session_state.selected_language]["lang_instruction"]
 
-        # Emergency detection on user input
-        if user_input.strip() and detect_emergency(user_input):
-            st.session_state.emergency_detected = True
+        # Advanced emergency detection: check user input + full conversation history
+        if user_input.strip():
+            conv_text = " ".join([m.get("content", "") for m in st.session_state.messages if m.get("type") == "text"])
+            is_emerg, reason = detect_emergency(user_input, conv_text)
+            if is_emerg:
+                st.session_state.emergency_detected = True
+                st.session_state.emergency_reason = reason
 
         if uploaded_image:
             st.session_state.messages.append({"role": "user", "type": "image", "content": user_input.strip()})
@@ -994,14 +1177,24 @@ if st.session_state.mode == "chat":
                 uploaded_image.seek(0)
                 reply = medichat_vision(user_input, encode_image(uploaded_image), st.session_state.messages, lang_instruction)
             st.session_state.last_sources = ["Vision AI (Llama-4-Scout)"]
+            st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75})
         else:
             st.session_state.messages.append({"role": "user", "type": "text", "content": user_input.strip()})
             with st.spinner("Thinking..."):
                 name_for_rag = "" if st.session_state.patient_name == "Guest" else st.session_state.patient_name
-                reply, memory, sources = medichat_rag(user_input, st.session_state.messages, lang_instruction, name_for_rag)
+                reply, memory, sources, conf_level, conf_pct = medichat_rag(user_input, st.session_state.messages, lang_instruction, name_for_rag)
                 st.session_state.patient_memory = memory
                 st.session_state.last_sources = sources
-        st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources})
+
+                # Check drug-condition interactions and append safety alert
+                interaction_alerts = check_drug_interactions(reply, memory)
+                if interaction_alerts:
+                    alert_block = "\n\n---\n\n**⚠️ Drug Safety Check:**\n"
+                    for a in interaction_alerts:
+                        alert_block += "\n- **" + a["drug"] + "** — given your " + ", ".join(a["conditions"]) + ": " + a["warning"]
+                    reply = reply + alert_block
+
+            st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": sources, "confidence": conf_level, "confidence_pct": conf_pct})
         st.rerun()
 
 else:
@@ -1107,7 +1300,7 @@ else:
                     with ocols[i % num_cols]:
                         if st.button(opt, key="opt_" + str(stage) + "_" + str(i), use_container_width=True):
                             st.session_state.assessment_data[current["key"]] = opt
-                            if current["key"] == "main_symptom" and detect_emergency(opt):
+                            if current["key"] == "main_symptom" and detect_emergency(opt)[0]:
                                 st.session_state.emergency_detected = True
                             st.session_state.assessment_stage += 1
                             if st.session_state.assessment_stage >= total:
@@ -1129,7 +1322,7 @@ else:
 
             if next_btn and typed.strip():
                 st.session_state.assessment_data[current["key"]] = typed.strip()
-                if current["key"] == "main_symptom" and detect_emergency(typed):
+                if current["key"] == "main_symptom" and detect_emergency(typed)[0]:
                     st.session_state.emergency_detected = True
                 st.session_state.assessment_stage += 1
                 if st.session_state.assessment_stage >= total:
