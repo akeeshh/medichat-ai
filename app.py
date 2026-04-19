@@ -708,13 +708,6 @@ with st.sidebar:
     L = LANGUAGES[st.session_state.selected_language]
 
     st.markdown("---")
-    st.markdown('<div class="sb-title">Your Name (Optional)</div>', unsafe_allow_html=True)
-    name_input = st.text_input("", value=st.session_state.patient_name, placeholder="First name", label_visibility="collapsed", key="name_input")
-    if name_input != st.session_state.patient_name:
-        st.session_state.patient_name = name_input.strip()
-        st.rerun()
-
-    st.markdown("---")
     st.markdown('<div class="sb-title">Session Stats</div>', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
@@ -789,13 +782,6 @@ if st.session_state.emergency_detected:
 if st.session_state.mode == "chat":
     mem = st.session_state.patient_memory
 
-    # Patient name welcome
-    if st.session_state.patient_name and not st.session_state.messages:
-        st.markdown(
-            '<div class="name-welcome"><div class="name-welcome-text">👋 Hi <strong>' + st.session_state.patient_name + '</strong>! MediChat will personalise responses for you throughout this session.</div></div>',
-            unsafe_allow_html=True
-        )
-
     if any([mem.get("symptoms"), mem.get("conditions"), mem.get("medications")]) and st.session_state.messages:
         mem_parts = []
         if mem.get("symptoms"):
@@ -807,8 +793,54 @@ if st.session_state.mode == "chat":
         st.markdown('<div class="memory-card"><div class="memory-title">MediChat remembers from this session:</div>' + "".join(["<div>- " + p + "</div>" for p in mem_parts]) + "</div>", unsafe_allow_html=True)
 
     if not st.session_state.messages:
-        st.markdown('<div class="welcome-card"><div style="font-size:3rem;margin-bottom:0.7rem;">👋</div><div class="welcome-title">' + L["greeting"] + '</div><div class="welcome-text">' + L["welcome_text"] + '</div><div class="chip-row"><span class="chip">Medications</span><span class="chip">Heart Health</span><span class="chip">Conditions</span><span class="chip">Nutrition</span><span class="chip">Mental Health</span><span class="chip">Infections</span></div></div>', unsafe_allow_html=True)
+        if not st.session_state.patient_name:
+            # Ask for name first
+            st.markdown(
+                '<div class="welcome-card">'
+                '<div style="font-size:3rem;margin-bottom:0.7rem;">👋</div>'
+                '<div class="welcome-title">' + L["greeting"] + '</div>'
+                '<div class="welcome-text">Before we start, what should I call you? Sharing your name is optional but helps me personalise our conversation.</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+            with st.form(key="name_form", clear_on_submit=True):
+                name_cols = st.columns([3, 1, 1])
+                with name_cols[0]:
+                    name_typed = st.text_input("", placeholder="Type your first name...", label_visibility="collapsed")
+                with name_cols[1]:
+                    name_submit = st.form_submit_button("Save")
+                with name_cols[2]:
+                    skip_name = st.form_submit_button("Skip")
+            if name_submit and name_typed.strip():
+                st.session_state.patient_name = name_typed.strip()[:20]
+                st.rerun()
+            if skip_name:
+                st.session_state.patient_name = "Guest"
+                st.rerun()
+        else:
+            # Show personalised welcome
+            display_name = "" if st.session_state.patient_name == "Guest" else ", " + st.session_state.patient_name
+            st.markdown(
+                '<div class="welcome-card">'
+                '<div style="font-size:3rem;margin-bottom:0.7rem;">👋</div>'
+                '<div class="welcome-title">Hi' + display_name + '! How can I help you today?</div>'
+                '<div class="welcome-text">' + L["welcome_text"] + '</div>'
+                '<div class="chip-row">'
+                '<span class="chip">Medications</span>'
+                '<span class="chip">Heart Health</span>'
+                '<span class="chip">Conditions</span>'
+                '<span class="chip">Nutrition</span>'
+                '<span class="chip">Mental Health</span>'
+                '<span class="chip">Infections</span>'
+                '</div></div>',
+                unsafe_allow_html=True
+            )
     else:
+        user_initial = "U"
+        if st.session_state.patient_name and st.session_state.patient_name != "Guest":
+            user_initial = st.session_state.patient_name[0].upper()
+        user_name_label = st.session_state.patient_name if st.session_state.patient_name and st.session_state.patient_name != "Guest" else "You"
+
         for msg in st.session_state.messages:
             role = msg.get("role", "")
             content = msg.get("content", "")
@@ -817,9 +849,9 @@ if st.session_state.mode == "chat":
                 if msg_type == "image":
                     st.markdown('<span class="image-tag">Medical image uploaded for analysis</span>', unsafe_allow_html=True)
                     if content:
-                        st.markdown('<div class="user-wrap"><div class="user-bubble">' + content + '</div><div class="av av-user">U</div></div>', unsafe_allow_html=True)
+                        st.markdown('<div class="user-wrap"><div class="user-bubble">' + content + '</div><div class="av av-user">' + user_initial + '</div></div>', unsafe_allow_html=True)
                 else:
-                    st.markdown('<div class="user-wrap"><div class="user-bubble">' + content + '</div><div class="av av-user">U</div></div>', unsafe_allow_html=True)
+                    st.markdown('<div class="user-wrap"><div class="user-bubble">' + content + '</div><div class="av av-user">' + user_initial + '</div></div>', unsafe_allow_html=True)
             else:
                 st.markdown('<div class="bot-label">MediChat</div>', unsafe_allow_html=True)
                 st.markdown('<div class="bot-wrap"><div class="av av-bot">M</div><div class="bot-bubble">' + content + '</div></div>', unsafe_allow_html=True)
@@ -877,6 +909,7 @@ if st.session_state.mode == "chat":
         st.session_state.uploader_key += 1
         st.session_state.emergency_detected = False
         st.session_state.last_sources = []
+        st.session_state.patient_name = ""
         st.rerun()
 
     if submit and (user_input.strip() or uploaded_image):
@@ -896,7 +929,8 @@ if st.session_state.mode == "chat":
         else:
             st.session_state.messages.append({"role": "user", "type": "text", "content": user_input.strip()})
             with st.spinner("Thinking..."):
-                reply, memory, sources = medichat_rag(user_input, st.session_state.messages, lang_instruction, st.session_state.patient_name)
+                name_for_rag = "" if st.session_state.patient_name == "Guest" else st.session_state.patient_name
+                reply, memory, sources = medichat_rag(user_input, st.session_state.messages, lang_instruction, name_for_rag)
                 st.session_state.patient_memory = memory
                 st.session_state.last_sources = sources
         st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources})
