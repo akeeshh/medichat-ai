@@ -5,3 +5,4 @@ sentence-transformers
 datasets
 pillow
 fpdf2
+openpyxl
