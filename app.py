@@ -982,19 +982,38 @@ st.markdown('<div class="header-card"><div style="font-size:2.5rem;">🏥</div><
 
 L = LANGUAGES[st.session_state.selected_language]
 
-cm1, cm2, cm3 = st.columns(3)
-with cm1:
-    if st.button(L["free_chat"] + (" (Active)" if st.session_state.mode == "chat" else ""), use_container_width=True):
+# Admin mode check: only show Analytics if URL contains ?admin=medichat2026
+ADMIN_KEY = "medichat2026"
+_query_params = st.query_params
+_is_admin = _query_params.get("admin", "") == ADMIN_KEY
+
+if _is_admin:
+    cm1, cm2, cm3 = st.columns(3)
+    with cm1:
+        if st.button(L["free_chat"] + (" (Active)" if st.session_state.mode == "chat" else ""), use_container_width=True):
+            st.session_state.mode = "chat"
+            st.rerun()
+    with cm2:
+        if st.button(L["symptom_check"] + (" (Active)" if st.session_state.mode == "assessment" else ""), use_container_width=True):
+            st.session_state.mode = "assessment"
+            st.rerun()
+    with cm3:
+        if st.button("📊 Analytics" + (" (Active)" if st.session_state.mode == "eval" else ""), use_container_width=True):
+            st.session_state.mode = "eval"
+            st.rerun()
+else:
+    # Patient view: only Free Chat and Symptom Check, no Analytics
+    if st.session_state.mode == "eval":
         st.session_state.mode = "chat"
-        st.rerun()
-with cm2:
-    if st.button(L["symptom_check"] + (" (Active)" if st.session_state.mode == "assessment" else ""), use_container_width=True):
-        st.session_state.mode = "assessment"
-        st.rerun()
-with cm3:
-    if st.button("📊 Analytics" + (" (Active)" if st.session_state.mode == "eval" else ""), use_container_width=True):
-        st.session_state.mode = "eval"
-        st.rerun()
+    cm1, cm2 = st.columns(2)
+    with cm1:
+        if st.button(L["free_chat"] + (" (Active)" if st.session_state.mode == "chat" else ""), use_container_width=True):
+            st.session_state.mode = "chat"
+            st.rerun()
+    with cm2:
+        if st.button(L["symptom_check"] + (" (Active)" if st.session_state.mode == "assessment" else ""), use_container_width=True):
+            st.session_state.mode = "assessment"
+            st.rerun()
 
 st.markdown('<div class="stats-row"><span class="stat-pill green">RAG - PubMed + MedDialog</span><span class="stat-pill purple">Vision AI Active</span><span class="stat-pill blue">1000 Medical Docs</span><span class="stat-pill orange">Memory Active</span><span class="stat-pill" style="color:#dc2626;border-color:#fecaca;background:#fef2f2;">Emergency Detection</span></div>', unsafe_allow_html=True)
 st.markdown('<div class="disclaimer">MediChat provides general health information only - not a substitute for professional medical advice. Always consult a qualified doctor for personal health concerns.</div>', unsafe_allow_html=True)
@@ -1221,10 +1240,17 @@ if st.session_state.mode == "chat":
         st.rerun()
 
 elif st.session_state.mode == "eval":
-    # ── Evaluation Dashboard ───────────────────────────────────────
+    # ── Evaluation Dashboard (Admin Only) ──────────────────────────
+    st.markdown(
+        '<div style="background:linear-gradient(135deg,#1f2937,#111827);color:white;padding:0.7rem 1.2rem;border-radius:12px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;">'
+        '<div style="display:flex;align-items:center;gap:0.5rem;"><span style="font-size:1rem;">🔒</span><span style="font-weight:600;font-size:0.9rem;">Admin Mode — Research & Evaluation Dashboard</span></div>'
+        '<div style="font-size:0.75rem;opacity:0.8;">Not visible to patients</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
     st.markdown("---")
     st.markdown("### 📊 MediChat Analytics Dashboard")
-    st.caption("Real-time session analytics for clinical evaluation and research reporting")
+    st.caption("Real-time session analytics for clinical evaluation and research reporting. All patient query text is anonymised.")
 
     logs = st.session_state.eval_log
     total_queries = len(logs)
@@ -1367,19 +1393,21 @@ elif st.session_state.mode == "eval":
 
         st.markdown("---")
 
-        # Recent queries log
-        st.markdown("#### Recent Queries Log")
+        # Recent queries log (anonymised - no patient text shown)
+        st.markdown("#### Recent Queries Log (Anonymised)")
+        st.caption("For patient privacy, query text is not displayed. Only query length, confidence, timing, and source metadata are shown.")
         log_html = '<div style="padding:1rem;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;max-height:300px;overflow-y:auto;">'
         for i, l in enumerate(reversed(logs[-10:]), 1):
             conf_color = {"high": "#22c55e", "medium": "#f59e0b", "low": "#ef4444"}.get(l["confidence"], "#64748b")
-            query_text = l["query"][:80] + ("..." if len(l["query"]) > 80 else "")
+            query_len = len(l["query"].split())
             log_html += (
                 '<div style="padding:0.6rem 0.8rem;border-bottom:1px solid #e5e7eb;font-size:0.8rem;">'
-                '<div style="color:#334155;margin-bottom:0.2rem;">' + query_text + '</div>'
-                '<div style="display:flex;gap:0.8rem;font-size:0.7rem;color:#64748b;">'
+                '<div style="color:#334155;margin-bottom:0.2rem;font-weight:600;">Query #' + str(total_queries - i + 1) + ' — ' + str(query_len) + ' words</div>'
+                '<div style="display:flex;gap:0.8rem;font-size:0.7rem;color:#64748b;flex-wrap:wrap;">'
                 '<span style="color:' + conf_color + ';font-weight:600;">● ' + str(l["confidence_pct"]) + '% conf</span>'
                 '<span>⏱ ' + str(l["response_time"]) + 's</span>'
                 '<span>📚 ' + ", ".join(l.get("sources", []) or ["—"]) + '</span>'
+                '<span>🌐 ' + l.get("language", "English") + '</span>'
                 '</div>'
                 '</div>'
             )
@@ -1391,24 +1419,169 @@ elif st.session_state.mode == "eval":
         # Export dashboard data
         ec1, ec2 = st.columns([1, 1])
         with ec1:
-            import json as _json
-            export_data = {
-                "total_queries": total_queries,
-                "avg_confidence": round(avg_conf, 2),
-                "avg_response_time_sec": round(avg_time, 2),
-                "confidence_distribution": {"high": high, "medium": medium, "low": low},
-                "source_usage": {"pubmed_only": pubmed_queries, "doctor_patient_only": dialog_queries, "mixed": both},
-                "safety": {"emergency_alerts": emergency_fires, "drug_warnings": drug_warnings},
-                "language_distribution": lang_counts,
-                "detailed_log": logs,
-            }
-            st.download_button(
-                "📥 Export Analytics (JSON)",
-                data=_json.dumps(export_data, indent=2),
-                file_name="medichat_analytics_" + datetime.now().strftime("%Y%m%d_%H%M") + ".json",
-                mime="application/json",
-                use_container_width=True
-            )
+            # Build Excel workbook with multiple sheets
+            import io as _io
+            try:
+                from openpyxl import Workbook as _Workbook
+                from openpyxl.styles import Font as _Font, PatternFill as _Fill, Alignment as _Align, Border as _Border, Side as _Side
+                from openpyxl.utils import get_column_letter as _col_letter
+
+                wb = _Workbook()
+                thin = _Side(border_style="thin", color="CCCCCC")
+                cell_border = _Border(top=thin, bottom=thin, left=thin, right=thin)
+                header_fill = _Fill(start_color="1F3864", end_color="1F3864", fill_type="solid")
+                header_font = _Font(name="Arial", bold=True, color="FFFFFF", size=11)
+                label_font = _Font(name="Arial", bold=True, size=11, color="1F3864")
+                body_font = _Font(name="Arial", size=10)
+
+                # ── Sheet 1: Summary ──
+                ws1 = wb.active
+                ws1.title = "Summary"
+                ws1["A1"] = "MediChat Analytics Summary"
+                ws1["A1"].font = _Font(name="Arial", bold=True, size=16, color="1F3864")
+                ws1.merge_cells("A1:B1")
+                ws1["A2"] = "Generated: " + datetime.now().strftime("%B %d, %Y at %I:%M %p")
+                ws1["A2"].font = _Font(name="Arial", italic=True, size=10, color="555555")
+                ws1.merge_cells("A2:B2")
+                ws1["A3"] = "Privacy Note: All patient query text has been anonymised. Only aggregated metadata is shown."
+                ws1["A3"].font = _Font(name="Arial", italic=True, size=9, color="C2410C")
+                ws1.merge_cells("A3:B3")
+
+                summary_rows = [
+                    ("Metric", "Value"),
+                    ("Total Queries", total_queries),
+                    ("Average Confidence (%)", round(avg_conf, 2)),
+                    ("Average Response Time (seconds)", round(avg_time, 2)),
+                    ("Patient Satisfaction (%)", feedback_pct if feedback_total > 0 else "No feedback yet"),
+                    ("", ""),
+                    ("Confidence Distribution", ""),
+                    ("  High Confidence", high),
+                    ("  Medium Confidence", medium),
+                    ("  Low Confidence", low),
+                    ("", ""),
+                    ("Source Usage (RAG Retrieval)", ""),
+                    ("  PubMed Research", pubmed_queries),
+                    ("  Doctor-Patient Data", dialog_queries),
+                    ("  Mixed Sources", both),
+                    ("", ""),
+                    ("Safety Metrics", ""),
+                    ("  Emergency Alerts Fired", emergency_fires),
+                    ("  Drug Safety Warnings Raised", drug_warnings),
+                    ("  Memory Entries Extracted", total_extracted),
+                ]
+                for r, (label, value) in enumerate(summary_rows, start=5):
+                    ws1.cell(row=r, column=1, value=label).font = header_font if r == 5 else label_font
+                    ws1.cell(row=r, column=2, value=value).font = header_font if r == 5 else body_font
+                    if r == 5:
+                        ws1.cell(row=r, column=1).fill = header_fill
+                        ws1.cell(row=r, column=2).fill = header_fill
+                    ws1.cell(row=r, column=1).border = cell_border
+                    ws1.cell(row=r, column=2).border = cell_border
+                ws1.column_dimensions["A"].width = 42
+                ws1.column_dimensions["B"].width = 22
+
+                # ── Sheet 2: Language Distribution ──
+                ws2 = wb.create_sheet("Languages")
+                ws2["A1"] = "Language Distribution"
+                ws2["A1"].font = _Font(name="Arial", bold=True, size=14, color="1F3864")
+                ws2.merge_cells("A1:C1")
+                ws2["A3"] = "Language"
+                ws2["B3"] = "Query Count"
+                ws2["C3"] = "Percentage"
+                for c in ["A3", "B3", "C3"]:
+                    ws2[c].font = header_font
+                    ws2[c].fill = header_fill
+                    ws2[c].border = cell_border
+                row_i = 4
+                for lang, count in sorted(lang_counts.items(), key=lambda x: x[1], reverse=True):
+                    pct = round((count / total_queries) * 100, 1)
+                    ws2.cell(row=row_i, column=1, value=lang).font = body_font
+                    ws2.cell(row=row_i, column=2, value=count).font = body_font
+                    ws2.cell(row=row_i, column=3, value=str(pct) + "%").font = body_font
+                    for col in range(1, 4):
+                        ws2.cell(row=row_i, column=col).border = cell_border
+                    row_i += 1
+                ws2.column_dimensions["A"].width = 18
+                ws2.column_dimensions["B"].width = 15
+                ws2.column_dimensions["C"].width = 15
+
+                # ── Sheet 3: Anonymised Query Log ──
+                ws3 = wb.create_sheet("Query Log (Anonymised)")
+                ws3["A1"] = "Anonymised Query Log"
+                ws3["A1"].font = _Font(name="Arial", bold=True, size=14, color="1F3864")
+                ws3.merge_cells("A1:H1")
+                ws3["A2"] = "All patient query text has been removed. Only metadata is included for privacy compliance."
+                ws3["A2"].font = _Font(name="Arial", italic=True, size=9, color="C2410C")
+                ws3.merge_cells("A2:H2")
+
+                headers3 = ["Query ID", "Word Count", "Confidence", "Confidence %", "Response Time (s)", "Sources", "Language", "Safety Triggered"]
+                for col_i, h in enumerate(headers3, start=1):
+                    c = ws3.cell(row=4, column=col_i, value=h)
+                    c.font = header_font
+                    c.fill = header_fill
+                    c.border = cell_border
+                    c.alignment = _Align(horizontal="center")
+
+                for row_i, l in enumerate(logs, start=5):
+                    safety = "Yes" if (l.get("emergency_triggered") or l.get("drug_alerts", 0) > 0) else "No"
+                    values = [
+                        row_i - 4,
+                        len(l["query"].split()),
+                        l["confidence"].title(),
+                        str(l["confidence_pct"]) + "%",
+                        l["response_time"],
+                        ", ".join(l.get("sources", [])) or "—",
+                        l.get("language", "English"),
+                        safety,
+                    ]
+                    for col_i, v in enumerate(values, start=1):
+                        c = ws3.cell(row=row_i, column=col_i, value=v)
+                        c.font = body_font
+                        c.border = cell_border
+                        c.alignment = _Align(horizontal="center") if col_i != 6 else _Align(horizontal="left")
+                widths3 = [10, 12, 14, 14, 16, 30, 12, 16]
+                for col_i, w in enumerate(widths3, start=1):
+                    ws3.column_dimensions[_col_letter(col_i)].width = w
+
+                # ── Sheet 4: Methodology Notes ──
+                ws4 = wb.create_sheet("Methodology")
+                ws4["A1"] = "MediChat Analytics Methodology"
+                ws4["A1"].font = _Font(name="Arial", bold=True, size=14, color="1F3864")
+                ws4.merge_cells("A1:B1")
+
+                method_notes = [
+                    ("Confidence Score", "Calculated from FAISS L2 distance between query embedding and top-3 retrieved documents. Lower distance = higher confidence. < 0.8 = High, 0.8-1.3 = Medium, > 1.3 = Low."),
+                    ("Source Classification", "PubMed Research = documents 0-499 in FAISS index (biomedical research papers). Doctor-Patient Data = documents 500-999 (real clinical conversations)."),
+                    ("Emergency Detection", "Hybrid system: direct keyword match on 30+ emergency terms, plus 6 symptom-cluster patterns (cardiac, stroke, anaphylaxis, syncope, severe asthma, hyperglycemic crisis)."),
+                    ("Drug Safety Warnings", "Hard-coded rules cross-reference 6 drug classes (antihistamines, NSAIDs, decongestants, paracetamol, bismuth, PPIs) against patient-stated conditions from memory extraction."),
+                    ("Response Time", "Measured from query submission to final response display, including FAISS retrieval and Groq LLM inference."),
+                    ("Privacy Compliance", "Patient query text is NEVER stored or exported. Only aggregate metadata and word counts are retained for evaluation purposes."),
+                    ("Data Retention", "All analytics data is held in browser session state only. Cleared automatically when the patient closes their tab or clicks Reset."),
+                ]
+                for r, (label, desc) in enumerate(method_notes, start=3):
+                    ws4.cell(row=r, column=1, value=label).font = label_font
+                    ws4.cell(row=r, column=1).alignment = _Align(vertical="top")
+                    ws4.cell(row=r, column=2, value=desc).font = body_font
+                    ws4.cell(row=r, column=2).alignment = _Align(wrap_text=True, vertical="top")
+                    ws4.row_dimensions[r].height = 60
+                ws4.column_dimensions["A"].width = 24
+                ws4.column_dimensions["B"].width = 75
+
+                # Save to buffer
+                _buffer = _io.BytesIO()
+                wb.save(_buffer)
+                _buffer.seek(0)
+
+                st.download_button(
+                    "📊 Export Analytics (Excel)",
+                    data=_buffer.getvalue(),
+                    file_name="medichat_analytics_" + datetime.now().strftime("%Y%m%d_%H%M") + ".xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            except Exception as _ex:
+                st.error("Excel export failed: " + str(_ex))
+                st.info("openpyxl library missing. Add 'openpyxl' to requirements.txt and redeploy.")
         with ec2:
             if st.button("🔄 Reset Analytics", use_container_width=True):
                 st.session_state.eval_log = []
