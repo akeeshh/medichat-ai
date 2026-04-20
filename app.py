@@ -920,6 +920,8 @@ if "session_started" not in st.session_state:
     st.session_state.emergency_detected = False
     st.session_state.emergency_reason = ""
     st.session_state.last_sources = []
+    st.session_state.eval_log = []
+    st.session_state.response_times = []
 
 with st.sidebar:
     st.markdown("## MediChat")
@@ -980,7 +982,7 @@ st.markdown('<div class="header-card"><div style="font-size:2.5rem;">🏥</div><
 
 L = LANGUAGES[st.session_state.selected_language]
 
-cm1, cm2 = st.columns(2)
+cm1, cm2, cm3 = st.columns(3)
 with cm1:
     if st.button(L["free_chat"] + (" (Active)" if st.session_state.mode == "chat" else ""), use_container_width=True):
         st.session_state.mode = "chat"
@@ -988,6 +990,10 @@ with cm1:
 with cm2:
     if st.button(L["symptom_check"] + (" (Active)" if st.session_state.mode == "assessment" else ""), use_container_width=True):
         st.session_state.mode = "assessment"
+        st.rerun()
+with cm3:
+    if st.button("📊 Analytics" + (" (Active)" if st.session_state.mode == "eval" else ""), use_container_width=True):
+        st.session_state.mode = "eval"
         st.rerun()
 
 st.markdown('<div class="stats-row"><span class="stat-pill green">RAG - PubMed + MedDialog</span><span class="stat-pill purple">Vision AI Active</span><span class="stat-pill blue">1000 Medical Docs</span><span class="stat-pill orange">Memory Active</span><span class="stat-pill" style="color:#dc2626;border-color:#fecaca;background:#fef2f2;">Emergency Detection</span></div>', unsafe_allow_html=True)
@@ -1180,11 +1186,15 @@ if st.session_state.mode == "chat":
             st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75})
         else:
             st.session_state.messages.append({"role": "user", "type": "text", "content": user_input.strip()})
+            import time as _time
+            _t0 = _time.time()
             with st.spinner("Thinking..."):
                 name_for_rag = "" if st.session_state.patient_name == "Guest" else st.session_state.patient_name
                 reply, memory, sources, conf_level, conf_pct = medichat_rag(user_input, st.session_state.messages, lang_instruction, name_for_rag)
                 st.session_state.patient_memory = memory
                 st.session_state.last_sources = sources
+                _response_time = round(_time.time() - _t0, 2)
+                st.session_state.response_times.append(_response_time)
 
                 # Check drug-condition interactions and append safety alert
                 interaction_alerts = check_drug_interactions(reply, memory)
@@ -1194,8 +1204,216 @@ if st.session_state.mode == "chat":
                         alert_block += "\n- **" + a["drug"] + "** — given your " + ", ".join(a["conditions"]) + ": " + a["warning"]
                     reply = reply + alert_block
 
+                # Log for evaluation dashboard
+                st.session_state.eval_log.append({
+                    "query": user_input.strip(),
+                    "confidence": conf_level,
+                    "confidence_pct": conf_pct,
+                    "sources": sources,
+                    "response_time": _response_time,
+                    "language": st.session_state.selected_language,
+                    "mode": "free_chat",
+                    "emergency_triggered": st.session_state.emergency_detected,
+                    "drug_alerts": len(interaction_alerts),
+                })
+
             st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": sources, "confidence": conf_level, "confidence_pct": conf_pct})
         st.rerun()
+
+elif st.session_state.mode == "eval":
+    # ── Evaluation Dashboard ───────────────────────────────────────
+    st.markdown("---")
+    st.markdown("### 📊 MediChat Analytics Dashboard")
+    st.caption("Real-time session analytics for clinical evaluation and research reporting")
+
+    logs = st.session_state.eval_log
+    total_queries = len(logs)
+
+    if total_queries == 0:
+        st.markdown(
+            '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:14px;padding:2rem;text-align:center;color:#0369a1;">'
+            '<div style="font-size:3rem;margin-bottom:0.8rem;">📊</div>'
+            '<div style="font-size:1.1rem;font-weight:600;margin-bottom:0.4rem;">No data yet</div>'
+            '<div style="font-size:0.9rem;">Start a chat or symptom assessment in Free Chat mode. Analytics will appear here automatically.</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    else:
+        # Top metrics
+        mc1, mc2, mc3, mc4 = st.columns(4)
+        with mc1:
+            st.metric("Total Queries", total_queries)
+        with mc2:
+            avg_conf = sum(l["confidence_pct"] for l in logs) / total_queries
+            st.metric("Avg Confidence", str(round(avg_conf, 1)) + "%")
+        with mc3:
+            avg_time = sum(l["response_time"] for l in logs) / total_queries
+            st.metric("Avg Response", str(round(avg_time, 2)) + "s")
+        with mc4:
+            feedback_data = st.session_state.feedback
+            helpful_count = sum(1 for v in feedback_data.values() if v == "helpful")
+            not_helpful = sum(1 for v in feedback_data.values() if v == "not_helpful")
+            feedback_total = helpful_count + not_helpful
+            feedback_pct = round((helpful_count / feedback_total * 100), 1) if feedback_total > 0 else "N/A"
+            st.metric("Satisfaction", str(feedback_pct) + ("%" if feedback_total > 0 else ""))
+
+        st.markdown("---")
+
+        # Confidence distribution
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("#### Confidence Distribution")
+            high = sum(1 for l in logs if l["confidence"] == "high")
+            medium = sum(1 for l in logs if l["confidence"] == "medium")
+            low = sum(1 for l in logs if l["confidence"] == "low")
+            st.markdown(
+                '<div style="padding:1rem;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">'
+                '<div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:0.6rem;">'
+                '<div style="flex:0 0 80px;font-size:0.82rem;color:#166534;font-weight:600;">High</div>'
+                '<div style="flex:1;height:18px;background:#e5e7eb;border-radius:50px;overflow:hidden;">'
+                '<div style="height:100%;width:' + str(round((high / total_queries) * 100)) + '%;background:#22c55e;"></div>'
+                '</div>'
+                '<div style="flex:0 0 50px;font-size:0.82rem;color:#64748b;text-align:right;">' + str(high) + '</div>'
+                '</div>'
+                '<div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:0.6rem;">'
+                '<div style="flex:0 0 80px;font-size:0.82rem;color:#92400e;font-weight:600;">Medium</div>'
+                '<div style="flex:1;height:18px;background:#e5e7eb;border-radius:50px;overflow:hidden;">'
+                '<div style="height:100%;width:' + str(round((medium / total_queries) * 100)) + '%;background:#f59e0b;"></div>'
+                '</div>'
+                '<div style="flex:0 0 50px;font-size:0.82rem;color:#64748b;text-align:right;">' + str(medium) + '</div>'
+                '</div>'
+                '<div style="display:flex;align-items:center;gap:0.8rem;">'
+                '<div style="flex:0 0 80px;font-size:0.82rem;color:#991b1b;font-weight:600;">Low</div>'
+                '<div style="flex:1;height:18px;background:#e5e7eb;border-radius:50px;overflow:hidden;">'
+                '<div style="height:100%;width:' + str(round((low / total_queries) * 100)) + '%;background:#ef4444;"></div>'
+                '</div>'
+                '<div style="flex:0 0 50px;font-size:0.82rem;color:#64748b;text-align:right;">' + str(low) + '</div>'
+                '</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+
+        with col_b:
+            st.markdown("#### Source Usage (RAG Retrieval)")
+            pubmed_queries = sum(1 for l in logs if any("PubMed" in s for s in l.get("sources", [])))
+            dialog_queries = sum(1 for l in logs if any("Doctor-Patient" in s for s in l.get("sources", [])))
+            both = sum(1 for l in logs if len(l.get("sources", [])) > 1)
+            st.markdown(
+                '<div style="padding:1rem;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">'
+                '<div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:0.6rem;">'
+                '<div style="flex:0 0 110px;font-size:0.82rem;color:#0369a1;font-weight:600;">PubMed</div>'
+                '<div style="flex:1;height:18px;background:#e5e7eb;border-radius:50px;overflow:hidden;">'
+                '<div style="height:100%;width:' + str(round((pubmed_queries / total_queries) * 100)) + '%;background:#0ea5e9;"></div>'
+                '</div>'
+                '<div style="flex:0 0 50px;font-size:0.82rem;color:#64748b;text-align:right;">' + str(pubmed_queries) + '</div>'
+                '</div>'
+                '<div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:0.6rem;">'
+                '<div style="flex:0 0 110px;font-size:0.82rem;color:#7c3aed;font-weight:600;">Doctor-Patient</div>'
+                '<div style="flex:1;height:18px;background:#e5e7eb;border-radius:50px;overflow:hidden;">'
+                '<div style="height:100%;width:' + str(round((dialog_queries / total_queries) * 100)) + '%;background:#a855f7;"></div>'
+                '</div>'
+                '<div style="flex:0 0 50px;font-size:0.82rem;color:#64748b;text-align:right;">' + str(dialog_queries) + '</div>'
+                '</div>'
+                '<div style="display:flex;align-items:center;gap:0.8rem;">'
+                '<div style="flex:0 0 110px;font-size:0.82rem;color:#059669;font-weight:600;">Mixed Sources</div>'
+                '<div style="flex:1;height:18px;background:#e5e7eb;border-radius:50px;overflow:hidden;">'
+                '<div style="height:100%;width:' + str(round((both / total_queries) * 100)) + '%;background:#10b981;"></div>'
+                '</div>'
+                '<div style="flex:0 0 50px;font-size:0.82rem;color:#64748b;text-align:right;">' + str(both) + '</div>'
+                '</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+
+        st.markdown("---")
+
+        # Safety metrics
+        st.markdown("#### Safety Metrics")
+        sm1, sm2, sm3 = st.columns(3)
+        with sm1:
+            emergency_fires = sum(1 for l in logs if l.get("emergency_triggered"))
+            st.metric("🚨 Emergency Alerts Fired", emergency_fires)
+        with sm2:
+            drug_warnings = sum(l.get("drug_alerts", 0) for l in logs)
+            st.metric("⚠️ Drug Safety Warnings", drug_warnings)
+        with sm3:
+            mem = st.session_state.patient_memory
+            total_extracted = len(mem.get("symptoms", [])) + len(mem.get("conditions", [])) + len(mem.get("medications", []))
+            st.metric("🧠 Memory Entries Extracted", total_extracted)
+
+        st.markdown("---")
+
+        # Language distribution
+        lang_counts = {}
+        for l in logs:
+            lang = l.get("language", "English")
+            lang_counts[lang] = lang_counts.get(lang, 0) + 1
+        if len(lang_counts) > 0:
+            st.markdown("#### Language Distribution")
+            lang_html = '<div style="padding:1rem;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">'
+            for lang, count in sorted(lang_counts.items(), key=lambda x: x[1], reverse=True):
+                pct = round((count / total_queries) * 100)
+                lang_html += (
+                    '<div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:0.5rem;">'
+                    '<div style="flex:0 0 110px;font-size:0.82rem;color:#334155;font-weight:600;">' + lang + '</div>'
+                    '<div style="flex:1;height:16px;background:#e5e7eb;border-radius:50px;overflow:hidden;">'
+                    '<div style="height:100%;width:' + str(pct) + '%;background:#8b5cf6;"></div>'
+                    '</div>'
+                    '<div style="flex:0 0 70px;font-size:0.82rem;color:#64748b;text-align:right;">' + str(count) + ' (' + str(pct) + '%)</div>'
+                    '</div>'
+                )
+            lang_html += '</div>'
+            st.markdown(lang_html, unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # Recent queries log
+        st.markdown("#### Recent Queries Log")
+        log_html = '<div style="padding:1rem;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;max-height:300px;overflow-y:auto;">'
+        for i, l in enumerate(reversed(logs[-10:]), 1):
+            conf_color = {"high": "#22c55e", "medium": "#f59e0b", "low": "#ef4444"}.get(l["confidence"], "#64748b")
+            query_text = l["query"][:80] + ("..." if len(l["query"]) > 80 else "")
+            log_html += (
+                '<div style="padding:0.6rem 0.8rem;border-bottom:1px solid #e5e7eb;font-size:0.8rem;">'
+                '<div style="color:#334155;margin-bottom:0.2rem;">' + query_text + '</div>'
+                '<div style="display:flex;gap:0.8rem;font-size:0.7rem;color:#64748b;">'
+                '<span style="color:' + conf_color + ';font-weight:600;">● ' + str(l["confidence_pct"]) + '% conf</span>'
+                '<span>⏱ ' + str(l["response_time"]) + 's</span>'
+                '<span>📚 ' + ", ".join(l.get("sources", []) or ["—"]) + '</span>'
+                '</div>'
+                '</div>'
+            )
+        log_html += '</div>'
+        st.markdown(log_html, unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # Export dashboard data
+        ec1, ec2 = st.columns([1, 1])
+        with ec1:
+            import json as _json
+            export_data = {
+                "total_queries": total_queries,
+                "avg_confidence": round(avg_conf, 2),
+                "avg_response_time_sec": round(avg_time, 2),
+                "confidence_distribution": {"high": high, "medium": medium, "low": low},
+                "source_usage": {"pubmed_only": pubmed_queries, "doctor_patient_only": dialog_queries, "mixed": both},
+                "safety": {"emergency_alerts": emergency_fires, "drug_warnings": drug_warnings},
+                "language_distribution": lang_counts,
+                "detailed_log": logs,
+            }
+            st.download_button(
+                "📥 Export Analytics (JSON)",
+                data=_json.dumps(export_data, indent=2),
+                file_name="medichat_analytics_" + datetime.now().strftime("%Y%m%d_%H%M") + ".json",
+                mime="application/json",
+                use_container_width=True
+            )
+        with ec2:
+            if st.button("🔄 Reset Analytics", use_container_width=True):
+                st.session_state.eval_log = []
+                st.session_state.response_times = []
+                st.rerun()
 
 else:
     if st.session_state.assessment_complete and st.session_state.assessment_parsed:
