@@ -1,5 +1,10 @@
 import streamlit as st
 from groq import Groq
+try:
+    from anthropic import Anthropic
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    ANTHROPIC_AVAILABLE = False
 from sentence_transformers import SentenceTransformer
 from datasets import load_dataset
 import faiss
@@ -656,6 +661,19 @@ if not GROQ_API_KEY:
     st.stop()
 groq_client = Groq(api_key=GROQ_API_KEY)
 
+# Anthropic Claude (primary) with Groq fallback
+ANTHROPIC_API_KEY = st.secrets.get("ANTHROPIC_API_KEY", os.environ.get("ANTHROPIC_API_KEY", ""))
+CLAUDE_MODEL = "claude-haiku-4-5"
+anthropic_client = None
+if ANTHROPIC_AVAILABLE and ANTHROPIC_API_KEY:
+    try:
+        anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY)
+    except Exception as e:
+        print("Anthropic init failed:", e)
+        anthropic_client = None
+
+CLAUDE_ACTIVE = anthropic_client is not None
+
 # ── Language Config ───────────────────────────────────────────────────
 LANGUAGES = {
     "English": {
@@ -1208,6 +1226,32 @@ def sanitize_rag_context(raw_context):
     result = " ".join(clean).strip()
     return result if len(result) > 100 else raw_context  # fallback if we stripped too much
 
+def strip_excessive_disclaimers(text):
+    """Remove inline disclaimer spam from LLM output. The app shows ONE mini disclaimer permanently."""
+    if not text:
+        return text
+    import re as _re
+
+    patterns = [
+        r"\*?\*?Disclaimer:[^\n]*\*?\*?\s*",
+        r"\*?\*?Please note:[^\n]*not a doctor[^\n]*\*?\*?\s*",
+        r"Please note that I'?m not a doctor[^.]*\.\s*",
+        r"I'?m not a doctor[,.]?[^.]*\.\s*",
+        r"(I want to|I'd like to) emphasi[sz]e that I'?m not a doctor[^.]*\.\s*",
+        r"(My|This) response is not a substitute for professional medical (advice|diagnosis)[^.]*\.\s*",
+        r"This (conversation|response) is (not a substitute|for general information)[^.]*\.\s*",
+        r"Always consult (with )?a (qualified )?(healthcare|medical) professional[^.]*\.\s*",
+        r"Please consult (with )?a (qualified )?(healthcare|medical) professional[^.]*\.\s*",
+        r"It'?s (important|essential|crucial) to (consult|speak with) a (doctor|healthcare professional|medical professional)[^.]*\.\s*",
+    ]
+    cleaned = text
+    for pat in patterns:
+        cleaned = _re.sub(pat, "", cleaned, flags=_re.IGNORECASE)
+    # Remove trailing whitespace / orphan newlines
+    cleaned = _re.sub(r"\n{3,}", "\n\n", cleaned)
+    cleaned = cleaned.strip()
+    return cleaned
+
 def medichat_rag_stream(question, all_messages, lang_instruction="", patient_name=""):
     """Streaming version: yields text chunks as they arrive. Returns final metadata via final yield."""
     emb = embedder.encode([question]).astype("float32")
@@ -1347,6 +1391,48 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
         "</reference_knowledge>\n"
     )
 
+    full_response = ""
+    stream_error = None
+
+    # Try Claude first (primary)
+    if CLAUDE_ACTIVE:
+        try:
+            # Anthropic expects system prompt as a separate arg and only user/assistant messages
+            anthropic_messages = history + [{"role": "user", "content": question}]
+            # Ensure messages alternate user/assistant and start with user
+            normalized = []
+            for m in anthropic_messages:
+                role = m["role"]
+                if role not in ("user", "assistant"):
+                    continue
+                content = m.get("content", "")
+                if normalized and normalized[-1]["role"] == role:
+                    normalized[-1]["content"] += "\n\n" + content
+                else:
+                    normalized.append({"role": role, "content": content})
+            if not normalized or normalized[0]["role"] != "user":
+                normalized = [{"role": "user", "content": question}]
+
+            with anthropic_client.messages.stream(
+                model=CLAUDE_MODEL,
+                max_tokens=1024,
+                system=system,
+                messages=normalized,
+                temperature=0.55,
+            ) as claude_stream:
+                for text in claude_stream.text_stream:
+                    if text:
+                        full_response += text
+                        yield ("chunk", text, full_response)
+            # Claude succeeded, emit done and return
+            yield ("done", full_response, {"memory": memory, "sources": sources, "confidence": confidence_level, "confidence_pct": confidence_pct, "engine": "claude"})
+            return
+        except Exception as e:
+            stream_error = e
+            print("Claude stream failed, falling back to Groq:", e)
+            full_response = ""  # reset so Groq gets a clean start
+
+    # Fallback to Groq (if Claude not configured or failed)
     msgs = [{"role": "system", "content": system}] + history + [{"role": "user", "content": question}]
     stream = groq_client.chat.completions.create(
         model="llama-3.3-70b-versatile",
@@ -1355,13 +1441,12 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
         max_tokens=1024,
         stream=True,
     )
-    full_response = ""
     for chunk in stream:
         delta = chunk.choices[0].delta.content or ""
         if delta:
             full_response += delta
             yield ("chunk", delta, full_response)
-    yield ("done", full_response, {"memory": memory, "sources": sources, "confidence": confidence_level, "confidence_pct": confidence_pct})
+    yield ("done", full_response, {"memory": memory, "sources": sources, "confidence": confidence_level, "confidence_pct": confidence_pct, "engine": "groq"})
 
 def medichat_vision(question, b64, all_messages, lang_instruction=""):
     memory = extract_patient_memory(all_messages)
@@ -2005,6 +2090,9 @@ if st.session_state.mode == "chat":
                 thinking_placeholder.empty()
                 st.error("MediChat had trouble generating a response. Please try again.")
                 st.stop()
+
+            # Strip any inline disclaimer spam before final render
+            final_text = strip_excessive_disclaimers(final_text)
 
             # Final render without cursor
             thinking_placeholder.markdown(
