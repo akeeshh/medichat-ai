@@ -81,152 +81,568 @@ def fetch_all_queries_from_firestore(limit=500):
 
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    * { font-family: 'Inter', sans-serif; }
-    .stApp { background: linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 40%, #f0fdf4 100%); min-height: 100vh; }
-    .main .block-container { padding: 1.5rem 2rem 2rem 2rem; max-width: 820px; }
-    .header-card { background: white; border-radius: 20px; padding: 1.4rem 2rem; margin-bottom: 1rem; box-shadow: 0 4px 24px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 1.2rem; border: 1px solid rgba(255,255,255,0.8); }
-    .header-title { font-size: 1.8rem; font-weight: 800; color: #0f766e; margin: 0; }
-    .header-subtitle { color: #64748b; font-size: 0.85rem; margin: 0.2rem 0 0 0; }
-    .stats-row { display: flex; gap: 0.6rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
-    .stat-pill { background: white; border: 1px solid #e2e8f0; border-radius: 50px; padding: 0.3rem 0.8rem; font-size: 0.72rem; font-weight: 600; color: #475569; }
-    .stat-pill.green { color: #0f766e; border-color: #99f6e4; background: #f0fdfa; }
-    .stat-pill.blue { color: #0369a1; border-color: #bae6fd; background: #f0f9ff; }
-    .stat-pill.purple { color: #7c3aed; border-color: #ddd6fe; background: #faf5ff; }
-    .stat-pill.orange { color: #c2410c; border-color: #fed7aa; background: #fff7ed; }
-    .disclaimer { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 0.6rem 1rem; color: #92400e; font-size: 0.76rem; margin-bottom: 0.8rem; text-align: center; }
-    .welcome-card { background: white; border-radius: 20px; padding: 2.2rem 2rem; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,0.06); margin: 0.5rem 0 1rem 0; }
-    .welcome-title { font-size: 1.3rem; font-weight: 700; color: #0f172a; margin-bottom: 0.4rem; }
-    .welcome-text { color: #64748b; font-size: 0.87rem; line-height: 1.6; margin-bottom: 1rem; }
-    .chip-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; }
-    .chip { background: #f0fdf4; border: 1px solid #86efac; border-radius: 50px; padding: 0.3rem 0.8rem; color: #166534; font-size: 0.76rem; font-weight: 500; }
-    .assessment-card { background: white; border-radius: 20px; padding: 1.5rem 1.8rem; box-shadow: 0 4px 24px rgba(0,0,0,0.06); margin-bottom: 1rem; border: 1px solid #e2e8f0; }
-    .assessment-title { font-size: 1rem; font-weight: 700; color: #0f766e; margin-bottom: 0.3rem; }
-    .assessment-subtitle { font-size: 0.78rem; color: #64748b; margin-bottom: 1rem; }
-    .progress-bar-wrap { background: #f1f5f9; border-radius: 50px; height: 6px; margin-bottom: 1.2rem; overflow: hidden; }
-    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #0d9488, #059669); border-radius: 50px; }
-    .progress-label { font-size: 0.7rem; color: #94a3b8; margin-bottom: 0.3rem; display: flex; justify-content: space-between; }
-    .question-bubble { background: linear-gradient(135deg, #f0fdfa, #ecfdf5); border: 1px solid #99f6e4; border-radius: 16px 16px 16px 4px; padding: 1rem 1.2rem; margin-bottom: 1rem; font-size: 0.95rem; color: #134e4a; font-weight: 500; line-height: 1.5; }
-    .user-wrap { display: flex; justify-content: flex-end; align-items: flex-end; gap: 0.5rem; margin: 0.6rem 0; }
-    .bot-wrap { display: flex; justify-content: flex-start; align-items: flex-start; gap: 0.5rem; margin: 0.6rem 0; }
-    .av { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; color: white; }
-    .av-user { background: linear-gradient(135deg, #0d9488, #059669); }
-    .av-bot { background: #0f766e; border: 2px solid #99f6e4; }
-    .user-bubble { background: linear-gradient(135deg, #0d9488, #059669); color: white; padding: 0.75rem 1rem; border-radius: 16px 16px 4px 16px; max-width: 75%; font-size: 0.9rem; line-height: 1.5; }
-    .bot-bubble { background: white; border: 1px solid #e2e8f0; color: #1e293b; padding: 0.75rem 1rem; border-radius: 16px 16px 16px 4px; max-width: 78%; font-size: 0.9rem; line-height: 1.65; }
-    .bot-bubble strong { color: #0f766e; }
-    .bot-label { font-size: 0.7rem; font-weight: 700; color: #0f766e; margin-bottom: 0.25rem; margin-left: 40px; }
-    .image-tag { background: #faf5ff; border: 1px solid #ddd6fe; border-radius: 10px; padding: 0.3rem 0.7rem; color: #7c3aed; font-size: 0.73rem; margin-bottom: 0.3rem; display: inline-block; }
-    .memory-card { background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 0.6rem 1rem; margin-bottom: 0.8rem; font-size: 0.76rem; color: #166534; }
-    .memory-title { font-weight: 700; margin-bottom: 0.25rem; font-size: 0.78rem; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Serif+Display:ital@0;1&display=swap');
 
+    /* ═══════════════════════════════════════════════════════════════════
+       MediChat Trust-First Design System
+       Palette: Sage primary (calm medical), warm ivory canvas, soft accents
+    ═══════════════════════════════════════════════════════════════════ */
+
+    :root {
+        --sage-900: #1e3a36;
+        --sage-700: #2d5a52;
+        --sage-500: #5d8b7c;
+        --sage-300: #a8c5bd;
+        --sage-100: #e8f0ed;
+        --sage-50: #f3f8f6;
+
+        --ivory: #fefdfb;
+        --cream: #faf8f3;
+        --warm-gray: #6b6660;
+        --soft-gray: #94908a;
+
+        --accent-rose: #c4766a;
+        --accent-amber: #d69e2e;
+        --accent-lavender: #8b7aa8;
+    }
+
+    * { font-family: 'Inter', sans-serif; }
+
+    .stApp {
+        background:
+            radial-gradient(ellipse 80% 60% at top left, rgba(168, 197, 189, 0.15) 0%, transparent 50%),
+            radial-gradient(ellipse 70% 50% at bottom right, rgba(139, 122, 168, 0.08) 0%, transparent 50%),
+            linear-gradient(180deg, #fefdfb 0%, #faf8f3 100%);
+        min-height: 100vh;
+    }
+
+    .main .block-container {
+        padding: 1.5rem 2rem 5rem 2rem;
+        max-width: 780px;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────── */
+    .header-card {
+        background: white;
+        border-radius: 24px;
+        padding: 1.8rem 2.2rem;
+        margin-bottom: 1.2rem;
+        box-shadow:
+            0 1px 3px rgba(30, 58, 54, 0.04),
+            0 10px 40px rgba(30, 58, 54, 0.06);
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(168, 197, 189, 0.2);
+    }
+
+    .header-card::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--sage-500), var(--accent-lavender), var(--sage-500));
+        background-size: 200% 100%;
+        animation: shimmer 6s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+    }
+
+    .header-brand {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .header-logo {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, var(--sage-500), var(--sage-700));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.7rem;
+        color: white;
+        box-shadow: 0 4px 16px rgba(93, 139, 124, 0.25);
+        flex-shrink: 0;
+    }
+
+    .header-title {
+        font-family: 'DM Serif Display', serif;
+        font-size: 2.1rem;
+        font-weight: 400;
+        color: var(--sage-900);
+        margin: 0;
+        letter-spacing: -0.02em;
+        line-height: 1;
+    }
+
+    .header-subtitle {
+        color: var(--warm-gray);
+        font-size: 0.88rem;
+        margin: 0.4rem 0 0 0;
+        font-weight: 400;
+        line-height: 1.5;
+    }
+
+    /* ── Trust Strip ─────────────────────────────────────────────── */
+    .trust-strip {
+        display: flex;
+        gap: 0.55rem;
+        margin: 1rem 0 1.2rem 0;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .trust-pill {
+        background: white;
+        border: 1px solid var(--sage-100);
+        border-radius: 100px;
+        padding: 0.4rem 0.9rem;
+        font-size: 0.72rem;
+        font-weight: 500;
+        color: var(--sage-700);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        box-shadow: 0 1px 2px rgba(30, 58, 54, 0.03);
+        transition: all 0.2s ease;
+    }
+
+    .trust-pill:hover {
+        border-color: var(--sage-300);
+        transform: translateY(-1px);
+    }
+
+    .trust-pill-icon {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--sage-500);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.55rem;
+        font-weight: 700;
+    }
+
+    /* Legacy stats-row classes kept for compatibility */
+    .stats-row { display: flex; gap: 0.55rem; margin-bottom: 1rem; flex-wrap: wrap; justify-content: center; }
+    .stat-pill { background: white; border: 1px solid var(--sage-100); border-radius: 100px; padding: 0.4rem 0.9rem; font-size: 0.72rem; font-weight: 500; color: var(--sage-700); }
+    .stat-pill.green { color: var(--sage-700); border-color: var(--sage-300); background: var(--sage-50); }
+    .stat-pill.blue { color: #3a6b8f; border-color: #bed2e0; background: #eff5fa; }
+    .stat-pill.purple { color: var(--accent-lavender); border-color: #d4c9e3; background: #f5f0fa; }
+    .stat-pill.orange { color: var(--accent-amber); border-color: #e8cf9e; background: #fbf5e7; }
+
+    /* ── Disclaimer ──────────────────────────────────────────────── */
+    .disclaimer {
+        background: #fefaf0;
+        border: 1px solid #f0dfb8;
+        border-radius: 14px;
+        padding: 0.75rem 1.1rem;
+        color: #7a5d1a;
+        font-size: 0.78rem;
+        margin-bottom: 1.2rem;
+        text-align: center;
+        line-height: 1.5;
+    }
+
+    /* ── Emergency Banner ────────────────────────────────────────── */
     .emergency-banner {
         background: linear-gradient(135deg, #dc2626, #991b1b);
         color: white;
-        border-radius: 14px;
-        padding: 1rem 1.3rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 6px 20px rgba(220,38,38,0.35);
-        animation: pulse 1.6s ease-in-out infinite;
+        border-radius: 16px;
+        padding: 1.1rem 1.4rem;
+        margin-bottom: 1.2rem;
+        box-shadow: 0 8px 24px rgba(220, 38, 38, 0.25);
+        animation: pulse 2s ease-in-out infinite;
     }
     @keyframes pulse {
-        0%, 100% { box-shadow: 0 6px 20px rgba(220,38,38,0.35); }
-        50% { box-shadow: 0 6px 30px rgba(220,38,38,0.65); }
+        0%, 100% { box-shadow: 0 8px 24px rgba(220, 38, 38, 0.25); }
+        50% { box-shadow: 0 8px 36px rgba(220, 38, 38, 0.55); }
     }
-    .emergency-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.5rem; }
-    .emergency-text { font-size: 0.85rem; line-height: 1.5; margin-bottom: 0.5rem; }
+    .emergency-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.5rem; }
+    .emergency-text { font-size: 0.85rem; line-height: 1.55; margin-bottom: 0.6rem; opacity: 0.95; }
     .emergency-number {
         background: white; color: #991b1b;
-        padding: 0.5rem 1rem; border-radius: 10px;
-        font-size: 1.1rem; font-weight: 800;
+        padding: 0.55rem 1.2rem; border-radius: 12px;
+        font-size: 1.15rem; font-weight: 700;
         display: inline-block; margin-top: 0.2rem;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.04em;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
+    /* ── Mode Buttons ────────────────────────────────────────────── */
+    .stButton > button {
+        font-family: 'Inter', sans-serif;
+        font-weight: 500;
+        border-radius: 14px !important;
+        border: 1px solid var(--sage-100) !important;
+        background: white !important;
+        color: var(--sage-700) !important;
+        padding: 0.7rem 1rem !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 1px 2px rgba(30, 58, 54, 0.04) !important;
+    }
+    .stButton > button:hover {
+        border-color: var(--sage-300) !important;
+        background: var(--sage-50) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(93, 139, 124, 0.12) !important;
+    }
+
+    /* ── Welcome Card ────────────────────────────────────────────── */
+    .welcome-card {
+        background: white;
+        border-radius: 22px;
+        padding: 2.4rem 2.2rem;
+        text-align: center;
+        box-shadow: 0 4px 24px rgba(30, 58, 54, 0.06);
+        margin: 0.5rem 0 1.2rem 0;
+        border: 1px solid rgba(168, 197, 189, 0.2);
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .welcome-title {
+        font-family: 'DM Serif Display', serif;
+        font-size: 1.7rem;
+        font-weight: 400;
+        color: var(--sage-900);
+        margin: 0.8rem 0 0.6rem 0;
+        letter-spacing: -0.01em;
+    }
+    .welcome-text {
+        color: var(--warm-gray);
+        font-size: 0.95rem;
+        line-height: 1.65;
+        margin-bottom: 1.4rem;
+    }
+
+    .chip-row {
+        display: flex;
+        gap: 0.45rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 1rem;
+    }
+    .chip {
+        background: var(--sage-50);
+        border: 1px solid var(--sage-100);
+        color: var(--sage-700);
+        padding: 0.4rem 0.9rem;
+        border-radius: 100px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    .chip:hover {
+        background: var(--sage-100);
+        border-color: var(--sage-300);
+        transform: translateY(-1px);
+    }
+
+    /* ── Memory Card ─────────────────────────────────────────────── */
+    .memory-card {
+        background: linear-gradient(135deg, #f3f8f6, #eef4f1);
+        border: 1px solid var(--sage-100);
+        border-radius: 14px;
+        padding: 0.8rem 1.1rem;
+        margin-bottom: 1rem;
+        font-size: 0.8rem;
+        color: var(--sage-700);
+        animation: fadeIn 0.4s ease;
+    }
+    .memory-title { font-weight: 600; margin-bottom: 0.35rem; font-size: 0.82rem; color: var(--sage-900); display: flex; align-items: center; gap: 0.4rem; }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    /* ── Chat Messages ───────────────────────────────────────────── */
+    .bot-label {
+        font-size: 0.68rem;
+        color: var(--soft-gray);
+        font-weight: 600;
+        margin-left: 54px;
+        margin-bottom: 0.3rem;
+        margin-top: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .bot-wrap, .user-wrap {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.7rem;
+        margin-bottom: 0.8rem;
+        animation: messageSlideIn 0.35s ease-out;
+    }
+
+    .user-wrap {
+        justify-content: flex-end;
+    }
+
+    @keyframes messageSlideIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .av {
+        width: 40px;
+        height: 40px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+        box-shadow: 0 2px 6px rgba(30, 58, 54, 0.1);
+    }
+
+    .av-bot {
+        background: linear-gradient(135deg, var(--sage-500), var(--sage-700));
+        color: white;
+    }
+
+    .av-user {
+        background: linear-gradient(135deg, #e8e5df, #d6d0c5);
+        color: var(--sage-900);
+    }
+
+    .bot-bubble {
+        background: white;
+        color: #2a2825;
+        padding: 1rem 1.25rem;
+        border-radius: 4px 18px 18px 18px;
+        max-width: 85%;
+        font-size: 0.93rem;
+        line-height: 1.65;
+        box-shadow: 0 1px 3px rgba(30, 58, 54, 0.04), 0 8px 24px rgba(30, 58, 54, 0.04);
+        border: 1px solid rgba(168, 197, 189, 0.15);
+        position: relative;
+    }
+
+    .bot-bubble::before {
+        content: "";
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: 3px;
+        background: linear-gradient(180deg, var(--sage-500), var(--sage-300));
+        border-radius: 4px 0 0 0;
+    }
+
+    .user-bubble {
+        background: linear-gradient(135deg, var(--sage-700), var(--sage-900));
+        color: white;
+        padding: 0.85rem 1.15rem;
+        border-radius: 18px 4px 18px 18px;
+        max-width: 80%;
+        font-size: 0.93rem;
+        line-height: 1.55;
+        box-shadow: 0 4px 12px rgba(30, 58, 54, 0.15);
+    }
+
+    /* ── Thinking Indicator ──────────────────────────────────────── */
+    .thinking-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.8rem 1rem;
+        background: white;
+        border-radius: 4px 18px 18px 18px;
+        border-left: 3px solid var(--sage-500);
+        max-width: 180px;
+        box-shadow: 0 1px 3px rgba(30, 58, 54, 0.04);
+    }
+    .thinking-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--sage-500);
+        animation: bounce 1.4s infinite ease-in-out;
+    }
+    .thinking-dot:nth-child(1) { animation-delay: -0.32s; }
+    .thinking-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce {
+        0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+        40% { transform: scale(1); opacity: 1; }
+    }
+    .thinking-label {
+        font-size: 0.78rem;
+        color: var(--soft-gray);
+        margin-left: 0.3rem;
+        font-style: italic;
+    }
+
+    /* ── Streaming Cursor ────────────────────────────────────────── */
+    .stream-cursor {
+        display: inline-block;
+        width: 2px;
+        height: 1em;
+        background: var(--sage-500);
+        margin-left: 2px;
+        vertical-align: text-bottom;
+        animation: blink 1s step-end infinite;
+    }
+    @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0; }
+    }
+
+    /* ── Source & Confidence Rows ────────────────────────────────── */
+    .source-row {
+        margin-left: 54px;
+        margin-bottom: 0.3rem;
+        font-size: 0.72rem;
+        color: var(--soft-gray);
+    }
     .source-tag {
         display: inline-block;
-        background: #f0f9ff;
-        border: 1px solid #bae6fd;
-        color: #0369a1;
+        background: var(--sage-50);
+        border: 1px solid var(--sage-100);
+        color: var(--sage-700);
         font-size: 0.68rem;
-        font-weight: 600;
-        padding: 0.2rem 0.6rem;
-        border-radius: 50px;
+        font-weight: 500;
+        padding: 0.2rem 0.65rem;
+        border-radius: 100px;
         margin-right: 0.3rem;
         margin-top: 0.3rem;
     }
-    .source-row {
-        margin-left: 42px;
-        margin-bottom: 0.2rem;
-        font-size: 0.7rem;
-        color: #64748b;
-    }
-
     .confidence-row {
-        margin-left: 42px;
-        margin-bottom: 0.6rem;
+        margin-left: 54px;
+        margin-bottom: 0.8rem;
         display: flex;
         align-items: center;
         gap: 0.5rem;
         font-size: 0.68rem;
     }
     .confidence-pill {
-        padding: 0.15rem 0.6rem;
-        border-radius: 50px;
-        font-weight: 700;
+        padding: 0.15rem 0.7rem;
+        border-radius: 100px;
+        font-weight: 600;
         letter-spacing: 0.03em;
+        font-size: 0.66rem;
     }
-    .conf-high { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-    .conf-medium { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-    .conf-low { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .conf-high { background: var(--sage-50); color: var(--sage-700); border: 1px solid var(--sage-300); }
+    .conf-medium { background: #fbf5e7; color: #7a5d1a; border: 1px solid #e8cf9e; }
+    .conf-low { background: #fdf2f1; color: #8f3f34; border: 1px solid #e3bfb8; }
     .confidence-bar {
         display: inline-block;
         width: 80px;
-        height: 6px;
-        background: #e5e7eb;
-        border-radius: 50px;
+        height: 5px;
+        background: var(--sage-100);
+        border-radius: 100px;
         overflow: hidden;
     }
     .confidence-fill {
         display: block;
         height: 100%;
-        border-radius: 50px;
+        border-radius: 100px;
     }
 
+    /* ── Input ───────────────────────────────────────────────────── */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea {
+        border-radius: 14px !important;
+        border: 1.5px solid var(--sage-100) !important;
+        padding: 0.8rem 1.1rem !important;
+        font-size: 0.93rem !important;
+        background: white !important;
+        transition: all 0.2s ease !important;
+    }
+    .stTextInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus {
+        border-color: var(--sage-500) !important;
+        box-shadow: 0 0 0 3px rgba(93, 139, 124, 0.15) !important;
+    }
+
+    /* ── Image Tag ───────────────────────────────────────────────── */
+    .image-tag {
+        display: inline-block;
+        background: #f5f0fa;
+        color: var(--accent-lavender);
+        border: 1px solid #d4c9e3;
+        padding: 0.3rem 0.8rem;
+        border-radius: 100px;
+        font-size: 0.72rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+
+    /* ── Name Welcome ────────────────────────────────────────────── */
     .name-welcome {
-        background: linear-gradient(135deg, #f0fdfa, #ecfdf5);
-        border: 1px solid #99f6e4;
+        background: linear-gradient(135deg, #f3f8f6, #eef4f1);
+        border: 1px solid var(--sage-100);
         border-radius: 14px;
         padding: 0.9rem 1.2rem;
-        margin-bottom: 0.8rem;
+        margin-bottom: 1rem;
+        animation: fadeInUp 0.4s ease;
     }
     .name-welcome-text {
         font-size: 0.92rem;
-        color: #134e4a;
-        font-weight: 500;
+        color: var(--sage-900);
+        font-weight: 400;
     }
-    .input-card { background: white; border-radius: 20px; padding: 1.1rem 1.3rem; box-shadow: 0 4px 24px rgba(0,0,0,0.06); margin-top: 0.8rem; border: 1px solid #e2e8f0; }
-    .stTextInput > div > div > input { background: #f8fafc !important; border: 1.5px solid #e2e8f0 !important; border-radius: 12px !important; color: #1e293b !important; padding: 0.75rem 1rem !important; font-size: 0.9rem !important; }
-    .stTextInput > div > div > input:focus { border-color: #0d9488 !important; box-shadow: 0 0 0 3px rgba(13,148,136,0.1) !important; }
-    .stTextInput > div > div > input::placeholder { color: #94a3b8 !important; }
-    .stButton > button { background: linear-gradient(135deg, #0d9488, #059669) !important; color: white !important; border: none !important; border-radius: 12px !important; padding: 0.65rem 1.3rem !important; font-weight: 600 !important; font-size: 0.88rem !important; }
-    .stFileUploader > div { background: #f8fafc !important; border: 1.5px dashed #cbd5e1 !important; border-radius: 12px !important; }
-    .section-label { font-size: 0.73rem; font-weight: 600; color: #64748b; margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.06em; }
-    div[data-testid="stMarkdownContainer"] p { color: #334155; }
-    div[data-testid="column"] { padding: 0 0.25rem !important; }
-    section[data-testid="stSidebar"] { background: white !important; border-right: 1px solid #e2e8f0 !important; }
-    section[data-testid="stSidebar"] * { color: #1e293b !important; }
-    .sb-title { font-size: 0.68rem; font-weight: 700; color: #94a3b8 !important; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
-    .sb-stat-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.55rem 0.75rem; margin-bottom: 0.35rem; }
-    .sb-stat-num { font-size: 1.3rem; font-weight: 800; color: #0f766e !important; line-height: 1; }
-    .sb-stat-label { font-size: 0.63rem; color: #94a3b8 !important; font-weight: 500; margin-top: 0.1rem; }
-    .sb-feature { display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.4rem 0.65rem; margin-bottom: 0.3rem; }
+
+    /* ── Suggested Follow-ups ────────────────────────────────────── */
+    .suggestion-row {
+        margin-left: 54px;
+        margin-bottom: 1rem;
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+    }
+    .suggestion-label {
+        font-size: 0.68rem;
+        color: var(--soft-gray);
+        margin-left: 54px;
+        margin-bottom: 0.4rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    /* ── Sidebar Styling ─────────────────────────────────────────── */
+    [data-testid="stSidebar"] {
+        background: white !important;
+        border-right: 1px solid var(--sage-100);
+    }
+    [data-testid="stSidebar"] .stMarkdown { color: var(--sage-900); }
+    .sb-title {
+        font-size: 0.67rem;
+        font-weight: 700;
+        color: var(--soft-gray);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        margin: 0.8rem 0 0.5rem 0;
+    }
+    .sb-stat-card { background: var(--sage-50); border: 1px solid var(--sage-100); border-radius: 12px; padding: 0.6rem 0.8rem; margin-bottom: 0.4rem; }
+    .sb-stat-num { font-size: 1.4rem; font-weight: 700; color: var(--sage-700) !important; line-height: 1; font-family: 'DM Serif Display', serif; }
+    .sb-stat-label { font-size: 0.65rem; color: var(--soft-gray) !important; font-weight: 500; margin-top: 0.15rem; }
+    .sb-feature { display: flex; align-items: center; gap: 0.55rem; background: var(--sage-50); border: 1px solid var(--sage-100); border-radius: 10px; padding: 0.45rem 0.7rem; margin-bottom: 0.35rem; }
     .sb-feature-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .sb-feature-name { font-size: 0.73rem; font-weight: 600; color: #334155 !important; }
-    .sb-feature-status { font-size: 0.63rem; color: #22c55e !important; margin-left: auto; font-weight: 600; }
-    .sb-tip { font-size: 0.71rem; color: #64748b !important; padding: 0.28rem 0; border-bottom: 1px solid #f1f5f9; line-height: 1.4; }
-    .sb-memory-item { font-size: 0.68rem; color: #0f766e !important; padding: 0.22rem 0; border-bottom: 1px solid #f0fdf4; }
-    .sb-footer { font-size: 0.63rem; color: #cbd5e1 !important; text-align: center; padding-top: 0.8rem; border-top: 1px solid #f1f5f9; line-height: 1.5; }
+    .sb-feature-name { font-size: 0.74rem; font-weight: 500; color: var(--sage-900) !important; }
+    .sb-feature-status { font-size: 0.63rem; color: var(--sage-500) !important; margin-left: auto; font-weight: 600; }
+    .sb-tip { font-size: 0.73rem; color: var(--warm-gray) !important; padding: 0.3rem 0; border-bottom: 1px solid var(--sage-50); line-height: 1.5; }
+    .sb-memory-item { font-size: 0.7rem; color: var(--sage-700) !important; padding: 0.25rem 0; border-bottom: 1px solid var(--sage-50); }
+    .sb-footer { font-size: 0.65rem; color: var(--soft-gray) !important; text-align: center; padding-top: 1rem; border-top: 1px solid var(--sage-50); line-height: 1.6; }
+
+    /* ── Hide Streamlit Branding ─────────────────────────────────── */
+    footer { visibility: hidden; }
+    [data-testid="stHeader"] { background: transparent; }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -743,6 +1159,63 @@ def medichat_rag(question, all_messages, lang_instruction="", patient_name=""):
     )
     return r.choices[0].message.content, memory, sources, confidence_level, confidence_pct
 
+def medichat_rag_stream(question, all_messages, lang_instruction="", patient_name=""):
+    """Streaming version: yields text chunks as they arrive. Returns final metadata via final yield."""
+    emb = embedder.encode([question]).astype("float32")
+    distances, idxs = index.search(emb, k=3)
+    context = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
+    sources = get_sources_used(idxs[0])
+    confidence_level, confidence_pct = calculate_confidence(distances[0].tolist())
+    memory = extract_patient_memory(all_messages)
+    memory_context = build_memory_context(memory)
+    history = []
+    for m in all_messages[-10:]:
+        if m.get("type") == "text":
+            history.append({"role": m["role"], "content": m["content"]})
+
+    # Same system prompt as non-streaming version
+    system = (
+        "You are MediChat, a clinically competent AI health assistant. "
+        "Patients often come to you after doctors have dismissed their concerns. "
+        "Your job is to reason like a skilled GP: integrate the full symptom picture, "
+        "identify the most likely diagnosis, and give genuinely useful guidance.\n\n"
+        "CLINICAL REASONING FRAMEWORK:\n"
+        "1. ANCHOR on stated conditions. Make them the primary lens for new symptoms.\n"
+        "2. INTEGRATE symptoms into ONE mechanism where possible, not a list of possibilities.\n"
+        "3. CHECK medication safety against stated conditions before suggesting any OTC drug.\n"
+        "4. ASK one targeted condition-specific follow-up, not generic questions.\n"
+        "5. COMMIT to the most likely diagnosis. Don't hedge with 'it could be many things'.\n\n"
+        "OUTPUT RULES:\n"
+        "- Maximum ONE disclaimer at the end of the response.\n"
+        "- Never say 'I'm not a doctor' more than once per conversation.\n"
+        "- Do not repeat the patient's symptoms back to them.\n"
+        "- Be warm but confident. Skip excessive empathy filler.\n"
+        "- Never invent symptoms the patient did not state.\n\n"
+    )
+    if patient_name:
+        system += "Patient's name: " + patient_name + ". Use sparingly, max once per response.\n\n"
+    if lang_instruction:
+        system += lang_instruction + "\n\n"
+    if memory_context:
+        system += "WHAT THIS PATIENT HAS TOLD YOU (ANCHOR ON THIS):\n" + memory_context + "\n\n"
+    system += "MEDICAL KNOWLEDGE (PubMed + real doctor-patient conversations):\n" + context
+
+    msgs = [{"role": "system", "content": system}] + history + [{"role": "user", "content": question}]
+    stream = groq_client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=msgs,
+        temperature=0.4,
+        max_tokens=1024,
+        stream=True,
+    )
+    full_response = ""
+    for chunk in stream:
+        delta = chunk.choices[0].delta.content or ""
+        if delta:
+            full_response += delta
+            yield ("chunk", delta, full_response)
+    yield ("done", full_response, {"memory": memory, "sources": sources, "confidence": confidence_level, "confidence_pct": confidence_pct})
+
 def medichat_vision(question, b64, all_messages, lang_instruction=""):
     memory = extract_patient_memory(all_messages)
     memory_context = build_memory_context(memory)
@@ -1042,7 +1515,29 @@ with st.sidebar:
     st.markdown("---")
     st.markdown('<div class="sb-footer">MediChat v4.0<br>ICT654 - Group 7 - SISTC 2026</div>', unsafe_allow_html=True)
 
-st.markdown('<div class="header-card"><div style="font-size:2.5rem;">🏥</div><div><div class="header-title">MediChat</div><div class="header-subtitle">Your AI health assistant - chat freely or do a guided symptom check</div></div></div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="header-card">'
+    '<div class="header-brand">'
+    '<div class="header-logo">✦</div>'
+    '<div>'
+    '<div class="header-title">MediChat</div>'
+    '<div class="header-subtitle">A thoughtful health companion, grounded in real medical research</div>'
+    '</div>'
+    '</div>'
+    '</div>',
+    unsafe_allow_html=True
+)
+
+# Trust strip: shown always, reassures patient of core values
+st.markdown(
+    '<div class="trust-strip">'
+    '<span class="trust-pill"><span class="trust-pill-icon">🔒</span>Private &amp; anonymous</span>'
+    '<span class="trust-pill"><span class="trust-pill-icon">📚</span>Grounded in 1,000 medical sources</span>'
+    '<span class="trust-pill"><span class="trust-pill-icon">✓</span>Evidence-based answers</span>'
+    '<span class="trust-pill"><span class="trust-pill-icon">🌍</span>5 languages supported</span>'
+    '</div>',
+    unsafe_allow_html=True
+)
 
 L = LANGUAGES[st.session_state.selected_language]
 
@@ -1121,8 +1616,7 @@ else:
             st.session_state.mode = "assessment"
             st.rerun()
 
-st.markdown('<div class="stats-row"><span class="stat-pill green">RAG - PubMed + MedDialog</span><span class="stat-pill purple">Vision AI Active</span><span class="stat-pill blue">1000 Medical Docs</span><span class="stat-pill orange">Memory Active</span><span class="stat-pill" style="color:#dc2626;border-color:#fecaca;background:#fef2f2;">Emergency Detection</span></div>', unsafe_allow_html=True)
-st.markdown('<div class="disclaimer">MediChat provides general health information only - not a substitute for professional medical advice. Always consult a qualified doctor for personal health concerns.</div>', unsafe_allow_html=True)
+st.markdown('<div class="disclaimer">MediChat offers general health information, not personal medical advice. Please consult a qualified doctor for any health concerns that need diagnosis or treatment.</div>', unsafe_allow_html=True)
 
 # Emergency banner - shown whenever emergency keywords detected in this session
 if st.session_state.emergency_detected:
@@ -1310,42 +1804,103 @@ if st.session_state.mode == "chat":
             st.session_state.last_sources = ["Vision AI (Llama-4-Scout)"]
             st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75})
         else:
-            st.session_state.messages.append({"role": "user", "type": "text", "content": user_input.strip()})
+            user_msg = {"role": "user", "type": "text", "content": user_input.strip()}
+            st.session_state.messages.append(user_msg)
             import time as _time
             _t0 = _time.time()
-            with st.spinner("Thinking..."):
-                name_for_rag = "" if st.session_state.patient_name == "Guest" else st.session_state.patient_name
-                reply, memory, sources, conf_level, conf_pct = medichat_rag(user_input, st.session_state.messages, lang_instruction, name_for_rag)
-                st.session_state.patient_memory = memory
-                st.session_state.last_sources = sources
-                _response_time = round(_time.time() - _t0, 2)
-                st.session_state.response_times.append(_response_time)
 
-                # Check drug-condition interactions and append safety alert
-                interaction_alerts = check_drug_interactions(reply, memory)
-                if interaction_alerts:
-                    alert_block = "\n\n---\n\n**⚠️ Drug Safety Check:**\n"
-                    for a in interaction_alerts:
-                        alert_block += "\n- **" + a["drug"] + "** — given your " + ", ".join(a["conditions"]) + ": " + a["warning"]
-                    reply = reply + alert_block
+            # Determine avatar for live rendering
+            user_initial_live = "U"
+            if st.session_state.patient_name and st.session_state.patient_name != "Guest":
+                user_initial_live = st.session_state.patient_name[0].upper()
 
-                # Log for evaluation dashboard (session + cross-session)
-                _log_entry = {
-                    "query": user_input.strip(),
-                    "confidence": conf_level,
-                    "confidence_pct": conf_pct,
-                    "sources": sources,
-                    "response_time": _response_time,
-                    "language": st.session_state.selected_language,
-                    "mode": "free_chat",
-                    "emergency_triggered": st.session_state.emergency_detected,
-                    "drug_alerts": len(interaction_alerts),
-                }
-                st.session_state.eval_log.append(_log_entry)
-                # Write anonymised metadata to Firestore for cross-session admin analytics
-                log_query_to_firestore(_log_entry)
+            # Render the just-submitted user message immediately
+            st.markdown('<div class="user-wrap"><div class="user-bubble">' + user_msg["content"] + '</div><div class="av av-user">' + user_initial_live + '</div></div>', unsafe_allow_html=True)
 
-            st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": sources, "confidence": conf_level, "confidence_pct": conf_pct})
+            # Show thinking indicator
+            st.markdown('<div class="bot-label">MediChat</div>', unsafe_allow_html=True)
+            thinking_placeholder = st.empty()
+            thinking_placeholder.markdown(
+                '<div class="bot-wrap">'
+                '<div class="av av-bot">M</div>'
+                '<div class="thinking-indicator">'
+                '<div class="thinking-dot"></div>'
+                '<div class="thinking-dot"></div>'
+                '<div class="thinking-dot"></div>'
+                '<span class="thinking-label">thinking</span>'
+                '</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+
+            name_for_rag = "" if st.session_state.patient_name == "Guest" else st.session_state.patient_name
+
+            # Stream the response progressively
+            final_text = ""
+            stream_metadata = None
+            try:
+                for event in medichat_rag_stream(user_input, st.session_state.messages, lang_instruction, name_for_rag):
+                    kind = event[0]
+                    if kind == "chunk":
+                        final_text = event[2]
+                        # Update the placeholder with streaming content + blinking cursor
+                        thinking_placeholder.markdown(
+                            '<div class="bot-wrap">'
+                            '<div class="av av-bot">M</div>'
+                            '<div class="bot-bubble">' + final_text + '<span class="stream-cursor"></span></div>'
+                            '</div>',
+                            unsafe_allow_html=True
+                        )
+                    elif kind == "done":
+                        final_text = event[1]
+                        stream_metadata = event[2]
+            except Exception as e:
+                thinking_placeholder.empty()
+                st.error("MediChat had trouble generating a response. Please try again.")
+                st.stop()
+
+            # Final render without cursor
+            thinking_placeholder.markdown(
+                '<div class="bot-wrap">'
+                '<div class="av av-bot">M</div>'
+                '<div class="bot-bubble">' + final_text + '</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+
+            memory = stream_metadata["memory"]
+            sources = stream_metadata["sources"]
+            conf_level = stream_metadata["confidence"]
+            conf_pct = stream_metadata["confidence_pct"]
+            st.session_state.patient_memory = memory
+            st.session_state.last_sources = sources
+            _response_time = round(_time.time() - _t0, 2)
+            st.session_state.response_times.append(_response_time)
+
+            # Drug-condition interaction check
+            interaction_alerts = check_drug_interactions(final_text, memory)
+            if interaction_alerts:
+                alert_block = "\n\n---\n\n**⚠️ Drug Safety Check:**\n"
+                for a in interaction_alerts:
+                    alert_block += "\n- **" + a["drug"] + "** — given your " + ", ".join(a["conditions"]) + ": " + a["warning"]
+                final_text = final_text + alert_block
+
+            # Log for evaluation dashboard (session + cross-session)
+            _log_entry = {
+                "query": user_input.strip(),
+                "confidence": conf_level,
+                "confidence_pct": conf_pct,
+                "sources": sources,
+                "response_time": _response_time,
+                "language": st.session_state.selected_language,
+                "mode": "free_chat",
+                "emergency_triggered": st.session_state.emergency_detected,
+                "drug_alerts": len(interaction_alerts),
+            }
+            st.session_state.eval_log.append(_log_entry)
+            log_query_to_firestore(_log_entry)
+
+            st.session_state.messages.append({"role": "assistant", "type": "text", "content": final_text, "sources": sources, "confidence": conf_level, "confidence_pct": conf_pct})
         st.rerun()
 
 elif st.session_state.mode == "eval":
