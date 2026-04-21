@@ -517,6 +517,32 @@ st.markdown("""
         font-size: 0.72rem;
         color: var(--soft-gray);
     }
+
+    .engine-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.65rem;
+        font-weight: 600;
+        padding: 0.15rem 0.55rem;
+        border-radius: 100px;
+        letter-spacing: 0.02em;
+        margin-right: 0.4rem;
+    }
+    .engine-claude {
+        background: linear-gradient(135deg, #fef2e8, #fdeede);
+        color: #a8521a;
+        border: 1px solid #f5c4a1;
+    }
+    .engine-groq {
+        background: var(--sage-50);
+        color: var(--sage-700);
+        border: 1px solid var(--sage-300);
+    }
+    .engine-badge::before {
+        content: "●";
+        font-size: 0.5rem;
+    }
     .source-tag {
         display: inline-block;
         background: var(--sage-50);
@@ -1943,11 +1969,18 @@ if st.session_state.mode == "chat":
             else:
                 st.markdown('<div class="bot-label">MediChat</div>', unsafe_allow_html=True)
                 st.markdown('<div class="bot-wrap"><div class="av av-bot">M</div><div class="bot-bubble">' + content + '</div></div>', unsafe_allow_html=True)
-                # Show source tags
+                # Engine badge (Claude Haiku vs Groq fallback)
+                engine_used = msg.get("engine", "")
+                engine_html = ""
+                if engine_used == "claude":
+                    engine_html = '<span class="engine-badge engine-claude">Claude Haiku</span>'
+                elif engine_used == "groq":
+                    engine_html = '<span class="engine-badge engine-groq">Llama (fallback)</span>'
+                # Show source tags alongside engine badge
                 msg_sources = msg.get("sources", [])
-                if msg_sources:
-                    source_tags = "".join(['<span class="source-tag">📚 ' + s + '</span>' for s in msg_sources])
-                    st.markdown('<div class="source-row">Grounded in: ' + source_tags + '</div>', unsafe_allow_html=True)
+                source_tags = "".join(['<span class="source-tag">📚 ' + s + '</span>' for s in msg_sources])
+                if engine_html or source_tags:
+                    st.markdown('<div class="source-row">' + engine_html + source_tags + '</div>', unsafe_allow_html=True)
                 # Show confidence indicator
                 conf_level = msg.get("confidence")
                 conf_pct = msg.get("confidence_pct")
@@ -2107,6 +2140,7 @@ if st.session_state.mode == "chat":
             sources = stream_metadata["sources"]
             conf_level = stream_metadata["confidence"]
             conf_pct = stream_metadata["confidence_pct"]
+            engine_used = stream_metadata.get("engine", "unknown")
             st.session_state.patient_memory = memory
             st.session_state.last_sources = sources
             _response_time = round(_time.time() - _t0, 2)
@@ -2131,11 +2165,12 @@ if st.session_state.mode == "chat":
                 "mode": "free_chat",
                 "emergency_triggered": st.session_state.emergency_detected,
                 "drug_alerts": len(interaction_alerts),
+                "engine": engine_used,
             }
             st.session_state.eval_log.append(_log_entry)
             log_query_to_firestore(_log_entry)
 
-            st.session_state.messages.append({"role": "assistant", "type": "text", "content": final_text, "sources": sources, "confidence": conf_level, "confidence_pct": conf_pct})
+            st.session_state.messages.append({"role": "assistant", "type": "text", "content": final_text, "sources": sources, "confidence": conf_level, "confidence_pct": conf_pct, "engine": engine_used})
         st.rerun()
 
 elif st.session_state.mode == "eval":
