@@ -117,19 +117,19 @@ st.markdown("""
     }
 
     .main .block-container {
-        padding: 1.5rem 2rem 5rem 2rem;
-        max-width: 780px;
+        padding: 1rem 1.5rem 2rem 1.5rem;
+        max-width: 760px;
     }
 
     /* ── Header ──────────────────────────────────────────────────── */
     .header-card {
         background: white;
-        border-radius: 24px;
-        padding: 1.8rem 2.2rem;
-        margin-bottom: 1.2rem;
+        border-radius: 20px;
+        padding: 1.2rem 1.6rem;
+        margin-bottom: 0.8rem;
         box-shadow:
             0 1px 3px rgba(30, 58, 54, 0.04),
-            0 10px 40px rgba(30, 58, 54, 0.06);
+            0 8px 28px rgba(30, 58, 54, 0.05);
         position: relative;
         overflow: hidden;
         border: 1px solid rgba(168, 197, 189, 0.2);
@@ -153,27 +153,27 @@ st.markdown("""
     .header-brand {
         display: flex;
         align-items: center;
-        gap: 1rem;
-        margin-bottom: 0.3rem;
+        gap: 0.9rem;
+        margin-bottom: 0;
     }
 
     .header-logo {
-        width: 52px;
-        height: 52px;
-        border-radius: 16px;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
         background: linear-gradient(135deg, var(--sage-500), var(--sage-700));
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.7rem;
+        font-size: 1.4rem;
         color: white;
-        box-shadow: 0 4px 16px rgba(93, 139, 124, 0.25);
+        box-shadow: 0 3px 12px rgba(93, 139, 124, 0.22);
         flex-shrink: 0;
     }
 
     .header-title {
         font-family: 'DM Serif Display', serif;
-        font-size: 2.1rem;
+        font-size: 1.75rem;
         font-weight: 400;
         color: var(--sage-900);
         margin: 0;
@@ -183,10 +183,10 @@ st.markdown("""
 
     .header-subtitle {
         color: var(--warm-gray);
-        font-size: 0.88rem;
-        margin: 0.4rem 0 0 0;
+        font-size: 0.8rem;
+        margin: 0.3rem 0 0 0;
         font-weight: 400;
-        line-height: 1.5;
+        line-height: 1.4;
     }
 
     /* ── Trust Strip ─────────────────────────────────────────────── */
@@ -241,15 +241,19 @@ st.markdown("""
 
     /* ── Disclaimer ──────────────────────────────────────────────── */
     .disclaimer {
-        background: #fefaf0;
-        border: 1px solid #f0dfb8;
-        border-radius: 14px;
-        padding: 0.75rem 1.1rem;
-        color: #7a5d1a;
-        font-size: 0.78rem;
-        margin-bottom: 1.2rem;
+        display: none;
+    }
+
+    .disclaimer-mini {
+        font-size: 0.7rem;
+        color: var(--soft-gray);
         text-align: center;
-        line-height: 1.5;
+        padding: 0.3rem 0;
+        margin-top: 0.5rem;
+        opacity: 0.8;
+    }
+    .disclaimer-mini-red {
+        color: #a85c50;
     }
 
     /* ── Emergency Banner ────────────────────────────────────────── */
@@ -1168,43 +1172,154 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
     confidence_level, confidence_pct = calculate_confidence(distances[0].tolist())
     memory = extract_patient_memory(all_messages)
     memory_context = build_memory_context(memory)
+
+    # Build conversation history from ACTUAL patient messages only, not RAG context
     history = []
-    for m in all_messages[-10:]:
+    patient_turns = 0
+    for m in all_messages[-12:]:
         if m.get("type") == "text":
+            if m["role"] == "user":
+                patient_turns += 1
             history.append({"role": m["role"], "content": m["content"]})
 
-    # Same system prompt as non-streaming version
+    # Extract patient's LAST message to check for dissatisfaction signals
+    last_user_message = question.lower() if question else ""
+    dissatisfaction_signals = [
+        "not helping", "isn't helping", "not useful", "that doesn't help",
+        "you are not helping", "keep repeating", "already said", "same thing",
+        "useless", "unhelpful", "why are you", "doesn't make sense"
+    ]
+    escalation_needed = any(sig in last_user_message for sig in dissatisfaction_signals)
+
     system = (
-        "You are MediChat, a clinically competent AI health assistant. "
-        "Patients often come to you after doctors have dismissed their concerns. "
-        "Your job is to reason like a skilled GP: integrate the full symptom picture, "
-        "identify the most likely diagnosis, and give genuinely useful guidance.\n\n"
-        "CLINICAL REASONING FRAMEWORK:\n"
-        "1. ANCHOR on stated conditions. Make them the primary lens for new symptoms.\n"
-        "2. INTEGRATE symptoms into ONE mechanism where possible, not a list of possibilities.\n"
-        "3. CHECK medication safety against stated conditions before suggesting any OTC drug.\n"
-        "4. ASK one targeted condition-specific follow-up, not generic questions.\n"
-        "5. COMMIT to the most likely diagnosis. Don't hedge with 'it could be many things'.\n\n"
-        "OUTPUT RULES:\n"
-        "- Maximum ONE disclaimer at the end of the response.\n"
-        "- Never say 'I'm not a doctor' more than once per conversation.\n"
-        "- Do not repeat the patient's symptoms back to them.\n"
-        "- Be warm but confident. Skip excessive empathy filler.\n"
-        "- Never invent symptoms the patient did not state.\n\n"
+        "You are MediChat, a clinically competent AI health assistant designed with the care and rigour of a thoughtful GP. "
+        "Your role is to give patients genuinely useful, specific, and safe guidance — not generic reassurance or vague lists.\n\n"
+
+        "═══════════════════════════════════════════════════════════\n"
+        "ABSOLUTE RULES — NEVER BREAK THESE\n"
+        "═══════════════════════════════════════════════════════════\n\n"
+
+        "RULE 1 — FABRICATION IS FORBIDDEN:\n"
+        "You may ONLY reference information the patient has explicitly typed in THIS conversation. "
+        "Never claim the patient 'mentioned', 'said', 'told you', or 'reported' anything they did not literally type. "
+        "The medical knowledge context below is REFERENCE MATERIAL, not patient history. "
+        "If you're about to say 'you mentioned X', STOP and check — did they actually type X in this chat?\n\n"
+
+        "RULE 2 — RED FLAG SCREENING (do this BEFORE anything else):\n"
+        "For any of these presenting complaints, screen for danger signs FIRST before giving general advice:\n\n"
+        "• Sudden severe headache → ask about: thunderclap onset (worst of life), neck stiffness, fever, "
+        "vision changes, weakness on one side, confusion. These indicate possible subarachnoid haemorrhage "
+        "or meningitis — MEDICAL EMERGENCY.\n\n"
+        "• Chest pain → ask about: radiation to arm/jaw, sweating, shortness of breath, nausea. "
+        "These indicate possible cardiac event — EMERGENCY.\n\n"
+        "• Sudden shortness of breath → ask about: chest pain, leg swelling, recent travel/surgery. "
+        "Rule out PE.\n\n"
+        "• Severe abdominal pain → ask about: rigidity, fever, inability to pass wind/stool, vomiting blood.\n\n"
+        "• Any neurological symptom (weakness, numbness, speech) → urgent stroke screen.\n\n"
+        "If red flags present → tell patient to seek emergency care NOW. Don't hedge.\n\n"
+
+        "RULE 3 — ONE DISCLAIMER ONLY:\n"
+        "The app shows a permanent disclaimer. Do NOT add 'Disclaimer:' or 'I'm not a doctor' or "
+        "'consult a healthcare professional' at the end of EVERY response. Use it only when genuinely relevant "
+        "(e.g., before naming a specific prescription medication, or when red flags warrant escalation).\n\n"
+
+        "RULE 4 — NEVER REPEAT YOURSELF:\n"
+        "If you've already suggested X in this conversation, do NOT suggest X again. "
+        "Each response must add NEW information, a NEW angle, or escalate to a different approach.\n\n"
+
+        "═══════════════════════════════════════════════════════════\n"
+        "CLINICAL REASONING FRAMEWORK\n"
+        "═══════════════════════════════════════════════════════════\n\n"
+
+        "STEP 1 — ANCHOR ON STATED CONDITIONS:\n"
+        "If the patient has said they have a diagnosed condition (asthma, diabetes, hypertension, etc.), "
+        "make that your primary lens. New symptoms usually mean (a) the condition is uncontrolled, "
+        "(b) medication side effect, or (c) a common comorbidity.\n\n"
+
+        "STEP 2 — INTEGRATE THE FULL PICTURE:\n"
+        "Ask: what SINGLE mechanism explains all of the patient's symptoms together? "
+        "Prefer one coherent diagnosis over five scattered possibilities.\n\n"
+
+        "STEP 3 — MEDICATION SAFETY CHECK:\n"
+        "Before suggesting any medication:\n"
+        "- Antihistamines → caution in asthma, glaucoma, BPH\n"
+        "- NSAIDs (ibuprofen, naproxen) → caution in hypertension, kidney disease, ulcers, asthma\n"
+        "- Decongestants → caution in hypertension, heart disease, thyroid\n"
+        "- Paracetamol → caution in liver disease, heavy alcohol\n"
+        "- Triptans → caution in cardiovascular disease, stroke history, uncontrolled hypertension\n"
+        "If there's a potential interaction, flag it directly in the response, don't skip it.\n\n"
+
+        "STEP 4 — TARGETED FOLLOW-UP (ONE question max):\n"
+        "Ask ONE clinically targeted question that actually advances the diagnosis. "
+        "Not generic stuff like 'when did it start' unless truly unknown. "
+        "For migraine: 'Is this like any previous headache, or is this completely different in character/severity?' "
+        "For diabetes: 'What are your recent blood sugar readings?' "
+        "For asthma: 'Preventer daily, or reliever only?'\n\n"
+
+        "STEP 5 — COMMIT + NEXT STEPS:\n"
+        "State the most likely 1-2 diagnoses WITH reasoning. Give specific next steps: "
+        "what OTC medication (with dose + safety check), what tests to ask a doctor for, "
+        "what warning signs would make this urgent.\n\n"
+
+        "═══════════════════════════════════════════════════════════\n"
+        "WHEN PATIENT SAYS 'YOU'RE NOT HELPING' OR REPEATS THEMSELVES\n"
+        "═══════════════════════════════════════════════════════════\n\n"
+        "This means your previous advice was too generic. ESCALATE the response:\n"
+        "1. Acknowledge briefly ('I hear you — let me go deeper.')\n"
+        "2. Commit to a specific likely diagnosis if you haven't yet\n"
+        "3. Give SPECIFIC actionable interventions (exact drug names, exact doses, exact techniques)\n"
+        "4. Explain what to watch for that would mean this is NOT the typical case\n"
+        "5. Do NOT repeat hydration/rest/cold compress if already mentioned\n\n"
+
+        "═══════════════════════════════════════════════════════════\n"
+        "STYLE\n"
+        "═══════════════════════════════════════════════════════════\n\n"
+        "- Warm but direct. Skip 'that sounds difficult' and 'I understand this is stressful' filler.\n"
+        "- Clinical confidence is itself reassuring. A vague, hedge-everything response feels untrustworthy.\n"
+        "- Use specific numbers: exact dosages (ibuprofen 400mg every 6 hours, max 1200mg/day OTC), "
+        "exact timeframes ('if no improvement in 2 hours, escalate'), exact percentages when giving likelihoods.\n"
+        "- Never invent symptoms the patient didn't state.\n"
+        "- Never pretend to remember something from 'earlier' that wasn't said.\n\n"
     )
+
+    if escalation_needed:
+        system += (
+            "═══════════════════════════════════════════════════════════\n"
+            "⚠ ESCALATION TRIGGER DETECTED\n"
+            "═══════════════════════════════════════════════════════════\n"
+            "The patient has indicated your previous responses are not helpful. This response MUST be different — "
+            "more specific, more committed to a diagnosis, with concrete interventions they haven't already heard. "
+            "Do NOT repeat general advice (hydration, rest, dark room, cold compress) if you've given it before. "
+            "Name the most likely specific diagnosis, suggest a specific medication with dose, "
+            "and say exactly when to escalate to urgent care.\n\n"
+        )
+
     if patient_name:
-        system += "Patient's name: " + patient_name + ". Use sparingly, max once per response.\n\n"
+        system += "Patient's first name: " + patient_name + ". Use max once per response, only where natural.\n\n"
     if lang_instruction:
         system += lang_instruction + "\n\n"
+
     if memory_context:
-        system += "WHAT THIS PATIENT HAS TOLD YOU (ANCHOR ON THIS):\n" + memory_context + "\n\n"
-    system += "MEDICAL KNOWLEDGE (PubMed + real doctor-patient conversations):\n" + context
+        system += (
+            "WHAT THIS PATIENT HAS EXPLICITLY TOLD YOU (ANCHOR ON THIS, do not invent anything beyond this):\n"
+            + memory_context + "\n\n"
+        )
+    else:
+        system += "This patient has not yet stated any conditions or medications. Do not assume any.\n\n"
+
+    system += (
+        "═══════════════════════════════════════════════════════════\n"
+        "REFERENCE: Medical knowledge retrieved for this query\n"
+        "(NOT patient history — do not cite this as something the patient said)\n"
+        "═══════════════════════════════════════════════════════════\n\n"
+        + context
+    )
 
     msgs = [{"role": "system", "content": system}] + history + [{"role": "user", "content": question}]
     stream = groq_client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=msgs,
-        temperature=0.4,
+        temperature=0.35,
         max_tokens=1024,
         stream=True,
     )
@@ -1528,13 +1643,12 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Trust strip: shown always, reassures patient of core values
+# Trust strip: compact, only 3 key signals
 st.markdown(
     '<div class="trust-strip">'
-    '<span class="trust-pill"><span class="trust-pill-icon">🔒</span>Private &amp; anonymous</span>'
-    '<span class="trust-pill"><span class="trust-pill-icon">📚</span>Grounded in 1,000 medical sources</span>'
-    '<span class="trust-pill"><span class="trust-pill-icon">✓</span>Evidence-based answers</span>'
-    '<span class="trust-pill"><span class="trust-pill-icon">🌍</span>5 languages supported</span>'
+    '<span class="trust-pill"><span class="trust-pill-icon">🔒</span>Private</span>'
+    '<span class="trust-pill"><span class="trust-pill-icon">📚</span>1,000 medical sources</span>'
+    '<span class="trust-pill"><span class="trust-pill-icon">✓</span>Evidence-based</span>'
     '</div>',
     unsafe_allow_html=True
 )
@@ -1765,11 +1879,12 @@ if st.session_state.mode == "chat":
     st.markdown('<div class="section-label" style="margin-top:0.7rem;">' + L["question_label"] + '</div>', unsafe_allow_html=True)
     with st.form(key="chat_form", clear_on_submit=True):
         user_input = st.text_input("", placeholder=L["placeholder"], label_visibility="collapsed")
-        fc1, fc2, fc3 = st.columns([2, 2, 1])
-        with fc2:
-            submit = st.form_submit_button(L["send_btn"])
-        with fc3:
-            clear = st.form_submit_button(L["clear_btn"])
+        bc1, bc2, bc3, bc4 = st.columns([1, 2, 2, 1])
+        with bc2:
+            submit = st.form_submit_button(L["send_btn"], use_container_width=True)
+        with bc3:
+            clear = st.form_submit_button(L["clear_btn"], use_container_width=True)
+    st.markdown('<div class="disclaimer-mini disclaimer-mini-red">⚠ MediChat is not a substitute for professional medical advice. For diagnosis or treatment, please consult a qualified doctor.</div>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
     if clear:
