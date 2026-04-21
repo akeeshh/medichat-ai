@@ -1,5 +1,6 @@
 streamlit
 groq
+anthropic
 faiss-cpu
 sentence-transformers
 datasets
