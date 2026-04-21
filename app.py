@@ -11,11 +11,73 @@ import io
 from datetime import datetime
 from fpdf import FPDF
 
+# Firebase for cross-session analytics (optional - fails gracefully if missing)
+try:
+    import firebase_admin
+    from firebase_admin import credentials, firestore
+    FIREBASE_AVAILABLE = True
+except ImportError:
+    FIREBASE_AVAILABLE = False
+
 st.set_page_config(
     page_title="MediChat - Your Health Assistant",
     page_icon="🏥",
     layout="centered"
 )
+
+# ── Firebase Initialization (cross-session analytics) ────────────────
+@st.cache_resource
+def init_firebase():
+    """Initialize Firebase Admin SDK. Returns Firestore client or None if unavailable."""
+    if not FIREBASE_AVAILABLE:
+        return None
+    try:
+        firebase_config = st.secrets.get("firebase", {})
+        if not firebase_config or not firebase_config.get("project_id"):
+            return None
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(dict(firebase_config))
+            firebase_admin.initialize_app(cred)
+        return firestore.client()
+    except Exception as e:
+        print("Firebase init failed:", e)
+        return None
+
+firestore_db = init_firebase()
+FIREBASE_ACTIVE = firestore_db is not None
+
+def log_query_to_firestore(query_data):
+    """Write anonymised query metadata to Firestore. Silent failure if Firebase unavailable."""
+    if not FIREBASE_ACTIVE:
+        return
+    try:
+        # Strip raw query text before writing - ONLY metadata
+        safe_data = {
+            "query_word_count": len(query_data.get("query", "").split()),
+            "confidence": query_data.get("confidence", "unknown"),
+            "confidence_pct": query_data.get("confidence_pct", 0),
+            "sources": query_data.get("sources", []),
+            "response_time": query_data.get("response_time", 0),
+            "language": query_data.get("language", "English"),
+            "mode": query_data.get("mode", "free_chat"),
+            "emergency_triggered": query_data.get("emergency_triggered", False),
+            "drug_alerts": query_data.get("drug_alerts", 0),
+            "timestamp": firestore.SERVER_TIMESTAMP,
+        }
+        firestore_db.collection("medichat_queries").add(safe_data)
+    except Exception as e:
+        print("Firestore write failed:", e)
+
+def fetch_all_queries_from_firestore(limit=500):
+    """Retrieve all anonymised query logs for admin dashboard."""
+    if not FIREBASE_ACTIVE:
+        return []
+    try:
+        docs = firestore_db.collection("medichat_queries").order_by("timestamp", direction=firestore.Query.DESCENDING).limit(limit).stream()
+        return [doc.to_dict() for doc in docs]
+    except Exception as e:
+        print("Firestore read failed:", e)
+        return []
 
 st.markdown("""
 <style>
@@ -1267,8 +1329,8 @@ if st.session_state.mode == "chat":
                         alert_block += "\n- **" + a["drug"] + "** — given your " + ", ".join(a["conditions"]) + ": " + a["warning"]
                     reply = reply + alert_block
 
-                # Log for evaluation dashboard
-                st.session_state.eval_log.append({
+                # Log for evaluation dashboard (session + cross-session)
+                _log_entry = {
                     "query": user_input.strip(),
                     "confidence": conf_level,
                     "confidence_pct": conf_pct,
@@ -1278,7 +1340,10 @@ if st.session_state.mode == "chat":
                     "mode": "free_chat",
                     "emergency_triggered": st.session_state.emergency_detected,
                     "drug_alerts": len(interaction_alerts),
-                })
+                }
+                st.session_state.eval_log.append(_log_entry)
+                # Write anonymised metadata to Firestore for cross-session admin analytics
+                log_query_to_firestore(_log_entry)
 
             st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": sources, "confidence": conf_level, "confidence_pct": conf_pct})
         st.rerun()
@@ -1296,7 +1361,43 @@ elif st.session_state.mode == "eval":
     st.markdown("### 📊 MediChat Analytics Dashboard")
     st.caption("Real-time session analytics for clinical evaluation and research reporting. All patient query text is anonymised.")
 
-    logs = st.session_state.eval_log
+    # Data source toggle: Current session vs All patients (Firestore)
+    dc1, dc2 = st.columns([3, 2])
+    with dc2:
+        if FIREBASE_ACTIVE:
+            data_source = st.radio(
+                "Data source:",
+                ["Current Session", "All Patients (Firestore)"],
+                horizontal=True,
+                key="analytics_data_source",
+                label_visibility="collapsed"
+            )
+        else:
+            data_source = "Current Session"
+            st.caption("⚠️ Firestore not connected. Showing current session only.")
+
+    # Load logs based on selected data source
+    if data_source == "All Patients (Firestore)" and FIREBASE_ACTIVE:
+        raw_logs = fetch_all_queries_from_firestore(limit=500)
+        # Convert Firestore docs to same shape as session logs
+        logs = [
+            {
+                "query": " " * d.get("query_word_count", 0),  # Placeholder for word count, no real text
+                "confidence": d.get("confidence", "unknown"),
+                "confidence_pct": d.get("confidence_pct", 0),
+                "sources": d.get("sources", []),
+                "response_time": d.get("response_time", 0),
+                "language": d.get("language", "English"),
+                "emergency_triggered": d.get("emergency_triggered", False),
+                "drug_alerts": d.get("drug_alerts", 0),
+            }
+            for d in raw_logs
+        ]
+        st.info("📡 Live data from Firestore — aggregated from all MediChat patients (anonymised). Total records: " + str(len(logs)))
+    else:
+        logs = st.session_state.eval_log
+        if FIREBASE_ACTIVE:
+            st.caption("💻 Current session only. Switch to 'All Patients (Firestore)' to see aggregate data.")
     total_queries = len(logs)
 
     if total_queries == 0:
