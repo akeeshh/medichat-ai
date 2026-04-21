@@ -922,6 +922,8 @@ if "session_started" not in st.session_state:
     st.session_state.last_sources = []
     st.session_state.eval_log = []
     st.session_state.response_times = []
+    st.session_state.admin_authenticated = False
+    st.session_state.admin_attempt_failed = False
 
 with st.sidebar:
     st.markdown("## MediChat")
@@ -982,12 +984,54 @@ st.markdown('<div class="header-card"><div style="font-size:2.5rem;">🏥</div><
 
 L = LANGUAGES[st.session_state.selected_language]
 
-# Admin mode check: only show Analytics if URL contains ?admin=medichat2026
-ADMIN_KEY = "medichat2026"
+# Admin access: URL parameter triggers the password gate.
+# Patients cannot see the Analytics tab at all unless they:
+#   1. Know the admin URL parameter (?admin=1)
+#   2. Enter the correct password
+ADMIN_PASSWORD = "MediChat@Group7#2026"  # Change this before final submission
 _query_params = st.query_params
-_is_admin = _query_params.get("admin", "") == ADMIN_KEY
+_admin_requested = _query_params.get("admin", "") != ""
+
+# Show password gate if admin URL is visited but not yet authenticated
+if _admin_requested and not st.session_state.admin_authenticated:
+    st.markdown(
+        '<div style="background:linear-gradient(135deg,#1f2937,#111827);color:white;padding:1.5rem 2rem;border-radius:16px;margin:2rem auto;max-width:500px;box-shadow:0 8px 30px rgba(0,0,0,0.2);">'
+        '<div style="text-align:center;margin-bottom:1.2rem;">'
+        '<div style="font-size:2.5rem;margin-bottom:0.5rem;">🔒</div>'
+        '<div style="font-size:1.3rem;font-weight:700;margin-bottom:0.3rem;">Admin Access Required</div>'
+        '<div style="font-size:0.85rem;opacity:0.8;">Research &amp; Evaluation Dashboard</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+    pg_c1, pg_c2, pg_c3 = st.columns([1, 2, 1])
+    with pg_c2:
+        with st.form(key="admin_login_form", clear_on_submit=True):
+            admin_pw_input = st.text_input("Password", type="password", placeholder="Enter admin password", label_visibility="collapsed")
+            login_btn = st.form_submit_button("Unlock Analytics", use_container_width=True)
+        if login_btn:
+            if admin_pw_input == ADMIN_PASSWORD:
+                st.session_state.admin_authenticated = True
+                st.session_state.admin_attempt_failed = False
+                st.rerun()
+            else:
+                st.session_state.admin_attempt_failed = True
+                st.rerun()
+        if st.session_state.admin_attempt_failed:
+            st.error("Incorrect password. Access denied.")
+        st.caption("Authorised team members only. This dashboard contains anonymised research data.")
+    st.stop()
+
+_is_admin = st.session_state.admin_authenticated
 
 if _is_admin:
+    # Admin logout option at top
+    admin_c1, admin_c2 = st.columns([5, 1])
+    with admin_c2:
+        if st.button("🔒 Logout", key="admin_logout"):
+            st.session_state.admin_authenticated = False
+            st.session_state.mode = "chat"
+            st.rerun()
     cm1, cm2, cm3 = st.columns(3)
     with cm1:
         if st.button(L["free_chat"] + (" (Active)" if st.session_state.mode == "chat" else ""), use_container_width=True):
