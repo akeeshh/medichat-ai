@@ -6,3 +6,4 @@ datasets
 pillow
 fpdf2
 openpyxl
+firebase-admin
