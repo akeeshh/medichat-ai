@@ -13,6 +13,8 @@ import os
 import base64
 from PIL import Image
 import io
+import re
+import time
 from datetime import datetime
 from fpdf import FPDF
 
@@ -297,6 +299,10 @@ st.markdown("""
         background: white !important;
         color: var(--clinical-700) !important;
         padding: 0.6rem 0.9rem !important;
+        color: var(--sage-700) !important;
+        padding: 0 1rem !important;
+        height: 44px !important;
+        min-height: 44px !important;
         transition: all 0.2s ease !important;
         box-shadow: 0 1px 2px rgba(12, 45, 72, 0.04) !important;
         font-size: 0.85rem !important;
@@ -306,6 +312,30 @@ st.markdown("""
         background: var(--clinical-50) !important;
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(42, 143, 197, 0.12) !important;
+    }
+
+    /* ── Primary Send button (form submit) ───────────────────────── */
+    .stForm [data-testid="stFormSubmitButton"] > button {
+        background: linear-gradient(135deg, var(--sage-700), var(--sage-900)) !important;
+        color: white !important;
+        border: 1px solid var(--sage-700) !important;
+        font-weight: 600 !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        border-radius: 14px !important;
+        box-shadow: 0 4px 12px rgba(30, 58, 54, 0.15) !important;
+    }
+    .stForm [data-testid="stFormSubmitButton"] > button:hover {
+        background: linear-gradient(135deg, var(--sage-900), var(--sage-700)) !important;
+        border-color: var(--sage-900) !important;
+        box-shadow: 0 6px 18px rgba(30, 58, 54, 0.22) !important;
+        transform: translateY(-1px);
+    }
+
+    /* Match input height to buttons */
+    .stForm .stTextInput > div > div > input {
+        height: 44px !important;
+        padding: 0 1.1rem !important;
     }
 
     /* ── Welcome Card ────────────────────────────────────────────── */
@@ -742,14 +772,81 @@ st.markdown("""
         box-shadow: 0 0 0 3px rgba(42, 143, 197, 0.15) !important;
     }
 
-    /* ── Attach Uploader: completely hidden, triggered by custom JS button ── */
-    .attach-uploader [data-testid="stFileUploader"] {
-        position: absolute !important;
-        width: 1px !important;
-        height: 1px !important;
-        overflow: hidden !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
+    /* ── Attach Uploader: styled to look like a clean Attach button ── */
+    [data-testid="stFileUploader"] > label {
+        display: none !important;
+    }
+    [data-testid="stFileUploader"] section {
+        padding: 0 !important;
+        border: 1px solid var(--sage-100) !important;
+        border-radius: 14px !important;
+        background: white !important;
+        box-shadow: 0 1px 2px rgba(30, 58, 54, 0.04) !important;
+        transition: all 0.2s ease !important;
+        min-height: 44px !important;
+        height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+    }
+    [data-testid="stFileUploader"] section:hover {
+        border-color: var(--sage-300) !important;
+        background: var(--sage-50) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(93, 139, 124, 0.12) !important;
+    }
+    [data-testid="stFileUploaderDropzone"] {
+        padding: 0 1rem !important;
+        min-height: 44px !important;
+        height: 44px !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 14px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
+    [data-testid="stFileUploaderDropzoneInstructions"] {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.4rem !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    [data-testid="stFileUploaderDropzoneInstructions"] > div {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.4rem !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    [data-testid="stFileUploaderDropzoneInstructions"] svg,
+    [data-testid="stFileUploaderDropzoneInstructions"] small {
+        display: none !important;
+    }
+    [data-testid="stFileUploaderDropzoneInstructions"] span {
+        font-size: 0 !important;
+        color: transparent !important;
+    }
+    [data-testid="stFileUploaderDropzoneInstructions"] span::before {
+        content: "📎  Attach image or PDF";
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.84rem !important;
+        font-weight: 500 !important;
+        color: var(--sage-700) !important;
+    }
+    [data-testid="stFileUploaderDropzone"] button {
+        display: none !important;
+    }
+    /* Show filename neatly once a file is selected */
+    [data-testid="stFileUploaderFile"] {
+        padding: 0.5rem 0.8rem !important;
+        background: var(--sage-50) !important;
+        border-radius: 12px !important;
+        margin-top: 0.4rem !important;
     }
 
     /* ── Image Tag ───────────────────────────────────────────────── */
@@ -833,32 +930,8 @@ st.markdown("""
     [data-testid="stFileUploader"] [data-testid="stAlert"] {
         margin-top: 0.5rem !important;
         position: relative !important;
-        z-index: 1 !important;
-    }
-    [data-testid="stFileUploader"] section {
-        position: relative !important;
-        z-index: 2 !important;
-    }
-    [data-testid="stFileUploader"] button[kind="header"] {
-        z-index: 10 !important;
-        position: relative !important;
-    }
-
-    /* ── ATTACH UPLOADER: hide static help text globally ── */
-    [data-testid="stFileUploaderDropzoneInstructions"] small,
-    [data-testid="stFileUploader"] section > div > small,
-    [data-testid="stFileUploader"] > label + div small {
-        display: none !important;
-    }
-    [data-testid="stFileUploaderDropzoneInstructions"] > div:first-child {
-        display: none !important;
-    }
-    /* Keep error/validation alert messages visible */
-    .attach-uploader [data-testid="stAlert"] {
-        display: block !important;
-        margin-top: 0.4rem !important;
-        position: relative !important;
         z-index: 5 !important;
+        display: block !important;
     }
 
 </style>
@@ -1432,7 +1505,6 @@ def medichat_rag(question, all_messages, lang_instruction="", patient_name=""):
     return r.choices[0].message.content, memory, sources, confidence_level, confidence_pct
 
 def sanitize_rag_context(raw_context):
-    import re as _re
     if not raw_context:
         return ""
     leaked_meds = [
@@ -1452,8 +1524,8 @@ def sanitize_rag_context(raw_context):
         r"(?i)currently on [^.]*?\.",
     ]
     for pat in patterns_to_strip:
-        text = _re.sub(pat, "", text)
-    sentences = _re.split(r'(?<=[.!?])\s+', text)
+        text = re.sub(pat, "", text)
+    sentences = re.split(r'(?<=[.!?])\s+', text)
     clean = []
     for s in sentences:
         s_lower = s.lower()
@@ -1466,17 +1538,16 @@ def sanitize_rag_context(raw_context):
 def markdown_to_html(text):
     if not text:
         return ""
-    import re as _re
 
     raw = text
-    raw = _re.sub(r"^#{1,6}\s+(.+?)$", lambda m: "\n\n**" + m.group(1).strip().rstrip(":") + ":**\n", raw, flags=_re.MULTILINE)
-    raw = _re.sub(r"\s*#{2,6}\s+", " ", raw)
-    raw = _re.sub(r"(?<=[.!?:\)])\s+\*\s+(?=[A-Z])", "\n- ", raw)
-    raw = _re.sub(r"\*\*\s*\*\s+(?=[A-Z])", "**\n- ", raw)
-    raw = _re.sub(r"(?<=[a-zA-Z\.])\s+\*\s+(?=[A-Z])", "\n- ", raw)
-    raw = _re.sub(r"(?<=[.!?])\s+(\*\*[^\*\n]{2,40}:\*\*)", r"\n\n\1\n\n", raw)
-    raw = _re.sub(r"(?<=[a-zA-Z\.\)])\s+(?=-\s+[A-Z])", r"\n", raw)
-    raw = _re.sub(r"\n{3,}", "\n\n", raw)
+    raw = re.sub(r"^#{1,6}\s+(.+?)$", lambda m: "\n\n**" + m.group(1).strip().rstrip(":") + ":**\n", raw, flags=re.MULTILINE)
+    raw = re.sub(r"\s*#{2,6}\s+", " ", raw)
+    raw = re.sub(r"(?<=[.!?:\)])\s+\*\s+(?=[A-Z])", "\n- ", raw)
+    raw = re.sub(r"\*\*\s*\*\s+(?=[A-Z])", "**\n- ", raw)
+    raw = re.sub(r"(?<=[a-zA-Z\.])\s+\*\s+(?=[A-Z])", "\n- ", raw)
+    raw = re.sub(r"(?<=[.!?])\s+(\*\*[^\*\n]{2,40}:\*\*)", r"\n\n\1\n\n", raw)
+    raw = re.sub(r"(?<=[a-zA-Z\.\)])\s+(?=-\s+[A-Z])", r"\n", raw)
+    raw = re.sub(r"\n{3,}", "\n\n", raw)
 
     try:
         import markdown as _md
@@ -1485,7 +1556,7 @@ def markdown_to_html(text):
         import html as _html
         safe = _html.escape(raw)
         html_text = "<p>" + safe.replace("\n\n", "</p><p>").replace("\n", "<br>") + "</p>"
-        html_text = _re.sub(r"\*\*([^\*\n]+)\*\*", r"<strong>\1</strong>", html_text)
+        html_text = re.sub(r"\*\*([^\*\n]+)\*\*", r"<strong>\1</strong>", html_text)
 
     html_text = html_text.replace("<p>", "<p class='md-p'>")
     html_text = html_text.replace("<ul>", "<ul class='md-ul'>")
@@ -1493,18 +1564,17 @@ def markdown_to_html(text):
     html_text = html_text.replace("<hr>", "<hr class='md-hr'/>")
     html_text = html_text.replace("<hr />", "<hr class='md-hr'/>")
     for level in range(1, 7):
-        html_text = _re.sub(
+        html_text = re.sub(
             r"<h" + str(level) + r"[^>]*>(.*?)</h" + str(level) + r">",
             r"<p class='md-p'><strong>\1</strong></p>",
             html_text,
-            flags=_re.DOTALL
+            flags=re.DOTALL
         )
     return html_text
 
 def strip_excessive_disclaimers(text):
     if not text:
         return text
-    import re as _re
 
     patterns = [
         r"\*?\*?Disclaimer:[^\n]*\*?\*?\s*",
@@ -1520,14 +1590,14 @@ def strip_excessive_disclaimers(text):
     ]
     cleaned = text
     for pat in patterns:
-        cleaned = _re.sub(pat, "", cleaned, flags=_re.IGNORECASE)
+        cleaned = re.sub(pat, "", cleaned, flags=re.IGNORECASE)
 
-    cleaned = _re.sub(r"\s+[\u2014\u2013]\s+", ", ", cleaned)
+    cleaned = re.sub(r"\s+[\u2014\u2013]\s+", ", ", cleaned)
     cleaned = cleaned.replace("\u2014", ", ")
     cleaned = cleaned.replace("\u2013", ", ")
-    cleaned = _re.sub(r",\s*,", ",", cleaned)
-    cleaned = _re.sub(r"\s{2,}", " ", cleaned)
-    cleaned = _re.sub(r"\n{3,}", "\n\n", cleaned)
+    cleaned = re.sub(r",\s*,", ",", cleaned)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     cleaned = cleaned.strip()
     return cleaned
 
@@ -1869,14 +1939,13 @@ def generate_doctor_visit_summary(messages, patient_name=""):
     pdf.set_text_color(40, 40, 40)
     cleaned_summary = clean_text(summary_text)
 
-    import re as _re
     lines = cleaned_summary.split("\n")
     for line in lines:
         stripped = line.strip()
         if not stripped:
             pdf.ln(2)
             continue
-        bold_match = _re.match(r"^\*\*(.+?)\*\*:?$", stripped)
+        bold_match = re.match(r"^\*\*(.+?)\*\*:?$", stripped)
         if bold_match:
             pdf.ln(2)
             pdf.set_font("Helvetica", "B", 11)
@@ -1884,7 +1953,7 @@ def generate_doctor_visit_summary(messages, patient_name=""):
             pdf.cell(0, 6, bold_match.group(1).rstrip(":") + ":", ln=True)
             pdf.set_text_color(40, 40, 40)
             continue
-        bullet_match = _re.match(r"^[\-\*]\s+(.+)$", stripped)
+        bullet_match = re.match(r"^[\-\*]\s+(.+)$", stripped)
         if bullet_match:
             pdf.set_font("Helvetica", "", 10)
             pdf.set_x(25)
@@ -1892,7 +1961,7 @@ def generate_doctor_visit_summary(messages, patient_name=""):
             pdf.multi_cell(0, 5, bullet_match.group(1))
             continue
         pdf.set_font("Helvetica", "", 10)
-        plain = _re.sub(r"\*\*([^\*]+)\*\*", r"\1", stripped)
+        plain = re.sub(r"\*\*([^\*]+)\*\*", r"\1", stripped)
         pdf.multi_cell(0, 5, plain)
 
     pdf.ln(8)
@@ -2203,16 +2272,17 @@ st.markdown(
 
 st.markdown(
     '<div class="trust-strip">'
-    '<span class="trust-pill"><span class="trust-pill-icon">🔒</span>Private</span>'
+    '<span class="trust-pill"><span class="trust-pill-icon">🔒</span>Private &amp; Confidential</span>'
     '<span class="trust-pill"><span class="trust-pill-icon">📚</span>1,000 medical sources</span>'
     '<span class="trust-pill"><span class="trust-pill-icon">✓</span>Evidence-based</span>'
+    '<span class="trust-pill"><span class="trust-pill-icon">🌐</span>5 languages</span>'
     '</div>',
     unsafe_allow_html=True
 )
 
 L = LANGUAGES[st.session_state.selected_language]
 
-ADMIN_PASSWORD = "MediChat@Group7#2026"
+ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", os.environ.get("ADMIN_PASSWORD", "MediChat@Group7#2026"))
 _query_params = st.query_params
 _admin_requested = _query_params.get("admin", "") != ""
 
@@ -2471,40 +2541,26 @@ if st.session_state.mode == "chat":
         fc1, fc2 = st.columns([4, 1])
         with fc1:
             user_input = st.text_input(
-                "",
+                "Your message",
                 placeholder=L["placeholder"],
                 label_visibility="collapsed",
                 key="chat_input_" + str(st.session_state.chat_input_key),
             )
         with fc2:
-            submit = st.form_submit_button(L["send_btn"], use_container_width=True)
+            submit = st.form_submit_button("➤  " + L["send_btn"], use_container_width=True, type="primary")
 
-    # ── Button row: [📎 Attach] [Clear] ────────────────────────────────
-    bc_attach, bc_clear = st.columns([1.1, 1.3])
+    # ── Button row: [📎 Attach] [Clear] ─ equal width, parallel ────────
+    bc_attach, bc_clear = st.columns(2)
     with bc_attach:
-        st.markdown(
-            '<div class="attach-uploader">'
-            '<button onclick="var f=this.closest(\'.attach-uploader\').querySelector(\'input[type=file]\');if(f)f.click();" '
-            'style="background:white;color:#2d5a52;border:1px solid #e8f0ed;font-family:Inter,sans-serif;font-size:0.84rem;font-weight:500;'
-            'padding:0.68rem 0.9rem;border-radius:14px;width:100%;cursor:pointer;box-shadow:0 1px 2px rgba(30,58,54,0.04);'
-            'transition:all 0.2s ease;display:flex;align-items:center;gap:0.4rem;justify-content:center;" '
-            'onmouseover="this.style.background=\'#f3f8f6\';this.style.borderColor=\'#a8c5bd\'" '
-            'onmouseout="this.style.background=\'white\';this.style.borderColor=\'#e8f0ed\'">'
-            '📎 Attach</button>'
-            '</div>',
-            unsafe_allow_html=True
-        )
-        st.markdown('<div class="attach-uploader">', unsafe_allow_html=True)
         uploaded_image = st.file_uploader(
-            "",
+            "Attach a medical image or PDF report",
             type=["jpg", "jpeg", "png", "pdf"],
             label_visibility="collapsed",
             key="uploader_" + str(st.session_state.uploader_key),
             help="Attach a medical image (JPG, PNG) or PDF report",
         )
-        st.markdown('</div>', unsafe_allow_html=True)
     with bc_clear:
-        clear = st.button(L["clear_btn"], use_container_width=True, key="main_clear_btn")
+        clear = st.button("🗑  " + L["clear_btn"], use_container_width=True, key="main_clear_btn")
 
     # ── File preview (shown below button row once attached) ─────────────
     if uploaded_image:
@@ -2621,8 +2677,7 @@ if st.session_state.mode == "chat":
         else:
             user_msg = {"role": "user", "type": "text", "content": user_input.strip()}
             st.session_state.messages.append(user_msg)
-            import time as _time
-            _t0 = _time.time()
+            _t0 = time.time()
 
             name_for_rag = "" if st.session_state.patient_name == "Guest" else st.session_state.patient_name
 
@@ -2653,7 +2708,7 @@ if st.session_state.mode == "chat":
             engine_used = stream_metadata.get("engine", "unknown")
             st.session_state.patient_memory = memory
             st.session_state.last_sources = sources
-            _response_time = round(_time.time() - _t0, 2)
+            _response_time = round(time.time() - _t0, 2)
             st.session_state.response_times.append(_response_time)
 
             interaction_alerts = check_drug_interactions(final_text, memory)
