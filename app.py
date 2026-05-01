@@ -11,6 +11,7 @@ import faiss
 import numpy as np
 import os
 import base64
+import hashlib
 from PIL import Image
 import io
 import re
@@ -52,6 +53,79 @@ def init_firebase():
 
 firestore_db = init_firebase()
 FIREBASE_ACTIVE = firestore_db is not None
+
+# ── Persistent Patient Profiles (email + PIN, Firestore-backed) ──────
+PROFILE_SALT = st.secrets.get("PROFILE_SALT", os.environ.get("PROFILE_SALT", "medichat-default-change-me"))
+
+def hash_email(email):
+    return hashlib.sha256((email.lower().strip() + PROFILE_SALT).encode()).hexdigest()
+
+def hash_pin(pin, email_hash):
+    return hashlib.sha256((str(pin) + email_hash + PROFILE_SALT).encode()).hexdigest()
+
+def get_profile(email_hash):
+    if not FIREBASE_ACTIVE:
+        return None
+    try:
+        doc = firestore_db.collection("medichat_profiles").document(email_hash).get()
+        return doc.to_dict() if doc.exists else None
+    except Exception as e:
+        print("Profile fetch failed:", e)
+        return None
+
+def create_profile(email, pin, name=""):
+    if not FIREBASE_ACTIVE:
+        return None
+    eh = hash_email(email)
+    profile = {
+        "email_hash": eh,
+        "pin_hash": hash_pin(pin, eh),
+        "name": (name or "").strip()[:30],
+        "patient_memory": {"symptoms": [], "conditions": [], "medications": []},
+        "language": "English",
+        "created_at": firestore.SERVER_TIMESTAMP,
+        "last_visit": firestore.SERVER_TIMESTAMP,
+        "visit_count": 1,
+    }
+    try:
+        firestore_db.collection("medichat_profiles").document(eh).set(profile)
+        profile["email_hash"] = eh
+        return profile
+    except Exception as e:
+        print("Profile create failed:", e)
+        return None
+
+def authenticate_profile(email, pin):
+    eh = hash_email(email)
+    profile = get_profile(eh)
+    if profile is None:
+        return None, "not_found"
+    if profile.get("pin_hash") != hash_pin(pin, eh):
+        return None, "wrong_pin"
+    try:
+        firestore_db.collection("medichat_profiles").document(eh).update({
+            "last_visit": firestore.SERVER_TIMESTAMP,
+            "visit_count": firestore.Increment(1),
+        })
+    except Exception as e:
+        print("Profile visit-count update failed:", e)
+    profile["email_hash"] = eh
+    return profile, "ok"
+
+def persist_profile_state(email_hash, patient_memory=None, name=None, language=None):
+    if not FIREBASE_ACTIVE or not email_hash:
+        return
+    update = {"last_visit": firestore.SERVER_TIMESTAMP}
+    if patient_memory is not None:
+        update["patient_memory"] = patient_memory
+    if name is not None:
+        update["name"] = (name or "").strip()[:30]
+    if language is not None:
+        update["language"] = language
+    try:
+        firestore_db.collection("medichat_profiles").document(email_hash).update(update)
+    except Exception as e:
+        print("Profile state persist failed:", e)
 
 def log_query_to_firestore(query_data):
     """Write anonymised query metadata to Firestore. Silent failure if Firebase unavailable."""
@@ -2296,10 +2370,59 @@ if "session_started" not in st.session_state:
     st.session_state.admin_authenticated = False
     st.session_state.admin_attempt_failed = False
     st.session_state.chat_input_key = 0
+    st.session_state.is_authenticated = False
+    st.session_state.is_guest = False
+    st.session_state.user_email_hash = ""
+    st.session_state.user_email_display = ""
+    st.session_state.auth_error = ""
+    st.session_state.auth_view = "choose"
 
 with st.sidebar:
     st.markdown("## MediChat")
     st.markdown("---")
+
+    if st.session_state.is_authenticated:
+        _name = st.session_state.patient_name or "Patient"
+        _email = st.session_state.user_email_display or ""
+        _initial = (_name[0] if _name and _name != "Patient" else (_email[0] if _email else "P")).upper()
+        st.markdown(
+            '<div style="display:flex;align-items:center;gap:0.6rem;background:linear-gradient(135deg,#edf6fc,#d6edf9);border:1px solid #b0daf2;border-radius:12px;padding:0.6rem 0.8rem;margin-bottom:0.6rem;">'
+            '<div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#2176ae,#144272);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + _initial + '</div>'
+            '<div style="flex:1;min-width:0;">'
+            '<div style="font-size:0.8rem;font-weight:600;color:#0c2d48;line-height:1.1;">' + _name + '</div>'
+            '<div style="font-size:0.65rem;color:#1a5b8a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Profile saved</div>'
+            '</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+        if st.button("Sign out", use_container_width=True, key="profile_logout"):
+            for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context"]:
+                if k in st.session_state:
+                    if k in ("is_authenticated", "is_guest"):
+                        st.session_state[k] = False
+                    elif k == "patient_memory":
+                        st.session_state[k] = {"symptoms": [], "conditions": [], "medications": []}
+                    elif k == "messages":
+                        st.session_state[k] = []
+                    elif k == "qcount":
+                        st.session_state[k] = 0
+                    elif k == "feedback":
+                        st.session_state[k] = {}
+                    else:
+                        st.session_state[k] = "" if isinstance(st.session_state[k], str) else st.session_state[k]
+            st.rerun()
+        st.markdown("---")
+    elif st.session_state.is_guest:
+        st.markdown(
+            '<div style="display:flex;align-items:center;gap:0.5rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:0.55rem 0.75rem;margin-bottom:0.6rem;font-size:0.78rem;color:#475569;">'
+            '<span>👤</span><span>Guest session — not saved</span>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+        if FIREBASE_ACTIVE and st.button("Sign in / create profile", use_container_width=True, key="guest_to_signin"):
+            st.session_state.is_guest = False
+            st.rerun()
+        st.markdown("---")
 
     st.markdown('<div class="sb-title">Language / மொழி / භාෂාව / भाषा</div>', unsafe_allow_html=True)
     lang_options = list(LANGUAGES.keys())
@@ -2411,6 +2534,89 @@ if _admin_requested and not st.session_state.admin_authenticated:
 
 _is_admin = st.session_state.admin_authenticated
 
+# ── Patient Profile Auth Gate ────────────────────────────────────────
+# Only enforced when Firebase is connected and user is not admin.
+# Users can also continue as Guest (no persistence).
+if FIREBASE_ACTIVE and not _is_admin and not st.session_state.is_authenticated and not st.session_state.is_guest:
+    st.markdown(
+        '<div style="background:linear-gradient(135deg,#144272,#0c2d48);color:white;padding:1.6rem 2rem;border-radius:18px;margin:1rem auto 1.4rem auto;max-width:560px;box-shadow:0 8px 30px rgba(12,45,72,0.18);">'
+        '<div style="text-align:center;">'
+        '<div style="font-size:2.2rem;margin-bottom:0.4rem;">👤</div>'
+        '<div style="font-family:\'DM Serif Display\',serif;font-size:1.5rem;margin-bottom:0.3rem;">Welcome to MediChat</div>'
+        '<div style="font-size:0.88rem;opacity:0.85;line-height:1.55;">Sign in to keep your health profile across visits, or continue as a guest for a one-off chat.</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+    auth_c1, auth_c2, auth_c3 = st.columns([1, 3, 1])
+    with auth_c2:
+        view = st.session_state.auth_view
+        if view == "choose":
+            tab_signin, tab_signup, tab_guest = st.tabs(["Sign in", "Create profile", "Guest"])
+            with tab_signin:
+                with st.form("signin_form", clear_on_submit=False):
+                    si_email = st.text_input("Email", placeholder="you@example.com", key="si_email")
+                    si_pin = st.text_input("4-6 digit PIN", type="password", max_chars=6, key="si_pin")
+                    si_btn = st.form_submit_button("Sign in", use_container_width=True, type="primary")
+                if si_btn:
+                    if not si_email or "@" not in si_email or not si_pin or not si_pin.isdigit() or len(si_pin) < 4:
+                        st.error("Please enter a valid email and a 4-6 digit numeric PIN.")
+                    else:
+                        profile, status = authenticate_profile(si_email, si_pin)
+                        if status == "ok":
+                            st.session_state.is_authenticated = True
+                            st.session_state.user_email_hash = profile["email_hash"]
+                            st.session_state.user_email_display = si_email.strip()
+                            st.session_state.patient_name = profile.get("name", "") or ""
+                            st.session_state.patient_memory = profile.get("patient_memory", {"symptoms": [], "conditions": [], "medications": []})
+                            st.session_state.selected_language = profile.get("language", "English")
+                            st.success("Welcome back" + ((", " + profile.get("name", "")) if profile.get("name") else "") + ". Loading your profile…")
+                            st.rerun()
+                        elif status == "not_found":
+                            st.error("No profile found for that email. Switch to 'Create profile' to start one.")
+                        elif status == "wrong_pin":
+                            st.error("Incorrect PIN. Try again or recover your account by creating a new profile with a different email.")
+            with tab_signup:
+                with st.form("signup_form", clear_on_submit=False):
+                    su_email = st.text_input("Email", placeholder="you@example.com", key="su_email")
+                    su_name = st.text_input("First name (optional)", key="su_name", max_chars=30)
+                    su_pin = st.text_input("Choose a 4-6 digit PIN", type="password", max_chars=6, key="su_pin")
+                    su_pin2 = st.text_input("Confirm PIN", type="password", max_chars=6, key="su_pin2")
+                    su_btn = st.form_submit_button("Create profile", use_container_width=True, type="primary")
+                if su_btn:
+                    if not su_email or "@" not in su_email:
+                        st.error("Please enter a valid email.")
+                    elif not su_pin or not su_pin.isdigit() or len(su_pin) < 4:
+                        st.error("PIN must be 4-6 digits, numbers only.")
+                    elif su_pin != su_pin2:
+                        st.error("PINs do not match.")
+                    elif get_profile(hash_email(su_email)) is not None:
+                        st.error("A profile already exists for that email. Sign in instead.")
+                    else:
+                        profile = create_profile(su_email, su_pin, su_name)
+                        if profile is None:
+                            st.error("Could not create profile. Please try again in a moment.")
+                        else:
+                            st.session_state.is_authenticated = True
+                            st.session_state.user_email_hash = profile["email_hash"]
+                            st.session_state.user_email_display = su_email.strip()
+                            st.session_state.patient_name = profile.get("name", "") or ""
+                            st.success("Profile created. Welcome to MediChat.")
+                            st.rerun()
+            with tab_guest:
+                st.markdown(
+                    '<div style="padding:0.8rem 0;font-size:0.88rem;color:#334155;line-height:1.6;">'
+                    'Guest mode lets you try MediChat without an account. Your conversation lives only for this session. '
+                    'When you close the tab, everything is forgotten. Switch to a profile any time for continuity across visits.'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
+                if st.button("Continue as Guest", use_container_width=True, key="go_guest_btn"):
+                    st.session_state.is_guest = True
+                    st.rerun()
+        st.caption("Your email is stored as an irreversible hash. Your PIN is salted and hashed. Neither is reversible by the team.")
+    st.stop()
+
 if _is_admin:
     admin_c1, admin_c2 = st.columns([5, 1])
     with admin_c2:
@@ -2510,6 +2716,8 @@ if st.session_state.mode == "chat":
                 skip_name = st.form_submit_button("Skip")
         if name_submit and name_typed.strip():
             st.session_state.patient_name = name_typed.strip()[:20]
+            if st.session_state.is_authenticated and st.session_state.user_email_hash:
+                persist_profile_state(st.session_state.user_email_hash, name=st.session_state.patient_name)
             st.rerun()
         if skip_name:
             st.session_state.patient_name = "Guest"
@@ -2806,6 +3014,13 @@ if st.session_state.mode == "chat":
             engine_used = stream_metadata.get("engine", "unknown")
             st.session_state.patient_memory = memory
             st.session_state.last_sources = sources
+            if st.session_state.is_authenticated and st.session_state.user_email_hash:
+                persist_profile_state(
+                    st.session_state.user_email_hash,
+                    patient_memory=memory,
+                    name=st.session_state.patient_name or None,
+                    language=st.session_state.selected_language,
+                )
             _response_time = round(time.time() - _t0, 2)
             st.session_state.response_times.append(_response_time)
 
