@@ -293,44 +293,44 @@ st.markdown("""
     /* ── Mode Buttons ────────────────────────────────────────────── */
     .stButton > button {
         font-family: 'Inter', sans-serif;
-        font-weight: 500;
+        font-weight: 700 !important;
         border-radius: 12px !important;
-        border: 1px solid var(--clinical-100) !important;
+        border: 1.5px solid var(--clinical-300) !important;
         background: white !important;
-        color: var(--clinical-700) !important;
-        padding: 0.6rem 0.9rem !important;
-        color: var(--sage-700) !important;
+        color: #1a1d21 !important;
         padding: 0 1rem !important;
         height: 44px !important;
         min-height: 44px !important;
         transition: all 0.2s ease !important;
-        box-shadow: 0 1px 2px rgba(12, 45, 72, 0.04) !important;
+        box-shadow: 0 1px 3px rgba(12, 45, 72, 0.08) !important;
         font-size: 0.85rem !important;
     }
     .stButton > button:hover {
-        border-color: var(--clinical-300) !important;
+        border-color: var(--clinical-500) !important;
         background: var(--clinical-50) !important;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(42, 143, 197, 0.12) !important;
+        box-shadow: 0 4px 12px rgba(42, 143, 197, 0.15) !important;
     }
+
 
     /* ── Primary Send button (form submit) ───────────────────────── */
     .stForm [data-testid="stFormSubmitButton"] > button {
-        background: linear-gradient(135deg, var(--sage-700), var(--sage-900)) !important;
+        background: linear-gradient(135deg, var(--clinical-600), var(--clinical-800)) !important;
         color: white !important;
-        border: 1px solid var(--sage-700) !important;
+        border: 1px solid var(--clinical-700) !important;
         font-weight: 600 !important;
         height: 44px !important;
         min-height: 44px !important;
         border-radius: 14px !important;
-        box-shadow: 0 4px 12px rgba(30, 58, 54, 0.15) !important;
+        box-shadow: 0 4px 12px rgba(12, 45, 72, 0.2) !important;
     }
     .stForm [data-testid="stFormSubmitButton"] > button:hover {
-        background: linear-gradient(135deg, var(--sage-900), var(--sage-700)) !important;
-        border-color: var(--sage-900) !important;
-        box-shadow: 0 6px 18px rgba(30, 58, 54, 0.22) !important;
+        background: linear-gradient(135deg, var(--clinical-800), var(--clinical-900)) !important;
+        border-color: var(--clinical-900) !important;
+        box-shadow: 0 6px 18px rgba(12, 45, 72, 0.3) !important;
         transform: translateY(-1px);
     }
+
 
     /* Match input height to buttons */
     .stForm .stTextInput > div > div > input {
@@ -778,10 +778,10 @@ st.markdown("""
     }
     [data-testid="stFileUploader"] section {
         padding: 0 !important;
-        border: 1px solid var(--sage-100) !important;
+        border: 1px solid var(--clinical-200) !important;
         border-radius: 14px !important;
         background: white !important;
-        box-shadow: 0 1px 2px rgba(30, 58, 54, 0.04) !important;
+        box-shadow: 0 1px 2px rgba(12, 45, 72, 0.04) !important;
         transition: all 0.2s ease !important;
         min-height: 44px !important;
         height: 44px !important;
@@ -791,11 +791,12 @@ st.markdown("""
         cursor: pointer !important;
     }
     [data-testid="stFileUploader"] section:hover {
-        border-color: var(--sage-300) !important;
-        background: var(--sage-50) !important;
+        border-color: var(--clinical-400) !important;
+        background: var(--clinical-50) !important;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(93, 139, 124, 0.12) !important;
+        box-shadow: 0 4px 12px rgba(42, 143, 197, 0.12) !important;
     }
+
     [data-testid="stFileUploaderDropzone"] {
         padding: 0 1rem !important;
         min-height: 44px !important;
@@ -836,7 +837,7 @@ st.markdown("""
         font-family: 'Inter', sans-serif !important;
         font-size: 0.84rem !important;
         font-weight: 500 !important;
-        color: var(--sage-700) !important;
+        color: var(--clinical-700) !important;
     }
     [data-testid="stFileUploaderDropzone"] button {
         display: none !important;
@@ -844,10 +845,11 @@ st.markdown("""
     /* Show filename neatly once a file is selected */
     [data-testid="stFileUploaderFile"] {
         padding: 0.5rem 0.8rem !important;
-        background: var(--sage-50) !important;
+        background: var(--clinical-50) !important;
         border-radius: 12px !important;
         margin-top: 0.4rem !important;
     }
+
 
     /* ── Image Tag ───────────────────────────────────────────────── */
     .image-tag {
@@ -1916,7 +1918,7 @@ def generate_doctor_visit_summary(messages, patient_name=""):
     pdf.add_page()
     pdf.set_margins(20, 20, 20)
 
-    pdf.set_fill_color(93, 139, 124)
+    pdf.set_fill_color(33, 118, 174)
     pdf.rect(0, 0, 210, 38, "F")
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Helvetica", "B", 22)
@@ -1930,8 +1932,9 @@ def generate_doctor_visit_summary(messages, patient_name=""):
 
     pdf.set_y(46)
 
-    pdf.set_fill_color(241, 245, 243)
-    pdf.set_text_color(45, 90, 82)
+    pdf.set_fill_color(237, 246, 252)
+    pdf.set_text_color(20, 66, 114)
+
     pdf.set_font("Helvetica", "", 9)
     pdf.multi_cell(0, 5, "Bring this summary to your GP appointment. It captures what you discussed with MediChat, including symptoms, history, and questions to ask. This is NOT a diagnosis. Your GP will make the clinical judgement.", fill=True, border=0)
     pdf.ln(4)
@@ -1981,7 +1984,7 @@ def generate_chat_pdf(messages):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_margins(20, 20, 20)
-    pdf.set_fill_color(15, 118, 110)
+    pdf.set_fill_color(33, 118, 174)
     pdf.rect(0, 0, 210, 35, "F")
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Helvetica", "B", 20)
@@ -2002,12 +2005,13 @@ def generate_chat_pdf(messages):
         if not content:
             continue
         if role == "user":
-            pdf.set_fill_color(13, 148, 136)
+            pdf.set_fill_color(42, 143, 197)
             pdf.set_text_color(255, 255, 255)
             pdf.set_font("Helvetica", "B", 9)
             pdf.cell(0, 7, "  You", ln=True, fill=True)
-            pdf.set_fill_color(240, 253, 250)
-            pdf.set_text_color(19, 78, 74)
+            pdf.set_fill_color(237, 246, 252)
+            pdf.set_text_color(12, 45, 72)
+
             pdf.set_font("Helvetica", "", 9)
             display = "[Medical image uploaded]" + (" - " + clean_text(content) if content else "") if msg_type == "image" else clean_text(content)
             pdf.multi_cell(0, 6, "  " + display, fill=True)
@@ -2031,7 +2035,7 @@ def generate_assessment_pdf(parsed, data, report_date):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_margins(20, 20, 20)
-    pdf.set_fill_color(15, 118, 110)
+    pdf.set_fill_color(33, 118, 174)
     pdf.rect(0, 0, 210, 40, "F")
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Helvetica", "B", 18)
@@ -2058,11 +2062,12 @@ def generate_assessment_pdf(parsed, data, report_date):
     pdf.ln(5)
 
     def section_header(title):
-        pdf.set_fill_color(15, 118, 110)
+        pdf.set_fill_color(33, 118, 174)
         pdf.set_text_color(255, 255, 255)
         pdf.set_font("Helvetica", "B", 10)
         pdf.cell(0, 8, "  " + title, ln=True, fill=True)
         pdf.ln(2)
+
 
     def info_row(label, value):
         pdf.set_fill_color(248, 250, 252)
@@ -2400,11 +2405,12 @@ if st.session_state.mode == "chat":
             unsafe_allow_html=True
         )
         st.markdown(
-            '<div style="font-size:0.88rem;color:var(--sage-900);margin:0.3rem 0 0.5rem 0;font-weight:500;">'
-            "What should I call you? <span style=\"color:var(--warm-gray);font-weight:400;font-size:0.82rem;\">(optional)</span>"
+            '<div style="font-size:0.88rem;color:var(--clinical-800);margin:0.3rem 0 0.5rem 0;font-weight:500;">'
+            "What should I call you? <span style=\"color:var(--neutral-500);font-weight:400;font-size:0.82rem;\">(optional)</span>"
             '</div>',
             unsafe_allow_html=True
         )
+
         with st.form(key="name_form", clear_on_submit=True):
             name_cols = st.columns([3, 1, 1])
             with name_cols[0]:
@@ -2422,12 +2428,13 @@ if st.session_state.mode == "chat":
     elif not st.session_state.messages and st.session_state.patient_name:
         display_name = "" if st.session_state.patient_name == "Guest" else ", " + st.session_state.patient_name
         st.markdown(
-            '<div style="text-align:center;padding:1.2rem 1rem;color:var(--sage-700);">'
-            '<div style="font-family:\'DM Serif Display\',serif;font-size:1.3rem;color:var(--sage-900);margin-bottom:0.3rem;">Hi' + display_name + ', how can I help you today?</div>'
-            '<div style="font-size:0.85rem;color:var(--warm-gray);">Ask anything, upload an image or PDF report, or describe what is on your mind.</div>'
+            '<div style="text-align:center;padding:1.2rem 1rem;color:var(--clinical-700);">'
+            '<div style="font-family:\'DM Serif Display\',serif;font-size:1.3rem;color:var(--clinical-900);margin-bottom:0.3rem;">Hi' + display_name + ', how can I help you today?</div>'
+            '<div style="font-size:0.85rem;color:var(--neutral-600);">Ask anything, upload an image or PDF report, or describe what is on your mind.</div>'
             '</div>',
             unsafe_allow_html=True
         )
+
     else:
         user_initial = "U"
         if st.session_state.patient_name and st.session_state.patient_name != "Guest":
@@ -2528,11 +2535,12 @@ if st.session_state.mode == "chat":
                     st.error("Could not generate summary. Please try again or have a longer conversation first.")
 
         st.markdown(
-            '<div style="font-size:0.72rem;color:var(--warm-gray);margin-top:0.5rem;text-align:center;font-style:italic;">'
+            '<div style="font-size:0.72rem;color:var(--neutral-500);margin-top:0.5rem;text-align:center;font-style:italic;">'
             'The Doctor Visit Summary is a structured one-pager you can bring to your next GP appointment.'
             '</div>',
             unsafe_allow_html=True
         )
+
 
     st.markdown('<div id="chat-input-anchor"></div>', unsafe_allow_html=True)
 
@@ -2567,11 +2575,12 @@ if st.session_state.mode == "chat":
         is_pdf_upload = uploaded_image.name.lower().endswith(".pdf")
         if is_pdf_upload:
             st.markdown(
-                '<div style="display:flex;align-items:center;gap:0.7rem;padding:0.8rem 1rem;background:var(--sage-50);border:1px solid var(--sage-100);border-radius:12px;margin:0.5rem 0;">'
-                '<div style="width:40px;height:40px;background:var(--sage-500);color:white;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem;">PDF</div>'
+                '<div style="display:flex;align-items:center;gap:0.7rem;padding:0.8rem 1rem;background:var(--clinical-50);border:1px solid var(--clinical-200);border-radius:12px;margin:0.5rem 0;">'
+                '<div style="width:40px;height:40px;background:var(--clinical-600);color:white;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem;">PDF</div>'
                 '<div style="flex:1;">'
-                '<div style="font-weight:600;font-size:0.88rem;color:var(--sage-900);">' + uploaded_image.name + '</div>'
-                '<div style="font-size:0.75rem;color:var(--warm-gray);">Ready for analysis. Ask MediChat what you want to know about this report.</div>'
+                '<div style="font-weight:600;font-size:0.88rem;color:var(--clinical-900);">' + uploaded_image.name + '</div>'
+                '<div style="font-size:0.75rem;color:var(--neutral-600);">Ready for analysis. Ask MediChat what you want to know about this report.</div>'
+
                 '</div>'
                 '</div>',
                 unsafe_allow_html=True
