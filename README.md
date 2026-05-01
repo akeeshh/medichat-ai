@@ -10,7 +10,7 @@
 | Ahkeeshan Sarvananthan | S20250214 | Group Leader |
 | Thanusha Shakthivelu | S20242820 | Member |
 | Gurpreet Singh | S20242457 | Member |
-| Yehan Ayesh Kumarathilake | N/A | Member |
+| Yehan Ayesh Kumarathilake | S20242471 | Member |
 | Muskan Garg | S20250201 | Member |
 
 **Supervisor:** Dr. Amoakoh Gyasi-Agyei
