@@ -2558,7 +2558,7 @@ if FIREBASE_ACTIVE and not _is_admin and not st.session_state.is_authenticated a
         '<div style="background:linear-gradient(135deg,#144272,#0c2d48);color:white;padding:1.6rem 2rem;border-radius:18px;margin:1rem auto 1.4rem auto;max-width:560px;box-shadow:0 8px 30px rgba(12,45,72,0.18);">'
         '<div style="text-align:center;">'
         '<div style="font-size:2.2rem;margin-bottom:0.4rem;">👤</div>'
-        '<div style="font-family:\'DM Serif Display\',serif;font-size:1.5rem;margin-bottom:0.3rem;">Welcome to MediChat, your virtual doctor</div>'
+        '<div style="font-family:\'DM Serif Display\',serif;font-size:1.5rem;margin-bottom:0.3rem;">Welcome to MediChat - your virtual doctor.</div>'
         '<div style="font-size:0.88rem;opacity:0.85;line-height:1.55;">Sign in to keep your health profile across visits, or continue as a guest for a one-off MediChat.</div>'
         '</div>'
         '</div>',
