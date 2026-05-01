@@ -2488,7 +2488,7 @@ with st.sidebar:
     for tip in ["What causes high blood pressure?", "I have chest pain and I am diabetic", "How does stress affect the heart?", "What foods reduce inflammation?", "I have been dizzy since yesterday"]:
         st.markdown('<div class="sb-tip">- ' + tip + '</div>', unsafe_allow_html=True)
     st.markdown("---")
-    st.markdown('<div class="sb-footer">MediChat v4.0<br>ICT654 - Group 7 - SISTC 2026</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sb-footer">MediChat v6.0<br>ICT654 - Group 7 - SISTC 2026</div>', unsafe_allow_html=True)
 
 st.markdown(
     '<div class="header-card">'
