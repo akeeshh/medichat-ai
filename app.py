@@ -302,8 +302,9 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(93, 139, 124, 0.12) !important;
     }
 
-    /* ── Primary Send button (form submit) ───────────────────────── */
-    .stForm [data-testid="stFormSubmitButton"] > button {
+    /* ── Primary Send button (chat form only — uses type="primary") ── */
+    .stForm [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
+    .stForm [data-testid="stFormSubmitButton"] > button[kind="primary"] {
         background: linear-gradient(135deg, var(--sage-700), var(--sage-900)) !important;
         color: white !important;
         border: 1px solid var(--sage-700) !important;
@@ -313,11 +314,30 @@ st.markdown("""
         border-radius: 14px !important;
         box-shadow: 0 4px 12px rgba(30, 58, 54, 0.15) !important;
     }
-    .stForm [data-testid="stFormSubmitButton"] > button:hover {
+    .stForm [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"]:hover,
+    .stForm [data-testid="stFormSubmitButton"] > button[kind="primary"]:hover {
         background: linear-gradient(135deg, var(--sage-900), var(--sage-700)) !important;
         border-color: var(--sage-900) !important;
         box-shadow: 0 6px 18px rgba(30, 58, 54, 0.22) !important;
         transform: translateY(-1px);
+    }
+
+    /* Secondary form buttons (Save / Skip / Next / Cancel) — visible dark text */
+    .stForm [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"],
+    .stForm [data-testid="stFormSubmitButton"] > button[kind="secondary"] {
+        background: white !important;
+        color: var(--sage-900) !important;
+        border: 1px solid var(--sage-300) !important;
+        font-weight: 600 !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        border-radius: 14px !important;
+    }
+    .stForm [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"]:hover,
+    .stForm [data-testid="stFormSubmitButton"] > button[kind="secondary"]:hover {
+        background: var(--sage-50) !important;
+        border-color: var(--sage-500) !important;
+        color: var(--sage-900) !important;
     }
 
     /* Match input height to buttons */
@@ -797,34 +817,35 @@ st.markdown("""
         width: 100% !important;
     }
     [data-testid="stFileUploaderDropzoneInstructions"] {
+        position: relative !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 0.4rem !important;
         margin: 0 !important;
         padding: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
     }
-    [data-testid="stFileUploaderDropzoneInstructions"] > div {
-        display: flex !important;
-        align-items: center !important;
-        gap: 0.4rem !important;
-        margin: 0 !important;
-        padding: 0 !important;
+    /* Hide Streamlit's original dropzone children */
+    [data-testid="stFileUploaderDropzoneInstructions"] > * {
+        visibility: hidden !important;
+        position: absolute !important;
+        pointer-events: none !important;
     }
-    [data-testid="stFileUploaderDropzoneInstructions"] svg,
-    [data-testid="stFileUploaderDropzoneInstructions"] small {
-        display: none !important;
-    }
-    [data-testid="stFileUploaderDropzoneInstructions"] span {
-        font-size: 0 !important;
-        color: transparent !important;
-    }
-    [data-testid="stFileUploaderDropzoneInstructions"] span::before {
+    /* Inject our own visible label */
+    [data-testid="stFileUploaderDropzoneInstructions"]::after {
         content: "📎  Attach image or PDF";
-        font-family: 'Inter', sans-serif !important;
-        font-size: 0.84rem !important;
-        font-weight: 500 !important;
-        color: var(--sage-700) !important;
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1e3a36;
+        letter-spacing: 0.01em;
+        pointer-events: none;
     }
     [data-testid="stFileUploaderDropzone"] button {
         display: none !important;
