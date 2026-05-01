@@ -935,6 +935,75 @@ st.markdown("""
     .sb-memory-item { font-size: 0.68rem; color: var(--clinical-700) !important; padding: 0.2rem 0; border-bottom: 1px solid var(--clinical-50); }
     .sb-footer { font-size: 0.62rem; color: var(--neutral-500) !important; text-align: center; padding-top: 0.8rem; border-top: 1px solid var(--clinical-50); line-height: 1.6; }
 
+    /* ── Symptom Assessment Card ─────────────────────────────────── */
+    .assessment-card {
+        background: white;
+        border-radius: 18px;
+        padding: 1.4rem 1.6rem 1.5rem 1.6rem;
+        margin-bottom: 1.2rem;
+        border: 1px solid var(--clinical-100);
+        box-shadow: 0 1px 3px rgba(12, 45, 72, 0.04), 0 8px 28px rgba(12, 45, 72, 0.05);
+        animation: fadeInUp 0.4s ease;
+    }
+    .assessment-title {
+        font-family: 'DM Serif Display', serif;
+        font-size: 1.45rem;
+        font-weight: 400;
+        color: var(--clinical-900);
+        letter-spacing: -0.01em;
+        margin-bottom: 0.35rem;
+        line-height: 1.2;
+    }
+    .assessment-subtitle {
+        color: var(--neutral-600, #6b6660);
+        font-size: 0.88rem;
+        line-height: 1.55;
+        margin-bottom: 1rem;
+    }
+    .progress-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--clinical-700);
+        margin-bottom: 0.45rem;
+        letter-spacing: 0.02em;
+    }
+    .progress-label span:first-child {
+        color: var(--clinical-900);
+    }
+    .progress-label span:last-child {
+        color: var(--clinical-600);
+        font-weight: 700;
+    }
+    .progress-bar-wrap {
+        width: 100%;
+        height: 8px;
+        background: var(--clinical-50);
+        border: 1px solid var(--clinical-100);
+        border-radius: 100px;
+        overflow: hidden;
+    }
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--clinical-500), var(--clinical-700));
+        border-radius: 100px;
+        transition: width 0.4s ease;
+    }
+    .question-bubble {
+        background: var(--clinical-50);
+        border: 1px solid var(--clinical-100);
+        border-left: 4px solid var(--clinical-600);
+        border-radius: 14px;
+        padding: 1rem 1.2rem;
+        margin: 0.8rem 0 1rem 0;
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--clinical-900);
+        line-height: 1.5;
+    }
+
     /* ── Hide Streamlit Branding ─────────────────────────────────── */
     footer { visibility: hidden; }
     [data-testid="stHeader"] { background: transparent; }
