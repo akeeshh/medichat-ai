@@ -112,7 +112,7 @@ def authenticate_profile(email, pin):
     profile["email_hash"] = eh
     return profile, "ok"
 
-def persist_profile_state(email_hash, patient_memory=None, name=None, language=None):
+def persist_profile_state(email_hash, patient_memory=None, name=None, language=None, messages=None):
     if not FIREBASE_ACTIVE or not email_hash:
         return
     update = {"last_visit": firestore.SERVER_TIMESTAMP}
@@ -122,6 +122,22 @@ def persist_profile_state(email_hash, patient_memory=None, name=None, language=N
         update["name"] = (name or "").strip()[:30]
     if language is not None:
         update["language"] = language
+    if messages is not None:
+        # Trim to last 60 messages, strip non-serialisable fields, cap content length
+        trimmed = []
+        for m in messages[-60:]:
+            if not isinstance(m, dict):
+                continue
+            trimmed.append({
+                "role": m.get("role", ""),
+                "type": m.get("type", "text"),
+                "content": (m.get("content", "") or "")[:4000],
+                "sources": m.get("sources", []),
+                "confidence": m.get("confidence", ""),
+                "confidence_pct": m.get("confidence_pct", 0),
+                "engine": m.get("engine", ""),
+            })
+        update["messages"] = trimmed
     try:
         firestore_db.collection("medichat_profiles").document(email_hash).update(update)
     except Exception as e:
@@ -2570,6 +2586,10 @@ if FIREBASE_ACTIVE and not _is_admin and not st.session_state.is_authenticated a
                             st.session_state.patient_name = profile.get("name", "") or ""
                             st.session_state.patient_memory = profile.get("patient_memory", {"symptoms": [], "conditions": [], "medications": []})
                             st.session_state.selected_language = profile.get("language", "English")
+                            restored_msgs = profile.get("messages") or []
+                            if restored_msgs:
+                                st.session_state.messages = restored_msgs
+                                st.session_state.qcount = sum(1 for m in restored_msgs if m.get("role") == "user")
                             st.success("Welcome back" + ((", " + profile.get("name", "")) if profile.get("name") else "") + ". Loading your profile…")
                             st.rerun()
                         elif status == "not_found":
@@ -2936,6 +2956,12 @@ if st.session_state.mode == "chat":
         st.session_state.last_pdf_name = ""
         st.session_state.last_image_context = ""
         st.session_state.chat_input_key = st.session_state.get("chat_input_key", 0) + 1
+        if st.session_state.is_authenticated and st.session_state.user_email_hash:
+            persist_profile_state(
+                st.session_state.user_email_hash,
+                patient_memory=st.session_state.patient_memory,
+                messages=[],
+            )
         st.rerun()
 
     if submit and (user_input.strip() or uploaded_image):
@@ -3048,6 +3074,14 @@ if st.session_state.mode == "chat":
 
             st.session_state.messages.append({"role": "assistant", "type": "text", "content": final_text, "sources": sources, "confidence": conf_level, "confidence_pct": conf_pct, "engine": engine_used})
 
+        if st.session_state.is_authenticated and st.session_state.user_email_hash:
+            persist_profile_state(
+                st.session_state.user_email_hash,
+                patient_memory=st.session_state.patient_memory,
+                name=st.session_state.patient_name or None,
+                language=st.session_state.selected_language,
+                messages=st.session_state.messages,
+            )
         st.session_state.chat_input_key = st.session_state.get("chat_input_key", 0) + 1
         st.rerun()
 
