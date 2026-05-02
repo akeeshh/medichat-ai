@@ -143,6 +143,105 @@ def persist_profile_state(email_hash, patient_memory=None, name=None, language=N
     except Exception as e:
         print("Profile state persist failed:", e)
 
+# ── Per-Chat History (each conversation is its own Firestore doc) ────
+def _trim_messages_for_storage(messages):
+    trimmed = []
+    for m in (messages or [])[-80:]:
+        if not isinstance(m, dict):
+            continue
+        trimmed.append({
+            "role": m.get("role", ""),
+            "type": m.get("type", "text"),
+            "content": (m.get("content", "") or "")[:4000],
+            "sources": m.get("sources", []),
+            "confidence": m.get("confidence", ""),
+            "confidence_pct": m.get("confidence_pct", 0),
+            "engine": m.get("engine", ""),
+        })
+    return trimmed
+
+def derive_chat_title(messages):
+    for m in messages or []:
+        if m.get("role") == "user" and m.get("content"):
+            t = (m["content"] or "").strip().replace("\n", " ")
+            return (t[:50] + "…") if len(t) > 50 else t
+    return "New chat"
+
+def list_conversations(email_hash, limit=30):
+    if not FIREBASE_ACTIVE or not email_hash:
+        return []
+    try:
+        docs = (firestore_db.collection("medichat_profiles")
+                .document(email_hash)
+                .collection("conversations")
+                .order_by("last_updated", direction=firestore.Query.DESCENDING)
+                .limit(limit).stream())
+        out = []
+        for d in docs:
+            data = d.to_dict() or {}
+            out.append({
+                "id": d.id,
+                "title": data.get("title", "Chat"),
+                "message_count": data.get("message_count", 0),
+                "last_updated": data.get("last_updated"),
+            })
+        return out
+    except Exception as e:
+        print("list_conversations failed:", e)
+        return []
+
+def load_conversation(email_hash, conv_id):
+    if not FIREBASE_ACTIVE or not email_hash or not conv_id:
+        return None
+    try:
+        doc = (firestore_db.collection("medichat_profiles")
+               .document(email_hash)
+               .collection("conversations")
+               .document(conv_id).get())
+        if not doc.exists:
+            return None
+        return doc.to_dict()
+    except Exception as e:
+        print("load_conversation failed:", e)
+        return None
+
+def save_conversation(email_hash, conv_id, messages):
+    if not FIREBASE_ACTIVE or not email_hash:
+        return None
+    trimmed = _trim_messages_for_storage(messages)
+    payload = {
+        "title": derive_chat_title(trimmed),
+        "messages": trimmed,
+        "message_count": len(trimmed),
+        "last_updated": firestore.SERVER_TIMESTAMP,
+    }
+    try:
+        coll = firestore_db.collection("medichat_profiles").document(email_hash).collection("conversations")
+        if conv_id:
+            payload["created_at"] = firestore.SERVER_TIMESTAMP if False else firestore.SERVER_TIMESTAMP
+            coll.document(conv_id).set(payload, merge=True)
+            return conv_id
+        # New conversation: include created_at
+        payload["created_at"] = firestore.SERVER_TIMESTAMP
+        ref = coll.add(payload)
+        return ref[1].id if isinstance(ref, tuple) else ref.id
+    except Exception as e:
+        print("save_conversation failed:", e)
+        return None
+
+def delete_conversation(email_hash, conv_id):
+    if not FIREBASE_ACTIVE or not email_hash or not conv_id:
+        return False
+    try:
+        (firestore_db.collection("medichat_profiles")
+         .document(email_hash)
+         .collection("conversations")
+         .document(conv_id).delete())
+        return True
+    except Exception as e:
+        print("delete_conversation failed:", e)
+        return False
+
 def log_query_to_firestore(query_data):
     """Write anonymised query metadata to Firestore. Silent failure if Firebase unavailable."""
     if not FIREBASE_ACTIVE:
@@ -2392,6 +2491,7 @@ if "session_started" not in st.session_state:
     st.session_state.user_email_display = ""
     st.session_state.auth_error = ""
     st.session_state.auth_view = "choose"
+    st.session_state.current_conversation_id = ""
 
 with st.sidebar:
     st.markdown("## MediChat")
@@ -2426,7 +2526,65 @@ with st.sidebar:
                         st.session_state[k] = {}
                     else:
                         st.session_state[k] = "" if isinstance(st.session_state[k], str) else st.session_state[k]
+            st.session_state.current_conversation_id = ""
             st.rerun()
+        st.markdown("---")
+
+        # ── Past chats history ─────────────────────────────────────
+        st.markdown('<div class="sb-title">Your Chats</div>', unsafe_allow_html=True)
+        if st.button("➕  New chat", use_container_width=True, key="new_chat_btn"):
+            st.session_state.current_conversation_id = ""
+            st.session_state.messages = []
+            st.session_state.qcount = 0
+            st.session_state.feedback = {}
+            st.session_state.last_sources = []
+            st.session_state.last_pdf_context = ""
+            st.session_state.last_image_context = ""
+            st.session_state.emergency_detected = False
+            st.rerun()
+
+        _convs = list_conversations(st.session_state.user_email_hash, limit=20)
+        if not _convs:
+            st.markdown(
+                '<div style="font-size:0.72rem;color:#64748b;padding:0.5rem 0;font-style:italic;">'
+                'No past chats yet. Start one below.'
+                '</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            _active_id = st.session_state.current_conversation_id
+            for _c in _convs:
+                _is_active = _c["id"] == _active_id
+                _title = (_c.get("title") or "Chat")[:42]
+                _count = _c.get("message_count", 0)
+                _bg = "#d6edf9" if _is_active else "white"
+                _border = "#2176ae" if _is_active else "#e2e8f0"
+                _weight = "600" if _is_active else "500"
+                col_a, col_b = st.columns([5, 1])
+                with col_a:
+                    if st.button(
+                        ("● " if _is_active else "") + _title,
+                        key="conv_open_" + _c["id"],
+                        use_container_width=True,
+                        help=str(_count) + " messages",
+                    ):
+                        conv = load_conversation(st.session_state.user_email_hash, _c["id"])
+                        if conv is not None:
+                            st.session_state.current_conversation_id = _c["id"]
+                            st.session_state.messages = conv.get("messages", []) or []
+                            st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
+                            st.session_state.feedback = {}
+                            st.session_state.last_sources = []
+                            st.session_state.emergency_detected = False
+                            st.rerun()
+                with col_b:
+                    if st.button("🗑", key="conv_del_" + _c["id"], help="Delete this chat"):
+                        delete_conversation(st.session_state.user_email_hash, _c["id"])
+                        if _c["id"] == _active_id:
+                            st.session_state.current_conversation_id = ""
+                            st.session_state.messages = []
+                            st.session_state.qcount = 0
+                        st.rerun()
         st.markdown("---")
     elif st.session_state.is_guest:
         st.markdown(
@@ -2586,10 +2744,18 @@ if FIREBASE_ACTIVE and not _is_admin and not st.session_state.is_authenticated a
                             st.session_state.patient_name = profile.get("name", "") or ""
                             st.session_state.patient_memory = profile.get("patient_memory", {"symptoms": [], "conditions": [], "medications": []})
                             st.session_state.selected_language = profile.get("language", "English")
-                            restored_msgs = profile.get("messages") or []
-                            if restored_msgs:
-                                st.session_state.messages = restored_msgs
-                                st.session_state.qcount = sum(1 for m in restored_msgs if m.get("role") == "user")
+                            # Load most recent conversation (if any) so user picks up where they left off.
+                            recent = list_conversations(profile["email_hash"], limit=1)
+                            if recent:
+                                conv = load_conversation(profile["email_hash"], recent[0]["id"])
+                                if conv:
+                                    st.session_state.current_conversation_id = recent[0]["id"]
+                                    st.session_state.messages = conv.get("messages", []) or []
+                                    st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
+                            else:
+                                st.session_state.current_conversation_id = ""
+                                st.session_state.messages = []
+                                st.session_state.qcount = 0
                             st.success("Welcome back" + ((", " + profile.get("name", "")) if profile.get("name") else "") + ". Loading your profile…")
                             st.rerun()
                         elif status == "not_found":
@@ -2943,25 +3109,19 @@ if st.session_state.mode == "chat":
         )
 
     if clear:
+        # Start a fresh chat. The existing conversation stays saved in history.
         st.session_state.messages = []
         st.session_state.qcount = 0
         st.session_state.feedback = {}
-        st.session_state.patient_memory = {"symptoms": [], "conditions": [], "medications": []}
         st.session_state.uploader_key += 1
         st.session_state.emergency_detected = False
         st.session_state.emergency_reason = ""
         st.session_state.last_sources = []
-        st.session_state.patient_name = ""
         st.session_state.last_pdf_context = ""
         st.session_state.last_pdf_name = ""
         st.session_state.last_image_context = ""
+        st.session_state.current_conversation_id = ""
         st.session_state.chat_input_key = st.session_state.get("chat_input_key", 0) + 1
-        if st.session_state.is_authenticated and st.session_state.user_email_hash:
-            persist_profile_state(
-                st.session_state.user_email_hash,
-                patient_memory=st.session_state.patient_memory,
-                messages=[],
-            )
         st.rerun()
 
     if submit and (user_input.strip() or uploaded_image):
@@ -3080,8 +3240,14 @@ if st.session_state.mode == "chat":
                 patient_memory=st.session_state.patient_memory,
                 name=st.session_state.patient_name or None,
                 language=st.session_state.selected_language,
-                messages=st.session_state.messages,
             )
+            new_id = save_conversation(
+                st.session_state.user_email_hash,
+                st.session_state.current_conversation_id or "",
+                st.session_state.messages,
+            )
+            if new_id:
+                st.session_state.current_conversation_id = new_id
         st.session_state.chat_input_key = st.session_state.get("chat_input_key", 0) + 1
         st.rerun()
 
