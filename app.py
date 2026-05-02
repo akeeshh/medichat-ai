@@ -1780,7 +1780,35 @@ EMERGENCY_SYMPTOM_CLUSTERS = [
     },
 ]
 
+# Patterns that indicate the message is meta/docs/test rather than a real
+# symptom report. Used to suppress emergency + triage detection on pasted
+# instructions, code blocks, or app feedback.
+META_INDICATORS = [
+    "streamlit", "redeploy", "redeploying", "deployment", "deploy",
+    "tier 1", "tier 2", "tier 3", "tier 4", "tier 5",
+    "test path", "test plan", "test scenario", "test case",
+    "feature", "merging", "merged", "commit", "git push", "branch",
+    "github", "claude.ai/code", "session_01", "session_state",
+    "pull request", " pr #", "rebase",
+    "what you'll see", "what you’ll see",
+    "shipped to main", "redeploy in",
+]
+
+def is_meta_text(text):
+    if not text:
+        return False
+    t = text.lower()
+    score = sum(1 for ind in META_INDICATORS if ind in t)
+    has_md = ("**" in t) or ("###" in t) or ("```" in t)
+    if has_md:
+        score += 1
+    if len(t) > 1500:
+        score += 1
+    return score >= 2
+
 def detect_emergency(text, conversation_text=""):
+    if is_meta_text(text):
+        return False, None
     if not text and not conversation_text:
         return False, None
     combined = (text + " " + conversation_text).lower()
@@ -1846,11 +1874,24 @@ CONCERN_KEYWORDS = [
 def assess_triage_tier(text, conversation_text="", memory=None):
     """Return a 5-tier triage assessment with reasons.
     Tier 1: emergency (call 000). Tier 5: self-care.
+    Returns Tier 5 (no banner) for clearly meta / non-symptom text.
     """
     text_l = (text or "").lower()
     conv_l = (conversation_text or "").lower()
     combined = (text_l + " " + conv_l).strip()
     memory = memory or {}
+
+    # Meta detection: skip triage when the user's text is clearly app/docs/test
+    # rather than a first-person symptom report. Avoids false positives on
+    # pasted release notes, code blocks, or meta questions about MediChat itself.
+    if is_meta_text(text):
+        return {
+            "tier": 5, "label": "Self-care appropriate",
+            "icon": "⚪", "color": "#64748b",
+            "bg": "linear-gradient(135deg,#64748b,#475569)",
+            "next_step": "",
+            "reasons": [],
+        }
 
     is_emerg, emerg_reason = detect_emergency(text, conversation_text)
     if is_emerg:
@@ -3421,11 +3462,17 @@ if st.session_state.mode == "chat":
 
         if user_input.strip():
             conv_text = " ".join([m.get("content", "") for m in st.session_state.messages if m.get("type") == "text"])
-            is_emerg, reason = detect_emergency(user_input, conv_text)
-            if is_emerg:
-                st.session_state.emergency_detected = True
-                st.session_state.emergency_reason = reason
-            st.session_state.triage_assessment = assess_triage_tier(user_input, conv_text, st.session_state.patient_memory)
+            if is_meta_text(user_input):
+                # Pasted docs / test plans / app-feedback — not a symptom report.
+                st.session_state.emergency_detected = False
+                st.session_state.emergency_reason = ""
+                st.session_state.triage_assessment = None
+            else:
+                is_emerg, reason = detect_emergency(user_input, conv_text)
+                if is_emerg:
+                    st.session_state.emergency_detected = True
+                    st.session_state.emergency_reason = reason
+                st.session_state.triage_assessment = assess_triage_tier(user_input, conv_text, st.session_state.patient_memory)
 
         if uploaded_image:
             is_pdf = uploaded_image.name.lower().endswith(".pdf")
