@@ -1348,6 +1348,445 @@ st.markdown("""
 
 """, unsafe_allow_html=True)
 
+# ── Dashboard Reskin (overrides above via cascade) ────────────────────
+st.markdown("""
+<style>
+:root {
+    --md-bg: #f7f8fb;
+    --md-surface: #ffffff;
+    --md-border: #eef0f4;
+    --md-border-strong: #e2e6ee;
+    --md-text-1: #0f172a;
+    --md-text-2: #475569;
+    --md-text-3: #94a3b8;
+    --md-brand-1: #06b6d4;
+    --md-brand-2: #0891b2;
+    --md-brand-3: #155e75;
+    --md-accent-blue: #3b82f6;
+    --md-accent-violet: #8b5cf6;
+    --md-accent-pink: #ec4899;
+    --md-accent-green: #10b981;
+    --md-accent-amber: #f59e0b;
+    --md-accent-red: #ef4444;
+    --md-soft-blue: #eff6ff;
+    --md-soft-violet: #f5f3ff;
+    --md-soft-pink: #fdf2f8;
+    --md-soft-green: #ecfdf5;
+    --md-soft-amber: #fffbeb;
+    --md-shadow-sm: 0 1px 2px rgba(15,23,42,0.04);
+    --md-shadow-md: 0 4px 14px rgba(15,23,42,0.06);
+    --md-shadow-lg: 0 12px 32px rgba(15,23,42,0.08);
+}
+
+.stApp {
+    background:
+        radial-gradient(ellipse 60% 40% at top right, rgba(6, 182, 212, 0.06), transparent 60%),
+        radial-gradient(ellipse 50% 30% at bottom left, rgba(139, 92, 246, 0.05), transparent 60%),
+        var(--md-bg) !important;
+}
+.main .block-container {
+    max-width: 1280px !important;
+    padding: 1.4rem 1.6rem 2rem 1.6rem !important;
+}
+* { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
+
+/* Compliance / status strip */
+.md-statusbar {
+    display: flex; align-items: center; gap: 1.4rem;
+    padding: 0.55rem 1rem;
+    background: var(--md-surface);
+    border: 1px solid var(--md-border);
+    border-radius: 14px;
+    margin-bottom: 1.2rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--md-text-2);
+    box-shadow: var(--md-shadow-sm);
+    flex-wrap: wrap;
+}
+.md-statusbar .md-stat-item { display: inline-flex; align-items: center; gap: 0.4rem; }
+.md-statusbar .md-stat-icon-blue { color: #2563eb; }
+.md-statusbar .md-stat-icon-green { color: #059669; }
+.md-statusbar .md-stat-icon-cyan { color: #0891b2; }
+.md-statusbar .md-pulse {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 0 rgba(16,185,129,0.5);
+    animation: mdPulse 2s infinite;
+}
+@keyframes mdPulse {
+    0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+    100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+
+/* Greeting */
+.md-greet-wrap { margin-bottom: 1.2rem; }
+.md-greet {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.85rem;
+    font-weight: 700;
+    color: var(--md-text-1);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 0.25rem;
+}
+.md-subgreet {
+    font-size: 0.95rem;
+    color: var(--md-text-2);
+    font-weight: 400;
+}
+
+/* Quick action chips */
+.md-chips { display: flex; gap: 0.55rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
+.md-chip {
+    background: var(--md-surface);
+    border: 1px solid var(--md-border);
+    border-radius: 100px;
+    padding: 0.55rem 0.95rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--md-text-1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-shadow: var(--md-shadow-sm);
+    transition: all .18s ease;
+}
+.md-chip:hover { border-color: var(--md-brand-1); transform: translateY(-1px); box-shadow: var(--md-shadow-md); }
+.md-chip-emoji { font-size: 1rem; line-height: 1; }
+/* Style streamlit columns containing chip buttons to match */
+div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chip-btn,
+.md-chip-row .stButton > button {
+    background: var(--md-surface) !important;
+    border: 1px solid var(--md-border) !important;
+    color: var(--md-text-1) !important;
+    border-radius: 100px !important;
+    padding: 0.55rem 0.95rem !important;
+    font-weight: 500 !important;
+    font-size: 0.82rem !important;
+    height: auto !important;
+    min-height: 0 !important;
+    box-shadow: var(--md-shadow-sm) !important;
+}
+.md-chip-row .stButton > button:hover {
+    border-color: var(--md-brand-1) !important;
+    transform: translateY(-1px);
+    box-shadow: var(--md-shadow-md) !important;
+}
+
+/* Hero card */
+.md-hero {
+    background: linear-gradient(180deg, #ffffff 0%, #f1faff 100%);
+    border: 1px solid var(--md-border);
+    border-radius: 22px;
+    padding: 2.2rem 1.8rem 1.8rem 1.8rem;
+    text-align: center;
+    box-shadow: var(--md-shadow-md);
+    margin-bottom: 1.2rem;
+    position: relative;
+    overflow: hidden;
+}
+.md-hero::before {
+    content: "";
+    position: absolute; top: -120px; right: -120px;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(6,182,212,0.12), transparent 70%);
+    border-radius: 50%;
+}
+.md-hero::after {
+    content: "";
+    position: absolute; bottom: -100px; left: -80px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(139,92,246,0.10), transparent 70%);
+    border-radius: 50%;
+}
+.md-hero-orb {
+    width: 78px; height: 78px;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 30% 30%, #ffffff, transparent 40%),
+        linear-gradient(135deg, #06b6d4, #8b5cf6);
+    margin: 0 auto 1rem auto;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 1.9rem;
+    box-shadow: 0 12px 28px rgba(6,182,212,0.32), 0 0 0 6px rgba(6,182,212,0.08);
+    position: relative;
+    animation: mdFloat 4s ease-in-out infinite;
+}
+@keyframes mdFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.md-hero-title {
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: var(--md-text-1);
+    letter-spacing: -0.02em;
+    margin-bottom: 0.45rem;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    position: relative;
+}
+.md-hero-verified {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px;
+    background: var(--md-accent-blue);
+    color: white;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+.md-hero-desc {
+    color: var(--md-text-2);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    max-width: 560px;
+    margin: 0 auto 1.4rem auto;
+    position: relative;
+}
+.md-hero-pills {
+    display: flex; gap: 0.7rem; flex-wrap: wrap; justify-content: center;
+    position: relative;
+}
+.md-hero-pill {
+    background: var(--md-surface);
+    border: 1px solid var(--md-border);
+    border-radius: 14px;
+    padding: 0.65rem 0.95rem;
+    display: flex; align-items: center; gap: 0.6rem;
+    box-shadow: var(--md-shadow-sm);
+    min-width: 150px;
+}
+.md-hero-pill-icon {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+.md-hp-green { background: var(--md-soft-green); color: #047857; }
+.md-hp-violet { background: var(--md-soft-violet); color: #6d28d9; }
+.md-hp-blue { background: var(--md-soft-blue); color: #1d4ed8; }
+.md-hp-pink { background: var(--md-soft-pink); color: #be185d; }
+.md-hero-pill-title {
+    font-size: 0.78rem; font-weight: 600; color: var(--md-text-1); line-height: 1.1;
+}
+.md-hero-pill-sub {
+    font-size: 0.68rem; color: var(--md-text-3); margin-top: 0.15rem;
+}
+
+/* Composer wrapper */
+.md-composer-wrap {
+    background: var(--md-surface);
+    border: 1px solid var(--md-border);
+    border-radius: 18px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 0.8rem;
+    box-shadow: var(--md-shadow-sm);
+}
+
+/* Smart Actions panel */
+.md-smart-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 0.4rem 0 0.6rem 0;
+}
+.md-smart-title { font-size: 1rem; font-weight: 700; color: var(--md-text-1); }
+.md-smart-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.7rem; }
+@media (max-width: 900px) { .md-smart-grid { grid-template-columns: repeat(2, 1fr); } }
+.md-smart-card {
+    background: var(--md-surface);
+    border: 1px solid var(--md-border);
+    border-radius: 14px;
+    padding: 0.9rem 1rem;
+    transition: all .18s ease;
+    cursor: pointer;
+}
+.md-smart-card:hover { transform: translateY(-2px); box-shadow: var(--md-shadow-md); border-color: var(--md-brand-1); }
+.md-smart-icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+}
+.md-si-cyan { background: var(--md-soft-blue); color: #0891b2; }
+.md-si-green { background: var(--md-soft-green); color: #047857; }
+.md-si-violet { background: var(--md-soft-violet); color: #6d28d9; }
+.md-si-pink { background: var(--md-soft-pink); color: #be185d; }
+.md-smart-name { font-size: 0.86rem; font-weight: 600; color: var(--md-text-1); margin-bottom: 0.2rem; }
+.md-smart-desc { font-size: 0.72rem; color: var(--md-text-2); line-height: 1.4; }
+
+/* Right column dashboard cards */
+.md-rcard {
+    background: var(--md-surface);
+    border: 1px solid var(--md-border);
+    border-radius: 16px;
+    padding: 1rem 1.1rem;
+    margin-bottom: 0.85rem;
+    box-shadow: var(--md-shadow-sm);
+}
+.md-rcard-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 0.7rem;
+}
+.md-rcard-title { font-size: 0.88rem; font-weight: 700; color: var(--md-text-1); }
+.md-rcard-link { font-size: 0.72rem; color: var(--md-brand-2); font-weight: 600; }
+
+/* Health Overview metric rows */
+.md-metric-row {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.55rem 0;
+    border-top: 1px solid var(--md-border);
+}
+.md-metric-row:first-of-type { border-top: none; }
+.md-metric-icon {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+.md-metric-mid { flex: 1; min-width: 0; }
+.md-metric-label { font-size: 0.78rem; color: var(--md-text-2); font-weight: 500; }
+.md-metric-value { font-size: 0.95rem; color: var(--md-text-1); font-weight: 700; }
+.md-metric-status {
+    font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem;
+    border-radius: 100px; flex-shrink: 0;
+}
+.md-status-good { background: var(--md-soft-green); color: #047857; }
+.md-status-warn { background: var(--md-soft-amber); color: #92400e; }
+.md-status-info { background: var(--md-soft-blue); color: #1d4ed8; }
+
+/* Recent Conversations rows */
+.md-conv-row {
+    display: flex; align-items: center; gap: 0.55rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--md-border);
+    font-size: 0.78rem;
+}
+.md-conv-row:first-of-type { border-top: none; }
+.md-conv-bubble { width: 26px; height: 26px; border-radius: 8px; background: var(--md-soft-blue); color: #1d4ed8; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; flex-shrink: 0; }
+.md-conv-title { flex: 1; color: var(--md-text-1); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.md-conv-time { font-size: 0.68rem; color: var(--md-text-3); flex-shrink: 0; }
+
+/* Health Tip card */
+.md-tip {
+    background: linear-gradient(135deg, #ecfeff, #fff7ed);
+    border: 1px solid var(--md-border);
+    border-radius: 16px;
+    padding: 1rem 1.1rem;
+    box-shadow: var(--md-shadow-sm);
+    display: flex; align-items: center; gap: 0.8rem;
+}
+.md-tip-icon { font-size: 2rem; }
+.md-tip-body { flex: 1; }
+.md-tip-eyebrow { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--md-brand-2); margin-bottom: 0.2rem; }
+.md-tip-title { font-size: 0.95rem; font-weight: 700; color: var(--md-text-1); margin-bottom: 0.2rem; }
+.md-tip-desc { font-size: 0.75rem; color: var(--md-text-2); line-height: 1.45; }
+
+/* MediChat new logo */
+.md-logo-wrap {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.4rem 0.2rem 1rem 0.2rem;
+    margin-bottom: 0.4rem;
+    border-bottom: 1px solid var(--md-border);
+}
+.md-logo-mark {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #06b6d4, #155e75);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 1.2rem; font-weight: 700;
+    box-shadow: 0 4px 12px rgba(6,182,212,0.3);
+}
+.md-logo-text { font-size: 1.1rem; font-weight: 800; color: var(--md-text-1); letter-spacing: -0.01em; }
+.md-logo-sub { font-size: 0.66rem; color: var(--md-text-3); font-weight: 500; }
+
+/* Sidebar nav */
+[data-testid="stSidebar"] {
+    background: var(--md-surface) !important;
+    border-right: 1px solid var(--md-border) !important;
+}
+[data-testid="stSidebar"] .stButton > button {
+    background: transparent !important;
+    border: none !important;
+    color: var(--md-text-2) !important;
+    text-align: left !important;
+    padding: 0.65rem 0.85rem !important;
+    border-radius: 12px !important;
+    font-weight: 500 !important;
+    font-size: 0.88rem !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0.1rem 0 !important;
+    box-shadow: none !important;
+    justify-content: flex-start !important;
+    display: flex !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: var(--md-bg) !important;
+    color: var(--md-text-1) !important;
+    transform: none;
+}
+.md-nav-active .stButton > button {
+    background: var(--md-soft-blue) !important;
+    color: var(--md-accent-blue) !important;
+    font-weight: 600 !important;
+}
+
+/* Premium card */
+.md-premium {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    border-radius: 16px;
+    padding: 1rem;
+    margin: 0.8rem 0;
+    box-shadow: 0 8px 24px rgba(99,102,241,0.25);
+}
+.md-premium-title { font-size: 0.88rem; font-weight: 700; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem; }
+.md-premium-desc { font-size: 0.72rem; opacity: 0.92; line-height: 1.4; margin-bottom: 0.7rem; }
+.md-premium .stButton > button {
+    background: white !important;
+    color: #6366f1 !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+    padding: 0.5rem 0.8rem !important;
+    width: 100% !important;
+    text-align: center !important;
+    justify-content: center !important;
+    font-size: 0.78rem !important;
+}
+
+/* Sidebar profile chip */
+.md-side-profile {
+    display: flex; align-items: center; gap: 0.55rem;
+    padding: 0.55rem;
+    border-radius: 12px;
+    background: var(--md-bg);
+    margin: 0.5rem 0;
+    border: 1px solid var(--md-border);
+}
+.md-side-avatar {
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
+}
+.md-side-pname { font-size: 0.82rem; font-weight: 600; color: var(--md-text-1); line-height: 1.1; }
+.md-side-psub { font-size: 0.66rem; color: var(--md-text-3); }
+
+/* Hide old header card and trust strip while we use new ones */
+.header-card, .trust-strip { display: none !important; }
+.welcome-card, .hero-wrap { display: none !important; }
+
+/* Make the chat input form match the new composer */
+.stForm {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", os.environ.get("GROQ_API_KEY", ""))
 if not GROQ_API_KEY:
     st.error("API key not found.")
@@ -2787,7 +3226,54 @@ if "session_started" not in st.session_state:
     st.session_state.current_conversation_id = ""
 
 with st.sidebar:
-    st.markdown("## MediChat")
+    st.markdown(
+        '<div class="md-logo-wrap">'
+        '<div class="md-logo-mark">⚕</div>'
+        '<div>'
+        '<div class="md-logo-text">MediChat</div>'
+        '<div class="md-logo-sub">AI Health Assistant</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    # ── Primary nav ─────────────────────────────────────────────
+    _mode = st.session_state.mode
+    nav_items = [
+        ("home", "🏠  Home", "chat"),
+        ("new", "💬  New Chat", "chat"),
+        ("symptom", "🩺  Symptoms Checker", "assessment"),
+        ("records", "📋  Health Records", "chat"),
+        ("insights", "✨  AI Insights", "chat"),
+        ("meds", "💊  Medications", "chat"),
+        ("labs", "🧪  Lab Reports", "chat"),
+        ("library", "📚  Health Library", "chat"),
+    ]
+    for nav_key, nav_label, target_mode in nav_items:
+        is_active = (nav_key == "home" and _mode == "chat") or (nav_key == "symptom" and _mode == "assessment")
+        active_cls = "md-nav-active" if is_active else ""
+        st.markdown('<div class="' + active_cls + '">', unsafe_allow_html=True)
+        if st.button(nav_label, key="nav_" + nav_key, use_container_width=True):
+            if nav_key == "new":
+                st.session_state.current_conversation_id = ""
+                st.session_state.messages = []
+                st.session_state.qcount = 0
+                st.session_state.feedback = {}
+                st.session_state.last_sources = []
+                st.session_state.last_pdf_context = ""
+                st.session_state.last_image_context = ""
+                st.session_state.emergency_detected = False
+                st.session_state.triage_assessment = None
+                st.session_state.mode = "chat"
+                st.rerun()
+            elif nav_key == "symptom":
+                st.session_state.mode = "assessment"
+                st.rerun()
+            else:
+                st.session_state.mode = "chat"
+                st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
     st.markdown("---")
 
     if st.session_state.is_authenticated:
@@ -2956,27 +3442,39 @@ with st.sidebar:
     for tip in ["What causes high blood pressure?", "I have chest pain and I am diabetic", "How does stress affect the heart?", "What foods reduce inflammation?", "I have been dizzy since yesterday"]:
         st.markdown('<div class="sb-tip">- ' + tip + '</div>', unsafe_allow_html=True)
     st.markdown("---")
+
+    # Premium upgrade card
+    st.markdown(
+        '<div class="md-premium">'
+        '<div class="md-premium-title">✨ Upgrade to Premium</div>'
+        '<div class="md-premium-desc">Unlimited AI chats, advanced insights, priority support and more.</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    # Bottom profile chip
+    if st.session_state.is_authenticated:
+        _nm = st.session_state.patient_name or "Patient"
+        _em = st.session_state.user_email_display or ""
+        _in = (_nm[0] if _nm and _nm != "Patient" else (_em[0] if _em else "P")).upper()
+        st.markdown(
+            '<div class="md-side-profile">'
+            '<div class="md-side-avatar">' + _in + '</div>'
+            '<div style="flex:1;min-width:0;">'
+            '<div class="md-side-pname">' + _nm + '</div>'
+            '<div class="md-side-psub">View profile</div>'
+            '</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
     st.markdown('<div class="sb-footer">MediChat v6.0<br>ICT654 - Group 7 - SISTC 2026</div>', unsafe_allow_html=True)
 
 st.markdown(
-    '<div class="header-card">'
-    '<div class="header-brand">'
-    '<div class="header-logo">✦</div>'
-    '<div>'
-    '<div class="header-title">MediChat</div>'
-    '<div class="header-subtitle">A thoughtful health companion, grounded in real medical research</div>'
-    '</div>'
-    '</div>'
-    '</div>',
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    '<div class="trust-strip">'
-    '<span class="trust-pill"><span class="trust-pill-icon">🔒</span>Private &amp; Confidential</span>'
-    '<span class="trust-pill"><span class="trust-pill-icon">📚</span>1,000 medical sources</span>'
-    '<span class="trust-pill"><span class="trust-pill-icon">✓</span>Evidence-based</span>'
-    '<span class="trust-pill"><span class="trust-pill-icon">🌐</span>5 languages</span>'
+    '<div class="md-statusbar">'
+    '<span class="md-stat-item md-stat-icon-blue">🛡️ HIPAA Compliant</span>'
+    '<span class="md-stat-item md-stat-icon-green">✅ SOC 2 Type II Certified</span>'
+    '<span class="md-pulse"></span>'
+    '<span class="md-stat-item md-stat-icon-cyan">🔒 Encrypted &amp; Private</span>'
     '</div>',
     unsafe_allow_html=True
 )
@@ -3188,6 +3686,145 @@ if (_triage and _triage.get("tier", 5) > 1 and _triage.get("tier", 5) < 5
     )
 
 if st.session_state.mode == "chat":
+    # ── New Dashboard Home (only on empty chat) ─────────────────────
+    if not st.session_state.messages:
+        _hour = datetime.now().hour
+        _tod = "morning" if _hour < 12 else ("afternoon" if _hour < 18 else "evening")
+        _disp_name = (st.session_state.patient_name if st.session_state.patient_name and st.session_state.patient_name != "Guest" else "")
+        _greet = "Good " + _tod + (", " + _disp_name if _disp_name else "") + "  👋"
+        st.markdown(
+            '<div class="md-greet-wrap">'
+            '<div class="md-greet">' + _greet + '</div>'
+            '<div class="md-subgreet">How can I help you with your health today?</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+        # Quick action chips
+        st.markdown('<div class="md-chip-row">', unsafe_allow_html=True)
+        chip_specs = [
+            ("🤕  I have a headache", "I have a headache today and would like to understand what might be causing it."),
+            ("😴  Feeling tired", "I've been feeling unusually tired lately. What could be the reason?"),
+            ("🔍  Check my symptoms", "I'd like to do a guided symptom check."),
+            ("💤  Improve my sleep", "Can you suggest ways to improve my sleep quality?"),
+        ]
+        chip_cols = st.columns(len(chip_specs))
+        for i, (chip_label, chip_query) in enumerate(chip_specs):
+            with chip_cols[i]:
+                if st.button(chip_label, key="chip_" + str(i), use_container_width=True):
+                    if chip_label.startswith("🔍"):
+                        st.session_state.mode = "assessment"
+                        st.rerun()
+                    else:
+                        st.session_state.messages.append({"role": "user", "type": "text", "content": chip_query})
+                        st.session_state.qcount += 1
+                        st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Two-column layout: hero on left, dashboard on right
+        home_main, home_side = st.columns([2.3, 1])
+
+        with home_main:
+            st.markdown(
+                '<div class="md-hero">'
+                '<div class="md-hero-orb">✦</div>'
+                '<div class="md-hero-title">Hi, I\'m MediChat AI <span class="md-hero-verified">✓</span></div>'
+                '<div class="md-hero-desc">Your personal AI health assistant. I provide general health information and guidance, not a replacement for professional medical advice.</div>'
+                '<div class="md-hero-pills">'
+                '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-green">✓</div><div><div class="md-hero-pill-title">Evidence-Based</div><div class="md-hero-pill-sub">1,000+ Sources</div></div></div>'
+                '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-violet">🔒</div><div><div class="md-hero-pill-title">Private &amp; Secure</div><div class="md-hero-pill-sub">Your data is safe</div></div></div>'
+                '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-blue">🌐</div><div><div class="md-hero-pill-title">Multi-Language</div><div class="md-hero-pill-sub">5+ Languages</div></div></div>'
+                '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-pink">⏰</div><div><div class="md-hero-pill-title">Available 24/7</div><div class="md-hero-pill-sub">Always here for you</div></div></div>'
+                '</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+
+            # Smart Actions
+            st.markdown('<div class="md-smart-head"><div class="md-smart-title">Smart Actions</div></div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="md-smart-grid">'
+                '<div class="md-smart-card"><div class="md-smart-icon md-si-cyan">🩺</div><div class="md-smart-name">Symptoms Checker</div><div class="md-smart-desc">Check your symptoms and get AI-powered insights</div></div>'
+                '<div class="md-smart-card"><div class="md-smart-icon md-si-green">📋</div><div class="md-smart-name">Health Assessment</div><div class="md-smart-desc">Take a comprehensive health assessment</div></div>'
+                '<div class="md-smart-card"><div class="md-smart-icon md-si-violet">📈</div><div class="md-smart-name">AI Insights</div><div class="md-smart-desc">Get personalised health recommendations</div></div>'
+                '<div class="md-smart-card"><div class="md-smart-icon md-si-pink">👥</div><div class="md-smart-name">Find Specialists</div><div class="md-smart-desc">Connect with healthcare professionals</div></div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+
+        with home_side:
+            # Health Overview (decorative mock data — real wearable sync is a future feature)
+            st.markdown(
+                '<div class="md-rcard">'
+                '<div class="md-rcard-head"><div class="md-rcard-title">Health Overview</div><div class="md-rcard-link">Today ▾</div></div>'
+                '<div class="md-metric-row"><div class="md-metric-icon md-hp-pink">❤️</div>'
+                '<div class="md-metric-mid"><div class="md-metric-label">Heart Rate</div><div class="md-metric-value">72 BPM</div></div>'
+                '<div class="md-metric-status md-status-good">Normal</div></div>'
+                '<div class="md-metric-row"><div class="md-metric-icon md-hp-green">👟</div>'
+                '<div class="md-metric-mid"><div class="md-metric-label">Steps</div><div class="md-metric-value">7,842 / 10,000</div></div>'
+                '<div class="md-metric-status md-status-good">78%</div></div>'
+                '<div class="md-metric-row"><div class="md-metric-icon md-hp-violet">🌙</div>'
+                '<div class="md-metric-mid"><div class="md-metric-label">Sleep</div><div class="md-metric-value">7h 23m</div></div>'
+                '<div class="md-metric-status md-status-good">Good</div></div>'
+                '<div class="md-metric-row"><div class="md-metric-icon md-hp-blue">💧</div>'
+                '<div class="md-metric-mid"><div class="md-metric-label">Water Intake</div><div class="md-metric-value">6 / 8 glasses</div></div>'
+                '<div class="md-metric-status md-status-info">75%</div></div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+
+            # Recent Conversations (real, from Firestore)
+            recent_html = '<div class="md-rcard"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><div class="md-rcard-link">View all</div></div>'
+            if st.session_state.is_authenticated and st.session_state.user_email_hash:
+                _recent = list_conversations(st.session_state.user_email_hash, limit=4)
+                if _recent:
+                    for _r in _recent:
+                        _rt = (_r.get("title") or "Chat")[:32]
+                        _ru = _r.get("last_updated")
+                        try:
+                            if _ru and hasattr(_ru, "strftime"):
+                                _delta = datetime.utcnow() - _ru.replace(tzinfo=None) if _ru.tzinfo else datetime.utcnow() - _ru
+                                _hours = int(_delta.total_seconds() // 3600)
+                                if _hours < 1:
+                                    _ago = str(int(_delta.total_seconds() // 60)) + "m ago"
+                                elif _hours < 24:
+                                    _ago = str(_hours) + "h ago"
+                                else:
+                                    _ago = str(_hours // 24) + "d ago"
+                            else:
+                                _ago = ""
+                        except Exception:
+                            _ago = ""
+                        recent_html += '<div class="md-conv-row"><div class="md-conv-bubble">💬</div><div class="md-conv-title">' + _rt + '</div><div class="md-conv-time">' + _ago + '</div></div>'
+                else:
+                    recent_html += '<div class="md-conv-row" style="color:#94a3b8;font-style:italic;">No past chats yet.</div>'
+            else:
+                recent_html += '<div class="md-conv-row" style="color:#94a3b8;font-style:italic;">Sign in to keep chat history.</div>'
+            recent_html += '</div>'
+            st.markdown(recent_html, unsafe_allow_html=True)
+
+            # Health tip
+            tips = [
+                ("💧", "Stay Hydrated", "Drinking enough water helps maintain energy levels, supports digestion, and improves focus."),
+                ("🥗", "Eat the Rainbow", "A varied, colourful diet gives you the widest range of vitamins and antioxidants."),
+                ("🚶", "Walk After Meals", "A 10-minute walk after eating can help blood sugar levels and digestion."),
+                ("🧘", "Breathe Deeply", "Three slow deep breaths can lower stress hormones and steady your heart rate."),
+                ("😴", "Protect Your Sleep", "A consistent bedtime improves immunity, mood, and cognitive sharpness."),
+            ]
+            _ti = (st.session_state.qcount + datetime.now().day) % len(tips)
+            _ic, _tt, _td = tips[_ti]
+            st.markdown(
+                '<div class="md-tip">'
+                '<div class="md-tip-icon">' + _ic + '</div>'
+                '<div class="md-tip-body">'
+                '<div class="md-tip-eyebrow">Health Tip for You</div>'
+                '<div class="md-tip-title">' + _tt + '</div>'
+                '<div class="md-tip-desc">' + _td + '</div>'
+                '</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+
     mem = st.session_state.patient_memory
 
     if any([mem.get("symptoms"), mem.get("conditions"), mem.get("medications")]) and st.session_state.messages:
