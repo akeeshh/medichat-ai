@@ -167,6 +167,38 @@ def derive_chat_title(messages):
             return (t[:50] + "…") if len(t) > 50 else t
     return "New chat"
 
+def generate_ai_chat_title(messages):
+    """Use Claude to summarise a chat into a 3-6 word clinical title.
+    One call per chat. Falls back to derive_chat_title on any failure."""
+    if not CLAUDE_ACTIVE or not messages:
+        return derive_chat_title(messages)
+    try:
+        lines = []
+        for m in messages[:8]:
+            role = "Patient" if m.get("role") == "user" else "MediChat"
+            content = (m.get("content", "") or "")[:280]
+            if content:
+                lines.append(role + ": " + content)
+        transcript = "\n".join(lines)
+        resp = anthropic_client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=24,
+            system=(
+                "You are a clinical scribe. Read the chat and output a 3-6 word title "
+                "summarising the patient's chief concern. Output the title and nothing else: "
+                "no quotes, no punctuation at the end, no preamble. Examples: "
+                "Migraine workup, Type 2 diabetes review, Persistent dry cough, "
+                "Lower back pain after lifting."
+            ),
+            messages=[{"role": "user", "content": transcript}],
+            temperature=0.3,
+        )
+        title = (resp.content[0].text or "").strip().strip('"\'').rstrip(".")[:60]
+        return title or derive_chat_title(messages)
+    except Exception as e:
+        print("AI title generation failed:", e)
+        return derive_chat_title(messages)
+
 def list_conversations(email_hash, limit=30):
     if not FIREBASE_ACTIVE or not email_hash:
         return []
@@ -211,21 +243,25 @@ def save_conversation(email_hash, conv_id, messages):
     if not FIREBASE_ACTIVE or not email_hash:
         return None
     trimmed = _trim_messages_for_storage(messages)
+    msg_count = len(trimmed)
     # Lightweight summary fields for cross-chat context (avoids re-reading the full doc).
     _first_user = next((m.get("content", "") for m in trimmed if m.get("role") == "user"), "")
     _last_asst = next((m.get("content", "") for m in reversed(trimmed) if m.get("role") == "assistant"), "")
     payload = {
-        "title": derive_chat_title(trimmed),
         "messages": trimmed,
-        "message_count": len(trimmed),
+        "message_count": msg_count,
         "first_user_msg": (_first_user or "")[:240],
         "last_assistant_msg": (_last_asst or "")[:320],
         "last_updated": firestore.SERVER_TIMESTAMP,
     }
+    # Title strategy: cheap fallback on first save, AI upgrade once at 4 messages.
+    if not conv_id:
+        payload["title"] = derive_chat_title(trimmed)
+    elif msg_count == 4:
+        payload["title"] = generate_ai_chat_title(trimmed)
     try:
         coll = firestore_db.collection("medichat_profiles").document(email_hash).collection("conversations")
         if conv_id:
-            payload["created_at"] = firestore.SERVER_TIMESTAMP if False else firestore.SERVER_TIMESTAMP
             coll.document(conv_id).set(payload, merge=True)
             return conv_id
         # New conversation: include created_at
@@ -1200,6 +1236,93 @@ st.markdown("""
         line-height: 1.5;
     }
 
+    /* ── Triage Tier Badge ──────────────────────────────────────── */
+    .triage-card {
+        border-radius: 16px;
+        padding: 1rem 1.2rem;
+        margin: 0.5rem 0 1rem 0;
+        color: white;
+        box-shadow: 0 6px 20px rgba(12, 45, 72, 0.18);
+        animation: fadeInUp 0.35s ease;
+    }
+    .triage-head {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0.4rem;
+    }
+    .triage-icon { font-size: 1.4rem; line-height: 1; }
+    .triage-tier-num {
+        background: rgba(255,255,255,0.22);
+        padding: 0.18rem 0.55rem;
+        border-radius: 100px;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+    }
+    .triage-label {
+        font-size: 1.05rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+    .triage-step {
+        font-size: 0.86rem;
+        line-height: 1.55;
+        opacity: 0.95;
+        margin-bottom: 0.45rem;
+    }
+    .triage-reasons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        margin-top: 0.35rem;
+    }
+    .triage-reason-pill {
+        background: rgba(255,255,255,0.18);
+        border: 1px solid rgba(255,255,255,0.28);
+        color: white;
+        font-size: 0.7rem;
+        font-weight: 500;
+        padding: 0.18rem 0.6rem;
+        border-radius: 100px;
+    }
+
+    /* ── Health Profile Sidebar Card ─────────────────────────────── */
+    .hp-card {
+        background: linear-gradient(135deg, #edf6fc, #d6edf9);
+        border: 1px solid #b0daf2;
+        border-radius: 12px;
+        padding: 0.7rem 0.85rem;
+        margin-bottom: 0.55rem;
+    }
+    .hp-section-title {
+        font-size: 0.62rem;
+        font-weight: 700;
+        color: #1a5b8a;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.3rem;
+    }
+    .hp-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+    .hp-chip {
+        background: white;
+        border: 1px solid #b0daf2;
+        color: #144272;
+        font-size: 0.7rem;
+        font-weight: 500;
+        padding: 0.18rem 0.55rem;
+        border-radius: 100px;
+    }
+    .hp-empty {
+        font-size: 0.7rem;
+        color: #64748b;
+        font-style: italic;
+    }
+
     /* ── Hide Streamlit Branding ─────────────────────────────────── */
     footer { visibility: hidden; }
     [data-testid="stHeader"] { background: transparent; }
@@ -1679,6 +1802,116 @@ def detect_emergency(text, conversation_text=""):
         if matches >= cluster["min_any"]:
             return True, cluster["name"]
     return False, None
+
+# ── Triage tier scoring (Manchester-style 5-tier) ────────────────────
+URGENT_KEYWORDS = [
+    "severe pain", "worst pain", "intense pain", "unbearable pain",
+    "high fever", "fever over 39", "fever 40", "very high temperature",
+    "vomiting blood", "blood in stool", "blood in urine", "coughing up blood",
+    "cannot keep anything down", "can't keep food down",
+    "severe dehydration", "haven't urinated in", "no urine for",
+    "severe headache that won't go", "thunderclap headache",
+    "vision changes", "double vision", "lost vision",
+    "new confusion", "disoriented", "very confused",
+    "severe abdominal pain", "rigid abdomen",
+    "rapid heartbeat", "racing heart for hours",
+    "severe dizziness", "cannot stand",
+    "broken bone", "deformed limb", "bone visible",
+    "deep cut", "deep wound", "wound won't stop bleeding",
+    "burn larger than", "blistering burn",
+    "severe asthma attack", "wheezing badly",
+    "severe panic", "cannot stop shaking",
+    "pregnancy bleeding", "severe pregnancy pain",
+]
+CONCERN_KEYWORDS = [
+    "fever for", "persistent fever", "fever won't go", "fever lasting",
+    "headache for days", "persistent headache", "daily headaches",
+    "cough for weeks", "persistent cough", "cough lasting",
+    "rash spreading", "rash worse", "growing rash",
+    "weight loss", "losing weight", "lost weight",
+    "tired all the time", "exhausted constantly", "no energy for weeks",
+    "trouble sleeping for", "insomnia for",
+    "persistent pain", "pain for days", "pain getting worse",
+    "frequent urination", "burning urination", "painful urination",
+    "diarrhoea for", "diarrhea for", "constipation for",
+    "swelling that won't", "lump that's growing", "new lump",
+    "bleeding gums often", "easy bruising",
+    "new mole", "mole changing", "changing mole",
+    "irregular periods", "missed period",
+    "anxious all the time", "feeling depressed", "low mood for weeks",
+    "joint pain for", "stiff joints",
+    "shortness of breath on stairs", "out of breath easily",
+]
+
+def assess_triage_tier(text, conversation_text="", memory=None):
+    """Return a 5-tier triage assessment with reasons.
+    Tier 1: emergency (call 000). Tier 5: self-care.
+    """
+    text_l = (text or "").lower()
+    conv_l = (conversation_text or "").lower()
+    combined = (text_l + " " + conv_l).strip()
+    memory = memory or {}
+
+    is_emerg, emerg_reason = detect_emergency(text, conversation_text)
+    if is_emerg:
+        return {
+            "tier": 1,
+            "label": "Emergency",
+            "icon": "🔴",
+            "color": "#dc2626",
+            "bg": "linear-gradient(135deg,#dc2626,#991b1b)",
+            "next_step": "Call 000 (Australia) or your local emergency number now. Do not wait. Do not drive yourself.",
+            "reasons": [emerg_reason or "Emergency pattern detected"],
+        }
+
+    matched_urgent = [kw for kw in URGENT_KEYWORDS if kw in combined]
+    if matched_urgent:
+        return {
+            "tier": 2,
+            "label": "Urgent care today",
+            "icon": "🟠",
+            "color": "#ea580c",
+            "bg": "linear-gradient(135deg,#ea580c,#c2410c)",
+            "next_step": "See a GP, urgent care clinic, or ED today, ideally within 2-4 hours.",
+            "reasons": matched_urgent[:3],
+        }
+
+    matched_concern = [kw for kw in CONCERN_KEYWORDS if kw in combined]
+    has_chronic = bool(memory.get("conditions"))
+    has_meds = bool(memory.get("medications"))
+    if matched_concern or (has_chronic and any(s in combined for s in ["worse", "new symptom", "different"])):
+        reasons = matched_concern[:3] if matched_concern else ["Chronic condition + new or worsening symptom"]
+        return {
+            "tier": 3,
+            "label": "GP within 24-48 hrs",
+            "icon": "🟡",
+            "color": "#ca8a04",
+            "bg": "linear-gradient(135deg,#ca8a04,#a16207)",
+            "next_step": "Book a GP appointment for today or tomorrow. Watch for worsening signs.",
+            "reasons": reasons,
+        }
+
+    has_symptoms = bool(memory.get("symptoms")) or any(w in combined for w in ["pain", "ache", "sore", "tired", "dizzy", "nausea"])
+    if has_symptoms:
+        return {
+            "tier": 4,
+            "label": "GP within a week",
+            "icon": "🟢",
+            "color": "#16a34a",
+            "bg": "linear-gradient(135deg,#16a34a,#15803d)",
+            "next_step": "Book a routine GP appointment in the next few days to discuss your symptoms.",
+            "reasons": (memory.get("symptoms") or [])[:3] or ["Active symptoms reported"],
+        }
+
+    return {
+        "tier": 5,
+        "label": "Self-care appropriate",
+        "icon": "⚪",
+        "color": "#64748b",
+        "bg": "linear-gradient(135deg,#64748b,#475569)",
+        "next_step": "Self-care and monitoring is reasonable. Reach out if anything new or worsening.",
+        "reasons": [],
+    }
 
 DRUG_INTERACTIONS = {
     "antihistamine": {
@@ -2497,6 +2730,7 @@ if "session_started" not in st.session_state:
     st.session_state.patient_name = ""
     st.session_state.emergency_detected = False
     st.session_state.emergency_reason = ""
+    st.session_state.triage_assessment = None
     st.session_state.last_sources = []
     st.session_state.eval_log = []
     st.session_state.response_times = []
@@ -2637,15 +2871,32 @@ with st.sidebar:
         st.markdown('<div class="sb-stat-card"><div class="sb-stat-num">1000</div><div class="sb-stat-label">Medical Docs</div></div>', unsafe_allow_html=True)
     st.markdown("---")
     mem = st.session_state.patient_memory
-    if any([mem.get("symptoms"), mem.get("conditions"), mem.get("medications")]):
-        st.markdown('<div class="sb-title">Patient Memory</div>', unsafe_allow_html=True)
-        if mem.get("symptoms"):
-            st.markdown('<div class="sb-memory-item">Symptoms: ' + ", ".join(mem["symptoms"][:2]) + '</div>', unsafe_allow_html=True)
-        if mem.get("conditions"):
-            st.markdown('<div class="sb-memory-item">Conditions: ' + ", ".join(mem["conditions"][:2]) + '</div>', unsafe_allow_html=True)
-        if mem.get("medications"):
-            st.markdown('<div class="sb-memory-item">Medications: ' + ", ".join(mem["medications"][:2]) + '</div>', unsafe_allow_html=True)
-        st.markdown("---")
+    has_any_mem = any([mem.get("symptoms"), mem.get("conditions"), mem.get("medications")])
+    st.markdown('<div class="sb-title">Health Profile</div>', unsafe_allow_html=True)
+    if has_any_mem:
+        def _chips(items, max_n=8):
+            chips = "".join(['<span class="hp-chip">' + str(x).strip()[:40] + '</span>' for x in (items or [])[:max_n]])
+            return '<div class="hp-chip-row">' + chips + '</div>' if chips else '<div class="hp-empty">none recorded</div>'
+        st.markdown(
+            '<div class="hp-card">'
+            '<div class="hp-section-title">Conditions</div>' + _chips(mem.get("conditions")) +
+            '</div>'
+            '<div class="hp-card">'
+            '<div class="hp-section-title">Medications</div>' + _chips(mem.get("medications")) +
+            '</div>'
+            '<div class="hp-card">'
+            '<div class="hp-section-title">Recent Symptoms</div>' + _chips(mem.get("symptoms")) +
+            '</div>',
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            '<div class="hp-card"><div class="hp-empty">'
+            'Your conditions, medications and symptoms will appear here as you chat.'
+            '</div></div>',
+            unsafe_allow_html=True
+        )
+    st.markdown("---")
     st.markdown('<div class="sb-title">Active Features</div>', unsafe_allow_html=True)
     features = [
         ("#dc2626", "Emergency Detection"),
@@ -2872,6 +3123,28 @@ if st.session_state.emergency_detected:
         if st.button("Dismiss alert", key="dismiss_emergency"):
             st.session_state.emergency_detected = False
             st.rerun()
+
+# ── Triage tier banner (skip Tier 1 — emergency banner already covers it) ──
+_triage = st.session_state.get("triage_assessment")
+if (_triage and _triage.get("tier", 5) > 1 and _triage.get("tier", 5) < 5
+        and st.session_state.mode == "chat" and not st.session_state.emergency_detected):
+    _reasons_html = ""
+    if _triage.get("reasons"):
+        _reasons_html = '<div class="triage-reasons">' + "".join(
+            ['<span class="triage-reason-pill">' + str(r) + '</span>' for r in _triage["reasons"][:4]]
+        ) + '</div>'
+    st.markdown(
+        '<div class="triage-card" style="background:' + _triage["bg"] + ';">'
+        '<div class="triage-head">'
+        '<span class="triage-icon">' + _triage["icon"] + '</span>'
+        '<span class="triage-tier-num">TIER ' + str(_triage["tier"]) + '</span>'
+        '<span class="triage-label">' + _triage["label"] + '</span>'
+        '</div>'
+        '<div class="triage-step">' + _triage["next_step"] + '</div>'
+        + _reasons_html +
+        '</div>',
+        unsafe_allow_html=True
+    )
 
 if st.session_state.mode == "chat":
     mem = st.session_state.patient_memory
@@ -3152,6 +3425,7 @@ if st.session_state.mode == "chat":
             if is_emerg:
                 st.session_state.emergency_detected = True
                 st.session_state.emergency_reason = reason
+            st.session_state.triage_assessment = assess_triage_tier(user_input, conv_text, st.session_state.patient_memory)
 
         if uploaded_image:
             is_pdf = uploaded_image.name.lower().endswith(".pdf")
