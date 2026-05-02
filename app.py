@@ -184,6 +184,8 @@ def list_conversations(email_hash, limit=30):
                 "title": data.get("title", "Chat"),
                 "message_count": data.get("message_count", 0),
                 "last_updated": data.get("last_updated"),
+                "first_user_msg": data.get("first_user_msg", ""),
+                "last_assistant_msg": data.get("last_assistant_msg", ""),
             })
         return out
     except Exception as e:
@@ -209,10 +211,15 @@ def save_conversation(email_hash, conv_id, messages):
     if not FIREBASE_ACTIVE or not email_hash:
         return None
     trimmed = _trim_messages_for_storage(messages)
+    # Lightweight summary fields for cross-chat context (avoids re-reading the full doc).
+    _first_user = next((m.get("content", "") for m in trimmed if m.get("role") == "user"), "")
+    _last_asst = next((m.get("content", "") for m in reversed(trimmed) if m.get("role") == "assistant"), "")
     payload = {
         "title": derive_chat_title(trimmed),
         "messages": trimmed,
         "message_count": len(trimmed),
+        "first_user_msg": (_first_user or "")[:240],
+        "last_assistant_msg": (_last_asst or "")[:320],
         "last_updated": firestore.SERVER_TIMESTAMP,
     }
     try:
@@ -1881,7 +1888,7 @@ def strip_excessive_disclaimers(text):
     cleaned = cleaned.strip()
     return cleaned
 
-def medichat_rag_stream(question, all_messages, lang_instruction="", patient_name="", pdf_context="", image_context=""):
+def medichat_rag_stream(question, all_messages, lang_instruction="", patient_name="", pdf_context="", image_context="", past_chats_summary=""):
     emb = embedder.encode([question]).astype("float32")
     distances, idxs = index.search(emb, k=3)
     raw_context = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
@@ -1971,10 +1978,21 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
 
     system += "<patient_history>\n"
     if memory_context:
-        system += "What this patient has explicitly told you in this conversation:\n" + memory_context + "\n"
+        system += "What this patient has told you across all your conversations with them:\n" + memory_context + "\n"
     else:
         system += "This patient has NOT stated any conditions, medications, or chronic illnesses yet. Do not assume any exist.\n"
     system += "</patient_history>\n\n"
+
+    if past_chats_summary:
+        system += (
+            "<past_conversations>\n"
+            "This patient has had earlier separate conversations with you. Use these to recognise references "
+            "to 'last time' or 'remember when'. Each entry shows when the chat happened, its main topic, and a short summary.\n"
+            + past_chats_summary +
+            "\n</past_conversations>\n\n"
+            "When the patient asks if you remember a past chat, refer to <past_conversations> by topic naturally. "
+            "Do not say 'I have no memory'. You DO have access to the topics and summaries listed above.\n\n"
+        )
 
     if pdf_context:
         system += (
@@ -3173,11 +3191,29 @@ if st.session_state.mode == "chat":
 
             name_for_rag = "" if st.session_state.patient_name == "Guest" else st.session_state.patient_name
 
+            # Build cross-chat summary so the AI knows about the patient's other conversations.
+            past_chats_summary = ""
+            if st.session_state.is_authenticated and st.session_state.user_email_hash:
+                _all_convs = list_conversations(st.session_state.user_email_hash, limit=10)
+                _other = [c for c in _all_convs if c["id"] != st.session_state.current_conversation_id]
+                if _other:
+                    _lines = []
+                    for c in _other[:5]:
+                        _topic = (c.get("first_user_msg") or c.get("title") or "").strip().replace("\n", " ")
+                        _outcome = (c.get("last_assistant_msg") or "").strip().replace("\n", " ")
+                        if not _topic:
+                            continue
+                        _entry = "- Topic: " + _topic[:200]
+                        if _outcome:
+                            _entry += "\n  Last response summary: " + _outcome[:240]
+                        _lines.append(_entry)
+                    past_chats_summary = "\n".join(_lines)
+
             with st.spinner("MediChat is thinking..."):
                 final_text = ""
                 stream_metadata = None
                 try:
-                    for event in medichat_rag_stream(user_input, st.session_state.messages, lang_instruction, name_for_rag, st.session_state.get("last_pdf_context", ""), st.session_state.get("last_image_context", "")):
+                    for event in medichat_rag_stream(user_input, st.session_state.messages, lang_instruction, name_for_rag, st.session_state.get("last_pdf_context", ""), st.session_state.get("last_image_context", ""), past_chats_summary):
                         kind = event[0]
                         if kind == "chunk":
                             final_text = event[2]
@@ -3198,7 +3234,15 @@ if st.session_state.mode == "chat":
             conf_level = stream_metadata["confidence"]
             conf_pct = stream_metadata["confidence_pct"]
             engine_used = stream_metadata.get("engine", "unknown")
-            st.session_state.patient_memory = memory
+            # Merge fresh extraction with existing profile memory so facts
+            # from past chats persist into new ones.
+            existing_mem = st.session_state.patient_memory or {}
+            merged_mem = {}
+            for _key in ("symptoms", "conditions", "medications"):
+                _combined = list(dict.fromkeys((existing_mem.get(_key, []) or []) + (memory.get(_key, []) or [])))
+                merged_mem[_key] = _combined[:30]
+            st.session_state.patient_memory = merged_mem
+            memory = merged_mem
             st.session_state.last_sources = sources
             if st.session_state.is_authenticated and st.session_state.user_email_hash:
                 persist_profile_state(
