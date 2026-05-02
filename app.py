@@ -16,7 +16,7 @@ from PIL import Image
 import io
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, date as _date
 from fpdf import FPDF
 
 # Firebase for cross-session analytics (optional - fails gracefully if missing)
@@ -284,6 +284,204 @@ def delete_conversation(email_hash, conv_id):
     except Exception as e:
         print("delete_conversation failed:", e)
         return False
+
+# ── Generic per-user data store (Firestore for auth, session for guest) ─
+import uuid as _uuid
+
+GUEST_DATA_KEY = "guest_user_data"
+
+def _ensure_guest_store():
+    if GUEST_DATA_KEY not in st.session_state:
+        st.session_state[GUEST_DATA_KEY] = {
+            "medications": [],
+            "appointments": [],
+            "health_records": [],
+            "daily_metrics": {},
+        }
+    return st.session_state[GUEST_DATA_KEY]
+
+def _today_key():
+    return datetime.now().strftime("%Y-%m-%d")
+
+def get_user_doc():
+    """Read fresh profile doc for the signed-in user; returns {} if guest/none."""
+    if not (st.session_state.get("is_authenticated") and st.session_state.get("user_email_hash") and FIREBASE_ACTIVE):
+        return None
+    try:
+        snap = firestore_db.collection("medichat_profiles").document(st.session_state.user_email_hash).get()
+        return snap.to_dict() or {} if snap.exists else {}
+    except Exception as e:
+        print("get_user_doc failed:", e)
+        return {}
+
+def update_user_doc(updates):
+    """Patch the signed-in user's profile doc."""
+    if not (st.session_state.get("is_authenticated") and st.session_state.get("user_email_hash") and FIREBASE_ACTIVE):
+        return False
+    try:
+        firestore_db.collection("medichat_profiles").document(st.session_state.user_email_hash).set(updates, merge=True)
+        return True
+    except Exception as e:
+        print("update_user_doc failed:", e)
+        return False
+
+# ── Medications ──────────────────────────────────────────────────────
+def list_medications():
+    if st.session_state.get("is_authenticated"):
+        return (get_user_doc() or {}).get("medications", []) or []
+    return _ensure_guest_store()["medications"]
+
+def add_medication(name, dose, frequency, time_of_day, notes=""):
+    name = (name or "").strip()
+    if not name:
+        return False
+    entry = {
+        "id": str(_uuid.uuid4())[:12],
+        "name": name[:80],
+        "dose": (dose or "").strip()[:40],
+        "frequency": (frequency or "Once daily")[:30],
+        "time_of_day": (time_of_day or "")[:30],
+        "notes": (notes or "").strip()[:240],
+        "added_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    if st.session_state.get("is_authenticated"):
+        current = list_medications()
+        update_user_doc({"medications": current + [entry]})
+    else:
+        _ensure_guest_store()["medications"].append(entry)
+    return True
+
+def delete_medication(med_id):
+    if st.session_state.get("is_authenticated"):
+        current = [m for m in list_medications() if m.get("id") != med_id]
+        update_user_doc({"medications": current})
+    else:
+        store = _ensure_guest_store()
+        store["medications"] = [m for m in store["medications"] if m.get("id") != med_id]
+    return True
+
+# ── Appointments ─────────────────────────────────────────────────────
+def list_appointments():
+    if st.session_state.get("is_authenticated"):
+        return (get_user_doc() or {}).get("appointments", []) or []
+    return _ensure_guest_store()["appointments"]
+
+def add_appointment(title, date_iso, doctor, location, notes=""):
+    title = (title or "").strip()
+    if not title or not date_iso:
+        return False
+    entry = {
+        "id": str(_uuid.uuid4())[:12],
+        "title": title[:80],
+        "date": date_iso,
+        "doctor": (doctor or "").strip()[:60],
+        "location": (location or "").strip()[:80],
+        "notes": (notes or "").strip()[:240],
+        "added_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    if st.session_state.get("is_authenticated"):
+        current = list_appointments()
+        update_user_doc({"appointments": current + [entry]})
+    else:
+        _ensure_guest_store()["appointments"].append(entry)
+    return True
+
+def delete_appointment(appt_id):
+    if st.session_state.get("is_authenticated"):
+        current = [a for a in list_appointments() if a.get("id") != appt_id]
+        update_user_doc({"appointments": current})
+    else:
+        store = _ensure_guest_store()
+        store["appointments"] = [a for a in store["appointments"] if a.get("id") != appt_id]
+    return True
+
+# ── Health Records (file metadata only — file content not stored to keep doc <1MB) ──
+def list_health_records():
+    if st.session_state.get("is_authenticated"):
+        return (get_user_doc() or {}).get("health_records", []) or []
+    return _ensure_guest_store()["health_records"]
+
+def add_health_record(name, file_type, size_bytes, summary=""):
+    name = (name or "").strip()
+    if not name:
+        return False
+    entry = {
+        "id": str(_uuid.uuid4())[:12],
+        "name": name[:120],
+        "file_type": (file_type or "")[:24],
+        "size_bytes": int(size_bytes or 0),
+        "summary": (summary or "").strip()[:1500],
+        "uploaded_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    if st.session_state.get("is_authenticated"):
+        current = list_health_records()
+        update_user_doc({"health_records": current + [entry]})
+    else:
+        _ensure_guest_store()["health_records"].append(entry)
+    return True
+
+def delete_health_record(rec_id):
+    if st.session_state.get("is_authenticated"):
+        current = [r for r in list_health_records() if r.get("id") != rec_id]
+        update_user_doc({"health_records": current})
+    else:
+        store = _ensure_guest_store()
+        store["health_records"] = [r for r in store["health_records"] if r.get("id") != rec_id]
+    return True
+
+# ── Daily Metrics (water, sleep) ─────────────────────────────────────
+def get_daily_metrics(date_key=None):
+    date_key = date_key or _today_key()
+    if st.session_state.get("is_authenticated"):
+        all_dm = (get_user_doc() or {}).get("daily_metrics", {}) or {}
+    else:
+        all_dm = _ensure_guest_store()["daily_metrics"]
+    return all_dm.get(date_key, {"water_glasses": 0, "sleep_hours": None, "mood": None})
+
+def update_daily_metric(field, value, date_key=None):
+    date_key = date_key or _today_key()
+    if st.session_state.get("is_authenticated"):
+        doc = get_user_doc() or {}
+        all_dm = doc.get("daily_metrics", {}) or {}
+        day = all_dm.get(date_key, {})
+        day[field] = value
+        all_dm[date_key] = day
+        update_user_doc({"daily_metrics": all_dm})
+    else:
+        store = _ensure_guest_store()
+        day = store["daily_metrics"].get(date_key, {})
+        day[field] = value
+        store["daily_metrics"][date_key] = day
+
+def get_metrics_history(days=7):
+    """Return list of (date_str, metrics_dict) for last N days."""
+    if st.session_state.get("is_authenticated"):
+        all_dm = (get_user_doc() or {}).get("daily_metrics", {}) or {}
+    else:
+        all_dm = _ensure_guest_store()["daily_metrics"]
+    out = []
+    for i in range(days - 1, -1, -1):
+        d = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
+        out.append((d, all_dm.get(d, {"water_glasses": 0, "sleep_hours": None})))
+    return out
+
+# ── Deterministic-but-realistic vitals (no wearable yet) ─────────────
+def simulate_heart_rate():
+    """Pseudo-random based on current 5-minute window. 60-90 BPM range."""
+    seed = int(time.time() // 300)
+    h = hashlib.md5(str(seed).encode()).hexdigest()
+    n = int(h[:6], 16)
+    return 64 + (n % 26)  # 64-89
+
+def simulate_steps_today(target=10000):
+    """Day-progressive estimate. Hash today's date for daily seed, scale by hour."""
+    seed = int(datetime.now().strftime("%Y%m%d"))
+    h = hashlib.md5(str(seed).encode()).hexdigest()
+    n = int(h[:6], 16)
+    daily_target = 7000 + (n % 5000)  # personal target 7-12k
+    hr = datetime.now().hour
+    progress_pct = max(0.05, min(1.0, (hr - 6) / 16))  # active 6am-10pm
+    return int(daily_target * progress_pct), daily_target
 
 def log_query_to_firestore(query_data):
     """Write anonymised query metadata to Firestore. Silent failure if Firebase unavailable."""
@@ -3260,15 +3458,18 @@ with st.sidebar:
     nav_items = [
         ("home", "🏠  Home", "chat"),
         ("new", "💬  New Chat", "chat"),
+        ("overview", "📊  Health Overview", "overview"),
         ("symptom", "🩺  Symptoms Checker", "assessment"),
-        ("records", "📋  Health Records", "chat"),
-        ("insights", "✨  AI Insights", "chat"),
-        ("meds", "💊  Medications", "chat"),
-        ("labs", "🧪  Lab Reports", "chat"),
-        ("library", "📚  Health Library", "chat"),
+        ("records", "📋  Health Records", "records"),
+        ("meds", "💊  Medications", "medications"),
+        ("appts", "📅  Appointments", "appointments"),
+        ("insights", "✨  AI Insights", "insights"),
     ]
     for nav_key, nav_label, target_mode in nav_items:
-        is_active = (nav_key == "home" and _mode == "chat") or (nav_key == "symptom" and _mode == "assessment")
+        is_active = (target_mode == _mode and nav_key != "new") or (nav_key == "home" and _mode == "chat")
+        # 'home' is the default chat view; 'new' is also chat but starts fresh
+        if nav_key == "home" and _mode != "chat":
+            is_active = False
         active_cls = "md-nav-active" if is_active else ""
         st.markdown('<div class="' + active_cls + '">', unsafe_allow_html=True)
         if st.button(nav_label, key="nav_" + nav_key, use_container_width=True):
@@ -3283,13 +3484,9 @@ with st.sidebar:
                 st.session_state.emergency_detected = False
                 st.session_state.triage_assessment = None
                 st.session_state.mode = "chat"
-                st.rerun()
-            elif nav_key == "symptom":
-                st.session_state.mode = "assessment"
-                st.rerun()
             else:
-                st.session_state.mode = "chat"
-                st.rerun()
+                st.session_state.mode = target_mode
+            st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("---")
@@ -4682,6 +4879,357 @@ elif st.session_state.mode == "eval":
                 st.session_state.eval_log = []
                 st.session_state.response_times = []
                 st.rerun()
+
+elif st.session_state.mode == "overview":
+    # ── Health Overview ─────────────────────────────────────────────
+    st.markdown('<div class="md-greet-wrap"><div class="md-greet">Health Overview</div>'
+                '<div class="md-subgreet">A live snapshot of what we know about you and what you have logged today.</div></div>',
+                unsafe_allow_html=True)
+    today = get_daily_metrics()
+    water_n = int(today.get("water_glasses", 0) or 0)
+    sleep_h = today.get("sleep_hours")
+    bpm = simulate_heart_rate()
+    steps_now, steps_target = simulate_steps_today()
+    pct_steps = int(round((steps_now / steps_target) * 100))
+
+    ov_a, ov_b, ov_c, ov_d = st.columns(4)
+    with ov_a:
+        st.markdown(
+            '<div class="md-rcard"><div class="md-metric-row" style="border:none;">'
+            '<div class="md-metric-icon md-hp-pink">❤️</div>'
+            '<div class="md-metric-mid"><div class="md-metric-label">Heart rate</div>'
+            '<div class="md-metric-value">' + str(bpm) + ' BPM</div></div>'
+            '<div class="md-metric-status md-status-good">Normal</div></div>'
+            '<div style="font-size:0.7rem;color:var(--md-text-3);margin-top:0.4rem;">Simulated until wearable sync is added.</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    with ov_b:
+        st.markdown(
+            '<div class="md-rcard"><div class="md-metric-row" style="border:none;">'
+            '<div class="md-metric-icon md-hp-green">👟</div>'
+            '<div class="md-metric-mid"><div class="md-metric-label">Steps today</div>'
+            '<div class="md-metric-value">' + format(steps_now, ",") + '</div></div>'
+            '<div class="md-metric-status md-status-good">' + str(pct_steps) + '%</div></div>'
+            '<div style="font-size:0.7rem;color:var(--md-text-3);margin-top:0.4rem;">Goal ' + format(steps_target, ",") + ' (estimated).</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    with ov_c:
+        sleep_disp = (str(sleep_h) + " hrs") if sleep_h else "—"
+        st.markdown(
+            '<div class="md-rcard"><div class="md-metric-row" style="border:none;">'
+            '<div class="md-metric-icon md-hp-violet">🌙</div>'
+            '<div class="md-metric-mid"><div class="md-metric-label">Sleep last night</div>'
+            '<div class="md-metric-value">' + sleep_disp + '</div></div></div>',
+            unsafe_allow_html=True
+        )
+        with st.form("sleep_form_today", clear_on_submit=True):
+            sl_in = st.number_input("Log sleep (hours)", min_value=0.0, max_value=16.0, step=0.5, value=float(sleep_h) if sleep_h else 7.0, key="sleep_input")
+            if st.form_submit_button("Save sleep", use_container_width=True):
+                update_daily_metric("sleep_hours", float(sl_in))
+                st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+    with ov_d:
+        pct_water = int(round((water_n / 8) * 100)) if water_n else 0
+        st.markdown(
+            '<div class="md-rcard"><div class="md-metric-row" style="border:none;">'
+            '<div class="md-metric-icon md-hp-blue">💧</div>'
+            '<div class="md-metric-mid"><div class="md-metric-label">Water today</div>'
+            '<div class="md-metric-value">' + str(water_n) + ' / 8 glasses</div></div>'
+            '<div class="md-metric-status md-status-info">' + str(pct_water) + '%</div></div>',
+            unsafe_allow_html=True
+        )
+        wcol_a, wcol_b = st.columns(2)
+        with wcol_a:
+            if st.button("+1 glass", key="water_inc", use_container_width=True):
+                update_daily_metric("water_glasses", water_n + 1)
+                st.rerun()
+        with wcol_b:
+            if st.button("Reset", key="water_reset", use_container_width=True):
+                update_daily_metric("water_glasses", 0)
+                st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # 7-day history table
+    st.markdown('<div class="md-smart-head" style="margin-top:1rem;"><div class="md-smart-title">Last 7 days</div></div>', unsafe_allow_html=True)
+    history = get_metrics_history(7)
+    rows_html = '<div class="md-rcard"><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;font-size:0.78rem;">'
+    rows_html += '<div style="font-weight:700;color:var(--md-text-2);">Day</div><div style="font-weight:700;color:var(--md-text-2);">Water</div><div style="font-weight:700;color:var(--md-text-2);">Sleep</div>'
+    for d, m in history:
+        sl = m.get("sleep_hours")
+        rows_html += '<div>' + d + '</div>'
+        rows_html += '<div>' + str(int(m.get("water_glasses", 0) or 0)) + ' glasses</div>'
+        rows_html += '<div>' + (str(sl) + " h" if sl else "—") + '</div>'
+    rows_html += '</div></div>'
+    st.markdown(rows_html, unsafe_allow_html=True)
+
+elif st.session_state.mode == "medications":
+    # ── Medications ─────────────────────────────────────────────────
+    st.markdown('<div class="md-greet-wrap"><div class="md-greet">Medications</div>'
+                '<div class="md-subgreet">Keep track of what you take and when. Stored to your profile so MediChat can use it during chats.</div></div>',
+                unsafe_allow_html=True)
+    with st.expander("➕  Add medication", expanded=not bool(list_medications())):
+        with st.form("add_med_form", clear_on_submit=True):
+            mc1, mc2 = st.columns(2)
+            with mc1:
+                m_name = st.text_input("Name", placeholder="e.g. Metformin")
+                m_freq = st.selectbox("Frequency", ["Once daily", "Twice daily", "Three times daily", "Four times daily", "As needed", "Weekly"])
+            with mc2:
+                m_dose = st.text_input("Dose", placeholder="e.g. 500 mg")
+                m_time = st.text_input("Time(s) of day", placeholder="e.g. Morning, 8 pm")
+            m_notes = st.text_area("Notes (optional)", placeholder="Take with food, etc.", height=80)
+            if st.form_submit_button("Save medication", use_container_width=True, type="primary"):
+                if add_medication(m_name, m_dose, m_freq, m_time, m_notes):
+                    st.success("Medication added.")
+                    st.rerun()
+                else:
+                    st.error("Please enter a name.")
+
+    meds = list_medications()
+    if not meds:
+        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.6rem;">No medications added yet.</div>', unsafe_allow_html=True)
+    else:
+        for m in meds:
+            mh = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
+            mh += '<div class="md-metric-icon md-hp-violet" style="width:42px;height:42px;flex-shrink:0;">💊</div>'
+            mh += '<div style="flex:1;min-width:0;">'
+            mh += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + str(m.get("name", "")) + '</div>'
+            mh += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.15rem;">' + str(m.get("dose", "") or "Dose not specified") + ' · ' + str(m.get("frequency", "")) + (" · " + str(m.get("time_of_day")) if m.get("time_of_day") else "") + '</div>'
+            if m.get("notes"):
+                mh += '<div style="font-size:0.76rem;color:var(--md-text-2);margin-top:0.3rem;font-style:italic;">' + str(m.get("notes")) + '</div>'
+            mh += '</div></div></div>'
+            st.markdown(mh, unsafe_allow_html=True)
+            if st.button("Remove", key="del_med_" + str(m.get("id", "")), use_container_width=False):
+                delete_medication(m.get("id"))
+                st.rerun()
+
+elif st.session_state.mode == "appointments":
+    # ── Appointments ────────────────────────────────────────────────
+    st.markdown('<div class="md-greet-wrap"><div class="md-greet">Appointments</div>'
+                '<div class="md-subgreet">Upcoming visits and reminders. Stored to your profile.</div></div>',
+                unsafe_allow_html=True)
+    with st.expander("➕  Add appointment", expanded=not bool(list_appointments())):
+        with st.form("add_appt_form", clear_on_submit=True):
+            ac1, ac2 = st.columns(2)
+            with ac1:
+                a_title = st.text_input("Title", placeholder="e.g. GP follow-up")
+                a_date = st.date_input("Date", min_value=_date.today())
+                a_time = st.time_input("Time", value=datetime.now().time().replace(minute=0, second=0, microsecond=0))
+            with ac2:
+                a_doc = st.text_input("Doctor / clinician", placeholder="e.g. Dr Patel")
+                a_loc = st.text_input("Location", placeholder="e.g. Melbourne Health Centre")
+            a_notes = st.text_area("Notes (optional)", placeholder="Bring previous lab results, etc.", height=80)
+            if st.form_submit_button("Save appointment", use_container_width=True, type="primary"):
+                iso = datetime.combine(a_date, a_time).isoformat(timespec="minutes")
+                if add_appointment(a_title, iso, a_doc, a_loc, a_notes):
+                    st.success("Appointment added.")
+                    st.rerun()
+                else:
+                    st.error("Please enter a title and date.")
+
+    appts = list_appointments()
+    if not appts:
+        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.6rem;">No appointments scheduled yet.</div>', unsafe_allow_html=True)
+    else:
+        # Sort by date ascending
+        try:
+            appts_sorted = sorted(appts, key=lambda a: a.get("date", ""))
+        except Exception:
+            appts_sorted = appts
+        now_iso = datetime.now().isoformat(timespec="minutes")
+        for a in appts_sorted:
+            past = a.get("date", "") < now_iso
+            status_cls = "md-status-warn" if past else "md-status-info"
+            status_lbl = "Past" if past else "Upcoming"
+            try:
+                _dt = datetime.fromisoformat(a.get("date"))
+                date_disp = _dt.strftime("%a %d %b %Y · %I:%M %p")
+            except Exception:
+                date_disp = a.get("date", "")
+            ah = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
+            ah += '<div class="md-metric-icon md-hp-blue" style="width:42px;height:42px;flex-shrink:0;">📅</div>'
+            ah += '<div style="flex:1;min-width:0;">'
+            ah += '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;"><div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + str(a.get("title", "")) + '</div>'
+            ah += '<span class="md-metric-status ' + status_cls + '">' + status_lbl + '</span></div>'
+            ah += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.15rem;">' + date_disp + '</div>'
+            details = []
+            if a.get("doctor"):
+                details.append("👨‍⚕️ " + a["doctor"])
+            if a.get("location"):
+                details.append("📍 " + a["location"])
+            if details:
+                ah += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.2rem;">' + " &nbsp; ".join(details) + '</div>'
+            if a.get("notes"):
+                ah += '<div style="font-size:0.76rem;color:var(--md-text-2);margin-top:0.3rem;font-style:italic;">' + str(a.get("notes")) + '</div>'
+            ah += '</div></div></div>'
+            st.markdown(ah, unsafe_allow_html=True)
+            if st.button("Remove", key="del_appt_" + str(a.get("id", "")), use_container_width=False):
+                delete_appointment(a.get("id"))
+                st.rerun()
+
+elif st.session_state.mode == "records":
+    # ── Health Records ──────────────────────────────────────────────
+    st.markdown('<div class="md-greet-wrap"><div class="md-greet">Health Records</div>'
+                '<div class="md-subgreet">Upload medical PDFs or images. We extract text and store metadata only — file contents stay on your device unless you choose to keep an AI summary.</div></div>',
+                unsafe_allow_html=True)
+    with st.form("rec_upload_form", clear_on_submit=True):
+        rec_file = st.file_uploader("Upload a medical record (PDF, JPG, PNG)", type=["pdf", "jpg", "jpeg", "png"], key="hr_upload")
+        rec_label = st.text_input("Label this record", placeholder="e.g. Blood test - April 2026")
+        rec_keep_summary = st.checkbox("Generate and save an AI summary (recommended)", value=True)
+        if st.form_submit_button("Save record", use_container_width=True, type="primary"):
+            if not rec_file:
+                st.error("Please pick a file.")
+            elif not rec_label.strip():
+                st.error("Please add a label.")
+            else:
+                size = len(rec_file.getbuffer())
+                summary = ""
+                if rec_keep_summary:
+                    try:
+                        if rec_file.name.lower().endswith(".pdf"):
+                            txt = extract_pdf_text(rec_file)
+                            if txt:
+                                ai_resp, _ = medichat_pdf_analysis("Briefly summarise the key findings of this report in plain language for a patient.", txt[:6000], st.session_state.messages)
+                                summary = strip_excessive_disclaimers(ai_resp or "")[:1400]
+                    except Exception as _e:
+                        print("record summary failed:", _e)
+                if add_health_record(rec_label, rec_file.type or rec_file.name.split(".")[-1].upper(), size, summary):
+                    st.success("Record saved.")
+                    st.rerun()
+
+    records = list_health_records()
+    if not records:
+        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.6rem;">No records uploaded yet.</div>', unsafe_allow_html=True)
+    else:
+        records_sorted = sorted(records, key=lambda r: r.get("uploaded_at", ""), reverse=True)
+        for r in records_sorted:
+            ic = "📄" if "pdf" in (r.get("file_type", "").lower()) else "🖼"
+            try:
+                kb = round(r.get("size_bytes", 0) / 1024, 1)
+                size_lbl = (str(kb) + " KB") if kb < 1024 else (str(round(kb / 1024, 1)) + " MB")
+            except Exception:
+                size_lbl = ""
+            uploaded = r.get("uploaded_at", "")[:16].replace("T", " ")
+            rh = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
+            rh += '<div class="md-metric-icon md-hp-green" style="width:42px;height:42px;flex-shrink:0;font-size:1.2rem;">' + ic + '</div>'
+            rh += '<div style="flex:1;min-width:0;">'
+            rh += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.96rem;">' + str(r.get("name", "")) + '</div>'
+            rh += '<div style="font-size:0.74rem;color:var(--md-text-3);margin-top:0.15rem;">' + str(r.get("file_type", "")) + ' · ' + size_lbl + ' · uploaded ' + uploaded + '</div>'
+            if r.get("summary"):
+                rh += '<details style="margin-top:0.4rem;"><summary style="cursor:pointer;font-size:0.78rem;color:var(--md-brand-2);font-weight:600;">View AI summary</summary><div style="font-size:0.8rem;color:var(--md-text-2);margin-top:0.4rem;line-height:1.5;">' + str(r.get("summary")).replace("\n", "<br>") + '</div></details>'
+            rh += '</div></div></div>'
+            st.markdown(rh, unsafe_allow_html=True)
+            if st.button("Remove", key="del_rec_" + str(r.get("id", "")), use_container_width=False):
+                delete_health_record(r.get("id"))
+                st.rerun()
+
+elif st.session_state.mode == "insights":
+    # ── AI Insights ─────────────────────────────────────────────────
+    st.markdown('<div class="md-greet-wrap"><div class="md-greet">AI Insights</div>'
+                '<div class="md-subgreet">Personalised observations generated from what you have logged. Refreshes each time you visit.</div></div>',
+                unsafe_allow_html=True)
+    insights = []
+    mem = st.session_state.patient_memory or {}
+    meds = list_medications()
+    appts = list_appointments()
+    history = get_metrics_history(7)
+    today_m = get_daily_metrics()
+
+    # Hydration
+    water_today = int(today_m.get("water_glasses", 0) or 0)
+    if water_today < 4:
+        insights.append(("💧", "Hydration is low today",
+            "You have logged " + str(water_today) + " glasses today. Aim for at least 6-8 glasses across the day, more if active.",
+            "warn"))
+    elif water_today >= 6:
+        insights.append(("💧", "Great hydration today",
+            "You are at " + str(water_today) + " glasses. Keep it steady through the evening.", "good"))
+
+    # Sleep
+    sleeps = [m.get("sleep_hours") for _, m in history if m.get("sleep_hours") is not None]
+    if len(sleeps) >= 3:
+        avg_sleep = round(sum(sleeps) / len(sleeps), 1)
+        if avg_sleep < 6:
+            insights.append(("😴", "Sleep is running short",
+                "Your last " + str(len(sleeps)) + " logged nights average " + str(avg_sleep) + " hours. Most adults need 7-9.", "warn"))
+        elif avg_sleep > 9:
+            insights.append(("😴", "Long sleep pattern",
+                "Average " + str(avg_sleep) + " hours. Long sleep can sometimes signal infection or low mood — worth mentioning to a GP if it persists.", "info"))
+        else:
+            insights.append(("😴", "Sleep looks healthy",
+                "Averaging " + str(avg_sleep) + " hours over your last " + str(len(sleeps)) + " logged nights.", "good"))
+
+    # Medications & conditions cross-check
+    if meds and mem.get("conditions"):
+        insights.append(("💊", "Profile is well-populated",
+            "You have " + str(len(meds)) + " medication(s) and " + str(len(mem.get("conditions"))) + " condition(s) recorded. MediChat will use these in every chat.", "info"))
+    elif meds and not mem.get("conditions"):
+        insights.append(("💊", "Add the conditions these medications treat",
+            "You have " + str(len(meds)) + " medication(s) recorded but no conditions yet. Telling MediChat why you take each one will improve its advice.", "warn"))
+    elif not meds and mem.get("conditions"):
+        insights.append(("💊", "Any medications to add?",
+            "You have conditions recorded (" + ", ".join(mem.get("conditions", [])[:3]) + ") but no medications yet. Add them so MediChat can flag interactions.", "info"))
+
+    # Upcoming appointment
+    now_iso = datetime.now().isoformat(timespec="minutes")
+    upcoming = [a for a in appts if a.get("date", "") >= now_iso]
+    if upcoming:
+        upcoming.sort(key=lambda a: a.get("date", ""))
+        nx = upcoming[0]
+        try:
+            _dt = datetime.fromisoformat(nx.get("date"))
+            in_days = (_dt.date() - _date.today()).days
+            when = "today" if in_days == 0 else ("tomorrow" if in_days == 1 else "in " + str(in_days) + " days")
+        except Exception:
+            when = "soon"
+        insights.append(("📅", "Upcoming appointment " + when,
+            (nx.get("title") or "Appointment") + (" with " + nx.get("doctor", "") if nx.get("doctor") else "") + ". Want a Doctor Visit Summary PDF before then?", "info"))
+
+    # Symptom load
+    sym_n = len(mem.get("symptoms", []) or [])
+    if sym_n >= 5:
+        insights.append(("📌", "Several active symptoms",
+            "MediChat has " + str(sym_n) + " symptoms on file from your chats. Consider a Symptoms Checker run to see if a pattern emerges.", "warn"))
+
+    # AI-generated overall insight (one Claude call) if logged in and has data
+    if CLAUDE_ACTIVE and (meds or mem.get("conditions") or len(sleeps) >= 2):
+        try:
+            data_lines = []
+            if mem.get("conditions"):
+                data_lines.append("Conditions: " + ", ".join(mem["conditions"][:6]))
+            if meds:
+                data_lines.append("Medications: " + ", ".join([m["name"] + " " + m.get("dose", "") for m in meds[:6]]))
+            if sleeps:
+                data_lines.append("Recent sleep avg: " + str(round(sum(sleeps)/len(sleeps), 1)) + " h over " + str(len(sleeps)) + " nights")
+            data_lines.append("Hydration today: " + str(water_today) + "/8 glasses")
+            blob = "\n".join(data_lines)
+            resp = anthropic_client.messages.create(
+                model=CLAUDE_MODEL, max_tokens=200, temperature=0.4,
+                system="You are a careful AI health companion. Read the patient's logged data and give ONE clear, kind, evidence-aware insight in 2 short sentences. Avoid alarming language. End with a concrete suggestion. No disclaimer.",
+                messages=[{"role": "user", "content": blob}],
+            )
+            ai_text = (resp.content[0].text or "").strip()
+            if ai_text:
+                insights.append(("✨", "Personalised observation", ai_text, "info"))
+        except Exception as _e:
+            print("AI insights failed:", _e)
+
+    if not insights:
+        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);padding:1.6rem;">'
+                    'Log a few days of water, sleep, and any medications to unlock insights here.</div>',
+                    unsafe_allow_html=True)
+    else:
+        for icon, title, body, kind in insights:
+            badge_cls = {"good": "md-status-good", "warn": "md-status-warn", "info": "md-status-info"}.get(kind, "md-status-info")
+            ih = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
+            ih += '<div class="md-metric-icon md-hp-violet" style="width:42px;height:42px;flex-shrink:0;font-size:1.2rem;">' + icon + '</div>'
+            ih += '<div style="flex:1;min-width:0;">'
+            ih += '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;"><div style="font-weight:700;color:var(--md-text-1);font-size:0.95rem;">' + title + '</div>'
+            ih += '<span class="md-metric-status ' + badge_cls + '">' + kind.upper() + '</span></div>'
+            ih += '<div style="font-size:0.85rem;color:var(--md-text-2);margin-top:0.3rem;line-height:1.5;">' + body + '</div>'
+            ih += '</div></div></div>'
+            st.markdown(ih, unsafe_allow_html=True)
 
 else:
     if st.session_state.assessment_complete and st.session_state.assessment_parsed:
