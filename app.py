@@ -41,7 +41,7 @@ def _safe_int_env(name, default):
         return default
 
 APP_TITLE = "MediChat Ai"
-APP_SUBTITLE = "Your Ai Health Assistant"
+APP_SUBTITLE = "Your AI Health Assistant"
 APP_VERSION_LABEL = APP_TITLE
 MEDICAL_REFERENCE_TARGET = max(1000, _safe_int_env("MEDICHAT_REFERENCE_TARGET", 5000))
 PRIVACY_POLICY_URL = st.secrets.get(
@@ -558,6 +558,20 @@ def get_user_local_now():
         except Exception:
             pass
     return datetime.now()
+
+def get_emergency_guidance_text():
+    tz_name = ""
+    try:
+        tz_name = getattr(st.context, "timezone", "") or ""
+    except Exception:
+        tz_name = ""
+    if "Australia" in tz_name:
+        return "If this is an emergency, call 000 immediately."
+    if "America" in tz_name or "US/" in tz_name:
+        return "If this is an emergency, call 911 immediately."
+    if "Europe/London" in tz_name:
+        return "If this is an emergency, call 999 immediately."
+    return "If this is an emergency, contact your local emergency number immediately."
 
 def reset_prescription_reader_state():
     st.session_state.rx_reader_result = None
@@ -3833,6 +3847,224 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     min-width: 22px !important;
     margin-right: 0.72rem !important;
 }
+
+/* Header safeguard pills */
+.md-home-head-left {
+    text-align: left !important;
+    margin-bottom: 0.8rem !important;
+}
+.md-safeguards-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.45rem;
+    margin-top: 0.35rem;
+}
+.md-safe-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    padding: 0.42rem 0.58rem;
+    border-radius: 999px;
+    border: 1px solid #deebff;
+    background: rgba(255,255,255,0.92);
+    color: #1e3a8a;
+    font-size: 0.71rem;
+    font-weight: 640;
+    white-space: nowrap;
+}
+.md-safe-pill .material-symbols-rounded {
+    font-size: 0.95rem !important;
+    color: #2563eb;
+}
+
+/* Quick action cards */
+.st-key-qa_headache .stButton > button,
+.st-key-qa_tired .stButton > button,
+.st-key-qa_symptoms .stButton > button,
+.st-key-qa_sleep .stButton > button {
+    min-height: 84px !important;
+    border-radius: 18px !important;
+    padding: 0.86rem 0.92rem !important;
+    border: 1px solid #dce9fd !important;
+    background: rgba(255,255,255,0.95) !important;
+    box-shadow: 0 10px 24px rgba(15,23,42,0.045) !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    color: #0f172a !important;
+}
+.st-key-qa_headache .stButton > button:hover,
+.st-key-qa_tired .stButton > button:hover,
+.st-key-qa_symptoms .stButton > button:hover,
+.st-key-qa_sleep .stButton > button:hover {
+    transform: translateY(-2px) !important;
+    border-color: #bfd6fb !important;
+    box-shadow: 0 14px 30px rgba(37,99,235,0.11) !important;
+}
+.st-key-qa_headache .stButton > button [data-testid="stIconMaterial"],
+.st-key-qa_tired .stButton > button [data-testid="stIconMaterial"],
+.st-key-qa_symptoms .stButton > button [data-testid="stIconMaterial"],
+.st-key-qa_sleep .stButton > button [data-testid="stIconMaterial"] {
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    border-radius: 14px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-right: 0.7rem !important;
+    font-size: 1.2rem !important;
+}
+.st-key-qa_headache .stButton > button [data-testid="stIconMaterial"] { background: #e8efff; color: #2563eb !important; }
+.st-key-qa_tired .stButton > button [data-testid="stIconMaterial"] { background: #e8f9f0; color: #16a34a !important; }
+.st-key-qa_symptoms .stButton > button [data-testid="stIconMaterial"] { background: #efe9ff; color: #7c3aed !important; }
+.st-key-qa_sleep .stButton > button [data-testid="stIconMaterial"] { background: #eef2ff; color: #6366f1 !important; }
+.st-key-qa_headache .stButton > button p,
+.st-key-qa_tired .stButton > button p,
+.st-key-qa_symptoms .stButton > button p,
+.st-key-qa_sleep .stButton > button p {
+    white-space: pre-line !important;
+    line-height: 1.34 !important;
+    font-size: 0.8rem !important;
+    color: #64748b !important;
+}
+.st-key-qa_headache .stButton > button p::first-line,
+.st-key-qa_tired .stButton > button p::first-line,
+.st-key-qa_symptoms .stButton > button p::first-line,
+.st-key-qa_sleep .stButton > button p::first-line {
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 740;
+}
+
+/* Scrollable chat history area in sidebar */
+.md-past-chats {
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 0.15rem;
+}
+.md-past-chats::-webkit-scrollbar {
+    width: 6px;
+}
+.md-past-chats::-webkit-scrollbar-thumb {
+    background: #d5e3f9;
+    border-radius: 999px;
+}
+
+/* Center health tip card + learn more CTA */
+.md-tip-center {
+    display: flex;
+    align-items: center;
+    gap: 0.95rem;
+    margin-top: 1.1rem;
+    padding: 1.05rem 1.1rem;
+    border-radius: 20px;
+    border: 1px solid #e2ecfb;
+    background: linear-gradient(135deg, #edf8ff, #fffaf1);
+}
+.md-tip-center-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.75);
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    color: #2563eb;
+    font-size: 1.4rem !important;
+    flex-shrink: 0;
+}
+.md-tip-center-body {
+    min-width: 0;
+}
+.md-tip-center-eyebrow {
+    font-size: 0.7rem;
+    color: #0ea5e9;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    font-weight: 780;
+    margin-bottom: 0.2rem;
+}
+.md-tip-center-title {
+    font-size: 1.05rem;
+    color: #0f172a;
+    font-weight: 780;
+    line-height: 1.2;
+}
+.md-tip-center-desc {
+    font-size: 0.86rem;
+    color: #64748b;
+    line-height: 1.4;
+    margin-top: 0.2rem;
+}
+.st-key-tip_learn_more .stButton > button {
+    margin-top: 0.9rem !important;
+    min-height: 40px !important;
+    border-radius: 12px !important;
+    border: 1px solid #cfe1fb !important;
+    color: #1d4ed8 !important;
+    font-weight: 700 !important;
+}
+
+/* Emergency help card */
+.md-urgent-card {
+    margin-top: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    border-radius: 18px;
+    padding: 0.9rem 1rem;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: #fff;
+    box-shadow: 0 16px 34px rgba(59,130,246,0.24);
+}
+.md-urgent-icon, .md-urgent-arrow {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.16);
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem !important;
+}
+.md-urgent-body {
+    flex: 1;
+    min-width: 0;
+}
+.md-urgent-title {
+    font-size: 0.95rem;
+    font-weight: 780;
+    line-height: 1.2;
+}
+.md-urgent-desc {
+    font-size: 0.79rem;
+    opacity: 0.95;
+}
+.st-key-open_emergency_guidance .stButton > button {
+    margin-top: 0.6rem !important;
+    border-radius: 12px !important;
+    min-height: 38px !important;
+    font-size: 0.78rem !important;
+}
+
+@media (max-width: 980px) {
+    .md-safeguards-wrap {
+        justify-content: flex-start;
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+    }
+    .st-key-qa_headache .stButton > button,
+    .st-key-qa_tired .stButton > button,
+    .st-key-qa_symptoms .stButton > button,
+    .st-key-qa_sleep .stButton > button {
+        min-height: 74px !important;
+    }
+    .md-past-chats {
+        max-height: 240px;
+    }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -5570,7 +5802,7 @@ with st.sidebar:
             ("new", "New Chat", "chat", ":material/chat_bubble:"),
             ("symptom", "Symptoms Checker", "assessment", ":material/stethoscope:"),
             ("rx", "Prescription Reader", "rx_reader", ":material/document_scanner:"),
-            ("insights", "Ai Insights", "insights", ":material/auto_awesome:"),
+            ("insights", "AI Insights", "insights", ":material/auto_awesome:"),
         ]
     else:
         nav_items = [
@@ -5582,7 +5814,7 @@ with st.sidebar:
             ("rx", "Prescription Reader", "rx_reader", ":material/document_scanner:"),
             ("meds", "Medications", "medications", ":material/pill:"),
             ("appts", "Appointments", "appointments", ":material/calendar_month:"),
-            ("insights", "Ai Insights", "insights", ":material/auto_awesome:"),
+            ("insights", "AI Insights", "insights", ":material/auto_awesome:"),
         ]
     for nav_key, nav_label, target_mode, nav_icon in nav_items:
         is_active = (target_mode == _mode and nav_key != "new") or (nav_key == "home" and _mode == "chat")
@@ -5978,36 +6210,52 @@ if st.session_state.mode == "chat":
     if not st.session_state.messages:
         _local_now = get_user_local_now()
         _hour = _local_now.hour
-        _tod = "morning" if _hour < 12 else ("afternoon" if _hour < 18 else "evening")
+        if 5 <= _hour < 12:
+            _tod = "morning"
+        elif 12 <= _hour < 17:
+            _tod = "afternoon"
+        elif 17 <= _hour < 21:
+            _tod = "evening"
+        else:
+            _tod = "night"
         _disp_name = (st.session_state.patient_name if st.session_state.patient_name and st.session_state.patient_name != "Guest" else "")
         _greet = "Good " + _tod + (", " + _disp_name if _disp_name else "") + " 👋"
-        st.markdown(
-            '<div class="md-greet-wrap md-home-greet-wrap">'
-            '<div class="md-greet">' + ui_text(_greet, 80) + '</div>'
-            '<div class="md-subgreet">How can I help you today?</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
+        hd_left, hd_right = st.columns([1.9, 1], gap="small")
+        with hd_left:
+            st.markdown(
+                '<div class="md-greet-wrap md-home-greet-wrap md-home-head-left">'
+                '<div class="md-greet">' + ui_text(_greet, 80) + '</div>'
+                '<div class="md-subgreet">How can I help you today?</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+        with hd_right:
+            st.markdown(
+                '<div class="md-safeguards-wrap">'
+                '<span class="md-safe-pill"><span class="material-symbols-rounded">verified_user</span>HIPAA-style safeguards</span>'
+                '<span class="md-safe-pill"><span class="material-symbols-rounded">menu_book</span>3,500 medical references</span>'
+                '<span class="md-safe-pill"><span class="material-symbols-rounded">emergency</span>Emergency-aware triage</span>'
+                '</div>',
+                unsafe_allow_html=True
+            )
 
-        # Quick action chips
-        st.markdown('<div class="md-chip-row md-chip-row-compact">', unsafe_allow_html=True)
-        chip_specs = [
-            ("I have a headache", "I have a headache and would like to understand what might be causing it.", ":material/neurology:"),
-            ("Feeling tired", "I have been feeling unusually tired lately. What could be the reason?", ":material/mood:"),
-            ("Check my symptoms", "_route_assessment", ":material/search:"),
-            ("Improve my sleep", "Can you suggest ways to improve my sleep quality?", ":material/bedtime:"),
+        # Quick action cards
+        qa_cols = st.columns(4, gap="small")
+        qa_specs = [
+            ("qa_headache", "I have a headache\nGet AI insights", "I have a headache and would like to understand what might be causing it.", ":material/neurology:"),
+            ("qa_tired", "Feeling tired\nUnderstand why", "I have been feeling unusually tired lately. What could be the reason?", ":material/mood:"),
+            ("qa_symptoms", "Check my symptoms\nAnalyze symptoms", "_route_assessment", ":material/search:"),
+            ("qa_sleep", "Improve my sleep\nSleep better", "Can you suggest ways to improve my sleep quality?", ":material/bedtime:"),
         ]
-        chip_cols = st.columns([1, 1, 1, 1], gap="small")
-        for i, (chip_label, chip_query, chip_icon) in enumerate(chip_specs):
-            with chip_cols[i]:
-                if st.button(chip_label, key="chip_" + str(i), use_container_width=True, icon=chip_icon):
-                    if chip_query == "_route_assessment":
+        for i, (qa_key, qa_label, qa_query, qa_icon) in enumerate(qa_specs):
+            with qa_cols[i]:
+                if st.button(qa_label, key=qa_key, use_container_width=True, icon=qa_icon):
+                    if qa_query == "_route_assessment":
                         st.session_state.mode = "assessment"
                         st.rerun()
                     else:
-                        st.session_state.pending_user_input = chip_query
+                        st.session_state.pending_user_input = qa_query
                         st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
         if st.session_state.is_authenticated:
             home_main, home_side = st.columns([2.3, 1], gap="large")
@@ -6153,19 +6401,34 @@ if st.session_state.mode == "chat":
             if st.session_state.is_authenticated:
                 st.markdown('<div class="md-smart-head"><div class="md-smart-title">Smart Actions</div></div>', unsafe_allow_html=True)
                 sa_specs = [
-                    ("sa_sym", "Symptoms Checker\nGuided Ai assessment of your symptoms", "assessment", ":material/stethoscope:", "md-smart-purple"),
+                    ("sa_sym", "Symptoms Checker\nGuided AI assessment of your symptoms", "assessment", ":material/stethoscope:", "md-smart-purple"),
                     ("sa_rec", "Health Records\nUpload and manage your medical reports", "records", ":material/medical_information:", "md-smart-green"),
-                    ("sa_ins", "Ai Insights\nPersonalized insights based on your data", "insights", ":material/monitor_heart:", "md-smart-pink"),
+                    ("sa_ins", "AI Insights\nPersonalized insights based on your data", "insights", ":material/monitor_heart:", "md-smart-pink"),
                     ("sa_appt", "Appointments\nSchedule and manage your appointments", "appointments", ":material/calendar_month:", "md-smart-blue"),
                 ]
                 sa_cols = st.columns(4, gap="small")
                 for i, (sk, label, action, icon_name, accent_cls) in enumerate(sa_specs):
                     with sa_cols[i]:
-                        st.markdown('<div class="md-smart-route ' + accent_cls + '">', unsafe_allow_html=True)
                         if st.button(label, key=sk, use_container_width=True, icon=icon_name):
                             st.session_state.mode = action
                             st.rerun()
-                        st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown(
+                '<div class="md-tip-center">'
+                '<div class="md-tip-center-icon material-symbols-rounded">directions_walk</div>'
+                '<div class="md-tip-center-body">'
+                '<div class="md-tip-center-eyebrow">Health tip for you</div>'
+                '<div class="md-tip-center-title">Walk After Meals</div>'
+                '<div class="md-tip-center-desc">A 10-minute walk after eating can help blood sugar levels and digestion.</div>'
+                '</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+            tip_col_a, tip_col_b = st.columns([5, 1.2])
+            with tip_col_b:
+                if st.button("Learn more", key="tip_learn_more", use_container_width=True):
+                    st.session_state.mode = "insights"
+                    st.rerun()
 
         if home_side is not None:
             with home_side:
@@ -6248,7 +6511,7 @@ if st.session_state.mode == "chat":
                             _ago = ""
                         recent_html += '<div class="md-conv-row"><div class="md-conv-bubble material-symbols-rounded">chat_bubble</div><div class="md-conv-title">' + ui_text(_rt, 40) + '</div><div class="md-conv-time">' + ui_text(_ago, 20) + '</div></div>'
                 else:
-                    recent_html += '<div class="md-conv-row md-conv-empty">No saved conversations yet.</div>'
+                    recent_html += '<div class="md-conv-row md-conv-empty">No recent conversations yet.</div>'
                 recent_html += '</div>'
                 st.markdown(recent_html, unsafe_allow_html=True)
                 st.markdown('<div class="md-view-all-wrap">', unsafe_allow_html=True)
@@ -6256,28 +6519,19 @@ if st.session_state.mode == "chat":
                     st.session_state.mode = "history"
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
-
-                # Health tip
-                tips = [
-                    ("water_drop", "Stay Hydrated", "Drinking enough water helps maintain energy levels, supports digestion, and improves focus."),
-                    ("restaurant", "Eat the Rainbow", "A varied, colourful diet gives you the widest range of vitamins and antioxidants."),
-                    ("directions_walk", "Walk After Meals", "A 10-minute walk after eating can help blood sugar levels and digestion."),
-                    ("self_improvement", "Breathe Deeply", "Three slow deep breaths can lower stress hormones and steady your heart rate."),
-                    ("bedtime", "Protect Your Sleep", "A consistent bedtime improves immunity, mood, and cognitive sharpness."),
-                ]
-                _ti = random.randint(0, 10_000) % len(tips)
-                _ic, _tt, _td = tips[_ti]
                 st.markdown(
-                    '<div class="md-tip">'
-                    '<div class="md-tip-icon material-symbols-rounded">' + ui_escape(_ic) + '</div>'
-                    '<div class="md-tip-body">'
-                    '<div class="md-tip-eyebrow">Health Tip for You</div>'
-                    '<div class="md-tip-title">' + _tt + '</div>'
-                    '<div class="md-tip-desc">' + _td + '</div>'
+                    '<div class="md-urgent-card">'
+                    '<div class="md-urgent-icon material-symbols-rounded">call</div>'
+                    '<div class="md-urgent-body">'
+                    '<div class="md-urgent-title">Need urgent help?</div>'
+                    '<div class="md-urgent-desc">Contact emergency services</div>'
                     '</div>'
+                    '<div class="md-urgent-arrow material-symbols-rounded">arrow_forward</div>'
                     '</div>',
                     unsafe_allow_html=True
                 )
+                if st.button("Open emergency guidance", key="open_emergency_guidance", use_container_width=True):
+                    st.info(get_emergency_guidance_text())
 
     mem = st.session_state.patient_memory
 
@@ -7494,7 +7748,6 @@ elif st.session_state.mode == "rx_reader":
 
     if rx_clear:
         reset_prescription_reader_state()
-        st.rerun()
 
     if rx_submit:
         if not rx_img:
@@ -7535,7 +7788,6 @@ elif st.session_state.mode == "rx_reader":
         )
         if st.button("Upload a new prescription", key="rx_reader_reset_after_result", use_container_width=True):
             reset_prescription_reader_state()
-            st.rerun()
 
 elif st.session_state.mode == "privacy":
     # ── Privacy & Consent ─────────────────────────────────────────
