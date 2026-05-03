@@ -2000,6 +2000,403 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
     border: none !important;
     padding: 0 !important;
 }
+
+/* ================================================================
+   UI POLISH PASS — alignment, overflow, typography, premium feel
+   ================================================================ */
+
+/* Container hygiene: prevent cross-element overflow */
+.md-rcard, .md-tip, .md-snap-card, .md-wearable-card {
+    overflow: hidden;
+}
+.md-rcard * , .md-tip *, .md-greet, .md-subgreet {
+    min-width: 0;
+}
+
+/* Section header (md-greet) — guarantee no truncation/overlap */
+.md-greet-wrap {
+    margin-bottom: 1.4rem;
+    padding-right: 0.5rem;
+}
+.md-greet {
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1.2;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    letter-spacing: -0.02em;
+}
+.md-subgreet {
+    font-size: 0.92rem;
+    line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    max-width: 60ch;
+}
+
+/* Standard icon container — uniform shape, never clip text */
+.md-metric-icon, .md-snap-icon, .md-conv-bubble {
+    overflow: hidden;
+    text-align: center;
+    line-height: 1;
+}
+.md-metric-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 11px !important;
+    font-size: 1rem !important;
+}
+
+/* Status badge — never clipped, always rounded uniform */
+.md-metric-status {
+    white-space: nowrap;
+    overflow: visible;
+    line-height: 1.4;
+    padding: 0.22rem 0.6rem;
+    font-size: 0.68rem;
+    flex-shrink: 0;
+}
+
+/* Card padding/typography polish */
+.md-rcard {
+    padding: 1.1rem 1.2rem;
+    margin-bottom: 1rem;
+    border-radius: 18px;
+}
+.md-rcard-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: -0.005em;
+    line-height: 1.3;
+}
+.md-rcard-link {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.md-metric-label {
+    font-size: 0.76rem;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.md-metric-value {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.md-metric-row {
+    padding: 0.6rem 0;
+    gap: 0.7rem;
+}
+
+/* ── Snapshot grid (uniform height + width tiles) ── */
+.md-snap-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.7rem;
+    align-items: stretch;
+}
+.md-snap-tile {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.7rem 0.8rem;
+    border-radius: 12px;
+    background: var(--md-bg);
+    border: 1px solid var(--md-border);
+    min-height: 64px;
+    overflow: hidden;
+}
+.md-snap-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    overflow: hidden;
+    line-height: 1;
+}
+.md-snap-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.md-snap-value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--md-text-1);
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.md-snap-label {
+    font-size: 0.7rem;
+    color: var(--md-text-2);
+    font-weight: 500;
+    margin-top: 0.1rem;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Recent Conversations rows ── */
+.md-rcard-recent .md-rcard-head { margin-bottom: 0.3rem; }
+.md-conv-row {
+    padding: 0.6rem 0;
+    gap: 0.65rem;
+    min-height: 42px;
+}
+.md-conv-empty {
+    color: var(--md-text-3) !important;
+    font-style: italic;
+    border-top: none !important;
+    padding: 0.7rem 0 !important;
+    font-size: 0.78rem;
+}
+.md-view-all-wrap {
+    margin: -0.6rem 0 1rem 0;
+}
+.md-view-all-wrap .stButton > button {
+    background: transparent !important;
+    color: var(--md-brand-2) !important;
+    border: 1px solid var(--md-border) !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    font-size: 0.78rem !important;
+    padding: 0.5rem 0.8rem !important;
+    height: auto !important;
+}
+.md-view-all-wrap .stButton > button:hover {
+    background: var(--md-soft-blue) !important;
+    border-color: var(--md-brand-1) !important;
+}
+
+/* ── Sidebar past chats — clean uniform list ── */
+.md-past-chats {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 0.2rem;
+    margin-bottom: 0.4rem;
+}
+.md-past-chats [data-testid="stHorizontalBlock"] {
+    gap: 4px !important;
+    align-items: center !important;
+}
+.md-past-chats [data-testid="column"] {
+    padding: 0 !important;
+}
+[data-testid="stSidebar"] .md-past-chats .stButton > button {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    color: var(--md-text-1) !important;
+    text-align: left !important;
+    padding: 0.45rem 0.7rem !important;
+    border-radius: 9px !important;
+    font-weight: 500 !important;
+    font-size: 0.8rem !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+    width: 100% !important;
+}
+[data-testid="stSidebar"] .md-past-chats .stButton > button:hover {
+    background: var(--md-bg) !important;
+    border-color: var(--md-border) !important;
+}
+[data-testid="stSidebar"] .md-past-active .stButton > button {
+    background: var(--md-soft-blue) !important;
+    color: var(--md-accent-blue) !important;
+    border-color: var(--md-soft-blue) !important;
+    font-weight: 600 !important;
+}
+/* Delete × button — small, subtle, never overflows */
+[data-testid="stSidebar"] .md-past-chats [data-testid="column"]:last-child .stButton > button {
+    background: transparent !important;
+    color: var(--md-text-3) !important;
+    border: 1px solid transparent !important;
+    padding: 0 !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    width: 100% !important;
+    text-align: center !important;
+    font-size: 1.1rem !important;
+    font-weight: 400 !important;
+    border-radius: 9px !important;
+}
+[data-testid="stSidebar"] .md-past-chats [data-testid="column"]:last-child .stButton > button:hover {
+    background: #fee2e2 !important;
+    color: #dc2626 !important;
+}
+
+/* ── Wearable sync card (replaces simulated HR/Steps) ── */
+.md-wearable-card {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    padding: 1.4rem 1.5rem;
+    background: linear-gradient(135deg, #f0f9ff 0%, #ecfeff 50%, #f5f3ff 100%);
+    border: 1px solid var(--md-border);
+    border-radius: 18px;
+    box-shadow: var(--md-shadow-sm);
+    margin-bottom: 1.2rem;
+    overflow: hidden;
+}
+.md-wearable-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #06b6d4, #6366f1);
+    color: white;
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(6,182,212,0.3);
+    line-height: 1;
+}
+.md-wearable-body { flex: 1; min-width: 0; }
+.md-wearable-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--md-text-1);
+    margin-bottom: 0.25rem;
+    line-height: 1.3;
+}
+.md-wearable-desc {
+    font-size: 0.82rem;
+    color: var(--md-text-2);
+    line-height: 1.5;
+    margin-bottom: 0.7rem;
+    max-width: 65ch;
+}
+.md-wearable-actions {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+.md-wearable-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.32rem 0.7rem;
+    background: white;
+    border: 1px solid var(--md-border);
+    border-radius: 100px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--md-text-2);
+    white-space: nowrap;
+}
+.md-wearable-pill.md-wearable-soon {
+    background: #fef3c7;
+    border-color: #fde68a;
+    color: #92400e;
+}
+
+/* ── History list page ── */
+.md-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+.md-history-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+    padding: 1rem 1.1rem;
+    background: var(--md-surface);
+    border: 1px solid var(--md-border);
+    border-radius: 14px;
+    box-shadow: var(--md-shadow-sm);
+}
+.md-history-bubble {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--md-soft-blue);
+    color: var(--md-accent-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.md-history-mid { flex: 1; min-width: 0; }
+.md-history-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--md-text-1);
+    line-height: 1.3;
+    word-break: break-word;
+}
+.md-history-meta {
+    font-size: 0.72rem;
+    color: var(--md-text-3);
+    margin-top: 0.2rem;
+}
+.md-history-preview {
+    font-size: 0.78rem;
+    color: var(--md-text-2);
+    margin-top: 0.45rem;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+/* Generic: prevent any text from leaking out of badges/buttons */
+.md-status-good, .md-status-warn, .md-status-info,
+.md-chip, .trust-pill, .md-wearable-pill {
+    overflow: visible;
+    white-space: nowrap;
+    text-overflow: clip;
+}
+
+/* Form field spacing inside expanders / appointments to avoid label clipping */
+[data-testid="stExpander"] [data-testid="stForm"] label {
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    color: var(--md-text-2) !important;
+    margin-bottom: 0.2rem !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    line-height: 1.3 !important;
+}
+[data-testid="stExpander"] .stDateInput, [data-testid="stExpander"] .stTimeInput {
+    margin-bottom: 0.4rem;
+}
+[data-testid="stExpander"] .stTextInput input,
+[data-testid="stExpander"] .stTextArea textarea {
+    font-size: 0.85rem !important;
+}
+
+/* Premium negative space: increase gap between sections in main column */
+.main .block-container {
+    padding-top: 2rem !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -3547,17 +3944,17 @@ with st.sidebar:
             )
         else:
             _active_id = st.session_state.current_conversation_id
+            st.markdown('<div class="md-past-chats">', unsafe_allow_html=True)
             for _c in _convs:
                 _is_active = _c["id"] == _active_id
-                _title = (_c.get("title") or "Chat")[:42]
+                _title = (_c.get("title") or "Chat")[:38]
                 _count = _c.get("message_count", 0)
-                _bg = "#d6edf9" if _is_active else "white"
-                _border = "#2176ae" if _is_active else "#e2e8f0"
-                _weight = "600" if _is_active else "500"
-                col_a, col_b = st.columns([5, 1])
+                _row_cls = "md-past-row md-past-active" if _is_active else "md-past-row"
+                st.markdown('<div class="' + _row_cls + '">', unsafe_allow_html=True)
+                col_a, col_b = st.columns([7, 1])
                 with col_a:
                     if st.button(
-                        ("● " if _is_active else "") + _title,
+                        _title,
                         key="conv_open_" + _c["id"],
                         use_container_width=True,
                         help=str(_count) + " messages",
@@ -3570,15 +3967,18 @@ with st.sidebar:
                             st.session_state.feedback = {}
                             st.session_state.last_sources = []
                             st.session_state.emergency_detected = False
+                            st.session_state.mode = "chat"
                             st.rerun()
                 with col_b:
-                    if st.button("🗑", key="conv_del_" + _c["id"], help="Delete this chat"):
+                    if st.button("×", key="conv_del_" + _c["id"], help="Delete this chat"):
                         delete_conversation(st.session_state.user_email_hash, _c["id"])
                         if _c["id"] == _active_id:
                             st.session_state.current_conversation_id = ""
                             st.session_state.messages = []
                             st.session_state.qcount = 0
                         st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
         st.markdown("---")
     elif st.session_state.is_guest:
         st.markdown(
@@ -4006,33 +4406,35 @@ if st.session_state.mode == "chat":
                         _last_visit_str = "recently"
 
             _snap_title = "Your Snapshot" if st.session_state.is_authenticated else "Session Snapshot"
-            snap_html = (
-                '<div class="md-rcard">'
-                '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div></div>'
-                '<div class="md-metric-row"><div class="md-metric-icon md-hp-blue">💬</div>'
-                '<div class="md-metric-mid"><div class="md-metric-label">Conversations</div>'
-                '<div class="md-metric-value">' + str(_convs_total if st.session_state.is_authenticated else st.session_state.qcount) + '</div></div></div>'
-                '<div class="md-metric-row"><div class="md-metric-icon md-hp-green">🩺</div>'
-                '<div class="md-metric-mid"><div class="md-metric-label">Conditions tracked</div>'
-                '<div class="md-metric-value">' + str(_cond_n) + '</div></div></div>'
-                '<div class="md-metric-row"><div class="md-metric-icon md-hp-violet">💊</div>'
-                '<div class="md-metric-mid"><div class="md-metric-label">Medications noted</div>'
-                '<div class="md-metric-value">' + str(_med_n) + '</div></div></div>'
-                '<div class="md-metric-row"><div class="md-metric-icon md-hp-pink">📌</div>'
-                '<div class="md-metric-mid"><div class="md-metric-label">Symptoms remembered</div>'
-                '<div class="md-metric-value">' + str(_sym_n) + '</div></div></div>'
-            )
+            _conv_count_disp = str(_convs_total if st.session_state.is_authenticated else st.session_state.qcount)
+            _tiles = [
+                ("md-hp-blue", "💬", "Conversations", _conv_count_disp),
+                ("md-hp-green", "🩺", "Conditions", str(_cond_n)),
+                ("md-hp-violet", "💊", "Medications", str(_med_n)),
+                ("md-hp-pink", "📌", "Symptoms", str(_sym_n)),
+            ]
             if st.session_state.is_authenticated:
+                _tiles.append(("md-hp-blue", "🕒", "Last visit", _last_visit_str))
+            snap_html = (
+                '<div class="md-rcard md-snap-card">'
+                '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div></div>'
+                '<div class="md-snap-grid">'
+            )
+            for _cls, _emoji, _lbl, _val in _tiles:
                 snap_html += (
-                    '<div class="md-metric-row"><div class="md-metric-icon md-hp-blue">🕒</div>'
-                    '<div class="md-metric-mid"><div class="md-metric-label">Last visit</div>'
-                    '<div class="md-metric-value">' + _last_visit_str + '</div></div></div>'
+                    '<div class="md-snap-tile">'
+                    '<div class="md-snap-icon ' + _cls + '">' + _emoji + '</div>'
+                    '<div class="md-snap-text">'
+                    '<div class="md-snap-value">' + _val + '</div>'
+                    '<div class="md-snap-label">' + _lbl + '</div>'
+                    '</div>'
+                    '</div>'
                 )
-            snap_html += '</div>'
+            snap_html += '</div></div>'
             st.markdown(snap_html, unsafe_allow_html=True)
 
             # Recent Conversations (real, from Firestore)
-            recent_html = '<div class="md-rcard"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><div class="md-rcard-link">View all</div></div>'
+            recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div></div>'
             if st.session_state.is_authenticated and st.session_state.user_email_hash:
                 _recent = list_conversations(st.session_state.user_email_hash, limit=4)
                 if _recent:
@@ -4055,11 +4457,17 @@ if st.session_state.mode == "chat":
                             _ago = ""
                         recent_html += '<div class="md-conv-row"><div class="md-conv-bubble">💬</div><div class="md-conv-title">' + _rt + '</div><div class="md-conv-time">' + _ago + '</div></div>'
                 else:
-                    recent_html += '<div class="md-conv-row" style="color:#94a3b8;font-style:italic;">No past chats yet.</div>'
+                    recent_html += '<div class="md-conv-row md-conv-empty">No past chats yet.</div>'
             else:
-                recent_html += '<div class="md-conv-row" style="color:#94a3b8;font-style:italic;">Sign in to keep chat history.</div>'
+                recent_html += '<div class="md-conv-row md-conv-empty">Sign in to keep chat history.</div>'
             recent_html += '</div>'
             st.markdown(recent_html, unsafe_allow_html=True)
+            if st.session_state.is_authenticated:
+                st.markdown('<div class="md-view-all-wrap">', unsafe_allow_html=True)
+                if st.button("View all chats →", key="view_all_recent", use_container_width=True):
+                    st.session_state.mode = "history"
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
             # Health tip
             tips = [
@@ -4880,6 +5288,63 @@ elif st.session_state.mode == "eval":
                 st.session_state.response_times = []
                 st.rerun()
 
+elif st.session_state.mode == "history":
+    # ── Full chat history list ──────────────────────────────────────
+    st.markdown('<div class="md-greet-wrap"><div class="md-greet">Your Chats</div>'
+                '<div class="md-subgreet">Every conversation you have had with MediChat. Open one to continue, or start a new chat.</div></div>',
+                unsafe_allow_html=True)
+    if st.button("← Back to home", key="hist_back"):
+        st.session_state.mode = "chat"
+        st.rerun()
+    if st.session_state.is_authenticated and st.session_state.user_email_hash:
+        _hist = list_conversations(st.session_state.user_email_hash, limit=200)
+        if not _hist:
+            st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.6rem;">No past chats yet. Start one from the home screen.</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="md-history-list">', unsafe_allow_html=True)
+            for _h in _hist:
+                _ht = (_h.get("title") or "Chat")[:80]
+                _hc = _h.get("message_count", 0)
+                _hu = _h.get("last_updated")
+                try:
+                    if _hu and hasattr(_hu, "strftime"):
+                        _ago_disp = _hu.strftime("%d %b %Y · %H:%M")
+                    else:
+                        _ago_disp = ""
+                except Exception:
+                    _ago_disp = ""
+                _preview = (_h.get("first_user_msg") or "")[:120]
+                st.markdown(
+                    '<div class="md-history-row">'
+                    '<div class="md-history-bubble">💬</div>'
+                    '<div class="md-history-mid">'
+                    '<div class="md-history-title">' + _ht + '</div>'
+                    '<div class="md-history-meta">' + str(_hc) + ' messages · ' + _ago_disp + '</div>'
+                    + ('<div class="md-history-preview">' + _preview + '</div>' if _preview else '') +
+                    '</div></div>',
+                    unsafe_allow_html=True
+                )
+                hc1, hc2 = st.columns([4, 1])
+                with hc1:
+                    if st.button("Open", key="hist_open_" + _h["id"], use_container_width=True):
+                        conv = load_conversation(st.session_state.user_email_hash, _h["id"])
+                        if conv is not None:
+                            st.session_state.current_conversation_id = _h["id"]
+                            st.session_state.messages = conv.get("messages", []) or []
+                            st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
+                            st.session_state.feedback = {}
+                            st.session_state.last_sources = []
+                            st.session_state.emergency_detected = False
+                            st.session_state.mode = "chat"
+                            st.rerun()
+                with hc2:
+                    if st.button("Delete", key="hist_del_" + _h["id"], use_container_width=True):
+                        delete_conversation(st.session_state.user_email_hash, _h["id"])
+                        st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.6rem;">Sign in to keep and review your chat history.</div>', unsafe_allow_html=True)
+
 elif st.session_state.mode == "overview":
     # ── Health Overview ─────────────────────────────────────────────
     st.markdown('<div class="md-greet-wrap"><div class="md-greet">Health Overview</div>'
@@ -4888,33 +5353,26 @@ elif st.session_state.mode == "overview":
     today = get_daily_metrics()
     water_n = int(today.get("water_glasses", 0) or 0)
     sleep_h = today.get("sleep_hours")
-    bpm = simulate_heart_rate()
-    steps_now, steps_target = simulate_steps_today()
-    pct_steps = int(round((steps_now / steps_target) * 100))
 
-    ov_a, ov_b, ov_c, ov_d = st.columns(4)
-    with ov_a:
-        st.markdown(
-            '<div class="md-rcard"><div class="md-metric-row" style="border:none;">'
-            '<div class="md-metric-icon md-hp-pink">❤️</div>'
-            '<div class="md-metric-mid"><div class="md-metric-label">Heart rate</div>'
-            '<div class="md-metric-value">' + str(bpm) + ' BPM</div></div>'
-            '<div class="md-metric-status md-status-good">Normal</div></div>'
-            '<div style="font-size:0.7rem;color:var(--md-text-3);margin-top:0.4rem;">Simulated until wearable sync is added.</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
-    with ov_b:
-        st.markdown(
-            '<div class="md-rcard"><div class="md-metric-row" style="border:none;">'
-            '<div class="md-metric-icon md-hp-green">👟</div>'
-            '<div class="md-metric-mid"><div class="md-metric-label">Steps today</div>'
-            '<div class="md-metric-value">' + format(steps_now, ",") + '</div></div>'
-            '<div class="md-metric-status md-status-good">' + str(pct_steps) + '%</div></div>'
-            '<div style="font-size:0.7rem;color:var(--md-text-3);margin-top:0.4rem;">Goal ' + format(steps_target, ",") + ' (estimated).</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
+    # Wearable sync placeholder (no simulated data)
+    st.markdown(
+        '<div class="md-wearable-card">'
+        '<div class="md-wearable-icon">⌚</div>'
+        '<div class="md-wearable-body">'
+        '<div class="md-wearable-title">Sync your smart watch for live data</div>'
+        '<div class="md-wearable-desc">Connect a wearable to track heart rate, steps and activity automatically. Until then, you can still log sleep and water below.</div>'
+        '<div class="md-wearable-actions">'
+        '<span class="md-wearable-pill">📡 Bluetooth</span>'
+        '<span class="md-wearable-pill">⌚ Apple Health</span>'
+        '<span class="md-wearable-pill">🤖 Google Fit</span>'
+        '<span class="md-wearable-pill md-wearable-soon">Coming soon</span>'
+        '</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    ov_c, ov_d = st.columns(2)
     with ov_c:
         sleep_disp = (str(sleep_h) + " hrs") if sleep_h else "—"
         st.markdown(
@@ -5048,7 +5506,7 @@ elif st.session_state.mode == "appointments":
             except Exception:
                 date_disp = a.get("date", "")
             ah = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
-            ah += '<div class="md-metric-icon md-hp-blue" style="width:42px;height:42px;flex-shrink:0;">📅</div>'
+            ah += '<div class="md-metric-icon md-hp-blue" style="flex-shrink:0;">📅</div>'
             ah += '<div style="flex:1;min-width:0;">'
             ah += '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;"><div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + str(a.get("title", "")) + '</div>'
             ah += '<span class="md-metric-status ' + status_cls + '">' + status_lbl + '</span></div>'
