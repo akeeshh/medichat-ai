@@ -3467,6 +3467,44 @@ form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryF
     background: rgba(255,255,255,0.92) !important;
     box-shadow: 0 5px 14px rgba(15,23,42,0.035) !important;
 }
+form#chat_form {
+    background: rgba(255, 255, 255, 0.98) !important;
+    border: 1px solid #e7edf6 !important;
+    border-radius: 28px !important;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08) !important;
+    padding: 1rem 1rem 0.85rem 1rem !important;
+}
+form#chat_form [data-testid="stTextArea"] textarea {
+    border-radius: 20px !important;
+    border: 1px solid #e2eaf6 !important;
+    min-height: 130px !important;
+    font-size: 1.03rem !important;
+    line-height: 1.45 !important;
+    padding: 0.95rem 1.05rem !important;
+}
+form#chat_form [data-testid="stTextArea"] textarea:focus {
+    border-color: #c6d8f8 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+}
+form#chat_form [data-testid="stFormSubmitButton"] > button {
+    height: 48px !important;
+    min-height: 48px !important;
+    border-radius: 999px !important;
+}
+form#chat_form [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
+form#chat_form [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+    width: 52px !important;
+    min-width: 52px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    box-shadow: 0 14px 30px rgba(79,70,229,0.28) !important;
+}
+form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"] {
+    padding: 0 1rem !important;
+    border: 1px solid #d7e8fb !important;
+    background: rgba(255,255,255,0.92) !important;
+    box-shadow: 0 5px 14px rgba(15,23,42,0.035) !important;
+}
 
 /* Smart Actions as real Streamlit buttons, styled like glass cards */
 .md-smart-route .stButton > button {
@@ -3653,6 +3691,147 @@ form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryF
     justify-content: center;
     font-size: 1.55rem !important;
     flex-shrink: 0;
+}
+
+/* Smart Actions styling bound to widget keys so Streamlit layout wrappers cannot break it */
+.st-key-sa_sym .stButton > button,
+.st-key-sa_rec .stButton > button,
+.st-key-sa_ins .stButton > button,
+.st-key-sa_appt .stButton > button {
+    position: relative !important;
+    min-height: 172px !important;
+    border-radius: 24px !important;
+    padding: 1.05rem 1.1rem !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.84)) !important;
+    border: 1px solid rgba(226,232,240,0.96) !important;
+    box-shadow: 0 18px 48px rgba(15,23,42,0.055) !important;
+    color: #111827 !important;
+    overflow: visible !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+.st-key-sa_sym .stButton > button:hover,
+.st-key-sa_rec .stButton > button:hover,
+.st-key-sa_ins .stButton > button:hover,
+.st-key-sa_appt .stButton > button:hover {
+    transform: translateY(-4px) !important;
+    border-color: rgba(147,197,253,0.95) !important;
+    box-shadow: 0 24px 54px rgba(15,23,42,0.09) !important;
+}
+.st-key-sa_sym .stButton > button::after,
+.st-key-sa_rec .stButton > button::after,
+.st-key-sa_ins .stButton > button::after,
+.st-key-sa_appt .stButton > button::after {
+    content: "arrow_forward";
+    font-family: "Material Symbols Rounded", "Material Symbols Outlined" !important;
+    position: absolute;
+    right: 1rem;
+    bottom: 1rem;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.94);
+    border: 1px solid #e6edf7;
+    color: #0f172a;
+    font-size: 1.15rem;
+    line-height: 1;
+}
+.st-key-sa_sym .stButton > button [data-testid="stIconMaterial"],
+.st-key-sa_rec .stButton > button [data-testid="stIconMaterial"],
+.st-key-sa_ins .stButton > button [data-testid="stIconMaterial"],
+.st-key-sa_appt .stButton > button [data-testid="stIconMaterial"] {
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    border-radius: 16px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 0.75rem 0 0 !important;
+    font-size: 1.45rem !important;
+    overflow: visible !important;
+}
+.st-key-sa_sym .stButton > button [data-testid="stIconMaterial"] { background: #f2ebff; color: #7c3aed !important; }
+.st-key-sa_rec .stButton > button [data-testid="stIconMaterial"] { background: #e9fbf3; color: #10b981 !important; }
+.st-key-sa_ins .stButton > button [data-testid="stIconMaterial"] { background: #fff0f6; color: #ef4f85 !important; }
+.st-key-sa_appt .stButton > button [data-testid="stIconMaterial"] { background: #eaf6ff; color: #1d8cf8 !important; }
+.st-key-sa_sym .stButton > button p,
+.st-key-sa_rec .stButton > button p,
+.st-key-sa_ins .stButton > button p,
+.st-key-sa_appt .stButton > button p {
+    white-space: pre-line !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    line-height: 1.45 !important;
+    font-size: 0.83rem !important;
+    color: #64748b !important;
+    font-weight: 520 !important;
+}
+.st-key-sa_sym .stButton > button p::first-line,
+.st-key-sa_rec .stButton > button p::first-line,
+.st-key-sa_ins .stButton > button p::first-line,
+.st-key-sa_appt .stButton > button p::first-line {
+    color: #111827;
+    font-size: 0.97rem;
+    font-weight: 780;
+}
+
+/* Sidebar past chats styling bound to dynamic widget key prefixes */
+[class*="st-key-conv_open_"] .stButton > button {
+    height: 36px !important;
+    min-height: 36px !important;
+    border-radius: 11px !important;
+    background: #ffffff !important;
+    border: 1px solid #e5edf8 !important;
+    box-shadow: none !important;
+    padding: 0 0.55rem !important;
+    font-size: 0.78rem !important;
+    color: #334155 !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+}
+[class*="st-key-conv_open_"] .stButton > button:hover {
+    background: #f8fbff !important;
+    border-color: #cfe1fa !important;
+}
+[class*="st-key-conv_open_"] .stButton > button p {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+[class*="st-key-conv_del_"] .stButton > button {
+    width: 30px !important;
+    min-width: 30px !important;
+    max-width: 30px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    color: #94a3b8 !important;
+    box-shadow: none !important;
+}
+[class*="st-key-conv_del_"] .stButton > button:hover {
+    background: #fee2e2 !important;
+    color: #dc2626 !important;
+}
+
+/* Keep icons visible and aligned in left navigation */
+[data-testid="stSidebar"] .stButton > button > div {
+    overflow: visible !important;
+}
+[data-testid="stSidebar"] .stButton > button [data-testid="stIconMaterial"] {
+    opacity: 1 !important;
+    visibility: visible !important;
+    width: 22px !important;
+    min-width: 22px !important;
+    margin-right: 0.72rem !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -6266,33 +6445,122 @@ if st.session_state.mode == "chat":
     clear = False
     if not home_empty_chat:
         uploaded_image = None
+        chat_upload_clicked = False
+        chat_voice_clicked = False
         with st.form("chat_form", clear_on_submit=True):
-            fc1, fc2 = st.columns([4, 1])
+            user_input = st.text_area(
+                "Your message",
+                placeholder="Ask anything about your health...",
+                label_visibility="collapsed",
+                height=120,
+                key="chat_input_" + str(st.session_state.chat_input_key),
+            )
+            fc1, fc2, fc_spacer, fc3 = st.columns([0.72, 0.72, 3.1, 0.48])
             with fc1:
-                user_input = st.text_input(
-                    "Your message",
-                    placeholder=L["placeholder"],
-                    label_visibility="collapsed",
-                    key="chat_input_" + str(st.session_state.chat_input_key),
-                )
+                chat_upload_clicked = st.form_submit_button("Upload", icon=":material/attach_file:", use_container_width=True)
             with fc2:
-                submit = st.form_submit_button("➤  " + L["send_btn"], use_container_width=True, type="primary")
+                chat_voice_clicked = st.form_submit_button("Voice", icon=":material/mic:", use_container_width=True)
+            with fc3:
+                submit = st.form_submit_button("➤", use_container_width=True, type="primary")
 
-        # ── Button row: [📎 Attach] [Clear] ─ equal width, parallel ────────
-        bc_attach, bc_clear = st.columns(2)
-        with bc_attach:
+        if chat_upload_clicked:
+            st.session_state.home_show_vision_upload = True
+            st.session_state.home_show_voice = False
+            st.rerun()
+        if chat_voice_clicked:
+            st.session_state.home_show_voice = True
+            st.session_state.home_show_vision_upload = False
+            st.rerun()
+
+        if st.session_state.get("home_show_vision_upload", False):
+            st.markdown(
+                '<div class="md-vision-panel">'
+                '<div class="md-panel-icon material-symbols-rounded">image_search</div>'
+                '<div><div class="md-panel-title">Vision Ai upload</div>'
+                '<div class="md-panel-subtitle">Upload an X-ray, scan photo, skin image, or blood report PDF for cautious visual/report analysis.</div></div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
             uploaded_image = st.file_uploader(
-                "Attach a medical image or PDF report",
+                "Upload for Vision Ai",
                 type=["jpg", "jpeg", "png", "pdf"],
                 label_visibility="collapsed",
-                key="uploader_" + str(st.session_state.uploader_key),
-                help="Attach a medical image (JPG, PNG) or PDF report",
+                key="chat_vision_uploader_" + str(st.session_state.uploader_key),
+                help="Upload a medical image or PDF report for Vision Ai analysis.",
             )
-        with bc_clear:
-            clear = st.button("🗑  " + L["clear_btn"], use_container_width=True, key="main_clear_btn")
+            if uploaded_image:
+                is_chat_pdf = uploaded_image.name.lower().endswith(".pdf")
+                if is_chat_pdf:
+                    st.markdown(
+                        '<div class="md-file-preview md-home-file-preview">'
+                        '<div class="md-file-icon">PDF</div>'
+                        '<div style="flex:1;min-width:0;">'
+                        '<div class="md-file-name">' + ui_text(uploaded_image.name, 90) + '</div>'
+                        '<div class="md-file-help">Ready for Vision Ai report review.</div>'
+                        '</div>'
+                        '</div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.image(uploaded_image, caption="Ready for Vision Ai analysis", use_column_width=True)
+            vu1, vu2, vu3 = st.columns([1, 1, 1])
+            with vu1:
+                home_vision_analyze = st.button("Analyze with Vision Ai", key="chat_vision_analyze", type="primary", use_container_width=True, icon=":material/image_search:")
+                submit = submit or home_vision_analyze
+                if home_vision_analyze and not uploaded_image:
+                    st.error("Please upload an image or PDF first.")
+                    submit = False
+            with vu2:
+                if st.button("Cancel upload", key="chat_vision_cancel", use_container_width=True, icon=":material/close:"):
+                    st.session_state.home_show_vision_upload = False
+                    st.session_state.uploader_key = st.session_state.get("uploader_key", 0) + 1
+                    st.rerun()
+            with vu3:
+                clear = st.button("Clear chat", use_container_width=True, key="main_clear_btn", icon=":material/delete:")
+
+        if st.session_state.get("home_show_voice", False):
+            st.markdown(
+                '<div class="md-voice-panel">'
+                '<div class="md-panel-icon material-symbols-rounded">mic</div>'
+                '<div><div class="md-panel-title">Voice note</div>'
+                '<div class="md-panel-subtitle">Record or upload a short voice question. MediChat will transcribe it before answering.</div></div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+            voice_audio = None
+            if hasattr(st, "audio_input"):
+                voice_audio = st.audio_input("Record your question", key="voice_audio_chat_" + str(st.session_state.voice_audio_key))
+            else:
+                voice_audio = st.file_uploader(
+                    "Upload a voice note",
+                    type=["wav", "mp3", "m4a", "ogg", "webm"],
+                    key="voice_upload_chat_" + str(st.session_state.voice_audio_key),
+                    help="Your Streamlit version does not expose microphone recording, so upload an audio note instead.",
+                )
+            vc1, vc2, vc3 = st.columns([1, 1, 1])
+            with vc1:
+                if st.button("Transcribe voice", key="voice_transcribe_chat", type="primary", use_container_width=True, icon=":material/graphic_eq:"):
+                    transcript = transcribe_voice_note(voice_audio)
+                    if transcript:
+                        st.session_state.pending_user_input = transcript
+                        st.session_state.home_show_voice = False
+                        st.session_state.voice_audio_key = st.session_state.get("voice_audio_key", 0) + 1
+                        st.rerun()
+                    else:
+                        st.error("I could not transcribe that audio. Please try a clearer recording or type the question.")
+            with vc2:
+                if st.button("Cancel voice", key="voice_cancel_chat", use_container_width=True, icon=":material/close:"):
+                    st.session_state.home_show_voice = False
+                    st.session_state.voice_audio_key = st.session_state.get("voice_audio_key", 0) + 1
+                    st.rerun()
+            with vc3:
+                clear = st.button("Clear chat", use_container_width=True, key="main_clear_btn_voice", icon=":material/delete:")
+
+        if not st.session_state.get("home_show_vision_upload", False) and not st.session_state.get("home_show_voice", False):
+            clear = st.button("Clear chat", use_container_width=True, key="main_clear_btn_plain", icon=":material/delete:")
 
     # ── File preview (shown below button row once attached) ─────────────
-    if uploaded_image and not home_empty_chat:
+    if uploaded_image and not home_empty_chat and not st.session_state.get("home_show_vision_upload", False):
         is_pdf_upload = uploaded_image.name.lower().endswith(".pdf")
         if is_pdf_upload:
             st.markdown(
@@ -6311,7 +6579,7 @@ if st.session_state.mode == "chat":
                 st.image(uploaded_image, caption="Ready for analysis", use_column_width=True)
 
     if not home_empty_chat:
-        st.markdown('<div class="disclaimer-mini disclaimer-mini-red">⚠ MediChat is not a substitute for professional medical advice. For diagnosis or treatment, please consult a qualified doctor.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="md-home-composer-note">MediChat Ai can make mistakes. Please consult a healthcare professional for medical advice.</div>', unsafe_allow_html=True)
     st.markdown('<div id="page-bottom-anchor" style="height:1px;"></div>', unsafe_allow_html=True)
 
     if st.session_state.messages:
