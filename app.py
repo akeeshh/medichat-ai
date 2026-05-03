@@ -43,7 +43,6 @@ def _safe_int_env(name, default):
 APP_TITLE = "MediChat Ai"
 APP_SUBTITLE = "Your Ai Health Assistant"
 APP_VERSION_LABEL = APP_TITLE
-UI_BUILD_TAG = "2026-05-03-1600-aest"
 MEDICAL_REFERENCE_TARGET = max(1000, _safe_int_env("MEDICHAT_REFERENCE_TARGET", 5000))
 PRIVACY_POLICY_URL = st.secrets.get(
     "PRIVACY_POLICY_URL",
@@ -2502,6 +2501,12 @@ st.markdown("""
     max-width: 1260px !important;
 }
 
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+#MainMenu {
+    display: none !important;
+}
+
 .md-logo-image {
     width: 44px;
     height: 44px;
@@ -2547,33 +2552,83 @@ st.markdown("""
     background: linear-gradient(135deg, #2563eb, #4f46e5) !important;
 }
 
-.md-chip-row .stButton > button {
+.md-chip-row .stButton > button,
+.md-chip-row-compact .stButton > button {
     min-height: 42px !important;
     border-radius: 999px !important;
-    font-size: 0.84rem !important;
+    font-size: 0.83rem !important;
     font-weight: 560 !important;
-    padding: 0.38rem 0.72rem !important;
+    padding: 0.34rem 0.68rem !important;
 }
 
-.md-home-composer-wrap + div [data-testid="stForm"],
-.md-home-composer-wrap ~ div [data-testid="stForm"] {
+form#home_chat_form {
     background: rgba(255, 255, 255, 0.98) !important;
     border: 1px solid #e7edf6 !important;
-    border-radius: 26px !important;
+    border-radius: 28px !important;
     box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08) !important;
-    padding: 1rem 1rem 0.85rem 1rem !important;
+    padding: 1rem 1rem 0.95rem 1rem !important;
+}
+
+form#home_chat_form [data-testid="stTextArea"] textarea,
+[data-testid="stForm"] [data-testid="stTextArea"] textarea {
+    border-radius: 20px !important;
+    border: 1px solid #e2eaf6 !important;
+    min-height: 130px !important;
+    font-size: 1.03rem !important;
+    line-height: 1.45 !important;
+    padding: 0.95rem 1.05rem !important;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+}
+
+form#home_chat_form [data-testid="stTextArea"] textarea:focus,
+[data-testid="stForm"] [data-testid="stTextArea"] textarea:focus {
+    border-color: #c6d8f8 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+}
+
+form#home_chat_form [data-testid="stFormSubmitButton"] > button,
+[data-testid="stForm"] [data-testid="stFormSubmitButton"] > button {
+    min-height: 44px !important;
+    border-radius: 999px !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+}
+
+form#home_chat_form [data-testid="stFormSubmitButton"] button p,
+[data-testid="stForm"] [data-testid="stFormSubmitButton"] button p {
+    white-space: nowrap !important;
+}
+
+.md-ref-ask-shell {
+    margin-bottom: 0.7rem;
+}
+
+.md-home-composer-note {
+    margin-top: 0.35rem !important;
+    margin-bottom: 1.25rem !important;
+    color: #64748b !important;
 }
 
 .md-smart-grid-buttons .stButton > button {
-    min-height: 108px !important;
-    border-radius: 18px !important;
+    min-height: 120px !important;
+    border-radius: 20px !important;
     text-align: left !important;
     justify-content: flex-start !important;
+    align-items: flex-start !important;
     white-space: pre-line !important;
-    line-height: 1.35 !important;
-    font-size: 0.84rem !important;
+    line-height: 1.42 !important;
+    font-size: 0.85rem !important;
     font-weight: 600 !important;
     padding: 0.95rem 0.95rem !important;
+    background: rgba(255,255,255,0.92) !important;
+    border: 1px solid #e8eef8 !important;
+    box-shadow: 0 12px 30px rgba(15,23,42,0.045) !important;
+}
+
+.md-smart-grid-buttons .stButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 18px 36px rgba(15,23,42,0.08) !important;
+    border-color: #cfddf5 !important;
 }
 
 .md-snap-card {
@@ -2621,8 +2676,8 @@ st.markdown("""
     .md-greet {
         font-size: 1.52rem !important;
     }
-    .md-home-composer-wrap + div [data-testid="stForm"],
-    .md-home-composer-wrap ~ div [data-testid="stForm"] {
+    form#home_chat_form,
+    [data-testid="stForm"] [data-testid="stTextArea"] {
         border-radius: 20px !important;
         padding: 0.85rem !important;
     }
@@ -5046,7 +5101,7 @@ with st.sidebar:
         st.session_state.mode = "privacy"
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sb-footer">' + APP_TITLE + '<br><span style="font-size:0.58rem;color:#94a3b8;">Build ' + UI_BUILD_TAG + '</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="sb-footer">' + APP_TITLE + '</div>', unsafe_allow_html=True)
 
 L = LANGUAGES[st.session_state.selected_language]
 
@@ -5258,6 +5313,8 @@ if (_triage and _triage.get("tier", 5) > 1 and _triage.get("tier", 5) < 5
 
 home_user_input = ""
 home_submit = False
+home_upload_clicked = False
+home_voice_clicked = False
 home_empty_chat = st.session_state.mode == "chat" and not st.session_state.messages
 
 if st.session_state.mode == "chat":
@@ -5266,11 +5323,12 @@ if st.session_state.mode == "chat":
         _local_now = get_user_local_now()
         _hour = _local_now.hour
         _tod = "morning" if _hour < 12 else ("afternoon" if _hour < 18 else "evening")
-        _greet = "Good " + _tod + " 👋"
+        _disp_name = (st.session_state.patient_name if st.session_state.patient_name and st.session_state.patient_name != "Guest" else "")
+        _greet = "Good " + _tod + (", " + _disp_name if _disp_name else "") + " 👋"
         st.markdown(
             '<div class="md-greet-wrap md-home-greet-wrap">'
             '<div class="md-greet">' + ui_text(_greet, 80) + '</div>'
-            '<div class="md-subgreet">How can I help you with your health today?</div>'
+            '<div class="md-subgreet">How can I help you today?</div>'
             '</div>',
             unsafe_allow_html=True
         )
@@ -5278,24 +5336,29 @@ if st.session_state.mode == "chat":
         # Quick action chips
         st.markdown('<div class="md-chip-row md-chip-row-compact">', unsafe_allow_html=True)
         chip_specs = [
-            ("Headache", "I have a headache and would like to understand what might be causing it."),
-            ("Tired", "I have been feeling unusually tired lately. What could be the reason?"),
-            ("Symptoms", "_route_assessment"),
-            ("Sleep", "Can you suggest ways to improve my sleep quality?"),
-            ("Meds", "I have a question about a medication I am taking."),
+            ("I have a headache", "I have a headache and would like to understand what might be causing it."),
+            ("Feeling tired", "I have been feeling unusually tired lately. What could be the reason?"),
+            ("Check my symptoms", "_route_assessment"),
+            ("Improve my sleep", "Can you suggest ways to improve my sleep quality?"),
         ]
-        chip_icons = {"Headache": "●", "Tired": "◐", "Symptoms": "⌕", "Sleep": "☾", "Meds": "✚"}
-        chip_cols = st.columns([1, 1, 1, 1, 1, 1.2], gap="small")
+        chip_icons = {
+            "I have a headache": ":material/neurology:",
+            "Feeling tired": ":material/mood:",
+            "Check my symptoms": ":material/search:",
+            "Improve my sleep": ":material/bedtime:",
+        }
+        chip_cols = st.columns([1, 1, 1, 1, 0.35], gap="small")
         for i, (chip_label, chip_query) in enumerate(chip_specs):
             with chip_cols[i]:
-                chip_text = chip_icons.get(chip_label, "•") + " " + chip_label
-                if st.button(chip_text, key="chip_" + str(i), use_container_width=True):
+                if st.button(chip_label, key="chip_" + str(i), use_container_width=True, icon=chip_icons.get(chip_label)):
                     if chip_query == "_route_assessment":
                         st.session_state.mode = "assessment"
                         st.rerun()
                     else:
                         st.session_state.pending_user_input = chip_query
                         st.rerun()
+        with chip_cols[4]:
+            st.button("", key="chip_more_stub", icon=":material/chevron_right:", help="More quick actions", use_container_width=True, disabled=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
         if st.session_state.is_authenticated:
@@ -5305,41 +5368,30 @@ if st.session_state.mode == "chat":
             home_side = None
 
         with home_main:
-            st.markdown(
-                '<div class="md-hero">'
-                '<div class="md-hero-mark">M</div>'
-                '<div class="md-hero-title">MediChat Ai <span class="md-hero-verified">✓</span></div>'
-                '<div class="md-hero-desc">A virtual doctor-style assistant for general health questions, symptom guidance, report summaries, and safer next-step planning.</div>'
-                '<div class="md-hero-pills">'
-                '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-green">✓</div><div><div class="md-hero-pill-title">Evidence-Based</div><div class="md-hero-pill-sub">' + format(int(MEDICAL_REFERENCE_COUNT), ",") + '+ Sources</div></div></div>'
-                '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-violet">🔒</div><div><div class="md-hero-pill-title">Private &amp; Secure</div><div class="md-hero-pill-sub">Your data is safe</div></div></div>'
-                '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-blue">🌐</div><div><div class="md-hero-pill-title">Multi-Language</div><div class="md-hero-pill-sub">5+ Languages</div></div></div>'
-                '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-pink">⏰</div><div><div class="md-hero-pill-title">Available 24/7</div><div class="md-hero-pill-sub">Always here for you</div></div></div>'
-                '</div>'
-                '</div>',
-                unsafe_allow_html=True
-            )
-            st.markdown('<div class="md-home-composer-wrap"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="md-ref-ask-shell">', unsafe_allow_html=True)
             with st.form("home_chat_form", clear_on_submit=True):
-                hc1, hc2 = st.columns([7.3, 1])
-                with hc1:
-                    home_user_input = st.text_input(
-                        "Start a chat",
-                        placeholder="Describe your symptoms, ask a health question, or just say hello...",
-                        label_visibility="collapsed",
-                        key="home_chat_input_" + str(st.session_state.chat_input_key),
-                    )
-                with hc2:
+                home_user_input = st.text_area(
+                    "Start a chat",
+                    placeholder="Ask anything about your health...",
+                    label_visibility="collapsed",
+                    height=120,
+                    key="home_chat_input_" + str(st.session_state.chat_input_key),
+                )
+                ac1, ac2, ac3 = st.columns([0.95, 0.95, 0.5])
+                with ac1:
+                    home_upload_clicked = st.form_submit_button("Upload", icon=":material/attach_file:", use_container_width=True)
+                with ac2:
+                    home_voice_clicked = st.form_submit_button("Voice", icon=":material/mic:", use_container_width=True)
+                with ac3:
                     home_submit = st.form_submit_button("➤", use_container_width=True, type="primary")
-            hc_a, hc_b = st.columns([1, 1])
-            with hc_a:
-                if st.button("Upload", key="home_upload_route", use_container_width=True):
-                    st.session_state.mode = "records" if st.session_state.is_authenticated else "rx_reader"
-                    st.rerun()
-            with hc_b:
-                st.button("Voice", key="home_voice_stub", use_container_width=True, help="Voice capture can be connected to your preferred speech-to-text backend.")
+            st.markdown('</div>', unsafe_allow_html=True)
+            if home_upload_clicked:
+                st.session_state.mode = "records" if st.session_state.is_authenticated else "rx_reader"
+                st.rerun()
+            if home_voice_clicked:
+                st.info("Voice input is not connected yet.")
             st.markdown(
-                '<div class="md-home-composer-note">MediChat provides general information only. For urgent symptoms, contact emergency services or a clinician.</div>',
+                '<div class="md-home-composer-note">MediChat Ai can make mistakes. Please consult a healthcare professional for medical advice.</div>',
                 unsafe_allow_html=True
             )
 
@@ -5348,15 +5400,16 @@ if st.session_state.mode == "chat":
                 st.markdown('<div class="md-smart-head"><div class="md-smart-title">Smart Actions</div></div>', unsafe_allow_html=True)
                 sa_cols = st.columns(4, gap="small")
                 sa_specs = [
-                    ("sa_sym", "Symptoms Checker", "Guided symptom assessment", "assessment"),
-                    ("sa_rec", "Health Records", "Upload and review reports", "records"),
-                    ("sa_ins", "Ai Insights", "Profile-based insights", "insights"),
-                    ("sa_appt", "Appointments", "Manage upcoming visits", "appointments"),
+                    ("sa_sym", "Symptoms Checker", "Guided Ai assessment of your symptoms", "assessment", ":material/stethoscope:"),
+                    ("sa_rec", "Health Records", "Upload and manage your medical reports", "records", ":material/lab_profile:"),
+                    ("sa_ins", "Ai Insights", "Personalized insights based on your data", "insights", ":material/insights:"),
+                    ("sa_appt", "Appointments", "Schedule and manage your appointments", "appointments", ":material/calendar_month:"),
                 ]
                 st.markdown('<div class="md-smart-grid-buttons">', unsafe_allow_html=True)
-                for i, (sk, nm, ds, action) in enumerate(sa_specs):
+                for i, (sk, nm, ds, action, ic) in enumerate(sa_specs):
                     with sa_cols[i]:
-                        if st.button(nm + "\n" + ds + "\n→", key=sk, use_container_width=True, help=ds):
+                        action_label = nm + "\n" + ds + "  →"
+                        if st.button(action_label, key=sk, use_container_width=True, icon=ic, help=ds):
                             st.session_state.mode = action
                             st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
@@ -5382,18 +5435,22 @@ if st.session_state.mode == "chat":
                         except Exception:
                             _last_visit_str = "recently"
 
-                _snap_title = "Session Snapshot"
-                _conv_count_disp = str(_convs_total)
+                _snap_title = "Health Overview"
+                _heart_rate_display = "Not connected"
+                _steps_display = "Not connected"
+                _sleep_hours = get_daily_metrics().get("sleep_hours")
+                _sleep_display = (str(_sleep_hours) + "h") if _sleep_hours else "Not connected"
+                _water_count = int(get_daily_metrics().get("water_glasses", 0) or 0)
+                _water_display = (str(_water_count) + " / 8 glasses") if _water_count else "Not connected"
                 _tiles = [
-                    ("md-hp-blue", "💬", "Conversations", _conv_count_disp),
-                    ("md-hp-green", "🩺", "Conditions", str(_cond_n)),
-                    ("md-hp-violet", "💊", "Medications", str(_med_n)),
-                    ("md-hp-pink", "📌", "Symptoms", str(_sym_n)),
+                    ("md-hp-pink", "♥", "Heart Rate", _heart_rate_display),
+                    ("md-hp-green", "⚘", "Steps", _steps_display),
+                    ("md-hp-violet", "☾", "Sleep", _sleep_display),
+                    ("md-hp-blue", "💧", "Water Intake", _water_display),
                 ]
-                _tiles.append(("md-hp-blue", "🕒", "Last visit", _last_visit_str))
                 snap_html = (
                     '<div class="md-rcard md-snap-card">'
-                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div></div>'
+                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><div class="md-rcard-link">See all</div></div>'
                     '<div class="md-snap-grid">'
                 )
                 for _cls, _emoji, _lbl, _val in _tiles:
@@ -5449,9 +5506,7 @@ if st.session_state.mode == "chat":
                     ("🧘", "Breathe Deeply", "Three slow deep breaths can lower stress hormones and steady your heart rate."),
                     ("😴", "Protect Your Sleep", "A consistent bedtime improves immunity, mood, and cognitive sharpness."),
                 ]
-                if "tip_choice" not in st.session_state:
-                    st.session_state.tip_choice = random.randint(0, 10_000)
-                _ti = st.session_state.tip_choice % len(tips)
+                _ti = random.randint(0, 10_000) % len(tips)
                 _ic, _tt, _td = tips[_ti]
                 st.markdown(
                     '<div class="md-tip">'
