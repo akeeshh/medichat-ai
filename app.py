@@ -3848,6 +3848,106 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     margin-right: 0.72rem !important;
 }
 
+/* Sidebar final override: make left navigation visibly different and cleaner */
+[data-testid="stSidebar"] {
+    width: 272px !important;
+    min-width: 272px !important;
+    background: #ffffff !important;
+    border-right: 1px solid #e8eef9 !important;
+    box-shadow: 10px 0 34px rgba(15,23,42,0.04) !important;
+}
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+    padding: 1.35rem 0.85rem 1rem 0.85rem !important;
+}
+.sb-title {
+    font-size: 0.68rem !important;
+    color: #94a3b8 !important;
+    letter-spacing: 0.14em !important;
+    margin: 0.62rem 0 0.34rem 0 !important;
+}
+[class*="st-key-nav_"] .stButton > button {
+    min-height: 50px !important;
+    height: 50px !important;
+    border-radius: 14px !important;
+    padding: 0 0.8rem !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #334155 !important;
+    font-size: 0.92rem !important;
+    font-weight: 620 !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+}
+[class*="st-key-nav_"] .stButton > button:hover {
+    background: #f6f9ff !important;
+    border-color: #e2eafa !important;
+    color: #1d4ed8 !important;
+}
+[class*="st-key-nav_"] .stButton > button [data-testid="stIconMaterial"] {
+    width: 22px !important;
+    min-width: 22px !important;
+    height: 22px !important;
+    border-radius: 8px !important;
+    background: #eef4ff;
+    color: #3666ea !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-right: 0.68rem !important;
+    font-size: 1rem !important;
+}
+[class*="st-key-nav_"] .stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #eef2ff, #eff6ff) !important;
+    border-color: #d7e5fb !important;
+    color: #1d4ed8 !important;
+    box-shadow: inset 0 0 0 1px rgba(191,219,254,0.42) !important;
+}
+[class*="st-key-nav_"] .stButton > button[kind="primary"] [data-testid="stIconMaterial"] {
+    background: #2563eb !important;
+    color: #ffffff !important;
+}
+
+/* Profile + sign out + new chat button polish */
+.st-key-profile_logout .stButton > button {
+    min-height: 38px !important;
+    height: 38px !important;
+    border-radius: 11px !important;
+    border: 1px solid #e5edf8 !important;
+    background: #ffffff !important;
+    color: #334155 !important;
+    font-weight: 630 !important;
+}
+.st-key-profile_logout .stButton > button:hover {
+    border-color: #cfe1fb !important;
+    background: #f8fbff !important;
+}
+.st-key-new_chat_btn .stButton > button {
+    min-height: 40px !important;
+    height: 40px !important;
+    border-radius: 12px !important;
+    border: 1px solid #dbe8fb !important;
+    background: linear-gradient(135deg, #ffffff, #f8fbff) !important;
+    color: #1d4ed8 !important;
+    font-weight: 700 !important;
+}
+
+/* Keep sidebar cards cleaner */
+.md-side-profile {
+    border-radius: 14px !important;
+    padding: 0.66rem !important;
+}
+.md-care-note {
+    border-radius: 14px !important;
+}
+
+@media (max-width: 980px) {
+    [data-testid="stSidebar"] {
+        width: min(84vw, 320px) !important;
+        min-width: min(84vw, 320px) !important;
+    }
+}
+
 /* Header safeguard pills */
 .md-home-head-left {
     text-align: left !important;
