@@ -2445,8 +2445,104 @@ st.markdown("""
 }
 
 .main .block-container {
-    max-width: 1180px !important;
-    padding: 1.5rem 1.4rem 2.5rem 1.4rem !important;
+    max-width: 1220px !important;
+    padding: 1.4rem 1.5rem 2.5rem 1.5rem !important;
+}
+
+/* Streamlit uses Material Symbols for expander/menu icons. The older global
+   font override made those icons render as text such as "keyboard_double". */
+.material-icons,
+.material-icons-round,
+.material-symbols-outlined,
+.material-symbols-rounded,
+.material-symbols-sharp,
+[class*="material-symbols"],
+[class*="material-icons"] {
+    font-family: "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons Round", "Material Icons" !important;
+    font-weight: normal !important;
+    font-style: normal !important;
+    line-height: 1 !important;
+    letter-spacing: normal !important;
+    text-transform: none !important;
+    display: inline-flex !important;
+    white-space: nowrap !important;
+    word-wrap: normal !important;
+    direction: ltr !important;
+    -webkit-font-feature-settings: "liga" !important;
+    -webkit-font-smoothing: antialiased !important;
+}
+
+/* App shell closer to the reference mockup */
+.stApp {
+    background:
+        radial-gradient(circle at 38% 8%, rgba(59,130,246,0.08), transparent 32%),
+        radial-gradient(circle at 92% 20%, rgba(139,92,246,0.06), transparent 28%),
+        #f7f9fd !important;
+}
+[data-testid="stSidebar"] {
+    width: 292px !important;
+    min-width: 292px !important;
+    background: rgba(255,255,255,0.94) !important;
+    border-right: 1px solid rgba(226,232,240,0.9) !important;
+    box-shadow: 12px 0 36px rgba(15,23,42,0.035) !important;
+}
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+    padding: 1.65rem 1rem 1.25rem 1rem !important;
+}
+.md-logo-wrap {
+    border-bottom: none !important;
+    padding: 0.35rem 0.45rem 1.25rem 0.45rem !important;
+    gap: 0.72rem !important;
+}
+.md-logo-mark {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 13px !important;
+    background: linear-gradient(135deg, #38bdf8, #2563eb 54%, #8b5cf6) !important;
+    box-shadow: 0 10px 24px rgba(37,99,235,0.22) !important;
+}
+.md-logo-text {
+    font-size: 1.08rem !important;
+}
+.md-logo-sub {
+    font-size: 0.68rem !important;
+}
+[data-testid="stSidebar"] hr {
+    margin: 0.75rem 0 !important;
+    border-color: #eef2f7 !important;
+}
+[data-testid="stSidebar"] .stButton > button {
+    height: 48px !important;
+    min-height: 48px !important;
+    padding: 0.65rem 0.85rem !important;
+    border-radius: 13px !important;
+    font-size: 0.93rem !important;
+    color: #334155 !important;
+    font-weight: 600 !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: #f4f7ff !important;
+    color: #1d4ed8 !important;
+}
+.md-nav-active .stButton > button {
+    background: linear-gradient(135deg, #eef2ff, #f5f3ff) !important;
+    color: #1d4ed8 !important;
+    box-shadow: inset 0 0 0 1px rgba(96,165,250,0.15) !important;
+}
+.md-side-profile {
+    margin-top: 1rem !important;
+    padding: 0.75rem !important;
+    background: #ffffff !important;
+    border: 1px solid #edf2f7 !important;
+    box-shadow: var(--md-shadow-sm) !important;
+}
+.md-side-avatar {
+    background: linear-gradient(135deg, #38bdf8, #2563eb) !important;
+}
+.sb-footer {
+    border-top: none !important;
+    color: #94a3b8 !important;
+    padding-top: 0.7rem !important;
 }
 
 /* Keep the app clinical and calm: remove decorative orb treatment. */
@@ -2456,44 +2552,58 @@ st.markdown("""
     display: none !important;
 }
 .md-hero {
-    text-align: left;
-    padding: 1.6rem;
-    border-radius: var(--md-radius-lg);
-    background: linear-gradient(180deg, #ffffff 0%, #f8fcff 100%);
+    text-align: center;
+    padding: 2.2rem 1.75rem 1.6rem 1.75rem;
+    border-radius: 24px;
+    background:
+        linear-gradient(135deg, rgba(239,246,255,0.94), rgba(255,255,255,0.98) 48%, rgba(245,243,255,0.88));
+    border: 1px solid rgba(219,234,254,0.95);
+    box-shadow: 0 18px 48px rgba(15,23,42,0.07);
 }
 .md-hero-mark {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
+    width: 64px;
+    height: 64px;
+    border-radius: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 1.35rem;
+    font-size: 1.55rem;
     font-weight: 800;
-    background: linear-gradient(135deg, var(--md-brand-1), var(--md-brand-3));
-    box-shadow: 0 8px 22px rgba(8,145,178,0.22);
-    margin-bottom: 0.9rem;
+    background:
+        radial-gradient(circle at 28% 20%, rgba(255,255,255,0.75), transparent 36%),
+        linear-gradient(135deg, #38bdf8, #2563eb 55%, #8b5cf6);
+    box-shadow: 0 16px 36px rgba(79,70,229,0.24);
+    margin: 0 auto 1.1rem auto;
 }
 .md-hero-title {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
     gap: 0.45rem;
-    font-size: 1.45rem;
+    font-size: 1.28rem;
+    margin-bottom: 0.7rem;
 }
 .md-hero-desc {
-    margin-left: 0;
-    margin-right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 520px;
+    color: #52627a;
 }
 .md-hero-pills {
-    justify-content: flex-start;
+    justify-content: center;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-top: 1.35rem;
 }
 .md-hero-pill {
     max-width: none;
-    min-height: 64px;
+    min-height: 66px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.78);
+    box-shadow: 0 8px 24px rgba(15,23,42,0.045);
 }
 
 .md-auth-hero,
@@ -2614,6 +2724,32 @@ st.markdown("""
     font-size: 0.72rem;
     line-height: 1.45;
 }
+.md-home-composer-note {
+    font-size: 0.74rem;
+    color: #64748b;
+    text-align: center;
+    margin: -0.3rem 0 1rem 0;
+}
+.md-home-composer-wrap {
+    margin-top: -0.2rem;
+    margin-bottom: 1.3rem;
+}
+.md-home-composer-wrap + div [data-testid="stForm"],
+.md-home-composer-wrap ~ div [data-testid="stForm"] {
+    border-radius: 22px !important;
+}
+.md-smart-head {
+    margin-top: 1rem !important;
+}
+.md-smart-card {
+    min-height: 132px;
+    border-radius: 18px !important;
+    box-shadow: 0 12px 30px rgba(15,23,42,0.045) !important;
+}
+.md-smart-card + div .stButton > button,
+.md-smart-card ~ div .stButton > button {
+    border-radius: 14px !important;
+}
 
 .bot-bubble,
 .user-bubble,
@@ -2658,6 +2794,45 @@ st.markdown("""
     min-height: 44px;
 }
 
+/* Streamlit forms as clean cards, and no more broken expander chrome */
+[data-testid="stForm"] {
+    background: rgba(255,255,255,0.86) !important;
+    border: 1px solid #dbeafe !important;
+    border-radius: 18px !important;
+    padding: 1rem !important;
+    box-shadow: 0 10px 28px rgba(15,23,42,0.045) !important;
+}
+.md-form-intro {
+    margin: 1.1rem 0 0.45rem 0;
+    font-size: 0.86rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+.md-form-sub {
+    color: #64748b;
+    font-size: 0.78rem;
+    margin-top: -0.25rem;
+    margin-bottom: 0.65rem;
+}
+
+/* Reference-style right rail */
+.md-snap-card,
+.md-rcard-recent,
+.md-tip {
+    border-radius: 20px !important;
+    border: 1px solid #e8eef8 !important;
+    box-shadow: 0 16px 34px rgba(15,23,42,0.055) !important;
+}
+.md-snap-tile {
+    border: none !important;
+    border-radius: 14px !important;
+    background: #f7f9fd !important;
+    min-height: 58px !important;
+}
+.md-tip {
+    background: linear-gradient(135deg, #ecfeff, #fff7ed) !important;
+}
+
 @media (max-width: 980px) {
     .main .block-container {
         padding: 1rem 0.85rem 2rem 0.85rem !important;
@@ -2683,7 +2858,7 @@ st.markdown("""
         font-size: 1.2rem;
     }
     .md-hero-pills {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .md-auth-hero {
         align-items: flex-start;
@@ -2731,6 +2906,9 @@ st.markdown("""
         align-items: flex-start;
         flex-direction: column;
         gap: 0.1rem;
+    }
+    .md-hero-pills {
+        grid-template-columns: 1fr;
     }
     .confidence-row {
         flex-wrap: wrap;
@@ -4344,58 +4522,15 @@ with st.sidebar:
     L = LANGUAGES[st.session_state.selected_language]
 
     st.markdown("---")
-    st.markdown('<div class="sb-title">Session Stats</div>', unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown('<div class="sb-stat-card"><div class="sb-stat-num">' + str(st.session_state.qcount) + '</div><div class="sb-stat-label">Questions</div></div>', unsafe_allow_html=True)
-    with c2:
-        st.markdown('<div class="sb-stat-card"><div class="sb-stat-num">1000</div><div class="sb-stat-label">Medical Docs</div></div>', unsafe_allow_html=True)
-    st.markdown("---")
-    mem = st.session_state.patient_memory
-    has_any_mem = any([mem.get("symptoms"), mem.get("conditions"), mem.get("medications")])
-    st.markdown('<div class="sb-title">Health Profile</div>', unsafe_allow_html=True)
-    if has_any_mem:
-        def _chips(items, max_n=8):
-            chips = "".join(['<span class="hp-chip">' + ui_text(x, 40) + '</span>' for x in (items or [])[:max_n]])
-            return '<div class="hp-chip-row">' + chips + '</div>' if chips else '<div class="hp-empty">none recorded</div>'
-        st.markdown(
-            '<div class="hp-card">'
-            '<div class="hp-section-title">Conditions</div>' + _chips(mem.get("conditions")) +
-            '</div>'
-            '<div class="hp-card">'
-            '<div class="hp-section-title">Medications</div>' + _chips(mem.get("medications")) +
-            '</div>'
-            '<div class="hp-card">'
-            '<div class="hp-section-title">Recent Symptoms</div>' + _chips(mem.get("symptoms")) +
-            '</div>',
-            unsafe_allow_html=True
-        )
-    else:
-        st.markdown(
-            '<div class="hp-card"><div class="hp-empty">'
-            'Your conditions, medications and symptoms will appear here as you chat.'
-            '</div></div>',
-            unsafe_allow_html=True
-        )
-    st.markdown("---")
-    st.markdown('<div class="sb-title">Active Features</div>', unsafe_allow_html=True)
-    features = [
-        ("#dc2626", "Emergency Detection"),
-        ("#0d9488", "RAG Pipeline"),
-        ("#7c3aed", "Vision AI"),
-        ("#0369a1", "Chat Memory"),
-        ("#059669", "Symptom Check"),
-        ("#d97706", "PDF Export"),
-        ("#0ea5e9", "Source Transparency"),
-        ("#8b5cf6", "Multilingual (5)"),
-    ]
-    for color, name in features:
-        st.markdown('<div class="sb-feature"><div class="sb-feature-dot" style="background:' + color + ';"></div><div class="sb-feature-name">' + name + '</div><div class="sb-feature-status">Live</div></div>', unsafe_allow_html=True)
-    st.markdown("---")
-    st.markdown('<div class="sb-title">Try Asking</div>', unsafe_allow_html=True)
-    for tip in ["What causes high blood pressure?", "I have chest pain and I am diabetic", "How does stress affect the heart?", "What foods reduce inflammation?", "I have been dizzy since yesterday"]:
-        st.markdown('<div class="sb-tip">- ' + tip + '</div>', unsafe_allow_html=True)
-    st.markdown("---")
+
+    # Reference-style upgrade/info card. Kept as a UI preview card, not a billing flow.
+    st.markdown(
+        '<div class="md-premium">'
+        '<div class="md-premium-title">✦ MediChat Plus</div>'
+        '<div class="md-premium-desc">Advanced summaries, richer health insights and priority project features.</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
 
     # Care boundary note
     st.markdown(
@@ -4625,6 +4760,10 @@ if (_triage and _triage.get("tier", 5) > 1 and _triage.get("tier", 5) < 5
         unsafe_allow_html=True
     )
 
+home_user_input = ""
+home_submit = False
+home_empty_chat = st.session_state.mode == "chat" and not st.session_state.messages
+
 if st.session_state.mode == "chat":
     # ── New Dashboard Home (only on empty chat) ─────────────────────
     if not st.session_state.messages:
@@ -4681,6 +4820,22 @@ if st.session_state.mode == "chat":
                 '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-pink">⏰</div><div><div class="md-hero-pill-title">Available 24/7</div><div class="md-hero-pill-sub">Always here for you</div></div></div>'
                 '</div>'
                 '</div>',
+                unsafe_allow_html=True
+            )
+            st.markdown('<div class="md-home-composer-wrap"></div>', unsafe_allow_html=True)
+            with st.form("home_chat_form", clear_on_submit=True):
+                hc1, hc2 = st.columns([8, 1])
+                with hc1:
+                    home_user_input = st.text_input(
+                        "Start a chat",
+                        placeholder="Describe your symptoms, ask a health question, or just say hello...",
+                        label_visibility="collapsed",
+                        key="home_chat_input_" + str(st.session_state.chat_input_key),
+                    )
+                with hc2:
+                    home_submit = st.form_submit_button("➤", use_container_width=True, type="primary")
+            st.markdown(
+                '<div class="md-home-composer-note">MediChat provides general information only. For urgent symptoms, contact emergency services or a clinician.</div>',
                 unsafe_allow_html=True
             )
 
@@ -4831,7 +4986,7 @@ if st.session_state.mode == "chat":
             mem_parts.append("Medications: " + ", ".join(mem["medications"]))
         st.markdown('<div class="memory-card"><div class="memory-title">MediChat remembers from this session:</div>' + "".join(["<div>- " + ui_text(p, 220) + "</div>" for p in mem_parts]) + "</div>", unsafe_allow_html=True)
 
-    show_hero = (not st.session_state.messages) and (not st.session_state.patient_name)
+    show_hero = False
 
     if show_hero:
         st.markdown(
@@ -4974,30 +5129,35 @@ if st.session_state.mode == "chat":
     st.markdown('<div id="chat-input-anchor"></div>', unsafe_allow_html=True)
 
     # ── Text input + Send (inside form so Enter key submits) ────────────
-    with st.form("chat_form", clear_on_submit=True):
-        fc1, fc2 = st.columns([4, 1])
-        with fc1:
-            user_input = st.text_input(
-                "Your message",
-                placeholder=L["placeholder"],
-                label_visibility="collapsed",
-                key="chat_input_" + str(st.session_state.chat_input_key),
-            )
-        with fc2:
-            submit = st.form_submit_button("➤  " + L["send_btn"], use_container_width=True, type="primary")
+    user_input = home_user_input
+    submit = home_submit
+    uploaded_image = None
+    clear = False
+    if not home_empty_chat:
+        with st.form("chat_form", clear_on_submit=True):
+            fc1, fc2 = st.columns([4, 1])
+            with fc1:
+                user_input = st.text_input(
+                    "Your message",
+                    placeholder=L["placeholder"],
+                    label_visibility="collapsed",
+                    key="chat_input_" + str(st.session_state.chat_input_key),
+                )
+            with fc2:
+                submit = st.form_submit_button("➤  " + L["send_btn"], use_container_width=True, type="primary")
 
-    # ── Button row: [📎 Attach] [Clear] ─ equal width, parallel ────────
-    bc_attach, bc_clear = st.columns(2)
-    with bc_attach:
-        uploaded_image = st.file_uploader(
-            "Attach a medical image or PDF report",
-            type=["jpg", "jpeg", "png", "pdf"],
-            label_visibility="collapsed",
-            key="uploader_" + str(st.session_state.uploader_key),
-            help="Attach a medical image (JPG, PNG) or PDF report",
-        )
-    with bc_clear:
-        clear = st.button("🗑  " + L["clear_btn"], use_container_width=True, key="main_clear_btn")
+        # ── Button row: [📎 Attach] [Clear] ─ equal width, parallel ────────
+        bc_attach, bc_clear = st.columns(2)
+        with bc_attach:
+            uploaded_image = st.file_uploader(
+                "Attach a medical image or PDF report",
+                type=["jpg", "jpeg", "png", "pdf"],
+                label_visibility="collapsed",
+                key="uploader_" + str(st.session_state.uploader_key),
+                help="Attach a medical image (JPG, PNG) or PDF report",
+            )
+        with bc_clear:
+            clear = st.button("🗑  " + L["clear_btn"], use_container_width=True, key="main_clear_btn")
 
     # ── File preview (shown below button row once attached) ─────────────
     if uploaded_image:
@@ -5018,7 +5178,8 @@ if st.session_state.mode == "chat":
             with ib:
                 st.image(uploaded_image, caption="Ready for analysis", use_column_width=True)
 
-    st.markdown('<div class="disclaimer-mini disclaimer-mini-red">⚠ MediChat is not a substitute for professional medical advice. For diagnosis or treatment, please consult a qualified doctor.</div>', unsafe_allow_html=True)
+    if not home_empty_chat:
+        st.markdown('<div class="disclaimer-mini disclaimer-mini-red">⚠ MediChat is not a substitute for professional medical advice. For diagnosis or treatment, please consult a qualified doctor.</div>', unsafe_allow_html=True)
     st.markdown('<div id="page-bottom-anchor" style="height:1px;"></div>', unsafe_allow_html=True)
 
     if st.session_state.messages:
@@ -5742,22 +5903,24 @@ elif st.session_state.mode == "medications":
     st.markdown('<div class="md-greet-wrap"><div class="md-greet">Medications</div>'
                 '<div class="md-subgreet">Keep track of what you take and when. Stored to your profile so MediChat can use it during chats.</div></div>',
                 unsafe_allow_html=True)
-    with st.expander("➕  Add medication", expanded=not bool(list_medications())):
-        with st.form("add_med_form", clear_on_submit=True):
-            mc1, mc2 = st.columns(2)
-            with mc1:
-                m_name = st.text_input("Name", placeholder="e.g. Metformin")
-                m_freq = st.selectbox("Frequency", ["Once daily", "Twice daily", "Three times daily", "Four times daily", "As needed", "Weekly"])
-            with mc2:
-                m_dose = st.text_input("Dose", placeholder="e.g. 500 mg")
-                m_time = st.text_input("Time(s) of day", placeholder="e.g. Morning, 8 pm")
-            m_notes = st.text_area("Notes (optional)", placeholder="Take with food, etc.", height=80)
-            if st.form_submit_button("Save medication", use_container_width=True, type="primary"):
-                if add_medication(m_name, m_dose, m_freq, m_time, m_notes):
-                    st.success("Medication added.")
-                    st.rerun()
-                else:
-                    st.error("Please enter a name.")
+    st.markdown('<div class="md-form-intro">Add medication</div>'
+                '<div class="md-form-sub">Capture dose, timing and notes so MediChat can reference them in future chats.</div>',
+                unsafe_allow_html=True)
+    with st.form("add_med_form", clear_on_submit=True):
+        mc1, mc2 = st.columns(2)
+        with mc1:
+            m_name = st.text_input("Name", placeholder="e.g. Metformin")
+            m_freq = st.selectbox("Frequency", ["Once daily", "Twice daily", "Three times daily", "Four times daily", "As needed", "Weekly"])
+        with mc2:
+            m_dose = st.text_input("Dose", placeholder="e.g. 500 mg")
+            m_time = st.text_input("Time(s) of day", placeholder="e.g. Morning, 8 pm")
+        m_notes = st.text_area("Notes (optional)", placeholder="Take with food, etc.", height=80)
+        if st.form_submit_button("Save medication", use_container_width=True, type="primary"):
+            if add_medication(m_name, m_dose, m_freq, m_time, m_notes):
+                st.success("Medication added.")
+                st.rerun()
+            else:
+                st.error("Please enter a name.")
 
     meds = list_medications()
     if not meds:
@@ -5782,24 +5945,26 @@ elif st.session_state.mode == "appointments":
     st.markdown('<div class="md-greet-wrap"><div class="md-greet">Appointments</div>'
                 '<div class="md-subgreet">Upcoming visits and reminders. Stored to your profile.</div></div>',
                 unsafe_allow_html=True)
-    with st.expander("➕  Add appointment", expanded=not bool(list_appointments())):
-        with st.form("add_appt_form", clear_on_submit=True):
-            ac1, ac2 = st.columns(2)
-            with ac1:
-                a_title = st.text_input("Title", placeholder="e.g. GP follow-up")
-                a_date = st.date_input("Date", min_value=_date.today())
-                a_time = st.time_input("Time", value=datetime.now().time().replace(minute=0, second=0, microsecond=0))
-            with ac2:
-                a_doc = st.text_input("Doctor / clinician", placeholder="e.g. Dr Patel")
-                a_loc = st.text_input("Location", placeholder="e.g. Melbourne Health Centre")
-            a_notes = st.text_area("Notes (optional)", placeholder="Bring previous lab results, etc.", height=80)
-            if st.form_submit_button("Save appointment", use_container_width=True, type="primary"):
-                iso = datetime.combine(a_date, a_time).isoformat(timespec="minutes")
-                if add_appointment(a_title, iso, a_doc, a_loc, a_notes):
-                    st.success("Appointment added.")
-                    st.rerun()
-                else:
-                    st.error("Please enter a title and date.")
+    st.markdown('<div class="md-form-intro">Add appointment</div>'
+                '<div class="md-form-sub">Save upcoming visits, reminders and notes in one place.</div>',
+                unsafe_allow_html=True)
+    with st.form("add_appt_form", clear_on_submit=True):
+        ac1, ac2 = st.columns(2)
+        with ac1:
+            a_title = st.text_input("Title", placeholder="e.g. GP follow-up")
+            a_date = st.date_input("Date", min_value=_date.today())
+            a_time = st.time_input("Time", value=datetime.now().time().replace(minute=0, second=0, microsecond=0))
+        with ac2:
+            a_doc = st.text_input("Doctor / clinician", placeholder="e.g. Dr Patel")
+            a_loc = st.text_input("Location", placeholder="e.g. Melbourne Health Centre")
+        a_notes = st.text_area("Notes (optional)", placeholder="Bring previous lab results, etc.", height=80)
+        if st.form_submit_button("Save appointment", use_container_width=True, type="primary"):
+            iso = datetime.combine(a_date, a_time).isoformat(timespec="minutes")
+            if add_appointment(a_title, iso, a_doc, a_loc, a_notes):
+                st.success("Appointment added.")
+                st.rerun()
+            else:
+                st.error("Please enter a title and date.")
 
     appts = list_appointments()
     if not appts:
