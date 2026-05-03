@@ -12,6 +12,7 @@ import numpy as np
 import os
 import base64
 import hashlib
+import html
 from PIL import Image
 import io
 import re
@@ -30,7 +31,7 @@ except ImportError:
 st.set_page_config(
     page_title="MediChat - Your Health Assistant",
     page_icon="🏥",
-    layout="centered"
+    layout="wide"
 )
 
 # ── Firebase Initialization (cross-session analytics) ────────────────
@@ -514,6 +515,19 @@ def fetch_all_queries_from_firestore(limit=500):
     except Exception as e:
         print("Firestore read failed:", e)
         return []
+
+def ui_escape(value):
+    """Escape dynamic text before placing it inside custom HTML."""
+    return html.escape(str(value or ""), quote=True)
+
+def ui_text(value, max_chars=None):
+    text = re.sub(r"\s+", " ", str(value or "").strip())
+    if max_chars and len(text) > max_chars:
+        text = text[:max_chars - 3].rstrip() + "..."
+    return ui_escape(text)
+
+def ui_lines(value):
+    return ui_escape(value).replace("\n", "<br>")
 
 st.markdown("""
 <style>
@@ -2421,6 +2435,310 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
 </style>
 """, unsafe_allow_html=True)
 
+# ── UX refinement pass (final cascade layer) ─────────────────────────
+st.markdown("""
+<style>
+:root {
+    --md-radius-sm: 10px;
+    --md-radius-md: 14px;
+    --md-radius-lg: 18px;
+}
+
+.main .block-container {
+    max-width: 1180px !important;
+    padding: 1.5rem 1.4rem 2.5rem 1.4rem !important;
+}
+
+/* Keep the app clinical and calm: remove decorative orb treatment. */
+.md-hero::before,
+.md-hero::after,
+.md-hero-orb {
+    display: none !important;
+}
+.md-hero {
+    text-align: left;
+    padding: 1.6rem;
+    border-radius: var(--md-radius-lg);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fcff 100%);
+}
+.md-hero-mark {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.35rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--md-brand-1), var(--md-brand-3));
+    box-shadow: 0 8px 22px rgba(8,145,178,0.22);
+    margin-bottom: 0.9rem;
+}
+.md-hero-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 1.45rem;
+}
+.md-hero-desc {
+    margin-left: 0;
+    margin-right: 0;
+}
+.md-hero-pills {
+    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.md-hero-pill {
+    max-width: none;
+    min-height: 64px;
+}
+
+.md-auth-hero,
+.md-name-card,
+.md-feedback-panel,
+.md-download-card,
+.md-file-preview,
+.md-inline-note {
+    background: var(--md-surface);
+    border: 1px solid var(--md-border);
+    border-radius: var(--md-radius-lg);
+    box-shadow: var(--md-shadow-sm);
+}
+.md-auth-hero {
+    max-width: 680px;
+    margin: 0.6rem auto 1.2rem auto;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.md-auth-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    background: var(--md-soft-blue);
+    color: var(--md-brand-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.45rem;
+    flex-shrink: 0;
+}
+.md-auth-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--md-text-1);
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    margin-bottom: 0.25rem;
+}
+.md-auth-subtitle,
+.md-name-subtitle {
+    color: var(--md-text-2);
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+.md-name-card {
+    padding: 1rem 1.1rem;
+    margin: 0.7rem 0 0.7rem 0;
+}
+.md-name-title {
+    font-size: 0.98rem;
+    font-weight: 750;
+    color: var(--md-text-1);
+    margin-bottom: 0.15rem;
+}
+.md-feedback-panel {
+    padding: 1rem;
+    margin-top: 1rem;
+}
+.md-download-card {
+    padding: 1rem;
+    margin-top: 0.9rem;
+}
+.md-file-preview {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.8rem 1rem;
+    margin: 0.7rem 0;
+}
+.md-file-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--md-soft-blue);
+    color: var(--md-brand-3);
+    font-weight: 800;
+    font-size: 0.74rem;
+    flex-shrink: 0;
+}
+.md-file-name {
+    font-weight: 700;
+    color: var(--md-text-1);
+    font-size: 0.88rem;
+    overflow-wrap: anywhere;
+}
+.md-file-help {
+    color: var(--md-text-2);
+    font-size: 0.76rem;
+    line-height: 1.4;
+}
+.md-inline-note {
+    padding: 0.8rem 0.95rem;
+    color: var(--md-text-2);
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+.md-care-note {
+    background: #f8fafc;
+    border: 1px solid var(--md-border);
+    border-radius: 14px;
+    padding: 0.85rem;
+    margin: 0.8rem 0;
+}
+.md-care-title {
+    font-size: 0.82rem;
+    font-weight: 750;
+    color: var(--md-text-1);
+    margin-bottom: 0.25rem;
+}
+.md-care-copy {
+    color: var(--md-text-2);
+    font-size: 0.72rem;
+    line-height: 1.45;
+}
+
+.bot-bubble,
+.user-bubble,
+.source-row,
+.confidence-row {
+    overflow-wrap: anywhere;
+}
+.emergency-banner {
+    animation: mdEmergencyPulse 2s ease-in-out infinite !important;
+}
+@keyframes mdEmergencyPulse {
+    0%, 100% { box-shadow: 0 6px 20px rgba(220, 38, 38, 0.2); }
+    50% { box-shadow: 0 6px 30px rgba(220, 38, 38, 0.42); }
+}
+.bot-bubble {
+    max-width: min(86%, 760px);
+}
+.user-bubble {
+    max-width: min(78%, 680px);
+}
+.source-row,
+.confidence-row {
+    max-width: calc(100% - 50px);
+}
+
+.stButton > button p,
+.stButton > button div {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+.main .stButton > button {
+    min-width: 0 !important;
+}
+.main .stButton > button p {
+    white-space: normal !important;
+    line-height: 1.2 !important;
+}
+
+[data-testid="stTextInput"] input,
+[data-testid="stTextArea"] textarea,
+[data-testid="stSelectbox"] div[data-baseweb="select"] {
+    min-height: 44px;
+}
+
+@media (max-width: 980px) {
+    .main .block-container {
+        padding: 1rem 0.85rem 2rem 0.85rem !important;
+    }
+    .md-statusbar {
+        gap: 0.55rem;
+        align-items: flex-start;
+    }
+    .md-statusbar span[style*="margin-left:auto"] {
+        margin-left: 0 !important;
+    }
+    .md-greet {
+        font-size: 1.45rem;
+        line-height: 1.25;
+    }
+    .md-subgreet {
+        font-size: 0.86rem;
+    }
+    .md-hero {
+        padding: 1.15rem;
+    }
+    .md-hero-title {
+        font-size: 1.2rem;
+    }
+    .md-hero-pills {
+        grid-template-columns: 1fr;
+    }
+    .md-auth-hero {
+        align-items: flex-start;
+        margin-top: 0.2rem;
+        padding: 1rem;
+    }
+    .md-auth-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 13px;
+        font-size: 1.15rem;
+    }
+    .md-auth-title {
+        font-size: 1.08rem;
+    }
+    .bot-bubble,
+    .user-bubble {
+        max-width: calc(100% - 46px);
+        font-size: 0.86rem;
+    }
+    .av {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+    }
+    .bot-label,
+    .source-row,
+    .confidence-row {
+        margin-left: 44px;
+    }
+}
+
+@media (max-width: 640px) {
+    .md-statusbar {
+        font-size: 0.68rem;
+        padding: 0.55rem 0.7rem;
+    }
+    .md-file-preview {
+        align-items: flex-start;
+    }
+    .md-tip {
+        align-items: flex-start;
+    }
+    .md-snap-text {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.1rem;
+    }
+    .confidence-row {
+        flex-wrap: wrap;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
 GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", os.environ.get("GROQ_API_KEY", ""))
 if not GROQ_API_KEY:
     st.error("API key not found.")
@@ -3185,10 +3503,9 @@ def markdown_to_html(text):
 
     try:
         import markdown as _md
-        html_text = _md.markdown(raw)
+        html_text = _md.markdown(html.escape(raw, quote=False))
     except ImportError:
-        import html as _html
-        safe = _html.escape(raw)
+        safe = html.escape(raw)
         html_text = "<p>" + safe.replace("\n\n", "</p><p>").replace("\n", "<br>") + "</p>"
         html_text = re.sub(r"\*\*([^\*\n]+)\*\*", r"<strong>\1</strong>", html_text)
 
@@ -3858,6 +4175,7 @@ if "session_started" not in st.session_state:
     st.session_state.auth_error = ""
     st.session_state.auth_view = "choose"
     st.session_state.current_conversation_id = ""
+    st.session_state.pending_user_input = ""
 
 with st.sidebar:
     st.markdown(
@@ -3915,9 +4233,9 @@ with st.sidebar:
         _initial = (_name[0] if _name and _name != "Patient" else (_email[0] if _email else "P")).upper()
         st.markdown(
             '<div style="display:flex;align-items:center;gap:0.6rem;background:linear-gradient(135deg,#edf6fc,#d6edf9);border:1px solid #b0daf2;border-radius:12px;padding:0.6rem 0.8rem;margin-bottom:0.6rem;">'
-            '<div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#2176ae,#144272);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + _initial + '</div>'
+            '<div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#2176ae,#144272);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + ui_escape(_initial) + '</div>'
             '<div style="flex:1;min-width:0;">'
-            '<div style="font-size:0.8rem;font-weight:600;color:#0c2d48;line-height:1.1;">' + _name + '</div>'
+            '<div style="font-size:0.8rem;font-weight:600;color:#0c2d48;line-height:1.1;">' + ui_text(_name, 30) + '</div>'
             '<div style="font-size:0.65rem;color:#1a5b8a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Profile saved</div>'
             '</div>'
             '</div>',
@@ -4038,7 +4356,7 @@ with st.sidebar:
     st.markdown('<div class="sb-title">Health Profile</div>', unsafe_allow_html=True)
     if has_any_mem:
         def _chips(items, max_n=8):
-            chips = "".join(['<span class="hp-chip">' + str(x).strip()[:40] + '</span>' for x in (items or [])[:max_n]])
+            chips = "".join(['<span class="hp-chip">' + ui_text(x, 40) + '</span>' for x in (items or [])[:max_n]])
             return '<div class="hp-chip-row">' + chips + '</div>' if chips else '<div class="hp-empty">none recorded</div>'
         st.markdown(
             '<div class="hp-card">'
@@ -4079,11 +4397,11 @@ with st.sidebar:
         st.markdown('<div class="sb-tip">- ' + tip + '</div>', unsafe_allow_html=True)
     st.markdown("---")
 
-    # Premium upgrade card
+    # Care boundary note
     st.markdown(
-        '<div class="md-premium">'
-        '<div class="md-premium-title">✨ Upgrade to Premium</div>'
-        '<div class="md-premium-desc">Unlimited AI chats, advanced insights, priority support and more.</div>'
+        '<div class="md-care-note">'
+        '<div class="md-care-title">Care boundaries</div>'
+        '<div class="md-care-copy">MediChat gives general health information. For urgent symptoms, use local emergency services or a qualified clinician.</div>'
         '</div>',
         unsafe_allow_html=True
     )
@@ -4095,9 +4413,9 @@ with st.sidebar:
         _in = (_nm[0] if _nm and _nm != "Patient" else (_em[0] if _em else "P")).upper()
         st.markdown(
             '<div class="md-side-profile">'
-            '<div class="md-side-avatar">' + _in + '</div>'
+            '<div class="md-side-avatar">' + ui_escape(_in) + '</div>'
             '<div style="flex:1;min-width:0;">'
-            '<div class="md-side-pname">' + _nm + '</div>'
+            '<div class="md-side-pname">' + ui_text(_nm, 30) + '</div>'
             '<div class="md-side-psub">View profile</div>'
             '</div>'
             '</div>',
@@ -4107,9 +4425,9 @@ with st.sidebar:
 
 st.markdown(
     '<div class="md-statusbar">'
-    '<span class="md-stat-item md-stat-icon-blue">🛡️ HIPAA-style data handling</span>'
-    '<span class="md-stat-item md-stat-icon-green">📚 1,000 medical sources</span>'
-    '<span class="md-stat-item md-stat-icon-cyan">🔒 Encrypted &amp; Private</span>'
+    '<span class="md-stat-item md-stat-icon-blue">🛡️ Privacy-first prototype</span>'
+    '<span class="md-stat-item md-stat-icon-green">📚 1,000 medical references</span>'
+    '<span class="md-stat-item md-stat-icon-cyan">🚨 Emergency-aware triage</span>'
     '<span style="margin-left:auto;display:inline-flex;align-items:center;gap:0.4rem;font-weight:600;color:#059669;">'
     '<span class="md-pulse"></span> Live'
     '</span>'
@@ -4159,11 +4477,11 @@ _is_admin = st.session_state.admin_authenticated
 # Users can also continue as Guest (no persistence).
 if FIREBASE_ACTIVE and not _is_admin and not st.session_state.is_authenticated and not st.session_state.is_guest:
     st.markdown(
-        '<div style="background:linear-gradient(135deg,#144272,#0c2d48);color:white;padding:1.6rem 2rem;border-radius:18px;margin:1rem auto 1.4rem auto;max-width:560px;box-shadow:0 8px 30px rgba(12,45,72,0.18);">'
-        '<div style="text-align:center;">'
-        '<div style="font-size:2.2rem;margin-bottom:0.4rem;">👤</div>'
-        '<div style="font-family:\'DM Serif Display\',serif;font-size:1.5rem;margin-bottom:0.3rem;">WELCOME TO MediChat - YOUR VIRTUAL DOCTOR.</div>'
-        '<div style="font-size:0.88rem;opacity:0.85;line-height:1.55;">Sign in to keep your health profile across visits, or continue as a guest for a one-off MediChat.</div>'
+        '<div class="md-auth-hero">'
+        '<div class="md-auth-icon">⚕</div>'
+        '<div>'
+        '<div class="md-auth-title">Welcome to MediChat</div>'
+        '<div class="md-auth-subtitle">Sign in to keep your health profile across visits, or continue as a guest for a one-off conversation.</div>'
         '</div>'
         '</div>',
         unsafe_allow_html=True
@@ -4273,7 +4591,7 @@ if st.session_state.emergency_detected:
     st.markdown(
         '<div class="emergency-banner">'
         '<div class="emergency-title">🚨 This May Be a Medical Emergency</div>'
-        '<div class="emergency-text"><strong>Detected pattern:</strong> ' + reason + '. Based on what you described, you may need immediate medical attention. Please stop and call emergency services now. Do not wait.</div>'
+        '<div class="emergency-text"><strong>Detected pattern:</strong> ' + ui_text(reason, 120) + '. Based on what you described, you may need immediate medical attention. Please stop and call emergency services now. Do not wait.</div>'
         '<div class="emergency-number">📞 Call 000 (Australia)</div>'
         '<div style="font-size:0.75rem;margin-top:0.5rem;opacity:0.9;">Other countries: 911 (USA) | 999 (UK) | 112 (EU) | 119 (Sri Lanka) | 102 (India)</div>'
         '</div>',
@@ -4292,16 +4610,16 @@ if (_triage and _triage.get("tier", 5) > 1 and _triage.get("tier", 5) < 5
     _reasons_html = ""
     if _triage.get("reasons"):
         _reasons_html = '<div class="triage-reasons">' + "".join(
-            ['<span class="triage-reason-pill">' + str(r) + '</span>' for r in _triage["reasons"][:4]]
+            ['<span class="triage-reason-pill">' + ui_text(r, 80) + '</span>' for r in _triage["reasons"][:4]]
         ) + '</div>'
     st.markdown(
         '<div class="triage-card" style="background:' + _triage["bg"] + ';">'
         '<div class="triage-head">'
-        '<span class="triage-icon">' + _triage["icon"] + '</span>'
+        '<span class="triage-icon">' + ui_escape(_triage["icon"]) + '</span>'
         '<span class="triage-tier-num">TIER ' + str(_triage["tier"]) + '</span>'
-        '<span class="triage-label">' + _triage["label"] + '</span>'
+        '<span class="triage-label">' + ui_text(_triage["label"], 60) + '</span>'
         '</div>'
-        '<div class="triage-step">' + _triage["next_step"] + '</div>'
+        '<div class="triage-step">' + ui_text(_triage["next_step"], 180) + '</div>'
         + _reasons_html +
         '</div>',
         unsafe_allow_html=True
@@ -4316,7 +4634,7 @@ if st.session_state.mode == "chat":
         _greet = "Good " + _tod + (", " + _disp_name if _disp_name else "") + "  👋"
         st.markdown(
             '<div class="md-greet-wrap">'
-            '<div class="md-greet">' + _greet + '</div>'
+            '<div class="md-greet">' + ui_text(_greet, 80) + '</div>'
             '<div class="md-subgreet">How can I help you with your health today?</div>'
             '</div>',
             unsafe_allow_html=True
@@ -4331,17 +4649,20 @@ if st.session_state.mode == "chat":
             ("💤  Sleep", "Can you suggest ways to improve my sleep quality?"),
             ("💊  Meds", "I have a question about a medication I am taking."),
         ]
-        chip_cols = st.columns(len(chip_specs))
-        for i, (chip_label, chip_query) in enumerate(chip_specs):
-            with chip_cols[i]:
-                if st.button(chip_label, key="chip_" + str(i), use_container_width=True):
-                    if chip_query == "_route_assessment":
-                        st.session_state.mode = "assessment"
-                        st.rerun()
-                    else:
-                        st.session_state.messages.append({"role": "user", "type": "text", "content": chip_query})
-                        st.session_state.qcount += 1
-                        st.rerun()
+        chip_idx = 0
+        for chip_row in (chip_specs[:3], chip_specs[3:]):
+            chip_cols = st.columns(len(chip_row))
+            for row_i, (chip_label, chip_query) in enumerate(chip_row):
+                with chip_cols[row_i]:
+                    i = chip_idx
+                    chip_idx += 1
+                    if st.button(chip_label, key="chip_" + str(i), use_container_width=True):
+                        if chip_query == "_route_assessment":
+                            st.session_state.mode = "assessment"
+                            st.rerun()
+                        else:
+                            st.session_state.pending_user_input = chip_query
+                            st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
         # Two-column layout: hero on left, dashboard on right
@@ -4350,9 +4671,9 @@ if st.session_state.mode == "chat":
         with home_main:
             st.markdown(
                 '<div class="md-hero">'
-                '<div class="md-hero-orb">✦</div>'
-                '<div class="md-hero-title">Hi, I\'m MediChat AI <span class="md-hero-verified">✓</span></div>'
-                '<div class="md-hero-desc">Your personal AI health assistant. I provide general health information and guidance, not a replacement for professional medical advice.</div>'
+                '<div class="md-hero-mark">M</div>'
+                '<div class="md-hero-title">MediChat AI <span class="md-hero-verified">✓</span></div>'
+                '<div class="md-hero-desc">A virtual doctor-style assistant for general health questions, symptom guidance, report summaries, and safer next-step planning.</div>'
                 '<div class="md-hero-pills">'
                 '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-green">✓</div><div><div class="md-hero-pill-title">Evidence-Based</div><div class="md-hero-pill-sub">1,000+ Sources</div></div></div>'
                 '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-violet">🔒</div><div><div class="md-hero-pill-title">Private &amp; Secure</div><div class="md-hero-pill-sub">Your data is safe</div></div></div>'
@@ -4369,7 +4690,7 @@ if st.session_state.mode == "chat":
             sa_specs = [
                 ("sa_sym", "🩺", "md-si-cyan", "Symptoms Checker", "Guided 7-step clinical assessment", "assessment"),
                 ("sa_ins", "📈", "md-si-violet", "AI Insights", "Get tailored insight from your profile", "insights"),
-                ("sa_pdf", "📋", "md-si-green", "Doctor Visit Summary", "Generate a one-page PDF for your GP", "summary"),
+                ("sa_rec", "📋", "md-si-green", "Health Records", "Upload a PDF or image report", "records"),
             ]
             for i, (sk, ic, cls, nm, ds, action) in enumerate(sa_specs):
                 with sa_cols[i]:
@@ -4385,26 +4706,12 @@ if st.session_state.mode == "chat":
                         if action == "assessment":
                             st.session_state.mode = "assessment"
                             st.rerun()
-                        elif action == "insights":
-                            _q = "Based on what you remember about my health profile, what should I focus on or watch out for? Give me 3 personalised insights."
-                            st.session_state.messages.append({"role": "user", "type": "text", "content": _q})
-                            st.session_state.qcount += 1
+                        elif action == "records":
+                            st.session_state.mode = "records"
                             st.rerun()
-                        elif action == "summary":
-                            if not st.session_state.messages:
-                                st.warning("Have a chat first — the summary uses your conversation as input.")
-                            else:
-                                with st.spinner("Preparing your doctor visit summary..."):
-                                    _pdfb, _ = generate_doctor_visit_summary(st.session_state.messages, st.session_state.patient_name)
-                                if _pdfb:
-                                    st.download_button(
-                                        "Download Doctor Visit Summary",
-                                        data=_pdfb,
-                                        file_name="MediChat_DoctorVisitSummary_" + datetime.now().strftime("%Y%m%d_%H%M") + ".pdf",
-                                        mime="application/pdf",
-                                        use_container_width=True,
-                                        key="sa_pdf_dl",
-                                    )
+                        elif action == "insights":
+                            st.session_state.mode = "insights"
+                            st.rerun()
 
         with home_side:
             # ── Profile Snapshot (REAL data only) ────────────────────
@@ -4444,10 +4751,10 @@ if st.session_state.mode == "chat":
             for _cls, _emoji, _lbl, _val in _tiles:
                 snap_html += (
                     '<div class="md-snap-tile">'
-                    '<div class="md-snap-icon ' + _cls + '">' + _emoji + '</div>'
+                    '<div class="md-snap-icon ' + _cls + '">' + ui_escape(_emoji) + '</div>'
                     '<div class="md-snap-text">'
-                    '<div class="md-snap-label">' + _lbl + '</div>'
-                    '<div class="md-snap-value">' + _val + '</div>'
+                    '<div class="md-snap-label">' + ui_text(_lbl, 40) + '</div>'
+                    '<div class="md-snap-value">' + ui_text(_val, 40) + '</div>'
                     '</div>'
                     '</div>'
                 )
@@ -4476,7 +4783,7 @@ if st.session_state.mode == "chat":
                                 _ago = ""
                         except Exception:
                             _ago = ""
-                        recent_html += '<div class="md-conv-row"><div class="md-conv-bubble">💬</div><div class="md-conv-title">' + _rt + '</div><div class="md-conv-time">' + _ago + '</div></div>'
+                        recent_html += '<div class="md-conv-row"><div class="md-conv-bubble">💬</div><div class="md-conv-title">' + ui_text(_rt, 40) + '</div><div class="md-conv-time">' + ui_text(_ago, 20) + '</div></div>'
                 else:
                     recent_html += '<div class="md-conv-row md-conv-empty">No past chats yet.</div>'
             else:
@@ -4522,28 +4829,15 @@ if st.session_state.mode == "chat":
             mem_parts.append("Conditions: " + ", ".join(mem["conditions"]))
         if mem.get("medications"):
             mem_parts.append("Medications: " + ", ".join(mem["medications"]))
-        st.markdown('<div class="memory-card"><div class="memory-title">MediChat remembers from this session:</div>' + "".join(["<div>- " + p + "</div>" for p in mem_parts]) + "</div>", unsafe_allow_html=True)
+        st.markdown('<div class="memory-card"><div class="memory-title">MediChat remembers from this session:</div>' + "".join(["<div>- " + ui_text(p, 220) + "</div>" for p in mem_parts]) + "</div>", unsafe_allow_html=True)
 
     show_hero = (not st.session_state.messages) and (not st.session_state.patient_name)
 
     if show_hero:
         st.markdown(
-            '<div class="hero-wrap">'
-            '<div class="hero-eyebrow">Live · Testing Stage</div>'
-            '<div class="hero-title">Your private clinical AI companion.</div>'
-            '<div class="hero-subtitle">Free. Multilingual. Evidence-grounded health guidance, with full transparency about sources and confidence.</div>'
-            '<div class="hero-trust-row">'
-            '<span class="trust-pill"><span class="trust-icon">🔒</span> Privacy by design</span>'
-            '<span class="trust-pill"><span class="trust-icon">📚</span> 1,000 medical sources</span>'
-            '<span class="trust-pill"><span class="trust-icon">🌐</span> 5 languages</span>'
-            '<span class="trust-pill"><span class="trust-icon">⚡</span> Powered by Claude Haiku</span>'
-            '</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
-        st.markdown(
-            '<div style="font-size:0.88rem;color:var(--clinical-800);margin:0.3rem 0 0.5rem 0;font-weight:500;">'
-            "What should I call you? <span style=\"color:var(--neutral-500);font-weight:400;font-size:0.82rem;\">(optional)</span>"
+            '<div class="md-name-card">'
+            '<div class="md-name-title">Personalise the conversation</div>'
+            '<div class="md-name-subtitle">Add a first name if you want MediChat to greet you more naturally. You can skip this and start chatting right away.</div>'
             '</div>',
             unsafe_allow_html=True
         )
@@ -4565,14 +4859,7 @@ if st.session_state.mode == "chat":
             st.session_state.patient_name = "Guest"
             st.rerun()
     elif not st.session_state.messages and st.session_state.patient_name:
-        display_name = "" if st.session_state.patient_name == "Guest" else ", " + st.session_state.patient_name
-        st.markdown(
-            '<div style="text-align:center;padding:1.2rem 1rem;color:var(--clinical-700);">'
-            '<div style="font-family:\'DM Serif Display\',serif;font-size:1.3rem;color:var(--clinical-900);margin-bottom:0.3rem;">Hi' + display_name + ', how can I help you today?</div>'
-            '<div style="font-size:0.85rem;color:var(--neutral-600);">Ask anything, upload an image or PDF report, or describe what is on your mind.</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
+        pass
 
     else:
         user_initial = "U"
@@ -4585,12 +4872,14 @@ if st.session_state.mode == "chat":
             content = msg.get("content", "")
             msg_type = msg.get("type", "text")
             if role == "user":
+                safe_content = ui_lines(content)
+                safe_initial = ui_text(user_initial, 2)
                 if msg_type == "image":
                     st.markdown('<span class="image-tag">Medical image uploaded for analysis</span>', unsafe_allow_html=True)
                     if content:
-                        st.markdown('<div class="user-wrap"><div class="user-bubble">' + content + '</div><div class="av av-user">' + user_initial + '</div></div>', unsafe_allow_html=True)
+                        st.markdown('<div class="user-wrap"><div class="user-bubble">' + safe_content + '</div><div class="av av-user">' + safe_initial + '</div></div>', unsafe_allow_html=True)
                 else:
-                    st.markdown('<div class="user-wrap"><div class="user-bubble">' + content + '</div><div class="av av-user">' + user_initial + '</div></div>', unsafe_allow_html=True)
+                    st.markdown('<div class="user-wrap"><div class="user-bubble">' + safe_content + '</div><div class="av av-user">' + safe_initial + '</div></div>', unsafe_allow_html=True)
             else:
                 st.markdown('<div class="bot-label">MediChat</div>', unsafe_allow_html=True)
                 st.markdown('<div class="bot-wrap"><div class="av av-bot">M</div><div class="bot-bubble">' + markdown_to_html(content) + '</div></div>', unsafe_allow_html=True)
@@ -4612,7 +4901,7 @@ if st.session_state.mode == "chat":
                 elif is_pdf_response:
                     source_tags = '<span class="source-tag">📄 PDF Report Analysis</span>'
                 else:
-                    source_tags = "".join(['<span class="source-tag">📚 ' + s + '</span>' for s in msg_sources])
+                    source_tags = "".join(['<span class="source-tag">📚 ' + ui_text(s, 50) + '</span>' for s in msg_sources])
 
                 if engine_html or source_tags:
                     st.markdown('<div class="source-row">' + engine_html + source_tags + '</div>', unsafe_allow_html=True)
@@ -4620,6 +4909,7 @@ if st.session_state.mode == "chat":
                 conf_level = msg.get("confidence")
                 conf_pct = msg.get("confidence_pct")
                 if conf_level and conf_pct and not is_image_response and engine_used != "system":
+                    conf_level = conf_level if conf_level in ("high", "medium", "low") else "low"
                     conf_label = {"high": "High Confidence", "medium": "Medium Confidence", "low": "Low Confidence"}.get(conf_level, "")
                     conf_color = {"high": "#22c55e", "medium": "#f59e0b", "low": "#ef4444"}.get(conf_level, "#64748b")
                     st.markdown(
@@ -4714,12 +5004,11 @@ if st.session_state.mode == "chat":
         is_pdf_upload = uploaded_image.name.lower().endswith(".pdf")
         if is_pdf_upload:
             st.markdown(
-                '<div style="display:flex;align-items:center;gap:0.7rem;padding:0.8rem 1rem;background:var(--clinical-50);border:1px solid var(--clinical-200);border-radius:12px;margin:0.5rem 0;">'
-                '<div style="width:40px;height:40px;background:var(--clinical-600);color:white;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem;">PDF</div>'
-                '<div style="flex:1;">'
-                '<div style="font-weight:600;font-size:0.88rem;color:var(--clinical-900);">' + uploaded_image.name + '</div>'
-                '<div style="font-size:0.75rem;color:var(--neutral-600);">Ready for analysis. Ask MediChat what you want to know about this report.</div>'
-
+                '<div class="md-file-preview">'
+                '<div class="md-file-icon">PDF</div>'
+                '<div style="flex:1;min-width:0;">'
+                '<div class="md-file-name">' + ui_text(uploaded_image.name, 90) + '</div>'
+                '<div class="md-file-help">Ready for analysis. Ask MediChat what you want to know about this report.</div>'
                 '</div>'
                 '</div>',
                 unsafe_allow_html=True
@@ -4777,31 +5066,38 @@ if st.session_state.mode == "chat":
         st.session_state.last_pdf_name = ""
         st.session_state.last_image_context = ""
         st.session_state.current_conversation_id = ""
+        st.session_state.pending_user_input = ""
         st.session_state.chat_input_key = st.session_state.get("chat_input_key", 0) + 1
         st.rerun()
 
-    if submit and (user_input.strip() or uploaded_image):
+    pending_user_input = st.session_state.get("pending_user_input", "")
+    effective_user_input = pending_user_input if pending_user_input else user_input
+    auto_submit = bool(pending_user_input)
+
+    if (submit or auto_submit) and (effective_user_input.strip() or uploaded_image):
+        if auto_submit:
+            st.session_state.pending_user_input = ""
         st.session_state.qcount += 1
         lang_instruction = LANGUAGES[st.session_state.selected_language]["lang_instruction"]
 
-        if user_input.strip():
+        if effective_user_input.strip():
             conv_text = " ".join([m.get("content", "") for m in st.session_state.messages if m.get("type") == "text"])
-            if is_meta_text(user_input):
+            if is_meta_text(effective_user_input):
                 # Pasted docs / test plans / app-feedback — not a symptom report.
                 st.session_state.emergency_detected = False
                 st.session_state.emergency_reason = ""
                 st.session_state.triage_assessment = None
             else:
-                is_emerg, reason = detect_emergency(user_input, conv_text)
+                is_emerg, reason = detect_emergency(effective_user_input, conv_text)
                 if is_emerg:
                     st.session_state.emergency_detected = True
                     st.session_state.emergency_reason = reason
-                st.session_state.triage_assessment = assess_triage_tier(user_input, conv_text, st.session_state.patient_memory)
+                st.session_state.triage_assessment = assess_triage_tier(effective_user_input, conv_text, st.session_state.patient_memory)
 
         if uploaded_image:
             is_pdf = uploaded_image.name.lower().endswith(".pdf")
             if is_pdf:
-                st.session_state.messages.append({"role": "user", "type": "pdf", "content": (user_input.strip() + " " if user_input.strip() else "") + "[PDF: " + uploaded_image.name + "]"})
+                st.session_state.messages.append({"role": "user", "type": "pdf", "content": (effective_user_input.strip() + " " if effective_user_input.strip() else "") + "[PDF: " + uploaded_image.name + "]"})
                 with st.spinner("Reading your medical report..."):
                     pdf_text = extract_pdf_text(uploaded_image)
                     if not pdf_text:
@@ -4810,27 +5106,27 @@ if st.session_state.mode == "chat":
                     else:
                         st.session_state.last_pdf_context = pdf_text
                         st.session_state.last_pdf_name = uploaded_image.name
-                        reply, engine_used = medichat_pdf_analysis(user_input, pdf_text, st.session_state.messages, lang_instruction)
+                        reply, engine_used = medichat_pdf_analysis(effective_user_input, pdf_text, st.session_state.messages, lang_instruction)
                         reply = strip_excessive_disclaimers(reply)
                 st.session_state.last_sources = ["PDF Report Analysis"]
                 st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75, "engine": engine_used})
                 st.session_state.uploader_key += 1
             else:
-                st.session_state.messages.append({"role": "user", "type": "image", "content": user_input.strip()})
+                st.session_state.messages.append({"role": "user", "type": "image", "content": effective_user_input.strip()})
                 with st.spinner("Analysing your image..."):
                     uploaded_image.seek(0)
-                    reply, vision_engine = medichat_vision(user_input, encode_image(uploaded_image), st.session_state.messages, lang_instruction)
+                    reply, vision_engine = medichat_vision(effective_user_input, encode_image(uploaded_image), st.session_state.messages, lang_instruction)
                     reply = strip_excessive_disclaimers(reply)
                 st.session_state.last_image_context = (
                     "User uploaded image: " + uploaded_image.name + "\n"
-                    "User's question about image: " + (user_input.strip() if user_input.strip() else "(no question, just the image)") + "\n"
+                    "User's question about image: " + (effective_user_input.strip() if effective_user_input.strip() else "(no question, just the image)") + "\n"
                     "Your visual analysis: " + reply
                 )
                 st.session_state.last_sources = ["Image Analysis"]
                 st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75, "engine": vision_engine})
                 st.session_state.uploader_key += 1
         else:
-            user_msg = {"role": "user", "type": "text", "content": user_input.strip()}
+            user_msg = {"role": "user", "type": "text", "content": effective_user_input.strip()}
             st.session_state.messages.append(user_msg)
             _t0 = time.time()
 
@@ -4858,7 +5154,7 @@ if st.session_state.mode == "chat":
                 final_text = ""
                 stream_metadata = None
                 try:
-                    for event in medichat_rag_stream(user_input, st.session_state.messages, lang_instruction, name_for_rag, st.session_state.get("last_pdf_context", ""), st.session_state.get("last_image_context", ""), past_chats_summary):
+                    for event in medichat_rag_stream(effective_user_input, st.session_state.messages, lang_instruction, name_for_rag, st.session_state.get("last_pdf_context", ""), st.session_state.get("last_image_context", ""), past_chats_summary):
                         kind = event[0]
                         if kind == "chunk":
                             final_text = event[2]
@@ -4907,7 +5203,7 @@ if st.session_state.mode == "chat":
                 final_text = final_text + alert_block
 
             _log_entry = {
-                "query": user_input.strip(),
+                "query": effective_user_input.strip(),
                 "confidence": conf_level,
                 "confidence_pct": conf_pct,
                 "sources": sources,
@@ -5339,9 +5635,9 @@ elif st.session_state.mode == "history":
                     '<div class="md-history-row">'
                     '<div class="md-history-bubble">💬</div>'
                     '<div class="md-history-mid">'
-                    '<div class="md-history-title">' + _ht + '</div>'
-                    '<div class="md-history-meta">' + str(_hc) + ' messages · ' + _ago_disp + '</div>'
-                    + ('<div class="md-history-preview">' + _preview + '</div>' if _preview else '') +
+                    '<div class="md-history-title">' + ui_text(_ht, 80) + '</div>'
+                    '<div class="md-history-meta">' + str(_hc) + ' messages · ' + ui_text(_ago_disp, 40) + '</div>'
+                    + ('<div class="md-history-preview">' + ui_text(_preview, 140) + '</div>' if _preview else '') +
                     '</div></div>',
                     unsafe_allow_html=True
                 )
@@ -5400,7 +5696,7 @@ elif st.session_state.mode == "overview":
             '<div class="md-rcard"><div class="md-metric-row" style="border:none;">'
             '<div class="md-metric-icon md-hp-violet">🌙</div>'
             '<div class="md-metric-mid"><div class="md-metric-label">Sleep last night</div>'
-            '<div class="md-metric-value">' + sleep_disp + '</div></div></div>',
+            '<div class="md-metric-value">' + ui_text(sleep_disp, 20) + '</div></div></div></div>',
             unsafe_allow_html=True
         )
         with st.form("sleep_form_today", clear_on_submit=True):
@@ -5408,7 +5704,6 @@ elif st.session_state.mode == "overview":
             if st.form_submit_button("Save sleep", use_container_width=True):
                 update_daily_metric("sleep_hours", float(sl_in))
                 st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
     with ov_d:
         pct_water = int(round((water_n / 8) * 100)) if water_n else 0
         st.markdown(
@@ -5416,7 +5711,7 @@ elif st.session_state.mode == "overview":
             '<div class="md-metric-icon md-hp-blue">💧</div>'
             '<div class="md-metric-mid"><div class="md-metric-label">Water today</div>'
             '<div class="md-metric-value">' + str(water_n) + ' / 8 glasses</div></div>'
-            '<div class="md-metric-status md-status-info">' + str(pct_water) + '%</div></div>',
+            '<div class="md-metric-status md-status-info">' + str(pct_water) + '%</div></div></div>',
             unsafe_allow_html=True
         )
         wcol_a, wcol_b = st.columns(2)
@@ -5428,7 +5723,6 @@ elif st.session_state.mode == "overview":
             if st.button("Reset", key="water_reset", use_container_width=True):
                 update_daily_metric("water_glasses", 0)
                 st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
     # 7-day history table
     st.markdown('<div class="md-smart-head" style="margin-top:1rem;"><div class="md-smart-title">Last 7 days</div></div>', unsafe_allow_html=True)
@@ -5437,9 +5731,9 @@ elif st.session_state.mode == "overview":
     rows_html += '<div style="font-weight:700;color:var(--md-text-2);">Day</div><div style="font-weight:700;color:var(--md-text-2);">Water</div><div style="font-weight:700;color:var(--md-text-2);">Sleep</div>'
     for d, m in history:
         sl = m.get("sleep_hours")
-        rows_html += '<div>' + d + '</div>'
+        rows_html += '<div>' + ui_text(d, 20) + '</div>'
         rows_html += '<div>' + str(int(m.get("water_glasses", 0) or 0)) + ' glasses</div>'
-        rows_html += '<div>' + (str(sl) + " h" if sl else "—") + '</div>'
+        rows_html += '<div>' + ui_text((str(sl) + " h" if sl else "—"), 20) + '</div>'
     rows_html += '</div></div>'
     st.markdown(rows_html, unsafe_allow_html=True)
 
@@ -5473,10 +5767,10 @@ elif st.session_state.mode == "medications":
             mh = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
             mh += '<div class="md-metric-icon md-hp-violet" style="width:42px;height:42px;flex-shrink:0;">💊</div>'
             mh += '<div style="flex:1;min-width:0;">'
-            mh += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + str(m.get("name", "")) + '</div>'
-            mh += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.15rem;">' + str(m.get("dose", "") or "Dose not specified") + ' · ' + str(m.get("frequency", "")) + (" · " + str(m.get("time_of_day")) if m.get("time_of_day") else "") + '</div>'
+            mh += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + ui_text(m.get("name", ""), 90) + '</div>'
+            mh += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.15rem;">' + ui_text(m.get("dose", "") or "Dose not specified", 40) + ' · ' + ui_text(m.get("frequency", ""), 40) + (" · " + ui_text(m.get("time_of_day"), 40) if m.get("time_of_day") else "") + '</div>'
             if m.get("notes"):
-                mh += '<div style="font-size:0.76rem;color:var(--md-text-2);margin-top:0.3rem;font-style:italic;">' + str(m.get("notes")) + '</div>'
+                mh += '<div style="font-size:0.76rem;color:var(--md-text-2);margin-top:0.3rem;font-style:italic;">' + ui_text(m.get("notes"), 260) + '</div>'
             mh += '</div></div></div>'
             st.markdown(mh, unsafe_allow_html=True)
             if st.button("Remove", key="del_med_" + str(m.get("id", "")), use_container_width=False):
@@ -5529,18 +5823,18 @@ elif st.session_state.mode == "appointments":
             ah = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
             ah += '<div class="md-metric-icon md-hp-blue" style="flex-shrink:0;">📅</div>'
             ah += '<div style="flex:1;min-width:0;">'
-            ah += '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;"><div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + str(a.get("title", "")) + '</div>'
+            ah += '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;"><div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + ui_text(a.get("title", ""), 90) + '</div>'
             ah += '<span class="md-metric-status ' + status_cls + '">' + status_lbl + '</span></div>'
-            ah += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.15rem;">' + date_disp + '</div>'
+            ah += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.15rem;">' + ui_text(date_disp, 60) + '</div>'
             details = []
             if a.get("doctor"):
-                details.append("👨‍⚕️ " + a["doctor"])
+                details.append("👨‍⚕️ " + ui_text(a["doctor"], 60))
             if a.get("location"):
-                details.append("📍 " + a["location"])
+                details.append("📍 " + ui_text(a["location"], 80))
             if details:
                 ah += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.2rem;">' + " &nbsp; ".join(details) + '</div>'
             if a.get("notes"):
-                ah += '<div style="font-size:0.76rem;color:var(--md-text-2);margin-top:0.3rem;font-style:italic;">' + str(a.get("notes")) + '</div>'
+                ah += '<div style="font-size:0.76rem;color:var(--md-text-2);margin-top:0.3rem;font-style:italic;">' + ui_text(a.get("notes"), 260) + '</div>'
             ah += '</div></div></div>'
             st.markdown(ah, unsafe_allow_html=True)
             if st.button("Remove", key="del_appt_" + str(a.get("id", "")), use_container_width=False):
@@ -5593,10 +5887,10 @@ elif st.session_state.mode == "records":
             rh = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
             rh += '<div class="md-metric-icon md-hp-green" style="width:42px;height:42px;flex-shrink:0;font-size:1.2rem;">' + ic + '</div>'
             rh += '<div style="flex:1;min-width:0;">'
-            rh += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.96rem;">' + str(r.get("name", "")) + '</div>'
-            rh += '<div style="font-size:0.74rem;color:var(--md-text-3);margin-top:0.15rem;">' + str(r.get("file_type", "")) + ' · ' + size_lbl + ' · uploaded ' + uploaded + '</div>'
+            rh += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.96rem;">' + ui_text(r.get("name", ""), 120) + '</div>'
+            rh += '<div style="font-size:0.74rem;color:var(--md-text-3);margin-top:0.15rem;">' + ui_text(r.get("file_type", ""), 30) + ' · ' + ui_text(size_lbl, 20) + ' · uploaded ' + ui_text(uploaded, 30) + '</div>'
             if r.get("summary"):
-                rh += '<details style="margin-top:0.4rem;"><summary style="cursor:pointer;font-size:0.78rem;color:var(--md-brand-2);font-weight:600;">View AI summary</summary><div style="font-size:0.8rem;color:var(--md-text-2);margin-top:0.4rem;line-height:1.5;">' + str(r.get("summary")).replace("\n", "<br>") + '</div></details>'
+                rh += '<details style="margin-top:0.4rem;"><summary style="cursor:pointer;font-size:0.78rem;color:var(--md-brand-2);font-weight:600;">View AI summary</summary><div style="font-size:0.8rem;color:var(--md-text-2);margin-top:0.4rem;line-height:1.5;">' + ui_lines(r.get("summary")) + '</div></details>'
             rh += '</div></div></div>'
             st.markdown(rh, unsafe_allow_html=True)
             if st.button("Remove", key="del_rec_" + str(r.get("id", "")), use_container_width=False):
@@ -5704,9 +5998,9 @@ elif st.session_state.mode == "insights":
             ih = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
             ih += '<div class="md-metric-icon md-hp-violet" style="width:42px;height:42px;flex-shrink:0;font-size:1.2rem;">' + icon + '</div>'
             ih += '<div style="flex:1;min-width:0;">'
-            ih += '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;"><div style="font-weight:700;color:var(--md-text-1);font-size:0.95rem;">' + title + '</div>'
-            ih += '<span class="md-metric-status ' + badge_cls + '">' + kind.upper() + '</span></div>'
-            ih += '<div style="font-size:0.85rem;color:var(--md-text-2);margin-top:0.3rem;line-height:1.5;">' + body + '</div>'
+            ih += '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;"><div style="font-weight:700;color:var(--md-text-1);font-size:0.95rem;">' + ui_text(title, 100) + '</div>'
+            ih += '<span class="md-metric-status ' + badge_cls + '">' + ui_text(kind.upper(), 12) + '</span></div>'
+            ih += '<div style="font-size:0.85rem;color:var(--md-text-2);margin-top:0.3rem;line-height:1.5;">' + ui_lines(body) + '</div>'
             ih += '</div></div></div>'
             st.markdown(ih, unsafe_allow_html=True)
 
