@@ -576,6 +576,9 @@ def start_new_chat_session():
     st.session_state.pending_user_input = ""
     st.session_state.chat_input_key = st.session_state.get("chat_input_key", 0) + 1
     st.session_state.uploader_key = st.session_state.get("uploader_key", 0) + 1
+    st.session_state.home_show_vision_upload = False
+    st.session_state.home_show_voice = False
+    st.session_state.voice_audio_key = st.session_state.get("voice_audio_key", 0) + 1
     st.session_state.assessment_stage = 0
     st.session_state.assessment_data = {}
     st.session_state.assessment_complete = False
@@ -2508,12 +2511,24 @@ st.markdown("""
 }
 
 .md-logo-image {
-    width: 44px;
-    height: 44px;
-    border-radius: 13px;
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
     object-fit: cover;
     flex-shrink: 0;
-    box-shadow: 0 8px 22px rgba(37, 99, 235, 0.14);
+    box-shadow: 0 12px 32px rgba(37, 99, 235, 0.18);
+}
+
+.md-logo-wrap {
+    gap: 0.85rem !important;
+    padding-bottom: 1.5rem !important;
+}
+.md-logo-text {
+    font-size: 1.22rem !important;
+    letter-spacing: 0 !important;
+}
+.md-logo-sub {
+    font-size: 0.76rem !important;
 }
 
 .md-home-greet-wrap {
@@ -2600,7 +2615,13 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
 }
 
 .md-ref-ask-shell {
-    margin-bottom: 0.7rem;
+    margin-bottom: 0.85rem;
+    animation: mdFadeUp 0.42s ease both;
+}
+
+@keyframes mdFadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .md-home-composer-note {
@@ -2609,38 +2630,130 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
     color: #64748b !important;
 }
 
-.md-smart-grid-buttons .stButton > button {
-    min-height: 120px !important;
-    border-radius: 20px !important;
-    text-align: left !important;
-    justify-content: flex-start !important;
-    align-items: flex-start !important;
-    white-space: pre-line !important;
-    line-height: 1.42 !important;
-    font-size: 0.85rem !important;
-    font-weight: 600 !important;
-    padding: 0.95rem 0.95rem !important;
-    background: rgba(255,255,255,0.92) !important;
-    border: 1px solid #e8eef8 !important;
-    box-shadow: 0 12px 30px rgba(15,23,42,0.045) !important;
+.md-action-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
 }
+.md-action-card {
+    position: relative;
+    min-height: 172px;
+    display: flex;
+    flex-direction: column;
+    text-decoration: none !important;
+    color: #101827 !important;
+    padding: 1.15rem 1.1rem;
+    border-radius: 24px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.82));
+    border: 1px solid rgba(226, 232, 240, 0.96);
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.055);
+    backdrop-filter: blur(18px);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    animation: mdFadeUp 0.48s ease both;
+}
+.md-action-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    border-color: rgba(147, 197, 253, 0.95);
+    box-shadow: 0 24px 54px rgba(15, 23, 42, 0.09);
+}
+.md-action-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.55rem !important;
+    margin-bottom: 1.15rem;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45);
+}
+.md-action-name {
+    color: #111827;
+    font-size: 0.98rem;
+    font-weight: 760;
+    line-height: 1.2;
+    margin-bottom: 0.42rem;
+}
+.md-action-desc {
+    color: #64748b;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    padding-right: 0.4rem;
+}
+.md-action-arrow {
+    position: absolute;
+    right: 1rem;
+    bottom: 1rem;
+    width: 34px;
+    height: 34px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    color: #0f172a;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid #e6edf7;
+    font-size: 1.15rem !important;
+}
+.md-accent-purple { background: #f2ebff; color: #7c3aed; }
+.md-accent-green { background: #e9fbf3; color: #10b981; }
+.md-accent-pink { background: #fff0f6; color: #ef4f85; }
+.md-accent-blue { background: #eaf6ff; color: #1d8cf8; }
 
-.md-smart-grid-buttons .stButton > button:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 18px 36px rgba(15,23,42,0.08) !important;
-    border-color: #cfddf5 !important;
+.md-vision-panel,
+.md-voice-panel {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin: 0.35rem 0 0.75rem 0;
+    padding: 0.9rem 1rem;
+    border-radius: 22px;
+    background: rgba(255,255,255,0.84);
+    border: 1px solid #e6eef8;
+    box-shadow: 0 12px 30px rgba(15,23,42,0.045);
+    animation: mdFadeUp 0.3s ease both;
+}
+.md-panel-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 15px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #e0f2fe, #eef2ff);
+    color: #2563eb;
+    font-size: 1.45rem !important;
+    flex-shrink: 0;
+}
+.md-panel-title {
+    font-size: 0.95rem;
+    font-weight: 760;
+    color: #0f172a;
+    line-height: 1.2;
+}
+.md-panel-subtitle {
+    font-size: 0.78rem;
+    color: #64748b;
+    line-height: 1.45;
+    margin-top: 0.18rem;
+}
+.md-home-file-preview {
+    border-radius: 18px !important;
+    background: rgba(255,255,255,0.92) !important;
 }
 
 .md-snap-card {
-    padding: 0.8rem 0.85rem !important;
+    padding: 1.05rem 1.05rem !important;
 }
 .md-snap-grid {
     gap: 0.38rem !important;
 }
 .md-snap-tile {
-    min-height: 44px !important;
-    padding: 0.42rem 0.55rem !important;
-    border-radius: 12px !important;
+    min-height: 68px !important;
+    padding: 0.72rem 0.78rem !important;
+    border-radius: 18px !important;
+    gap: 0.78rem !important;
 }
 .md-snap-label {
     font-size: 0.74rem !important;
@@ -2648,6 +2761,21 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
 .md-snap-value {
     font-size: 0.92rem !important;
 }
+.md-spark {
+    width: 74px;
+    height: 28px;
+    flex-shrink: 0;
+}
+.md-spark path {
+    fill: none;
+    stroke-width: 2.1;
+    stroke-linecap: round;
+    opacity: 0.78;
+}
+.md-line-pink path { stroke: #fb7185; }
+.md-line-green path { stroke: #34d399; }
+.md-line-purple path { stroke: #a78bfa; }
+.md-line-blue path { stroke: #38bdf8; }
 
 .md-tip {
     border-radius: 20px !important;
@@ -2764,21 +2892,21 @@ st.markdown("""
 }
 .md-logo-wrap {
     border-bottom: none !important;
-    padding: 0.35rem 0.45rem 1.25rem 0.45rem !important;
-    gap: 0.72rem !important;
+    padding: 0.35rem 0.45rem 1.55rem 0.45rem !important;
+    gap: 0.88rem !important;
 }
 .md-logo-mark {
-    width: 42px !important;
-    height: 42px !important;
-    border-radius: 13px !important;
+    width: 58px !important;
+    height: 58px !important;
+    border-radius: 18px !important;
     background: linear-gradient(135deg, #38bdf8, #2563eb 54%, #8b5cf6) !important;
-    box-shadow: 0 10px 24px rgba(37,99,235,0.22) !important;
+    box-shadow: 0 14px 32px rgba(37,99,235,0.22) !important;
 }
 .md-logo-text {
-    font-size: 1.08rem !important;
+    font-size: 1.24rem !important;
 }
 .md-logo-sub {
-    font-size: 0.68rem !important;
+    font-size: 0.76rem !important;
 }
 [data-testid="stSidebar"] hr {
     margin: 0.75rem 0 !important;
@@ -3242,6 +3370,37 @@ if ANTHROPIC_AVAILABLE and ANTHROPIC_API_KEY:
         anthropic_client = None
 
 CLAUDE_ACTIVE = anthropic_client is not None
+
+def transcribe_voice_note(audio_file):
+    """Transcribe a browser-recorded or uploaded audio note with Groq Whisper."""
+    if not audio_file:
+        return ""
+    try:
+        audio_file.seek(0)
+    except Exception:
+        pass
+    try:
+        audio_bytes = audio_file.read()
+    except Exception:
+        try:
+            audio_bytes = audio_file.getvalue()
+        except Exception:
+            audio_bytes = b""
+    if not audio_bytes:
+        return ""
+    file_name = getattr(audio_file, "name", "voice-note.wav") or "voice-note.wav"
+    mime_type = getattr(audio_file, "type", "audio/wav") or "audio/wav"
+    try:
+        transcription = groq_client.audio.transcriptions.create(
+            file=(file_name, audio_bytes, mime_type),
+            model=os.environ.get("GROQ_TRANSCRIPTION_MODEL", "whisper-large-v3-turbo"),
+            response_format="json",
+            temperature=0,
+        )
+        return (getattr(transcription, "text", "") or "").strip()
+    except Exception as e:
+        print("Voice transcription failed:", e)
+        return ""
 
 # ── Language Config ───────────────────────────────────────────────────
 LANGUAGES = {
@@ -4895,6 +5054,9 @@ if "session_started" not in st.session_state:
     st.session_state.pending_user_input = ""
     st.session_state.rx_reader_result = None
     st.session_state.rx_uploader_key = 0
+    st.session_state.home_show_vision_upload = False
+    st.session_state.home_show_voice = False
+    st.session_state.voice_audio_key = 0
 
 with st.sidebar:
     _logo_path = os.path.join(os.path.dirname(__file__), "assets", "medichat-logo.jpeg")
@@ -4921,32 +5083,36 @@ with st.sidebar:
     _mode = st.session_state.mode
     if st.session_state.is_guest and not st.session_state.is_authenticated:
         nav_items = [
-            ("home", "Home", "chat"),
-            ("new", "New Chat", "chat"),
-            ("symptom", "Symptoms Checker", "assessment"),
-            ("rx", "Prescription Reader", "rx_reader"),
-            ("insights", "Ai Insights", "insights"),
+            ("home", "Home", "chat", ":material/home:"),
+            ("new", "New Chat", "chat", ":material/chat_bubble:"),
+            ("symptom", "Symptoms Checker", "assessment", ":material/stethoscope:"),
+            ("rx", "Prescription Reader", "rx_reader", ":material/document_scanner:"),
+            ("insights", "Ai Insights", "insights", ":material/auto_awesome:"),
         ]
     else:
         nav_items = [
-            ("home", "Home", "chat"),
-            ("new", "New Chat", "chat"),
-            ("overview", "Health Overview", "overview"),
-            ("symptom", "Symptoms Checker", "assessment"),
-            ("records", "Health Records", "records"),
-            ("rx", "Prescription Reader", "rx_reader"),
-            ("meds", "Medications", "medications"),
-            ("appts", "Appointments", "appointments"),
-            ("insights", "Ai Insights", "insights"),
+            ("home", "Home", "chat", ":material/home:"),
+            ("new", "New Chat", "chat", ":material/chat_bubble:"),
+            ("overview", "Health Overview", "overview", ":material/monitoring:"),
+            ("symptom", "Symptoms Checker", "assessment", ":material/stethoscope:"),
+            ("records", "Health Records", "records", ":material/lab_profile:"),
+            ("rx", "Prescription Reader", "rx_reader", ":material/document_scanner:"),
+            ("meds", "Medications", "medications", ":material/pill:"),
+            ("appts", "Appointments", "appointments", ":material/calendar_month:"),
+            ("insights", "Ai Insights", "insights", ":material/auto_awesome:"),
         ]
-    for nav_key, nav_label, target_mode in nav_items:
+    for nav_key, nav_label, target_mode, nav_icon in nav_items:
         is_active = (target_mode == _mode and nav_key != "new") or (nav_key == "home" and _mode == "chat")
         # 'home' is the default chat view; 'new' is also chat but starts fresh
         if nav_key == "home" and _mode != "chat":
             is_active = False
         active_cls = "md-nav-active" if is_active else ""
         st.markdown('<div class="' + active_cls + '">', unsafe_allow_html=True)
-        if st.button(nav_label, key="nav_" + nav_key, use_container_width=True):
+        if st.button(nav_label, key="nav_" + nav_key, use_container_width=True, icon=nav_icon):
+            try:
+                st.query_params.clear()
+            except Exception:
+                pass
             if nav_key == "new":
                 start_new_chat_session()
             else:
@@ -5110,8 +5276,13 @@ _query_params = st.query_params
 _admin_requested = _query_params.get("admin", "") != ""
 _mode_from_url = str(_query_params.get("mode", "") or "").strip()
 _url_modes = {"chat", "overview", "assessment", "records", "rx_reader", "medications", "appointments", "insights", "history", "privacy"}
-if _mode_from_url in _url_modes and st.session_state.mode != _mode_from_url:
-    st.session_state.mode = _mode_from_url
+if _mode_from_url in _url_modes:
+    if st.session_state.mode != _mode_from_url:
+        st.session_state.mode = _mode_from_url
+    try:
+        del st.query_params["mode"]
+    except Exception:
+        pass
 
 if st.session_state.is_guest and not st.session_state.is_authenticated:
     _guest_allowed_modes = {"chat", "assessment", "rx_reader", "insights", "privacy"}
@@ -5315,6 +5486,8 @@ home_user_input = ""
 home_submit = False
 home_upload_clicked = False
 home_voice_clicked = False
+home_uploaded_image = None
+home_vision_analyze = False
 home_empty_chat = st.session_state.mode == "chat" and not st.session_state.messages
 
 if st.session_state.mode == "chat":
@@ -5386,10 +5559,93 @@ if st.session_state.mode == "chat":
                     home_submit = st.form_submit_button("➤", use_container_width=True, type="primary")
             st.markdown('</div>', unsafe_allow_html=True)
             if home_upload_clicked:
-                st.session_state.mode = "records" if st.session_state.is_authenticated else "rx_reader"
+                st.session_state.home_show_vision_upload = True
+                st.session_state.home_show_voice = False
                 st.rerun()
             if home_voice_clicked:
-                st.info("Voice input is not connected yet.")
+                st.session_state.home_show_voice = True
+                st.session_state.home_show_vision_upload = False
+                st.rerun()
+
+            if st.session_state.get("home_show_vision_upload", False):
+                st.markdown(
+                    '<div class="md-vision-panel">'
+                    '<div class="md-panel-icon material-symbols-rounded">image_search</div>'
+                    '<div><div class="md-panel-title">Vision Ai upload</div>'
+                    '<div class="md-panel-subtitle">Upload an X-ray, scan photo, skin image, or blood report PDF for cautious visual/report analysis.</div></div>'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
+                home_uploaded_image = st.file_uploader(
+                    "Upload for Vision Ai",
+                    type=["jpg", "jpeg", "png", "pdf"],
+                    label_visibility="collapsed",
+                    key="home_vision_uploader_" + str(st.session_state.uploader_key),
+                    help="Upload a medical image or PDF report for Vision Ai analysis.",
+                )
+                if home_uploaded_image:
+                    is_home_pdf = home_uploaded_image.name.lower().endswith(".pdf")
+                    if is_home_pdf:
+                        st.markdown(
+                            '<div class="md-file-preview md-home-file-preview">'
+                            '<div class="md-file-icon">PDF</div>'
+                            '<div style="flex:1;min-width:0;">'
+                            '<div class="md-file-name">' + ui_text(home_uploaded_image.name, 90) + '</div>'
+                            '<div class="md-file-help">Ready for Vision Ai report review.</div>'
+                            '</div>'
+                            '</div>',
+                            unsafe_allow_html=True
+                        )
+                    else:
+                        st.image(home_uploaded_image, caption="Ready for Vision Ai analysis", use_column_width=True)
+                vu1, vu2 = st.columns([1, 1])
+                with vu1:
+                    home_vision_analyze = st.button("Analyze with Vision Ai", key="home_vision_analyze", type="primary", use_container_width=True, icon=":material/image_search:")
+                    if home_vision_analyze and not home_uploaded_image:
+                        st.error("Please upload an image or PDF first.")
+                        home_vision_analyze = False
+                with vu2:
+                    if st.button("Cancel upload", key="home_vision_cancel", use_container_width=True, icon=":material/close:"):
+                        st.session_state.home_show_vision_upload = False
+                        st.session_state.uploader_key = st.session_state.get("uploader_key", 0) + 1
+                        st.rerun()
+
+            if st.session_state.get("home_show_voice", False):
+                st.markdown(
+                    '<div class="md-voice-panel">'
+                    '<div class="md-panel-icon material-symbols-rounded">mic</div>'
+                    '<div><div class="md-panel-title">Voice note</div>'
+                    '<div class="md-panel-subtitle">Record or upload a short voice question. MediChat will transcribe it before answering.</div></div>'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
+                voice_audio = None
+                if hasattr(st, "audio_input"):
+                    voice_audio = st.audio_input("Record your question", key="voice_audio_" + str(st.session_state.voice_audio_key))
+                else:
+                    voice_audio = st.file_uploader(
+                        "Upload a voice note",
+                        type=["wav", "mp3", "m4a", "ogg", "webm"],
+                        key="voice_upload_" + str(st.session_state.voice_audio_key),
+                        help="Your Streamlit version does not expose microphone recording, so upload an audio note instead.",
+                    )
+                vc1, vc2 = st.columns([1, 1])
+                with vc1:
+                    if st.button("Transcribe voice", key="voice_transcribe", type="primary", use_container_width=True, icon=":material/graphic_eq:"):
+                        transcript = transcribe_voice_note(voice_audio)
+                        if transcript:
+                            st.session_state.pending_user_input = transcript
+                            st.session_state.home_show_voice = False
+                            st.session_state.voice_audio_key = st.session_state.get("voice_audio_key", 0) + 1
+                            st.rerun()
+                        else:
+                            st.error("I could not transcribe that audio. Please try a clearer recording or type the question.")
+                with vc2:
+                    if st.button("Cancel voice", key="voice_cancel", use_container_width=True, icon=":material/close:"):
+                        st.session_state.home_show_voice = False
+                        st.session_state.voice_audio_key = st.session_state.get("voice_audio_key", 0) + 1
+                        st.rerun()
+
             st.markdown(
                 '<div class="md-home-composer-note">MediChat Ai can make mistakes. Please consult a healthcare professional for medical advice.</div>',
                 unsafe_allow_html=True
@@ -5398,21 +5654,24 @@ if st.session_state.mode == "chat":
             # ── Smart Actions (each one routes to a real feature) ────
             if st.session_state.is_authenticated:
                 st.markdown('<div class="md-smart-head"><div class="md-smart-title">Smart Actions</div></div>', unsafe_allow_html=True)
-                sa_cols = st.columns(4, gap="small")
                 sa_specs = [
-                    ("sa_sym", "Symptoms Checker", "Guided Ai assessment of your symptoms", "assessment", ":material/stethoscope:"),
-                    ("sa_rec", "Health Records", "Upload and manage your medical reports", "records", ":material/lab_profile:"),
-                    ("sa_ins", "Ai Insights", "Personalized insights based on your data", "insights", ":material/insights:"),
-                    ("sa_appt", "Appointments", "Schedule and manage your appointments", "appointments", ":material/calendar_month:"),
+                    ("stethoscope", "md-accent-purple", "Symptoms Checker", "Guided Ai assessment of your symptoms", "assessment"),
+                    ("medical_information", "md-accent-green", "Health Records", "Upload and manage your medical reports", "records"),
+                    ("monitor_heart", "md-accent-pink", "Ai Insights", "Personalized insights based on your data", "insights"),
+                    ("calendar_month", "md-accent-blue", "Appointments", "Schedule and manage your appointments", "appointments"),
                 ]
-                st.markdown('<div class="md-smart-grid-buttons">', unsafe_allow_html=True)
-                for i, (sk, nm, ds, action, ic) in enumerate(sa_specs):
-                    with sa_cols[i]:
-                        action_label = nm + "\n" + ds + "  →"
-                        if st.button(action_label, key=sk, use_container_width=True, icon=ic, help=ds):
-                            st.session_state.mode = action
-                            st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
+                sa_html = '<div class="md-action-grid">'
+                for icon_name, accent_cls, nm, ds, action in sa_specs:
+                    sa_html += (
+                        '<a class="md-action-card" href="?mode=' + ui_escape(action) + '" target="_self">'
+                        '<div class="md-action-icon ' + accent_cls + ' material-symbols-rounded">' + ui_escape(icon_name) + '</div>'
+                        '<div class="md-action-name">' + ui_text(nm, 50) + '</div>'
+                        '<div class="md-action-desc">' + ui_text(ds, 95) + '</div>'
+                        '<div class="md-action-arrow material-symbols-rounded">arrow_forward</div>'
+                        '</a>'
+                    )
+                sa_html += '</div>'
+                st.markdown(sa_html, unsafe_allow_html=True)
 
         if home_side is not None:
             with home_side:
@@ -5443,24 +5702,25 @@ if st.session_state.mode == "chat":
                 _water_count = int(get_daily_metrics().get("water_glasses", 0) or 0)
                 _water_display = (str(_water_count) + " / 8 glasses") if _water_count else "Not connected"
                 _tiles = [
-                    ("md-hp-pink", "♥", "Heart Rate", _heart_rate_display),
-                    ("md-hp-green", "⚘", "Steps", _steps_display),
-                    ("md-hp-violet", "☾", "Sleep", _sleep_display),
-                    ("md-hp-blue", "💧", "Water Intake", _water_display),
+                    ("md-accent-pink", "favorite", "Heart Rate", _heart_rate_display, "md-line-pink"),
+                    ("md-accent-green", "directions_walk", "Steps", _steps_display, "md-line-green"),
+                    ("md-accent-purple", "bedtime", "Sleep", _sleep_display, "md-line-purple"),
+                    ("md-accent-blue", "water_drop", "Water Intake", _water_display, "md-line-blue"),
                 ]
                 snap_html = (
                     '<div class="md-rcard md-snap-card">'
                     '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><div class="md-rcard-link">See all</div></div>'
                     '<div class="md-snap-grid">'
                 )
-                for _cls, _emoji, _lbl, _val in _tiles:
+                for _cls, _icon, _lbl, _val, _line_cls in _tiles:
                     snap_html += (
                         '<div class="md-snap-tile">'
-                        '<div class="md-snap-icon ' + _cls + '">' + ui_escape(_emoji) + '</div>'
+                        '<div class="md-snap-icon ' + _cls + ' material-symbols-rounded">' + ui_escape(_icon) + '</div>'
                         '<div class="md-snap-text">'
                         '<div class="md-snap-label">' + ui_text(_lbl, 40) + '</div>'
                         '<div class="md-snap-value">' + ui_text(_val, 40) + '</div>'
                         '</div>'
+                        '<svg class="md-spark ' + _line_cls + '" viewBox="0 0 96 28" aria-hidden="true"><path d="M2 18 C12 18 14 11 24 14 S38 24 48 15 S62 2 72 10 S84 19 94 13" /></svg>'
                         '</div>'
                     )
                 snap_html += '</div></div>'
@@ -5681,10 +5941,11 @@ if st.session_state.mode == "chat":
 
     # ── Text input + Send (inside form so Enter key submits) ────────────
     user_input = home_user_input
-    submit = home_submit
-    uploaded_image = None
+    submit = home_submit or home_vision_analyze
+    uploaded_image = home_uploaded_image
     clear = False
     if not home_empty_chat:
+        uploaded_image = None
         with st.form("chat_form", clear_on_submit=True):
             fc1, fc2 = st.columns([4, 1])
             with fc1:
@@ -5711,7 +5972,7 @@ if st.session_state.mode == "chat":
             clear = st.button("🗑  " + L["clear_btn"], use_container_width=True, key="main_clear_btn")
 
     # ── File preview (shown below button row once attached) ─────────────
-    if uploaded_image:
+    if uploaded_image and not home_empty_chat:
         is_pdf_upload = uploaded_image.name.lower().endswith(".pdf")
         if is_pdf_upload:
             st.markdown(
@@ -5813,6 +6074,7 @@ if st.session_state.mode == "chat":
                 st.session_state.last_sources = ["PDF Report Analysis"]
                 st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75, "engine": engine_used})
                 st.session_state.uploader_key += 1
+                st.session_state.home_show_vision_upload = False
             else:
                 st.session_state.messages.append({"role": "user", "type": "image", "content": effective_user_input.strip()})
                 if looks_like_prescription_request(effective_user_input):
@@ -5848,6 +6110,7 @@ if st.session_state.mode == "chat":
                     st.session_state.last_sources = ["Image Analysis"]
                     st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75, "engine": vision_engine})
                 st.session_state.uploader_key += 1
+                st.session_state.home_show_vision_upload = False
         else:
             user_msg = {"role": "user", "type": "text", "content": effective_user_input.strip()}
             st.session_state.messages.append(user_msg)
