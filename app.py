@@ -2930,6 +2930,59 @@ st.markdown("""
     color: #1d4ed8 !important;
     box-shadow: inset 0 0 0 1px rgba(96,165,250,0.15) !important;
 }
+
+/* Sidebar nav alignment: fixed icon column, fixed text start, active pill */
+[data-testid="stSidebar"] .stButton > button:has([data-testid="stIconMaterial"]) {
+    width: 100% !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    padding: 0 1.05rem !important;
+    border-radius: 16px !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+}
+[data-testid="stSidebar"] .stButton > button:has([data-testid="stIconMaterial"]) > div {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+}
+[data-testid="stSidebar"] .stButton > button:has([data-testid="stIconMaterial"]) [data-testid="stIconMaterial"] {
+    width: 24px !important;
+    min-width: 24px !important;
+    height: 24px !important;
+    margin-right: 0.86rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: currentColor !important;
+    font-size: 1.18rem !important;
+}
+[data-testid="stSidebar"] .stButton > button:has([data-testid="stIconMaterial"]) p,
+[data-testid="stSidebar"] .stButton > button:has([data-testid="stIconMaterial"]) span:not([data-testid="stIconMaterial"]) {
+    margin: 0 !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.1 !important;
+}
+[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #eef4ff, #f5f3ff) !important;
+    color: #1d4ed8 !important;
+    border: 1px solid rgba(147,197,253,0.28) !important;
+    box-shadow: inset 0 0 0 1px rgba(96,165,250,0.12), 0 10px 24px rgba(37,99,235,0.08) !important;
+}
+[data-testid="stSidebar"] .stButton > button[kind="secondary"]:has([data-testid="stIconMaterial"]) {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+}
+[data-testid="stSidebar"] .stButton > button[kind="secondary"]:has([data-testid="stIconMaterial"]):hover {
+    background: #f5f7ff !important;
+    border-color: rgba(226,232,240,0.9) !important;
+    color: #1d4ed8 !important;
+}
 .md-side-profile {
     margin-top: 1rem !important;
     padding: 0.75rem !important;
@@ -5108,7 +5161,7 @@ with st.sidebar:
             is_active = False
         active_cls = "md-nav-active" if is_active else ""
         st.markdown('<div class="' + active_cls + '">', unsafe_allow_html=True)
-        if st.button(nav_label, key="nav_" + nav_key, use_container_width=True, icon=nav_icon):
+        if st.button(nav_label, key="nav_" + nav_key, use_container_width=True, icon=nav_icon, type=("primary" if is_active else "secondary")):
             try:
                 st.query_params.clear()
             except Exception:
