@@ -5046,7 +5046,7 @@ with st.sidebar:
         st.session_state.mode = "privacy"
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sb-footer">' + APP_TITLE + '</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sb-footer">' + APP_TITLE + '<br><span style="font-size:0.58rem;color:#94a3b8;">Build ' + UI_BUILD_TAG + '</span></div>', unsafe_allow_html=True)
 
 L = LANGUAGES[st.session_state.selected_language]
 
