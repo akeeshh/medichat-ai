@@ -43,6 +43,7 @@ def _safe_int_env(name, default):
 APP_TITLE = "MediChat Ai"
 APP_SUBTITLE = "Your Ai Health Assistant"
 APP_VERSION_LABEL = APP_TITLE
+UI_BUILD_TAG = "2026-05-03-1600-aest"
 MEDICAL_REFERENCE_TARGET = max(1000, _safe_int_env("MEDICHAT_REFERENCE_TARGET", 5000))
 PRIVACY_POLICY_URL = st.secrets.get(
     "PRIVACY_POLICY_URL",
