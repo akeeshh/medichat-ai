@@ -1672,6 +1672,13 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
     transform: translateY(-1px);
     box-shadow: var(--md-shadow-md) !important;
 }
+.md-chip-row .stButton > button p,
+.md-chip-row .stButton > button div {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    margin: 0 !important;
+}
 
 /* Hero card */
 .md-hero {
@@ -2097,25 +2104,24 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
 
 /* ── Snapshot grid (uniform height + width tiles) ── */
 .md-snap-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.7rem;
-    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 .md-snap-tile {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
-    padding: 0.7rem 0.8rem;
+    gap: 0.7rem;
+    padding: 0.65rem 0.8rem;
     border-radius: 12px;
     background: var(--md-bg);
     border: 1px solid var(--md-border);
-    min-height: 64px;
+    min-height: 52px;
     overflow: hidden;
 }
 .md-snap-icon {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -2129,27 +2135,27 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
     flex: 1;
     min-width: 0;
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+.md-snap-label {
+    font-size: 0.8rem;
+    color: var(--md-text-2);
+    font-weight: 500;
+    line-height: 1.2;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .md-snap-value {
     font-size: 1.05rem;
     font-weight: 700;
     color: var(--md-text-1);
     line-height: 1.2;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.md-snap-label {
-    font-size: 0.7rem;
-    color: var(--md-text-2);
-    font-weight: 500;
-    margin-top: 0.1rem;
-    line-height: 1.2;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 /* ── Recent Conversations rows ── */
@@ -2210,12 +2216,27 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
     font-size: 0.8rem !important;
     height: 34px !important;
     min-height: 34px !important;
+    max-height: 34px !important;
     line-height: 1.2 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+}
+/* Force the inner <p> / <div> text node to single-line ellipsis */
+[data-testid="stSidebar"] .md-past-chats .stButton > button > div,
+[data-testid="stSidebar"] .md-past-chats .stButton > button p,
+[data-testid="stSidebar"] .md-past-chats .stButton > button span {
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     display: block !important;
     width: 100% !important;
+    text-align: left !important;
+    margin: 0 !important;
+    line-height: 1.2 !important;
+    font-size: 0.8rem !important;
 }
 [data-testid="stSidebar"] .md-past-chats .stButton > button:hover {
     background: var(--md-bg) !important;
@@ -4305,10 +4326,10 @@ if st.session_state.mode == "chat":
         st.markdown('<div class="md-chip-row">', unsafe_allow_html=True)
         chip_specs = [
             ("🤕  Headache", "I have a headache and would like to understand what might be causing it."),
-            ("😴  Feeling tired", "I have been feeling unusually tired lately. What could be the reason?"),
-            ("🔍  Symptom check", "_route_assessment"),
-            ("💤  Sleep advice", "Can you suggest ways to improve my sleep quality?"),
-            ("💊  Medication question", "I have a question about a medication I am taking."),
+            ("😴  Tired", "I have been feeling unusually tired lately. What could be the reason?"),
+            ("🔍  Symptoms", "_route_assessment"),
+            ("💤  Sleep", "Can you suggest ways to improve my sleep quality?"),
+            ("💊  Meds", "I have a question about a medication I am taking."),
         ]
         chip_cols = st.columns(len(chip_specs))
         for i, (chip_label, chip_query) in enumerate(chip_specs):
@@ -4425,8 +4446,8 @@ if st.session_state.mode == "chat":
                     '<div class="md-snap-tile">'
                     '<div class="md-snap-icon ' + _cls + '">' + _emoji + '</div>'
                     '<div class="md-snap-text">'
-                    '<div class="md-snap-value">' + _val + '</div>'
                     '<div class="md-snap-label">' + _lbl + '</div>'
+                    '<div class="md-snap-value">' + _val + '</div>'
                     '</div>'
                     '</div>'
                 )
