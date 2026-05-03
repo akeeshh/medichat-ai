@@ -3865,7 +3865,8 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     letter-spacing: 0.14em !important;
     margin: 0.62rem 0 0.34rem 0 !important;
 }
-[class*="st-key-nav_"] .stButton > button {
+[data-testid="stSidebar"] div[class*="st-key-nav_"] button,
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button {
     min-height: 50px !important;
     height: 50px !important;
     border-radius: 14px !important;
@@ -3879,12 +3880,21 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     justify-content: flex-start !important;
     text-align: left !important;
 }
-[class*="st-key-nav_"] .stButton > button:hover {
+[data-testid="stSidebar"] div[class*="st-key-nav_"] button:hover,
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button:hover {
     background: #f6f9ff !important;
     border-color: #e2eafa !important;
     color: #1d4ed8 !important;
 }
-[class*="st-key-nav_"] .stButton > button [data-testid="stIconMaterial"] {
+[data-testid="stSidebar"] div[class*="st-key-nav_"] button > div,
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button > div {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] button [data-testid="stIconMaterial"],
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button [data-testid="stIconMaterial"] {
     width: 22px !important;
     min-width: 22px !important;
     height: 22px !important;
@@ -3897,19 +3907,30 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     margin-right: 0.68rem !important;
     font-size: 1rem !important;
 }
-[class*="st-key-nav_"] .stButton > button[kind="primary"] {
+[data-testid="stSidebar"] div[class*="st-key-nav_"] button p,
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button p {
+    margin: 0 !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] button[kind="primary"],
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button[kind="primary"] {
     background: linear-gradient(135deg, #eef2ff, #eff6ff) !important;
     border-color: #d7e5fb !important;
     color: #1d4ed8 !important;
     box-shadow: inset 0 0 0 1px rgba(191,219,254,0.42) !important;
 }
-[class*="st-key-nav_"] .stButton > button[kind="primary"] [data-testid="stIconMaterial"] {
+[data-testid="stSidebar"] div[class*="st-key-nav_"] button[kind="primary"] [data-testid="stIconMaterial"],
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button[kind="primary"] [data-testid="stIconMaterial"] {
     background: #2563eb !important;
     color: #ffffff !important;
 }
 
 /* Profile + sign out + new chat button polish */
-.st-key-profile_logout .stButton > button {
+[data-testid="stSidebar"] div.st-key-profile_logout button,
+[data-testid="stSidebar"] div.st-key-profile_logout .stButton > button {
     min-height: 38px !important;
     height: 38px !important;
     border-radius: 11px !important;
@@ -3918,11 +3939,13 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     color: #334155 !important;
     font-weight: 630 !important;
 }
-.st-key-profile_logout .stButton > button:hover {
+[data-testid="stSidebar"] div.st-key-profile_logout button:hover,
+[data-testid="stSidebar"] div.st-key-profile_logout .stButton > button:hover {
     border-color: #cfe1fb !important;
     background: #f8fbff !important;
 }
-.st-key-new_chat_btn .stButton > button {
+[data-testid="stSidebar"] div.st-key-new_chat_btn button,
+[data-testid="stSidebar"] div.st-key-new_chat_btn .stButton > button {
     min-height: 40px !important;
     height: 40px !important;
     border-radius: 12px !important;
@@ -3930,6 +3953,11 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     background: linear-gradient(135deg, #ffffff, #f8fbff) !important;
     color: #1d4ed8 !important;
     font-weight: 700 !important;
+}
+[data-testid="stSidebar"] div.st-key-new_chat_btn button:hover,
+[data-testid="stSidebar"] div.st-key-new_chat_btn .stButton > button:hover {
+    border-color: #bcd6fa !important;
+    background: #f4f8ff !important;
 }
 
 /* Keep sidebar cards cleaner */
