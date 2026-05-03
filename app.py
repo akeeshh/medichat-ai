@@ -18,7 +18,12 @@ import io
 import re
 import time
 import difflib
+import random
 from datetime import datetime, timedelta, date as _date
+try:
+    from zoneinfo import ZoneInfo
+except Exception:
+    ZoneInfo = None
 from fpdf import FPDF
 
 # Firebase for cross-session analytics (optional - fails gracefully if missing)
@@ -35,7 +40,9 @@ def _safe_int_env(name, default):
     except Exception:
         return default
 
-APP_VERSION_LABEL = "MediChat v6.0"
+APP_TITLE = "MediChat Ai"
+APP_SUBTITLE = "Your Ai Health Assistant"
+APP_VERSION_LABEL = APP_TITLE
 MEDICAL_REFERENCE_TARGET = max(1000, _safe_int_env("MEDICHAT_REFERENCE_TARGET", 5000))
 PRIVACY_POLICY_URL = st.secrets.get(
     "PRIVACY_POLICY_URL",
@@ -538,6 +545,44 @@ def ui_text(value, max_chars=None):
 
 def ui_lines(value):
     return ui_escape(value).replace("\n", "<br>")
+
+def get_user_local_now():
+    tz_name = ""
+    try:
+        tz_name = getattr(st.context, "timezone", "") or ""
+    except Exception:
+        tz_name = ""
+    if tz_name and ZoneInfo is not None:
+        try:
+            return datetime.now(ZoneInfo(tz_name))
+        except Exception:
+            pass
+    return datetime.now()
+
+def reset_prescription_reader_state():
+    st.session_state.rx_reader_result = None
+    st.session_state.rx_uploader_key = st.session_state.get("rx_uploader_key", 0) + 1
+
+def start_new_chat_session():
+    st.session_state.current_conversation_id = ""
+    st.session_state.messages = []
+    st.session_state.qcount = 0
+    st.session_state.feedback = {}
+    st.session_state.last_sources = []
+    st.session_state.last_pdf_context = ""
+    st.session_state.last_image_context = ""
+    st.session_state.emergency_detected = False
+    st.session_state.triage_assessment = None
+    st.session_state.pending_user_input = ""
+    st.session_state.chat_input_key = st.session_state.get("chat_input_key", 0) + 1
+    st.session_state.uploader_key = st.session_state.get("uploader_key", 0) + 1
+    st.session_state.assessment_stage = 0
+    st.session_state.assessment_data = {}
+    st.session_state.assessment_complete = False
+    st.session_state.assessment_report = None
+    st.session_state.assessment_parsed = None
+    st.session_state.mode = "chat"
+    reset_prescription_reader_state()
 
 st.markdown("""
 <style>
@@ -2446,6 +2491,148 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
 </style>
 """, unsafe_allow_html=True)
 
+# ── Final premium cleanup pass (reference-aligned) ─────────────────────
+st.markdown("""
+<style>
+.stApp {
+    background: #f7f8fc !important;
+}
+.main .block-container {
+    max-width: 1260px !important;
+}
+
+.md-logo-image {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 8px 22px rgba(37, 99, 235, 0.14);
+}
+
+.md-home-greet-wrap {
+    text-align: center;
+    margin: 0.35rem auto 1.35rem auto;
+}
+.md-home-greet-wrap .md-subgreet {
+    margin: 0 auto;
+    max-width: 48ch;
+}
+
+.main .stButton > button {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border: 1px solid #e4eaf3 !important;
+    border-radius: 14px !important;
+    color: #18233c !important;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04) !important;
+    transition: all 0.18s ease !important;
+}
+.main .stButton > button:hover {
+    border-color: #cfd9ea !important;
+    background: #ffffff !important;
+    transform: translateY(-1px);
+}
+
+.stForm [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
+.stForm [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+    background: linear-gradient(135deg, #3b82f6, #6366f1) !important;
+    border: none !important;
+    color: #ffffff !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 24px rgba(79, 70, 229, 0.24) !important;
+}
+.stForm [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"]:hover,
+.stForm [data-testid="stFormSubmitButton"] > button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #2563eb, #4f46e5) !important;
+}
+
+.md-chip-row .stButton > button {
+    min-height: 42px !important;
+    border-radius: 999px !important;
+    font-size: 0.84rem !important;
+    font-weight: 560 !important;
+    padding: 0.38rem 0.72rem !important;
+}
+
+.md-home-composer-wrap + div [data-testid="stForm"],
+.md-home-composer-wrap ~ div [data-testid="stForm"] {
+    background: rgba(255, 255, 255, 0.98) !important;
+    border: 1px solid #e7edf6 !important;
+    border-radius: 26px !important;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08) !important;
+    padding: 1rem 1rem 0.85rem 1rem !important;
+}
+
+.md-smart-grid-buttons .stButton > button {
+    min-height: 108px !important;
+    border-radius: 18px !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    white-space: pre-line !important;
+    line-height: 1.35 !important;
+    font-size: 0.84rem !important;
+    font-weight: 600 !important;
+    padding: 0.95rem 0.95rem !important;
+}
+
+.md-snap-card {
+    padding: 0.8rem 0.85rem !important;
+}
+.md-snap-grid {
+    gap: 0.38rem !important;
+}
+.md-snap-tile {
+    min-height: 44px !important;
+    padding: 0.42rem 0.55rem !important;
+    border-radius: 12px !important;
+}
+.md-snap-label {
+    font-size: 0.74rem !important;
+}
+.md-snap-value {
+    font-size: 0.92rem !important;
+}
+
+.md-tip {
+    border-radius: 20px !important;
+}
+
+.md-sidebar-bottom {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    padding-top: 0.65rem;
+    margin-top: 0.85rem;
+    background: linear-gradient(to top, rgba(255,255,255,0.98), rgba(255,255,255,0.88) 70%, rgba(255,255,255,0));
+}
+.md-sidebar-bottom .stButton > button {
+    justify-content: center !important;
+    text-align: center !important;
+    min-height: 42px !important;
+    border-radius: 12px !important;
+    font-weight: 650 !important;
+}
+
+@media (max-width: 980px) {
+    .main .block-container {
+        padding: 0.95rem 0.8rem 1.8rem 0.8rem !important;
+    }
+    .md-greet {
+        font-size: 1.52rem !important;
+    }
+    .md-home-composer-wrap + div [data-testid="stForm"],
+    .md-home-composer-wrap ~ div [data-testid="stForm"] {
+        border-radius: 20px !important;
+        padding: 0.85rem !important;
+    }
+    .md-smart-grid-buttons .stButton > button {
+        min-height: 96px !important;
+        font-size: 0.82rem !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ── UX refinement pass (final cascade layer) ─────────────────────────
 st.markdown("""
 <style>
@@ -3005,7 +3192,7 @@ LANGUAGES = {
     "English": {
         "flag": "🇦🇺",
         "greeting": "Hello! How can I help you today?",
-        "welcome_text": "I am MediChat, your friendly AI health assistant.<br>I remember everything you tell me during our conversation.<br><br>Or switch to Symptom Check for a guided assessment!",
+        "welcome_text": "I am MediChat, your friendly Ai health assistant.<br>I remember everything you tell me during our conversation.<br><br>Or switch to Symptom Check for a guided assessment!",
         "placeholder": "Type your health question here...",
         "send_btn": "Send to MediChat",
         "clear_btn": "Clear",
@@ -3040,7 +3227,7 @@ LANGUAGES = {
     "Tamil": {
         "flag": "🇱🇰",
         "greeting": "வணக்கம்! இன்று நான் உங்களுக்கு எப்படி உதவலாம்?",
-        "welcome_text": "நான் MediChat — உங்கள் நட்பான AI சுகாதார உதவியாளர்.<br>உரையாடலில் நீங்கள் சொல்வதை நான் நினைவில் வைத்திருப்பேன்.<br><br>வழிகாட்டப்பட்ட மதிப்பீட்டிற்கு அறிகுறி சரிபார்ப்புக்கு மாறலாம்!",
+        "welcome_text": "நான் MediChat — உங்கள் நட்பான Ai சுகாதார உதவியாளர்.<br>உரையாடலில் நீங்கள் சொல்வதை நான் நினைவில் வைத்திருப்பேன்.<br><br>வழிகாட்டப்பட்ட மதிப்பீட்டிற்கு அறிகுறி சரிபார்ப்புக்கு மாறலாம்!",
         "placeholder": "உங்கள் உடல்நல கேள்வியை இங்கே தட்டச்சு செய்யுங்கள்...",
         "send_btn": "MediChat க்கு அனுப்பவும்",
         "clear_btn": "அழிக்கவும்",
@@ -3075,7 +3262,7 @@ LANGUAGES = {
     "Sinhala": {
         "flag": "🇱🇰",
         "greeting": "ආයුබෝවන්! අද මට ඔබට කෙසේ උදව් කළ හැකිද?",
-        "welcome_text": "මම MediChat — ඔබේ මිත්‍රශීලී AI සෞඛ්‍ය සහායකයා.<br>ඔබ කියන සෑම දෙයක්ම මම මතක තබා ගනිමි.<br><br>මඟ පෙන්වූ තක්සේරු කිරීම සඳහා රෝග ලක්ෂණ පරීක්ෂාවට මාරු වන්න!",
+        "welcome_text": "මම MediChat — ඔබේ මිත්‍රශීලී Ai සෞඛ්‍ය සහායකයා.<br>ඔබ කියන සෑම දෙයක්ම මම මතක තබා ගනිමි.<br><br>මඟ පෙන්වූ තක්සේරු කිරීම සඳහා රෝග ලක්ෂණ පරීක්ෂාවට මාරු වන්න!",
         "placeholder": "ඔබේ සෞඛ්‍ය ප්‍රශ්නය මෙහි ටයිප් කරන්න...",
         "send_btn": "MediChat වෙත යවන්න",
         "clear_btn": "හිස් කරන්න",
@@ -3110,7 +3297,7 @@ LANGUAGES = {
     "Hindi": {
         "flag": "🇮🇳",
         "greeting": "नमस्ते! आज मैं आपकी कैसे मदद कर सकता हूं?",
-        "welcome_text": "मैं MediChat हूं — आपका मित्रवत AI स्वास्थ्य सहायक.<br>आप जो कुछ भी बताते हैं मैं याद रखता हूं.<br><br>निर्देशित मूल्यांकन के लिए लक्षण जांच पर स्विच करें!",
+        "welcome_text": "मैं MediChat हूं — आपका मित्रवत Ai स्वास्थ्य सहायक.<br>आप जो कुछ भी बताते हैं मैं याद रखता हूं.<br><br>निर्देशित मूल्यांकन के लिए लक्षण जांच पर स्विच करें!",
         "placeholder": "अपना स्वास्थ्य प्रश्न यहाँ टाइप करें...",
         "send_btn": "MediChat को भेजें",
         "clear_btn": "साफ करें",
@@ -3145,7 +3332,7 @@ LANGUAGES = {
     "Malayalam": {
         "flag": "🇮🇳",
         "greeting": "നമസ്കാരം! ഇന്ന് ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കാം?",
-        "welcome_text": "ഞാൻ MediChat — നിങ്ങളുടെ സൗഹൃദ AI ആരോഗ്യ സഹായി.<br>നിങ്ങൾ പറയുന്നതെല്ലാം ഞാൻ ഓർത്തിരിക്കും.<br><br>ഗൈഡഡ് അസസ്മെൻ്റിനായി സിംപ്റ്റം ചെക്കിലേക്ക് മാറുക!",
+        "welcome_text": "ഞാൻ MediChat — നിങ്ങളുടെ സൗഹൃദ Ai ആരോഗ്യ സഹായി.<br>നിങ്ങൾ പറയുന്നതെല്ലാം ഞാൻ ഓർത്തിരിക്കും.<br><br>ഗൈഡഡ് അസസ്മെൻ്റിനായി സിംപ്റ്റം ചെക്കിലേക്ക് മാറുക!",
         "placeholder": "നിങ്ങളുടെ ആരോഗ്യ ചോദ്യം ഇവിടെ ടൈപ്പ് ചെയ്യുക...",
         "send_btn": "MediChat-ലേക്ക് അയയ്ക്കുക",
         "clear_btn": "മായ്ക്കുക",
@@ -4393,7 +4580,7 @@ def generate_doctor_visit_summary(messages, patient_name=""):
     pdf.ln(3)
     pdf.set_font("Helvetica", "I", 7)
     pdf.set_text_color(120, 120, 120)
-    pdf.multi_cell(0, 4, "MediChat is a research prototype, not a medical device. This summary is generated by AI from a chat conversation and may contain errors or omissions. Always rely on your qualified healthcare professional for diagnosis and treatment decisions.")
+    pdf.multi_cell(0, 4, "MediChat is a research prototype, not a medical device. This summary is generated by Ai from a chat conversation and may contain errors or omissions. Always rely on your qualified healthcare professional for diagnosis and treatment decisions.")
     pdf.ln(2)
     pdf.cell(0, 4, APP_VERSION_LABEL, ln=True, align="C")
 
@@ -4506,6 +4693,9 @@ def generate_assessment_pdf(parsed, data, report_date):
     other = data.get("other_symptoms", "")
     if other and other.lower() not in ["no", "none", "n/a", "no other symptoms"]:
         info_row("Other Symptoms", other)
+    info_row("Known Conditions", data.get("known_conditions", "Not specified"))
+    info_row("Current Medications", data.get("current_medications", "Not specified"))
+    info_row("Red-flag Symptoms", data.get("red_flags", "Not specified"))
     info_row("Age Group", data.get("age", ""))
     info_row("Biological Sex", data.get("gender", ""))
     pdf.ln(4)
@@ -4539,7 +4729,7 @@ def generate_assessment_pdf(parsed, data, report_date):
     pdf.set_fill_color(255, 251, 235)
     pdf.set_text_color(146, 64, 14)
     pdf.set_font("Helvetica", "B", 8)
-    pdf.multi_cell(0, 6, "IMPORTANT DISCLAIMER: This report was generated by MediChat AI and does NOT constitute a medical diagnosis. Please share this with your doctor for professional evaluation and treatment.", fill=True)
+    pdf.multi_cell(0, 6, "IMPORTANT DISCLAIMER: This report was generated by MediChat Ai and does NOT constitute a medical diagnosis. Please share this with your doctor for professional evaluation and treatment.", fill=True)
     pdf.set_y(-18)
     pdf.set_text_color(148, 163, 184)
     pdf.set_font("Helvetica", "", 7)
@@ -4552,6 +4742,9 @@ ASSESSMENT_STAGES = [
     {"key": "severity", "question": "How severe is it on a scale of 1 to 10? (1 = mild, 10 = unbearable)", "hint": "", "options": ["1-2 (Mild)", "3-4 (Moderate)", "5-6 (Significant)", "7-8 (Severe)", "9-10 (Unbearable)"]},
     {"key": "pattern", "question": "Is it constant or does it come and go?", "hint": "", "options": ["Constant, always there", "Comes and goes", "Getting worse over time", "Getting better", "Only happens sometimes"]},
     {"key": "other_symptoms", "question": "Are you experiencing any other symptoms alongside this?", "hint": "e.g. nausea, dizziness, fever, fatigue... or select None", "options": ["No other symptoms", "Nausea or vomiting", "Fever or chills", "Dizziness", "Fatigue or weakness", "Other (type below)"]},
+    {"key": "known_conditions", "question": "Do you have any known medical conditions relevant to this symptom?", "hint": "This helps make triage safer and more accurate.", "options": ["No known conditions", "Diabetes", "Asthma", "High blood pressure", "Heart condition", "Pregnancy", "Other (type below)"]},
+    {"key": "current_medications", "question": "Are you currently taking any medications?", "hint": "List known meds if relevant. You can type specific names below.", "options": ["No current medications", "Yes, regular medications", "Yes, as-needed medications", "Not sure", "Other (type below)"]},
+    {"key": "red_flags", "question": "Any red-flag symptoms right now?", "hint": "Select any urgent danger signs if present.", "options": ["No red flags", "Chest pain or pressure", "Trouble breathing", "Fainting or confusion", "Severe bleeding", "One-sided weakness or slurred speech", "Other (type below)"]},
     {"key": "age", "question": "How old are you?", "hint": "", "options": ["Under 18", "18-30", "31-45", "46-60", "61-75", "Over 75"]},
     {"key": "gender", "question": "What is your biological sex? (helps with medical accuracy)", "hint": "", "options": ["Male", "Female", "Prefer not to say"]},
 ]
@@ -4569,13 +4762,18 @@ def generate_assessment_report(assessment_data, lang_instruction=""):
         "- Severity: " + assessment_data.get("severity", "Not specified") + "\n"
         "- Pattern: " + assessment_data.get("pattern", "Not specified") + "\n"
         "- Other symptoms: " + assessment_data.get("other_symptoms", "None") + "\n"
+        "- Known conditions: " + assessment_data.get("known_conditions", "Not specified") + "\n"
+        "- Current medications: " + assessment_data.get("current_medications", "Not specified") + "\n"
+        "- Red-flag symptoms: " + assessment_data.get("red_flags", "Not specified") + "\n"
         "- Age group: " + assessment_data.get("age", "Not specified") + "\n"
         "- Biological sex: " + assessment_data.get("gender", "Not specified") + "\n\n"
         "INSTRUCTIONS:\n"
         "1. If the main symptom looks like a typo, interpret the most likely intended symptom.\n"
         "2. Consider all symptoms holistically.\n"
         "3. Provide realistic, evidence-based possible conditions.\n"
-        "4. Urgency must reflect actual severity.\n"
+        "4. Urgency must reflect severity, red-flag symptoms, age, and comorbidity risk.\n"
+        "5. If any red flags are present, escalate urgency and explicitly recommend urgent or emergency care.\n"
+        "6. Do not overdiagnose, use cautious probability language.\n"
         + lang_note + "\n\n"
         "Medical research context:\n" + context + "\n\n"
         "Respond in EXACTLY this format:\n"
@@ -4583,12 +4781,13 @@ def generate_assessment_report(assessment_data, lang_instruction=""):
         "CONDITIONS: [condition 1] | [condition 2] | [condition 3]\n"
         "NEXT STEPS: [step 1] | [step 2] | [step 3]\n"
         "SUMMARY: [2-3 warm, clear sentences summarising the assessment]\n"
+        "SAFETY: [one line with emergency fallback if symptoms worsen]\n"
     )
     r = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": prompt}], temperature=0.3, max_tokens=1024)
     return r.choices[0].message.content
 
 def parse_report(report_text):
-    parsed = {"urgency": "", "conditions": [], "next_steps": [], "summary": ""}
+    parsed = {"urgency": "", "conditions": [], "next_steps": [], "summary": "", "safety": ""}
     for line in report_text.strip().split("\n"):
         line = line.strip()
         if line.startswith("URGENCY:"):
@@ -4599,6 +4798,8 @@ def parse_report(report_text):
             parsed["next_steps"] = [s.strip() for s in line.replace("NEXT STEPS:", "").split("|") if s.strip()]
         elif line.startswith("SUMMARY:"):
             parsed["summary"] = line.replace("SUMMARY:", "").strip()
+        elif line.startswith("SAFETY:"):
+            parsed["safety"] = line.replace("SAFETY:", "").strip()
     return parsed
 
 if "session_started" not in st.session_state:
@@ -4637,14 +4838,24 @@ if "session_started" not in st.session_state:
     st.session_state.current_conversation_id = ""
     st.session_state.pending_user_input = ""
     st.session_state.rx_reader_result = None
+    st.session_state.rx_uploader_key = 0
 
 with st.sidebar:
+    _logo_path = os.path.join(os.path.dirname(__file__), "assets", "medichat-logo.jpeg")
+    _logo_block = '<div class="md-logo-mark">⚕</div>'
+    if os.path.exists(_logo_path):
+        try:
+            with open(_logo_path, "rb") as _lf:
+                _logo_b64 = base64.b64encode(_lf.read()).decode("utf-8")
+            _logo_block = '<img class="md-logo-image" src="data:image/jpeg;base64,' + _logo_b64 + '" alt="MediChat logo" />'
+        except Exception:
+            pass
     st.markdown(
         '<div class="md-logo-wrap">'
-        '<div class="md-logo-mark">⚕</div>'
+        + _logo_block +
         '<div>'
-        '<div class="md-logo-text">' + APP_VERSION_LABEL + '</div>'
-        '<div class="md-logo-sub">AI Health Assistant</div>'
+        '<div class="md-logo-text">' + APP_TITLE + '</div>'
+        '<div class="md-logo-sub">' + APP_SUBTITLE + '</div>'
         '</div>'
         '</div>',
         unsafe_allow_html=True
@@ -4652,18 +4863,26 @@ with st.sidebar:
 
     # ── Primary nav ─────────────────────────────────────────────
     _mode = st.session_state.mode
-    nav_items = [
-        ("home", "🏠  Home", "chat"),
-        ("new", "💬  New Chat", "chat"),
-        ("overview", "📊  Health Overview", "overview"),
-        ("symptom", "🩺  Symptoms Checker", "assessment"),
-        ("records", "📋  Health Records", "records"),
-        ("rx", "📝  Prescription Reader", "rx_reader"),
-        ("meds", "💊  Medications", "medications"),
-        ("appts", "📅  Appointments", "appointments"),
-        ("insights", "✨  AI Insights", "insights"),
-        ("privacy", "🔐  Privacy & Consent", "privacy"),
-    ]
+    if st.session_state.is_guest and not st.session_state.is_authenticated:
+        nav_items = [
+            ("home", "Home", "chat"),
+            ("new", "New Chat", "chat"),
+            ("symptom", "Symptoms Checker", "assessment"),
+            ("rx", "Prescription Reader", "rx_reader"),
+            ("insights", "Ai Insights", "insights"),
+        ]
+    else:
+        nav_items = [
+            ("home", "Home", "chat"),
+            ("new", "New Chat", "chat"),
+            ("overview", "Health Overview", "overview"),
+            ("symptom", "Symptoms Checker", "assessment"),
+            ("records", "Health Records", "records"),
+            ("rx", "Prescription Reader", "rx_reader"),
+            ("meds", "Medications", "medications"),
+            ("appts", "Appointments", "appointments"),
+            ("insights", "Ai Insights", "insights"),
+        ]
     for nav_key, nav_label, target_mode in nav_items:
         is_active = (target_mode == _mode and nav_key != "new") or (nav_key == "home" and _mode == "chat")
         # 'home' is the default chat view; 'new' is also chat but starts fresh
@@ -4673,16 +4892,7 @@ with st.sidebar:
         st.markdown('<div class="' + active_cls + '">', unsafe_allow_html=True)
         if st.button(nav_label, key="nav_" + nav_key, use_container_width=True):
             if nav_key == "new":
-                st.session_state.current_conversation_id = ""
-                st.session_state.messages = []
-                st.session_state.qcount = 0
-                st.session_state.feedback = {}
-                st.session_state.last_sources = []
-                st.session_state.last_pdf_context = ""
-                st.session_state.last_image_context = ""
-                st.session_state.emergency_detected = False
-                st.session_state.triage_assessment = None
-                st.session_state.mode = "chat"
+                start_new_chat_session()
             else:
                 st.session_state.mode = target_mode
             st.rerun()
@@ -4705,7 +4915,7 @@ with st.sidebar:
             unsafe_allow_html=True
         )
         if st.button("Sign out", use_container_width=True, key="profile_logout"):
-            for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context", "rx_reader_result"]:
+            for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context", "rx_reader_result", "rx_uploader_key"]:
                 if k in st.session_state:
                     if k in ("is_authenticated", "is_guest"):
                         st.session_state[k] = False
@@ -4715,6 +4925,8 @@ with st.sidebar:
                         st.session_state[k] = []
                     elif k == "rx_reader_result":
                         st.session_state[k] = None
+                    elif k == "rx_uploader_key":
+                        st.session_state[k] = 0
                     elif k == "qcount":
                         st.session_state[k] = 0
                     elif k == "feedback":
@@ -4728,14 +4940,7 @@ with st.sidebar:
         # ── Past chats history ─────────────────────────────────────
         st.markdown('<div class="sb-title">Your Chats</div>', unsafe_allow_html=True)
         if st.button("➕  New chat", use_container_width=True, key="new_chat_btn"):
-            st.session_state.current_conversation_id = ""
-            st.session_state.messages = []
-            st.session_state.qcount = 0
-            st.session_state.feedback = {}
-            st.session_state.last_sources = []
-            st.session_state.last_pdf_context = ""
-            st.session_state.last_image_context = ""
-            st.session_state.emergency_detected = False
+            start_new_chat_session()
             st.rerun()
 
         _convs = list_conversations(st.session_state.user_email_hash, limit=20)
@@ -4835,19 +5040,12 @@ with st.sidebar:
             '</div>',
             unsafe_allow_html=True
         )
-    st.markdown('<div class="sb-footer">' + APP_VERSION_LABEL + '</div>', unsafe_allow_html=True)
-
-st.markdown(
-    '<div class="md-statusbar">'
-    '<span class="md-stat-item md-stat-icon-blue">🛡️ HIPAA-style safeguards + APP alignment</span>'
-    '<span class="md-stat-item md-stat-icon-green">📚 ' + format(int(MEDICAL_REFERENCE_COUNT), ",") + ' medical references</span>'
-    '<span class="md-stat-item md-stat-icon-cyan">🚨 Emergency-aware triage</span>'
-    '<span style="margin-left:auto;display:inline-flex;align-items:center;gap:0.4rem;font-weight:600;color:#059669;">'
-    '<span class="md-pulse"></span> Live'
-    '</span>'
-    '</div>',
-    unsafe_allow_html=True
-)
+    st.markdown('<div class="md-sidebar-bottom">', unsafe_allow_html=True)
+    if st.button("Privacy & Consent", key="nav_privacy_bottom", use_container_width=True):
+        st.session_state.mode = "privacy"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sb-footer">' + APP_TITLE + '</div>', unsafe_allow_html=True)
 
 L = LANGUAGES[st.session_state.selected_language]
 
@@ -4858,6 +5056,11 @@ _mode_from_url = str(_query_params.get("mode", "") or "").strip()
 _url_modes = {"chat", "overview", "assessment", "records", "rx_reader", "medications", "appointments", "insights", "history", "privacy"}
 if _mode_from_url in _url_modes and st.session_state.mode != _mode_from_url:
     st.session_state.mode = _mode_from_url
+
+if st.session_state.is_guest and not st.session_state.is_authenticated:
+    _guest_allowed_modes = {"chat", "assessment", "rx_reader", "insights", "privacy"}
+    if st.session_state.mode not in _guest_allowed_modes:
+        st.session_state.mode = "chat"
 
 if _admin_requested and not st.session_state.admin_authenticated:
     st.markdown(
@@ -5059,51 +5262,52 @@ home_empty_chat = st.session_state.mode == "chat" and not st.session_state.messa
 if st.session_state.mode == "chat":
     # ── New Dashboard Home (only on empty chat) ─────────────────────
     if not st.session_state.messages:
-        _hour = datetime.now().hour
+        _local_now = get_user_local_now()
+        _hour = _local_now.hour
         _tod = "morning" if _hour < 12 else ("afternoon" if _hour < 18 else "evening")
-        _disp_name = (st.session_state.patient_name if st.session_state.patient_name and st.session_state.patient_name != "Guest" else "")
-        _greet = "Good " + _tod + (", " + _disp_name if _disp_name else "") + "  👋"
+        _greet = "Good " + _tod + " 👋"
         st.markdown(
-            '<div class="md-greet-wrap">'
+            '<div class="md-greet-wrap md-home-greet-wrap">'
             '<div class="md-greet">' + ui_text(_greet, 80) + '</div>'
             '<div class="md-subgreet">How can I help you with your health today?</div>'
             '</div>',
             unsafe_allow_html=True
         )
 
-        # Quick action chips — short labels, evenly spaced
-        st.markdown('<div class="md-chip-row">', unsafe_allow_html=True)
+        # Quick action chips
+        st.markdown('<div class="md-chip-row md-chip-row-compact">', unsafe_allow_html=True)
         chip_specs = [
-            ("🤕  Headache", "I have a headache and would like to understand what might be causing it."),
-            ("😴  Tired", "I have been feeling unusually tired lately. What could be the reason?"),
-            ("🔍  Symptoms", "_route_assessment"),
-            ("💤  Sleep", "Can you suggest ways to improve my sleep quality?"),
-            ("💊  Meds", "I have a question about a medication I am taking."),
+            ("Headache", "I have a headache and would like to understand what might be causing it."),
+            ("Tired", "I have been feeling unusually tired lately. What could be the reason?"),
+            ("Symptoms", "_route_assessment"),
+            ("Sleep", "Can you suggest ways to improve my sleep quality?"),
+            ("Meds", "I have a question about a medication I am taking."),
         ]
-        chip_idx = 0
-        for chip_row in (chip_specs[:3], chip_specs[3:]):
-            chip_cols = st.columns(len(chip_row))
-            for row_i, (chip_label, chip_query) in enumerate(chip_row):
-                with chip_cols[row_i]:
-                    i = chip_idx
-                    chip_idx += 1
-                    if st.button(chip_label, key="chip_" + str(i), use_container_width=True):
-                        if chip_query == "_route_assessment":
-                            st.session_state.mode = "assessment"
-                            st.rerun()
-                        else:
-                            st.session_state.pending_user_input = chip_query
-                            st.rerun()
+        chip_icons = {"Headache": "●", "Tired": "◐", "Symptoms": "⌕", "Sleep": "☾", "Meds": "✚"}
+        chip_cols = st.columns([1, 1, 1, 1, 1, 1.2], gap="small")
+        for i, (chip_label, chip_query) in enumerate(chip_specs):
+            with chip_cols[i]:
+                chip_text = chip_icons.get(chip_label, "•") + " " + chip_label
+                if st.button(chip_text, key="chip_" + str(i), use_container_width=True):
+                    if chip_query == "_route_assessment":
+                        st.session_state.mode = "assessment"
+                        st.rerun()
+                    else:
+                        st.session_state.pending_user_input = chip_query
+                        st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Two-column layout: hero on left, dashboard on right
-        home_main, home_side = st.columns([2.3, 1])
+        if st.session_state.is_authenticated:
+            home_main, home_side = st.columns([2.3, 1], gap="large")
+        else:
+            home_main = st.container()
+            home_side = None
 
         with home_main:
             st.markdown(
                 '<div class="md-hero">'
                 '<div class="md-hero-mark">M</div>'
-                '<div class="md-hero-title">MediChat AI <span class="md-hero-verified">✓</span></div>'
+                '<div class="md-hero-title">MediChat Ai <span class="md-hero-verified">✓</span></div>'
                 '<div class="md-hero-desc">A virtual doctor-style assistant for general health questions, symptom guidance, report summaries, and safer next-step planning.</div>'
                 '<div class="md-hero-pills">'
                 '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-green">✓</div><div><div class="md-hero-pill-title">Evidence-Based</div><div class="md-hero-pill-sub">' + format(int(MEDICAL_REFERENCE_COUNT), ",") + '+ Sources</div></div></div>'
@@ -5116,7 +5320,7 @@ if st.session_state.mode == "chat":
             )
             st.markdown('<div class="md-home-composer-wrap"></div>', unsafe_allow_html=True)
             with st.form("home_chat_form", clear_on_submit=True):
-                hc1, hc2 = st.columns([8, 1])
+                hc1, hc2 = st.columns([7.3, 1])
                 with hc1:
                     home_user_input = st.text_input(
                         "Start a chat",
@@ -5126,92 +5330,86 @@ if st.session_state.mode == "chat":
                     )
                 with hc2:
                     home_submit = st.form_submit_button("➤", use_container_width=True, type="primary")
+            hc_a, hc_b = st.columns([1, 1])
+            with hc_a:
+                if st.button("Upload", key="home_upload_route", use_container_width=True):
+                    st.session_state.mode = "records" if st.session_state.is_authenticated else "rx_reader"
+                    st.rerun()
+            with hc_b:
+                st.button("Voice", key="home_voice_stub", use_container_width=True, help="Voice capture can be connected to your preferred speech-to-text backend.")
             st.markdown(
                 '<div class="md-home-composer-note">MediChat provides general information only. For urgent symptoms, contact emergency services or a clinician.</div>',
                 unsafe_allow_html=True
             )
 
             # ── Smart Actions (each one routes to a real feature) ────
-            st.markdown('<div class="md-smart-head"><div class="md-smart-title">Smart Actions</div></div>', unsafe_allow_html=True)
-            sa_cols = st.columns(4)
-            sa_specs = [
-                ("sa_sym", "🩺", "md-si-cyan", "Symptoms Checker", "Guided 7-step clinical assessment", "assessment"),
-                ("sa_ins", "📈", "md-si-violet", "AI Insights", "Get tailored insight from your profile", "insights"),
-                ("sa_rec", "📋", "md-si-green", "Health Records", "Upload a PDF or image report", "records"),
-                ("sa_rx", "📝", "md-si-blue", "Prescription Reader", "Read handwritten prescriptions with confidence flags", "rx_reader"),
-            ]
-            for i, (sk, ic, cls, nm, ds, action) in enumerate(sa_specs):
-                with sa_cols[i]:
-                    st.markdown(
-                        '<div class="md-smart-card">'
-                        '<div class="md-smart-icon ' + cls + '">' + ic + '</div>'
-                        '<div class="md-smart-name">' + nm + '</div>'
-                        '<div class="md-smart-desc">' + ds + '</div>'
-                        '</div>',
-                        unsafe_allow_html=True
-                    )
-                    if st.button("Open", key=sk, use_container_width=True):
-                        if action == "assessment":
-                            st.session_state.mode = "assessment"
-                            st.rerun()
-                        elif action == "records":
-                            st.session_state.mode = "records"
-                            st.rerun()
-                        elif action == "insights":
-                            st.session_state.mode = "insights"
-                            st.rerun()
-
-        with home_side:
-            # ── Profile Snapshot (REAL data only) ────────────────────
-            _mem_now = st.session_state.patient_memory or {}
-            _cond_n = len(_mem_now.get("conditions") or [])
-            _med_n = len(_mem_now.get("medications") or [])
-            _sym_n = len(_mem_now.get("symptoms") or [])
-            _convs_total = 0
-            _last_visit_str = "—"
-            if st.session_state.is_authenticated and st.session_state.user_email_hash:
-                _all_convs = list_conversations(st.session_state.user_email_hash, limit=100)
-                _convs_total = len(_all_convs)
-                if _all_convs and _all_convs[0].get("last_updated"):
-                    try:
-                        _lu = _all_convs[0]["last_updated"]
-                        _delta = datetime.utcnow() - (_lu.replace(tzinfo=None) if _lu.tzinfo else _lu)
-                        _h = int(_delta.total_seconds() // 3600)
-                        _last_visit_str = (str(int(_delta.total_seconds() // 60)) + "m ago") if _h < 1 else (str(_h) + "h ago" if _h < 24 else str(_h // 24) + "d ago")
-                    except Exception:
-                        _last_visit_str = "recently"
-
-            _snap_title = "Your Snapshot" if st.session_state.is_authenticated else "Session Snapshot"
-            _conv_count_disp = str(_convs_total if st.session_state.is_authenticated else st.session_state.qcount)
-            _tiles = [
-                ("md-hp-blue", "💬", "Conversations", _conv_count_disp),
-                ("md-hp-green", "🩺", "Conditions", str(_cond_n)),
-                ("md-hp-violet", "💊", "Medications", str(_med_n)),
-                ("md-hp-pink", "📌", "Symptoms", str(_sym_n)),
-            ]
             if st.session_state.is_authenticated:
-                _tiles.append(("md-hp-blue", "🕒", "Last visit", _last_visit_str))
-            snap_html = (
-                '<div class="md-rcard md-snap-card">'
-                '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div></div>'
-                '<div class="md-snap-grid">'
-            )
-            for _cls, _emoji, _lbl, _val in _tiles:
-                snap_html += (
-                    '<div class="md-snap-tile">'
-                    '<div class="md-snap-icon ' + _cls + '">' + ui_escape(_emoji) + '</div>'
-                    '<div class="md-snap-text">'
-                    '<div class="md-snap-label">' + ui_text(_lbl, 40) + '</div>'
-                    '<div class="md-snap-value">' + ui_text(_val, 40) + '</div>'
-                    '</div>'
-                    '</div>'
-                )
-            snap_html += '</div></div>'
-            st.markdown(snap_html, unsafe_allow_html=True)
+                st.markdown('<div class="md-smart-head"><div class="md-smart-title">Smart Actions</div></div>', unsafe_allow_html=True)
+                sa_cols = st.columns(4, gap="small")
+                sa_specs = [
+                    ("sa_sym", "Symptoms Checker", "Guided symptom assessment", "assessment"),
+                    ("sa_rec", "Health Records", "Upload and review reports", "records"),
+                    ("sa_ins", "Ai Insights", "Profile-based insights", "insights"),
+                    ("sa_appt", "Appointments", "Manage upcoming visits", "appointments"),
+                ]
+                st.markdown('<div class="md-smart-grid-buttons">', unsafe_allow_html=True)
+                for i, (sk, nm, ds, action) in enumerate(sa_specs):
+                    with sa_cols[i]:
+                        if st.button(nm + "\n" + ds + "\n→", key=sk, use_container_width=True, help=ds):
+                            st.session_state.mode = action
+                            st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
-            # Recent Conversations (real, from Firestore)
-            recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div></div>'
-            if st.session_state.is_authenticated and st.session_state.user_email_hash:
+        if home_side is not None:
+            with home_side:
+                # ── Profile Snapshot (REAL data only) ────────────────────
+                _mem_now = st.session_state.patient_memory or {}
+                _cond_n = len(_mem_now.get("conditions") or [])
+                _med_n = len(_mem_now.get("medications") or [])
+                _sym_n = len(_mem_now.get("symptoms") or [])
+                _convs_total = 0
+                _last_visit_str = "—"
+                if st.session_state.is_authenticated and st.session_state.user_email_hash:
+                    _all_convs = list_conversations(st.session_state.user_email_hash, limit=100)
+                    _convs_total = len(_all_convs)
+                    if _all_convs and _all_convs[0].get("last_updated"):
+                        try:
+                            _lu = _all_convs[0]["last_updated"]
+                            _delta = datetime.utcnow() - (_lu.replace(tzinfo=None) if _lu.tzinfo else _lu)
+                            _h = int(_delta.total_seconds() // 3600)
+                            _last_visit_str = (str(int(_delta.total_seconds() // 60)) + "m ago") if _h < 1 else (str(_h) + "h ago" if _h < 24 else str(_h // 24) + "d ago")
+                        except Exception:
+                            _last_visit_str = "recently"
+
+                _snap_title = "Session Snapshot"
+                _conv_count_disp = str(_convs_total)
+                _tiles = [
+                    ("md-hp-blue", "💬", "Conversations", _conv_count_disp),
+                    ("md-hp-green", "🩺", "Conditions", str(_cond_n)),
+                    ("md-hp-violet", "💊", "Medications", str(_med_n)),
+                    ("md-hp-pink", "📌", "Symptoms", str(_sym_n)),
+                ]
+                _tiles.append(("md-hp-blue", "🕒", "Last visit", _last_visit_str))
+                snap_html = (
+                    '<div class="md-rcard md-snap-card">'
+                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div></div>'
+                    '<div class="md-snap-grid">'
+                )
+                for _cls, _emoji, _lbl, _val in _tiles:
+                    snap_html += (
+                        '<div class="md-snap-tile">'
+                        '<div class="md-snap-icon ' + _cls + '">' + ui_escape(_emoji) + '</div>'
+                        '<div class="md-snap-text">'
+                        '<div class="md-snap-label">' + ui_text(_lbl, 40) + '</div>'
+                        '<div class="md-snap-value">' + ui_text(_val, 40) + '</div>'
+                        '</div>'
+                        '</div>'
+                    )
+                snap_html += '</div></div>'
+                st.markdown(snap_html, unsafe_allow_html=True)
+
+                # Recent Conversations (real, from Firestore)
+                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div></div>'
                 _recent = list_conversations(st.session_state.user_email_hash, limit=4)
                 if _recent:
                     for _r in _recent:
@@ -5233,39 +5431,38 @@ if st.session_state.mode == "chat":
                             _ago = ""
                         recent_html += '<div class="md-conv-row"><div class="md-conv-bubble">💬</div><div class="md-conv-title">' + ui_text(_rt, 40) + '</div><div class="md-conv-time">' + ui_text(_ago, 20) + '</div></div>'
                 else:
-                    recent_html += '<div class="md-conv-row md-conv-empty">No past chats yet.</div>'
-            else:
-                recent_html += '<div class="md-conv-row md-conv-empty">Sign in to keep chat history.</div>'
-            recent_html += '</div>'
-            st.markdown(recent_html, unsafe_allow_html=True)
-            if st.session_state.is_authenticated:
+                    recent_html += '<div class="md-conv-row md-conv-empty">No saved conversations yet.</div>'
+                recent_html += '</div>'
+                st.markdown(recent_html, unsafe_allow_html=True)
                 st.markdown('<div class="md-view-all-wrap">', unsafe_allow_html=True)
                 if st.button("View all chats →", key="view_all_recent", use_container_width=True):
                     st.session_state.mode = "history"
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            # Health tip
-            tips = [
-                ("💧", "Stay Hydrated", "Drinking enough water helps maintain energy levels, supports digestion, and improves focus."),
-                ("🥗", "Eat the Rainbow", "A varied, colourful diet gives you the widest range of vitamins and antioxidants."),
-                ("🚶", "Walk After Meals", "A 10-minute walk after eating can help blood sugar levels and digestion."),
-                ("🧘", "Breathe Deeply", "Three slow deep breaths can lower stress hormones and steady your heart rate."),
-                ("😴", "Protect Your Sleep", "A consistent bedtime improves immunity, mood, and cognitive sharpness."),
-            ]
-            _ti = (st.session_state.qcount + datetime.now().day) % len(tips)
-            _ic, _tt, _td = tips[_ti]
-            st.markdown(
-                '<div class="md-tip">'
-                '<div class="md-tip-icon">' + _ic + '</div>'
-                '<div class="md-tip-body">'
-                '<div class="md-tip-eyebrow">Health Tip for You</div>'
-                '<div class="md-tip-title">' + _tt + '</div>'
-                '<div class="md-tip-desc">' + _td + '</div>'
-                '</div>'
-                '</div>',
-                unsafe_allow_html=True
-            )
+                # Health tip
+                tips = [
+                    ("💧", "Stay Hydrated", "Drinking enough water helps maintain energy levels, supports digestion, and improves focus."),
+                    ("🥗", "Eat the Rainbow", "A varied, colourful diet gives you the widest range of vitamins and antioxidants."),
+                    ("🚶", "Walk After Meals", "A 10-minute walk after eating can help blood sugar levels and digestion."),
+                    ("🧘", "Breathe Deeply", "Three slow deep breaths can lower stress hormones and steady your heart rate."),
+                    ("😴", "Protect Your Sleep", "A consistent bedtime improves immunity, mood, and cognitive sharpness."),
+                ]
+                if "tip_choice" not in st.session_state:
+                    st.session_state.tip_choice = random.randint(0, 10_000)
+                _ti = st.session_state.tip_choice % len(tips)
+                _ic, _tt, _td = tips[_ti]
+                st.markdown(
+                    '<div class="md-tip">'
+                    '<div class="md-tip-icon">' + _ic + '</div>'
+                    '<div class="md-tip-body">'
+                    '<div class="md-tip-eyebrow">Health Tip for You</div>'
+                    '<div class="md-tip-title">' + _tt + '</div>'
+                    '<div class="md-tip-desc">' + _td + '</div>'
+                    '</div>'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
 
     mem = st.session_state.patient_memory
 
@@ -5514,19 +5711,9 @@ if st.session_state.mode == "chat":
 
     if clear:
         # Start a fresh chat. The existing conversation stays saved in history.
-        st.session_state.messages = []
-        st.session_state.qcount = 0
-        st.session_state.feedback = {}
-        st.session_state.uploader_key += 1
-        st.session_state.emergency_detected = False
-        st.session_state.emergency_reason = ""
-        st.session_state.last_sources = []
-        st.session_state.last_pdf_context = ""
         st.session_state.last_pdf_name = ""
-        st.session_state.last_image_context = ""
-        st.session_state.current_conversation_id = ""
-        st.session_state.pending_user_input = ""
-        st.session_state.chat_input_key = st.session_state.get("chat_input_key", 0) + 1
+        st.session_state.emergency_reason = ""
+        start_new_chat_session()
         st.rerun()
 
     pending_user_input = st.session_state.get("pending_user_input", "")
@@ -6156,13 +6343,13 @@ elif st.session_state.mode == "overview":
         '<div class="md-wearable-card">'
         '<div class="md-wearable-icon">⌚</div>'
         '<div class="md-wearable-body">'
-        '<div class="md-wearable-title">Sync your smart watch for live data</div>'
-        '<div class="md-wearable-desc">Connect a wearable to track heart rate, steps and activity automatically. Until then, you can still log sleep and water below.</div>'
+        '<div class="md-wearable-title">Wearable data source: Not connected</div>'
+        '<div class="md-wearable-desc">Connect a wearable to track heart rate, steps, and activity automatically. Until then, health overview only uses your manually logged data.</div>'
         '<div class="md-wearable-actions">'
-        '<span class="md-wearable-pill">📡 Bluetooth</span>'
-        '<span class="md-wearable-pill">⌚ Apple Health</span>'
-        '<span class="md-wearable-pill">🤖 Google Fit</span>'
-        '<span class="md-wearable-pill md-wearable-soon">Coming soon</span>'
+        '<span class="md-wearable-pill">Bluetooth</span>'
+        '<span class="md-wearable-pill">Apple Health</span>'
+        '<span class="md-wearable-pill">Google Fit</span>'
+        '<span class="md-wearable-pill md-wearable-soon">Not connected</span>'
         '</div>'
         '</div>'
         '</div>',
@@ -6328,12 +6515,12 @@ elif st.session_state.mode == "appointments":
 elif st.session_state.mode == "records":
     # ── Health Records ──────────────────────────────────────────────
     st.markdown('<div class="md-greet-wrap"><div class="md-greet">Health Records</div>'
-                '<div class="md-subgreet">Upload medical PDFs or images. We extract text and store metadata only — file contents stay on your device unless you choose to keep an AI summary.</div></div>',
+                '<div class="md-subgreet">Upload medical PDFs or images. We extract text and store metadata only, file contents stay on your device unless you choose to keep an Ai summary.</div></div>',
                 unsafe_allow_html=True)
     with st.form("rec_upload_form", clear_on_submit=True):
         rec_file = st.file_uploader("Upload a medical record (PDF, JPG, PNG)", type=["pdf", "jpg", "jpeg", "png"], key="hr_upload")
         rec_label = st.text_input("Label this record", placeholder="e.g. Blood test - April 2026")
-        rec_keep_summary = st.checkbox("Generate and save an AI summary (recommended)", value=True)
+        rec_keep_summary = st.checkbox("Generate and save an Ai summary (recommended)", value=True)
         if st.form_submit_button("Save record", use_container_width=True, type="primary"):
             if not rec_file:
                 st.error("Please pick a file.")
@@ -6374,7 +6561,7 @@ elif st.session_state.mode == "records":
             rh += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.96rem;">' + ui_text(r.get("name", ""), 120) + '</div>'
             rh += '<div style="font-size:0.74rem;color:var(--md-text-3);margin-top:0.15rem;">' + ui_text(r.get("file_type", ""), 30) + ' · ' + ui_text(size_lbl, 20) + ' · uploaded ' + ui_text(uploaded, 30) + '</div>'
             if r.get("summary"):
-                rh += '<details style="margin-top:0.4rem;"><summary style="cursor:pointer;font-size:0.78rem;color:var(--md-brand-2);font-weight:600;">View AI summary</summary><div style="font-size:0.8rem;color:var(--md-text-2);margin-top:0.4rem;line-height:1.5;">' + ui_lines(r.get("summary")) + '</div></details>'
+                rh += '<details style="margin-top:0.4rem;"><summary style="cursor:pointer;font-size:0.78rem;color:var(--md-brand-2);font-weight:600;">View Ai summary</summary><div style="font-size:0.8rem;color:var(--md-text-2);margin-top:0.4rem;line-height:1.5;">' + ui_lines(r.get("summary")) + '</div></details>'
             rh += '</div></div></div>'
             st.markdown(rh, unsafe_allow_html=True)
             if st.button("Remove", key="del_rec_" + str(r.get("id", "")), use_container_width=False):
@@ -6383,15 +6570,24 @@ elif st.session_state.mode == "records":
 
 elif st.session_state.mode == "rx_reader":
     # ── Prescription Reader ────────────────────────────────────────
+    rx_uploader_widget_key = "rx_uploader_" + str(st.session_state.get("rx_uploader_key", 0))
     st.markdown(
         '<div class="md-greet-wrap"><div class="md-greet">Prescription Reader</div>'
         '<div class="md-subgreet">Upload a handwritten prescription photo. MediChat will transcribe text only, with confidence grading and an AU drug-name cross-check.</div></div>',
         unsafe_allow_html=True
     )
     with st.form("rx_reader_form", clear_on_submit=False):
-        rx_img = st.file_uploader("Upload prescription image (JPG, PNG)", type=["jpg", "jpeg", "png"], key="rx_uploader")
+        rx_img = st.file_uploader("Upload prescription image (JPG, PNG)", type=["jpg", "jpeg", "png"], key=rx_uploader_widget_key)
         rx_note = st.text_input("Optional context", placeholder="e.g. GP script from today, hard to read medication line")
-        rx_submit = st.form_submit_button("Read prescription", use_container_width=True, type="primary")
+        rx_btn_a, rx_btn_b = st.columns([3, 1])
+        with rx_btn_a:
+            rx_submit = st.form_submit_button("Read prescription", use_container_width=True, type="primary")
+        with rx_btn_b:
+            rx_clear = st.form_submit_button("Clear", use_container_width=True)
+
+    if rx_clear:
+        reset_prescription_reader_state()
+        st.rerun()
 
     if rx_submit:
         if not rx_img:
@@ -6430,6 +6626,9 @@ elif st.session_state.mode == "rx_reader":
             '</div>',
             unsafe_allow_html=True
         )
+        if st.button("Upload a new prescription", key="rx_reader_reset_after_result", use_container_width=True):
+            reset_prescription_reader_state()
+            st.rerun()
 
 elif st.session_state.mode == "privacy":
     # ── Privacy & Consent ─────────────────────────────────────────
@@ -6470,19 +6669,38 @@ elif st.session_state.mode == "privacy":
     )
 
 elif st.session_state.mode == "insights":
-    # ── AI Insights ─────────────────────────────────────────────────
-    st.markdown('<div class="md-greet-wrap"><div class="md-greet">AI Insights</div>'
+    # ── Ai Insights ─────────────────────────────────────────────────
+    st.markdown('<div class="md-greet-wrap"><div class="md-greet">Ai Insights</div>'
                 '<div class="md-subgreet">Personalised observations generated from what you have logged. Refreshes each time you visit.</div></div>',
                 unsafe_allow_html=True)
     insights = []
     mem = st.session_state.patient_memory or {}
     meds = list_medications()
     appts = list_appointments()
+    records = list_health_records()
+    saved_conversations = []
+    if st.session_state.is_authenticated and st.session_state.user_email_hash:
+        saved_conversations = list_conversations(st.session_state.user_email_hash, limit=20)
     history = get_metrics_history(7)
     today_m = get_daily_metrics()
 
     # Hydration
     water_today = int(today_m.get("water_glasses", 0) or 0)
+    sleeps = [m.get("sleep_hours") for _, m in history if m.get("sleep_hours") is not None]
+    has_profile_data = bool(mem.get("symptoms") or mem.get("conditions") or mem.get("medications"))
+    has_logged_metrics = (water_today > 0 or len(sleeps) > 0)
+    has_records = bool(records)
+    has_chat_history = bool(saved_conversations)
+
+    if not (has_profile_data or has_logged_metrics or has_records or has_chat_history or meds or appts):
+        st.markdown(
+            '<div class="md-rcard" style="text-align:center;color:var(--md-text-3);padding:1.6rem;">'
+            'Add more health information to generate insights.'
+            '</div>',
+            unsafe_allow_html=True
+        )
+        st.stop()
+
     if water_today < 4:
         insights.append(("💧", "Hydration is low today",
             "You have logged " + str(water_today) + " glasses today. Aim for at least 6-8 glasses across the day, more if active.",
@@ -6492,7 +6710,6 @@ elif st.session_state.mode == "insights":
             "You are at " + str(water_today) + " glasses. Keep it steady through the evening.", "good"))
 
     # Sleep
-    sleeps = [m.get("sleep_hours") for _, m in history if m.get("sleep_hours") is not None]
     if len(sleeps) >= 3:
         avg_sleep = round(sum(sleeps) / len(sleeps), 1)
         if avg_sleep < 6:
@@ -6537,8 +6754,16 @@ elif st.session_state.mode == "insights":
         insights.append(("📌", "Several active symptoms",
             "MediChat has " + str(sym_n) + " symptoms on file from your chats. Consider a Symptoms Checker run to see if a pattern emerges.", "warn"))
 
+    if records:
+        insights.append(("📄", "Health records available",
+            "You have " + str(len(records)) + " uploaded record(s). MediChat can use these to improve context during chat and summaries.", "info"))
+
+    if saved_conversations:
+        insights.append(("💬", "Conversation history linked",
+            str(len(saved_conversations)) + " saved conversation(s) are available for continuity of care context.", "info"))
+
     # AI-generated overall insight (one Claude call) if logged in and has data
-    if CLAUDE_ACTIVE and (meds or mem.get("conditions") or len(sleeps) >= 2):
+    if CLAUDE_ACTIVE and (meds or mem.get("conditions") or len(sleeps) >= 2 or records or saved_conversations):
         try:
             data_lines = []
             if mem.get("conditions"):
@@ -6562,7 +6787,7 @@ elif st.session_state.mode == "insights":
 
     if not insights:
         st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);padding:1.6rem;">'
-                    'Log a few days of water, sleep, and any medications to unlock insights here.</div>',
+                    'Add more health information to generate insights.</div>',
                     unsafe_allow_html=True)
     else:
         for icon, title, body, kind in insights:
@@ -6606,10 +6831,15 @@ else:
             st.info("**Pattern:** " + data.get("pattern", ""))
             st.info("**Age:** " + data.get("age", ""))
             st.info("**Sex:** " + data.get("gender", ""))
+            st.info("**Conditions:** " + data.get("known_conditions", "Not specified"))
+            st.info("**Medications:** " + data.get("current_medications", "Not specified"))
 
         other = data.get("other_symptoms", "")
         if other and other.lower() not in ["no", "none", "n/a", "no other symptoms"]:
             st.info("**Other symptoms:** " + other)
+        red_flags = data.get("red_flags", "")
+        if red_flags:
+            st.info("**Red flags:** " + red_flags)
 
         st.markdown("---")
         st.markdown("#### " + L["possible_conditions"])
@@ -6628,6 +6858,9 @@ else:
         summary = parsed.get("summary", "")
         if summary:
             st.markdown('<div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:12px;padding:1rem;font-size:0.92rem;color:#134e4a;line-height:1.6;">' + summary + "</div>", unsafe_allow_html=True)
+
+        if parsed.get("safety"):
+            st.markdown('<div class="md-inline-note" style="margin-top:0.6rem;">' + ui_text(parsed.get("safety"), 300) + '</div>', unsafe_allow_html=True)
 
         st.markdown("---")
         st.warning(L["disclaimer_short"])
@@ -6679,7 +6912,7 @@ else:
                     with ocols[i % num_cols]:
                         if st.button(opt, key="opt_" + str(stage) + "_" + str(i), use_container_width=True):
                             st.session_state.assessment_data[current["key"]] = opt
-                            if current["key"] == "main_symptom" and detect_emergency(opt)[0]:
+                            if current["key"] in ("main_symptom", "red_flags") and detect_emergency(opt)[0]:
                                 st.session_state.emergency_detected = True
                             st.session_state.assessment_stage += 1
                             if st.session_state.assessment_stage >= total:
@@ -6701,7 +6934,7 @@ else:
 
             if next_btn and typed.strip():
                 st.session_state.assessment_data[current["key"]] = typed.strip()
-                if current["key"] == "main_symptom" and detect_emergency(typed)[0]:
+                if current["key"] in ("main_symptom", "red_flags") and detect_emergency(typed)[0]:
                     st.session_state.emergency_detected = True
                 st.session_state.assessment_stage += 1
                 if st.session_state.assessment_stage >= total:
