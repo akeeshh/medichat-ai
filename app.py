@@ -13,10 +13,11 @@ import os
 import base64
 import hashlib
 import html
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageOps
 import io
 import re
 import time
+import difflib
 from datetime import datetime, timedelta, date as _date
 from fpdf import FPDF
 
@@ -28,11 +29,20 @@ try:
 except ImportError:
     FIREBASE_AVAILABLE = False
 
-st.set_page_config(
-    page_title="MediChat - Your Health Assistant",
-    page_icon="🏥",
-    layout="wide"
+def _safe_int_env(name, default):
+    try:
+        return int(os.environ.get(name, str(default)))
+    except Exception:
+        return default
+
+APP_VERSION_LABEL = "MediChat v6.0"
+MEDICAL_REFERENCE_TARGET = max(1000, _safe_int_env("MEDICHAT_REFERENCE_TARGET", 5000))
+PRIVACY_POLICY_URL = st.secrets.get(
+    "PRIVACY_POLICY_URL",
+    os.environ.get("PRIVACY_POLICY_URL", "?mode=privacy"),
 )
+
+st.set_page_config(page_title=APP_VERSION_LABEL, page_icon="🏥", layout="wide")
 
 # ── Firebase Initialization (cross-session analytics) ────────────────
 @st.cache_resource
@@ -1827,6 +1837,7 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
     margin-bottom: 0.5rem;
 }
 .md-si-cyan { background: var(--md-soft-blue); color: #0891b2; }
+.md-si-blue { background: #eff6ff; color: #1d4ed8; }
 .md-si-green { background: var(--md-soft-green); color: #047857; }
 .md-si-violet { background: var(--md-soft-violet); color: #6d28d9; }
 .md-si-pink { background: var(--md-soft-pink); color: #be185d; }
@@ -2471,6 +2482,25 @@ st.markdown("""
     -webkit-font-feature-settings: "liga" !important;
     -webkit-font-smoothing: antialiased !important;
 }
+[data-testid="stIconMaterial"],
+[data-testid="stIconMaterial"] * {
+    font-family: "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons Round", "Material Icons" !important;
+    font-weight: normal !important;
+    font-style: normal !important;
+    line-height: 1 !important;
+    letter-spacing: normal !important;
+    text-transform: none !important;
+    white-space: nowrap !important;
+    -webkit-font-feature-settings: "liga" !important;
+}
+[data-testid="collapsedControl"] [data-testid="stIconMaterial"] {
+    font-size: 0 !important;
+}
+[data-testid="collapsedControl"] [data-testid="stIconMaterial"]::after {
+    content: "☰";
+    font-size: 1.2rem;
+    color: #334155;
+}
 
 /* App shell closer to the reference mockup */
 .stApp {
@@ -2834,12 +2864,35 @@ st.markdown("""
 }
 
 @media (max-width: 980px) {
+    [data-testid="stToolbar"],
+    [data-testid="stDecoration"] {
+        display: none !important;
+    }
+    [data-testid="collapsedControl"] {
+        position: fixed !important;
+        top: 0.55rem !important;
+        left: 0.65rem !important;
+        z-index: 1002 !important;
+        background: rgba(255,255,255,0.92);
+        border-radius: 10px;
+        padding: 0.2rem;
+        box-shadow: 0 4px 12px rgba(15,23,42,0.12);
+    }
+    [data-testid="stSidebar"] {
+        width: min(86vw, 340px) !important;
+        min-width: min(86vw, 340px) !important;
+    }
+    [data-testid="stSidebar"][aria-expanded="false"] {
+        width: 0 !important;
+        min-width: 0 !important;
+    }
     .main .block-container {
-        padding: 1rem 0.85rem 2rem 0.85rem !important;
+        padding: 0.95rem 0.8rem 1.9rem 0.8rem !important;
     }
     .md-statusbar {
         gap: 0.55rem;
         align-items: flex-start;
+        margin-top: 0.2rem;
     }
     .md-statusbar span[style*="margin-left:auto"] {
         margin-left: 0 !important;
@@ -2874,6 +2927,9 @@ st.markdown("""
     .md-auth-title {
         font-size: 1.08rem;
     }
+    .md-smart-card {
+        min-height: 114px !important;
+    }
     .bot-bubble,
     .user-bubble {
         max-width: calc(100% - 46px);
@@ -2892,6 +2948,15 @@ st.markdown("""
 }
 
 @media (max-width: 640px) {
+    .md-chip-row [data-testid="stHorizontalBlock"] {
+        gap: 0.5rem !important;
+    }
+    .md-smart-head {
+        margin-top: 0.4rem !important;
+    }
+    .md-smart-card {
+        min-height: 106px !important;
+    }
     .md-statusbar {
         font-size: 0.68rem;
         padding: 0.55rem 0.7rem;
@@ -3119,16 +3184,18 @@ def load_rag_system():
     embedder = SentenceTransformer("all-MiniLM-L6-v2")
     pubmed_docs = []
     dialog_docs = []
+    pubmed_target = max(500, MEDICAL_REFERENCE_TARGET // 2)
+    dialog_target = max(500, MEDICAL_REFERENCE_TARGET - pubmed_target)
 
     try:
-        pubmed = load_dataset("qiaojin/PubMedQA", "pqa_labeled", split="train[:500]")
+        pubmed = load_dataset("qiaojin/PubMedQA", "pqa_labeled", split="train[:" + str(pubmed_target) + "]")
         pubmed_docs = ["[PubMed Research]\nQuestion: " + i["question"] + "\nAnswer: " + i["long_answer"] for i in pubmed]
     except Exception as e:
         print("PubMedQA load failed:", e)
 
     dialog_sources = [
-        ("BinKhoaLe1812/MedDialog-EN-100k", "train[:500]", "input", "output"),
-        ("shibing624/medical", "train[:500]", "instruction", "output"),
+        ("BinKhoaLe1812/MedDialog-EN-100k", "train[:" + str(dialog_target) + "]", "input", "output"),
+        ("shibing624/medical", "train[:" + str(dialog_target) + "]", "instruction", "output"),
     ]
     for ds_name, ds_split, in_key, out_key in dialog_sources:
         try:
@@ -3154,6 +3221,8 @@ def load_rag_system():
     docs = pubmed_docs + dialog_docs
     if not docs:
         raise RuntimeError("No medical documents could be loaded. Check network connectivity.")
+    if len(docs) > MEDICAL_REFERENCE_TARGET:
+        docs = docs[:MEDICAL_REFERENCE_TARGET]
 
     embeddings = embedder.encode(docs)
     idx = faiss.IndexFlatL2(embeddings.shape[1])
@@ -3166,6 +3235,210 @@ with st.spinner("Loading MediChat knowledge base..."):
     except Exception as e:
         st.error("MediChat knowledge base failed to load. Please refresh the page in a moment. Error: " + str(e))
         st.stop()
+
+MEDICAL_REFERENCE_COUNT = len(documents)
+
+AU_TOP_DRUGS_FALLBACK = {
+    "amoxicillin", "amoxicillin clavulanate", "azithromycin", "cephalexin", "doxycycline", "trimethoprim",
+    "metformin", "gliclazide", "empagliflozin", "sitagliptin", "insulin glargine",
+    "atorvastatin", "rosuvastatin", "simvastatin", "ezetimibe",
+    "amlodipine", "perindopril", "lisinopril", "ramipril", "losartan", "valsartan", "metoprolol",
+    "aspirin", "clopidogrel", "apixaban", "rivaroxaban", "warfarin",
+    "salbutamol", "budesonide", "fluticasone", "tiotropium", "montelukast",
+    "levothyroxine", "prednisone", "prednisolone", "omeprazole", "esomeprazole", "pantoprazole",
+    "ibuprofen", "naproxen", "diclofenac", "paracetamol", "codeine", "tramadol",
+    "sertraline", "escitalopram", "fluoxetine", "mirtazapine", "venlafaxine",
+    "quetiapine", "olanzapine", "risperidone", "lithium",
+    "ondansetron", "metoclopramide", "loperamide", "dimenhydrinate",
+    "nitrofurantoin", "ciprofloxacin", "valaciclovir", "acyclovir",
+}
+
+def load_known_drugs():
+    csv_path = st.secrets.get("AU_DRUGS_CSV_PATH", os.environ.get("AU_DRUGS_CSV_PATH", ""))
+    known = set(AU_TOP_DRUGS_FALLBACK)
+    if not csv_path:
+        return known
+    try:
+        with open(csv_path, "r", encoding="utf-8") as f:
+            for line in f:
+                token = (line or "").strip().lower()
+                if token and token not in {"drug", "name", "medication"}:
+                    known.add(token)
+    except Exception as e:
+        print("Known-drug list load failed:", e)
+    return known
+
+KNOWN_DRUGS = load_known_drugs()
+
+PRESCRIPTION_PROMPT = """You are a clinical transcription assistant. Your only job is to read the prescription image and transcribe what is written.
+You are NOT giving medical advice, NOT diagnosing, and NOT prescribing treatment.
+
+Read this order:
+1. Prescriber/clinic header
+2. Patient identifiers
+3. Medication line(s)
+4. Dose, frequency, route, quantity, repeats
+5. Date and signature
+
+Output this exact format:
+
+**MEDICATION**
+Reading: <best transcription>
+Matches known drug: <yes/no>
+Confidence: high | medium | low
+
+**STRENGTH / DOSE**
+Reading: <exact text or not specified>
+Confidence: high | medium | low
+
+**FREQUENCY / DIRECTIONS**
+As written: <exact text>
+Plain English: <short rewrite>
+Confidence: high | medium | low
+
+**ROUTE**
+Reading: <oral/topical/inhaled/injection/not specified>
+
+**QUANTITY**
+Reading: <exact text or not specified>
+
+**REFILLS**
+Reading: <exact text or not specified>
+
+**PRESCRIBER**
+Name: <as written or unclear>
+Date: <as written or unclear>
+
+**OVERALL CONFIDENCE**: high | medium | low
+**ILLEGIBLE SECTIONS**: <list regions that are genuinely unreadable>
+
+**IMPORTANT**: Transcription only. Do not use this output as dosing or diagnosis advice. Confirm with a pharmacist or prescriber.
+"""
+
+def preprocess_prescription(image_bytes):
+    img = Image.open(io.BytesIO(image_bytes))
+    img = ImageOps.exif_transpose(img)
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+    max_dim = 1568
+    if max(img.size) > max_dim:
+        img.thumbnail((max_dim, max_dim), Image.LANCZOS)
+    img = ImageEnhance.Contrast(img).enhance(1.35)
+    img = ImageEnhance.Sharpness(img).enhance(1.4)
+    out = io.BytesIO()
+    img.save(out, format="JPEG", quality=92)
+    return out.getvalue()
+
+def validate_drug_name(reading):
+    candidate = (reading or "").lower().strip()
+    if not candidate:
+        return {"match": "none"}
+    if candidate in KNOWN_DRUGS:
+        return {"match": "exact", "drug": candidate}
+    close = difflib.get_close_matches(candidate, KNOWN_DRUGS, n=3, cutoff=0.76)
+    if close:
+        return {"match": "close", "candidates": close}
+    return {"match": "none"}
+
+def extract_medication_reading(transcribed_text):
+    m = re.search(r"\*\*MEDICATION\*\*.*?Reading:\s*(.+)", transcribed_text or "", flags=re.IGNORECASE | re.DOTALL)
+    if not m:
+        return ""
+    line = (m.group(1) or "").splitlines()[0]
+    return line.strip()[:120]
+
+def read_prescription(image_bytes, user_note="", lang_instruction=""):
+    processed = preprocess_prescription(image_bytes)
+    b64 = base64.standard_b64encode(processed).decode("utf-8")
+    prompt = PRESCRIPTION_PROMPT + ("\n\n" + lang_instruction if lang_instruction else "")
+    if user_note and user_note.strip():
+        prompt += "\n\nContext note from user: " + user_note.strip()[:200]
+
+    reading = ""
+    model_used = "unavailable"
+    if CLAUDE_ACTIVE:
+        try:
+            first = anthropic_client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=1600,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b64}},
+                        {"type": "text", "text": prompt},
+                    ],
+                }],
+                temperature=0.2,
+            )
+            reading = first.content[0].text
+            model_used = CLAUDE_MODEL
+        except Exception as e:
+            print("Prescription reader Claude pass failed:", e)
+
+    if not reading:
+        try:
+            r = groq_client.chat.completions.create(
+                model="meta-llama/llama-4-scout-17b-16e-instruct",
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + b64}},
+                    ],
+                }],
+                temperature=0.2,
+                max_tokens=1800,
+            )
+            reading = r.choices[0].message.content
+            model_used = "groq-vision"
+        except Exception as e:
+            print("Prescription reader Groq pass failed:", e)
+            return {"reading": "I could not process this prescription image right now. Please try again with a clearer photo.", "model_used": "error", "overall_confidence": "low"}
+
+    low_conf = "overall confidence**: low" in reading.lower() or "overall confidence: low" in reading.lower()
+    if low_conf and CLAUDE_ACTIVE:
+        try:
+            second = anthropic_client.messages.create(
+                model=os.environ.get("CLAUDE_RX_ESCALATION_MODEL", "claude-opus-4-7"),
+                max_tokens=2200,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b64}},
+                        {"type": "text", "text": prompt + "\n\nA prior pass was low confidence. Re-check carefully using common Australian prescriptions."},
+                    ],
+                }],
+                temperature=0.2,
+            )
+            reading = second.content[0].text
+            model_used = os.environ.get("CLAUDE_RX_ESCALATION_MODEL", "claude-opus-4-7")
+        except Exception as e:
+            print("Prescription reader escalation failed:", e)
+
+    med_reading = extract_medication_reading(reading)
+    validation = validate_drug_name(med_reading)
+    if validation.get("match") == "close":
+        reading += "\n\n**Drug name check:** Closest known AU medications: " + ", ".join(validation.get("candidates", []))
+    elif validation.get("match") == "exact":
+        reading += "\n\n**Drug name check:** Exact match to known AU medication: " + validation.get("drug", "")
+
+    overall = "medium"
+    overall_match = re.search(r"\*\*OVERALL CONFIDENCE\*\*\s*:\s*(high|medium|low)", reading, flags=re.IGNORECASE)
+    if overall_match:
+        overall = overall_match.group(1).lower()
+
+    return {"reading": reading, "model_used": model_used, "overall_confidence": overall, "drug_validation": validation}
+
+def looks_like_prescription_request(text):
+    t = (text or "").lower()
+    if not t:
+        return False
+    keys = [
+        "prescription", "script", "handwriting", "doctor wrote", "doctor writing",
+        "medicine name", "medication name", "can you read this", "what does this say",
+        "dose on script", "rx", "chemist",
+    ]
+    return any(k in t for k in keys)
 
 def encode_image(f):
     img = Image.open(f)
@@ -3215,6 +3488,8 @@ def medichat_pdf_analysis(question, pdf_text, all_messages, lang_instruction="")
         "- Highlight ABNORMAL values clearly first, then briefly summarise normal results.\n"
         "- If everything is normal, say so positively.\n"
         "- Suggest specific, actionable next steps based on what's abnormal.\n"
+        "- Do not provide a final diagnosis. Use probability language and recommend clinician confirmation.\n"
+        "- Do not prescribe medicines, initiate treatment plans, or provide exact dosing changes.\n"
         "- Mention patient by name if known, sparingly.\n"
         "- One brief disclaimer at most. The app shows a permanent disclaimer.\n\n"
         "FORMATTING RULES (CRITICAL for readability):\n"
@@ -3589,8 +3864,9 @@ def calculate_confidence(distances):
         return "low", max(20, round((1 - avg_dist / 2.5) * 100))
 
 def get_sources_used(idxs):
-    pubmed_count = sum(1 for i in idxs if i < 500)
-    dialog_count = sum(1 for i in idxs if i >= 500)
+    pubmed_split = max(1, len(documents) // 2)
+    pubmed_count = sum(1 for i in idxs if i < pubmed_split)
+    dialog_count = sum(1 for i in idxs if i >= pubmed_split)
     sources = []
     if pubmed_count > 0:
         sources.append("PubMed Research (" + str(pubmed_count) + ")")
@@ -3600,7 +3876,7 @@ def get_sources_used(idxs):
 
 def medichat_rag(question, all_messages, lang_instruction="", patient_name=""):
     emb = embedder.encode([question]).astype("float32")
-    distances, idxs = index.search(emb, k=3)
+    distances, idxs = index.search(emb, k=6)
     context = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
     sources = get_sources_used(idxs[0])
     confidence_level, confidence_pct = calculate_confidence(distances[0].tolist())
@@ -3615,7 +3891,8 @@ def medichat_rag(question, all_messages, lang_instruction="", patient_name=""):
         "You are MediChat, a clinically competent AI health assistant. "
         "Patients often come to you after doctors have dismissed their concerns. "
         "Your job is to reason like a skilled GP: integrate the full symptom picture, "
-        "identify the most likely diagnosis, and give genuinely useful guidance.\n\n"
+        "offer likely possibilities and risk level, and give useful next-step guidance.\n\n"
+        "Safety boundary: never present a final diagnosis, never prescribe medication, and never provide new dosage instructions.\n\n"
     )
     if patient_name:
         system += "The patient's name is " + patient_name + ". Use their name sparingly, maximum once per response.\n\n"
@@ -3732,7 +4009,7 @@ def strip_excessive_disclaimers(text):
 
 def medichat_rag_stream(question, all_messages, lang_instruction="", patient_name="", pdf_context="", image_context="", past_chats_summary=""):
     emb = embedder.encode([question]).astype("float32")
-    distances, idxs = index.search(emb, k=3)
+    distances, idxs = index.search(emb, k=6)
     raw_context = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
     clean_context = sanitize_rag_context(raw_context)
     sources = get_sources_used(idxs[0])
@@ -3797,6 +4074,10 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
 
         "RULE 9 — REMEMBER THE CONVERSATION:\n"
         "If the patient already shared something, DO NOT ask them to repeat it.\n\n"
+
+        "RULE 10 — CLINICAL GUARDRAILS:\n"
+        "Do not give a final diagnosis. Do not prescribe medicine. Do not provide exact dosage calculations or dose changes. "
+        "Use risk-aware language, safety-net advice, and escalation triggers.\n\n"
     )
 
     if tone_complaint:
@@ -3937,6 +4218,7 @@ def medichat_vision(question, b64, all_messages, lang_instruction=""):
         "- Never use em-dashes or en-dashes. Use commas, semicolons, colons.\n"
         "- Never use # ## ### markdown headings.\n"
         "- Use bullet points (- item) on their own lines for lists.\n"
+        "- Do not provide a final diagnosis or medication dosage instructions.\n"
         "- One brief disclaimer at most."
         + memory_note + lang_note
     )
@@ -4113,7 +4395,7 @@ def generate_doctor_visit_summary(messages, patient_name=""):
     pdf.set_text_color(120, 120, 120)
     pdf.multi_cell(0, 4, "MediChat is a research prototype, not a medical device. This summary is generated by AI from a chat conversation and may contain errors or omissions. Always rely on your qualified healthcare professional for diagnosis and treatment decisions.")
     pdf.ln(2)
-    pdf.cell(0, 4, "MediChat v3.0 | ICT654 Group 7 | SISTC Melbourne 2026", ln=True, align="C")
+    pdf.cell(0, 4, APP_VERSION_LABEL, ln=True, align="C")
 
     pdf_bytes = bytes(pdf.output(dest="S"))
     return pdf_bytes, summary_text
@@ -4166,7 +4448,7 @@ def generate_chat_pdf(messages):
     pdf.set_y(-18)
     pdf.set_text_color(148, 163, 184)
     pdf.set_font("Helvetica", "", 7)
-    pdf.cell(0, 5, "MediChat v3.0 - ICT654 Group 7 - SISTC Melbourne 2026", align="C")
+    pdf.cell(0, 5, APP_VERSION_LABEL, align="C")
     return bytes(pdf.output())
 
 def generate_assessment_pdf(parsed, data, report_date):
@@ -4261,7 +4543,7 @@ def generate_assessment_pdf(parsed, data, report_date):
     pdf.set_y(-18)
     pdf.set_text_color(148, 163, 184)
     pdf.set_font("Helvetica", "", 7)
-    pdf.cell(0, 5, "MediChat v3.0 - ICT654 Group 7 - SISTC Melbourne 2026", align="C")
+    pdf.cell(0, 5, APP_VERSION_LABEL, align="C")
     return bytes(pdf.output())
 
 ASSESSMENT_STAGES = [
@@ -4354,13 +4636,14 @@ if "session_started" not in st.session_state:
     st.session_state.auth_view = "choose"
     st.session_state.current_conversation_id = ""
     st.session_state.pending_user_input = ""
+    st.session_state.rx_reader_result = None
 
 with st.sidebar:
     st.markdown(
         '<div class="md-logo-wrap">'
         '<div class="md-logo-mark">⚕</div>'
         '<div>'
-        '<div class="md-logo-text">MediChat</div>'
+        '<div class="md-logo-text">' + APP_VERSION_LABEL + '</div>'
         '<div class="md-logo-sub">AI Health Assistant</div>'
         '</div>'
         '</div>',
@@ -4375,9 +4658,11 @@ with st.sidebar:
         ("overview", "📊  Health Overview", "overview"),
         ("symptom", "🩺  Symptoms Checker", "assessment"),
         ("records", "📋  Health Records", "records"),
+        ("rx", "📝  Prescription Reader", "rx_reader"),
         ("meds", "💊  Medications", "medications"),
         ("appts", "📅  Appointments", "appointments"),
         ("insights", "✨  AI Insights", "insights"),
+        ("privacy", "🔐  Privacy & Consent", "privacy"),
     ]
     for nav_key, nav_label, target_mode in nav_items:
         is_active = (target_mode == _mode and nav_key != "new") or (nav_key == "home" and _mode == "chat")
@@ -4420,7 +4705,7 @@ with st.sidebar:
             unsafe_allow_html=True
         )
         if st.button("Sign out", use_container_width=True, key="profile_logout"):
-            for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context"]:
+            for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context", "rx_reader_result"]:
                 if k in st.session_state:
                     if k in ("is_authenticated", "is_guest"):
                         st.session_state[k] = False
@@ -4428,6 +4713,8 @@ with st.sidebar:
                         st.session_state[k] = {"symptoms": [], "conditions": [], "medications": []}
                     elif k == "messages":
                         st.session_state[k] = []
+                    elif k == "rx_reader_result":
+                        st.session_state[k] = None
                     elif k == "qcount":
                         st.session_state[k] = 0
                     elif k == "feedback":
@@ -4523,20 +4810,12 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Reference-style upgrade/info card. Kept as a UI preview card, not a billing flow.
-    st.markdown(
-        '<div class="md-premium">'
-        '<div class="md-premium-title">✦ MediChat Plus</div>'
-        '<div class="md-premium-desc">Advanced summaries, richer health insights and priority project features.</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
     # Care boundary note
     st.markdown(
         '<div class="md-care-note">'
         '<div class="md-care-title">Care boundaries</div>'
         '<div class="md-care-copy">MediChat gives general health information. For urgent symptoms, use local emergency services or a qualified clinician.</div>'
+        '<div style="margin-top:0.35rem;font-size:0.72rem;"><a href="' + ui_escape(PRIVACY_POLICY_URL) + '" target="_blank">Privacy Policy (APP + NDB)</a></div>'
         '</div>',
         unsafe_allow_html=True
     )
@@ -4556,12 +4835,12 @@ with st.sidebar:
             '</div>',
             unsafe_allow_html=True
         )
-    st.markdown('<div class="sb-footer">MediChat v6.0<br>ICT654 - Group 7 - SISTC 2026</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sb-footer">' + APP_VERSION_LABEL + '</div>', unsafe_allow_html=True)
 
 st.markdown(
     '<div class="md-statusbar">'
-    '<span class="md-stat-item md-stat-icon-blue">🛡️ Privacy-first prototype</span>'
-    '<span class="md-stat-item md-stat-icon-green">📚 1,000 medical references</span>'
+    '<span class="md-stat-item md-stat-icon-blue">🛡️ HIPAA-style safeguards + APP alignment</span>'
+    '<span class="md-stat-item md-stat-icon-green">📚 ' + format(int(MEDICAL_REFERENCE_COUNT), ",") + ' medical references</span>'
     '<span class="md-stat-item md-stat-icon-cyan">🚨 Emergency-aware triage</span>'
     '<span style="margin-left:auto;display:inline-flex;align-items:center;gap:0.4rem;font-weight:600;color:#059669;">'
     '<span class="md-pulse"></span> Live'
@@ -4572,9 +4851,13 @@ st.markdown(
 
 L = LANGUAGES[st.session_state.selected_language]
 
-ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", os.environ.get("ADMIN_PASSWORD", "MediChat@Group7#2026"))
+ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", os.environ.get("ADMIN_PASSWORD", "MediChatAdmin@2026"))
 _query_params = st.query_params
 _admin_requested = _query_params.get("admin", "") != ""
+_mode_from_url = str(_query_params.get("mode", "") or "").strip()
+_url_modes = {"chat", "overview", "assessment", "records", "rx_reader", "medications", "appointments", "insights", "history", "privacy"}
+if _mode_from_url in _url_modes and st.session_state.mode != _mode_from_url:
+    st.session_state.mode = _mode_from_url
 
 if _admin_requested and not st.session_state.admin_authenticated:
     st.markdown(
@@ -4610,7 +4893,7 @@ _is_admin = st.session_state.admin_authenticated
 # ── Patient Profile Auth Gate ────────────────────────────────────────
 # Only enforced when Firebase is connected and user is not admin.
 # Users can also continue as Guest (no persistence).
-if FIREBASE_ACTIVE and not _is_admin and not st.session_state.is_authenticated and not st.session_state.is_guest:
+if FIREBASE_ACTIVE and not _is_admin and not st.session_state.is_authenticated and not st.session_state.is_guest and st.session_state.mode != "privacy":
     st.markdown(
         '<div class="md-auth-hero">'
         '<div class="md-auth-icon">⚕</div>'
@@ -4629,11 +4912,11 @@ if FIREBASE_ACTIVE and not _is_admin and not st.session_state.is_authenticated a
             with tab_signin:
                 with st.form("signin_form", clear_on_submit=False):
                     si_email = st.text_input("Email", placeholder="you@example.com", key="si_email")
-                    si_pin = st.text_input("4-6 digit PIN", type="password", max_chars=6, key="si_pin")
+                    si_pin = st.text_input("4-8 digit PIN", type="password", max_chars=8, key="si_pin")
                     si_btn = st.form_submit_button("Sign in", use_container_width=True, type="primary")
                 if si_btn:
-                    if not si_email or "@" not in si_email or not si_pin or not si_pin.isdigit() or len(si_pin) < 4:
-                        st.error("Please enter a valid email and a 4-6 digit numeric PIN.")
+                    if not si_email or "@" not in si_email or not si_pin or not si_pin.isdigit() or len(si_pin) < 4 or len(si_pin) > 8:
+                        st.error("Please enter a valid email and a 4-8 digit numeric PIN.")
                     else:
                         profile, status = authenticate_profile(si_email, si_pin)
                         if status == "ok":
@@ -4665,14 +4948,14 @@ if FIREBASE_ACTIVE and not _is_admin and not st.session_state.is_authenticated a
                 with st.form("signup_form", clear_on_submit=False):
                     su_email = st.text_input("Email", placeholder="you@example.com", key="su_email")
                     su_name = st.text_input("First name (optional)", key="su_name", max_chars=30)
-                    su_pin = st.text_input("Choose a 4-6 digit PIN", type="password", max_chars=6, key="su_pin")
-                    su_pin2 = st.text_input("Confirm PIN", type="password", max_chars=6, key="su_pin2")
+                    su_pin = st.text_input("Choose a 4-8 digit PIN", type="password", max_chars=8, key="su_pin")
+                    su_pin2 = st.text_input("Confirm PIN", type="password", max_chars=8, key="su_pin2")
                     su_btn = st.form_submit_button("Create profile", use_container_width=True, type="primary")
                 if su_btn:
                     if not su_email or "@" not in su_email:
                         st.error("Please enter a valid email.")
-                    elif not su_pin or not su_pin.isdigit() or len(su_pin) < 4:
-                        st.error("PIN must be 4-6 digits, numbers only.")
+                    elif not su_pin or not su_pin.isdigit() or len(su_pin) < 4 or len(su_pin) > 8:
+                        st.error("PIN must be 4-8 digits, numbers only.")
                     elif su_pin != su_pin2:
                         st.error("PINs do not match.")
                     elif get_profile(hash_email(su_email)) is not None:
@@ -4699,7 +4982,16 @@ if FIREBASE_ACTIVE and not _is_admin and not st.session_state.is_authenticated a
                 if st.button("Continue as Guest", use_container_width=True, key="go_guest_btn"):
                     st.session_state.is_guest = True
                     st.rerun()
-        st.caption("Your email is stored as an irreversible hash. Your PIN is salted and hashed. Neither is reversible by the team.")
+        st.caption("Guest mode minimizes data collection. Signed profiles store irreversible email hashes and salted PIN hashes only, designed to align with APP and HIPAA-style safeguards.")
+        st.markdown(
+            '<div style="font-size:0.76rem;color:#475569;line-height:1.5;margin-top:0.35rem;">'
+            'Privacy policy includes Australian Privacy Principles (APPs), consent handling, and Notifiable Data Breach (NDB) response commitments.'
+            '</div>'
+            '<div style="margin-top:0.35rem;font-size:0.78rem;">'
+            '<a href="' + ui_escape(PRIVACY_POLICY_URL) + '" target="_blank">Open Privacy Policy (APP + NDB)</a>'
+            '</div>',
+            unsafe_allow_html=True
+        )
     st.stop()
 
 if _is_admin:
@@ -4814,7 +5106,7 @@ if st.session_state.mode == "chat":
                 '<div class="md-hero-title">MediChat AI <span class="md-hero-verified">✓</span></div>'
                 '<div class="md-hero-desc">A virtual doctor-style assistant for general health questions, symptom guidance, report summaries, and safer next-step planning.</div>'
                 '<div class="md-hero-pills">'
-                '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-green">✓</div><div><div class="md-hero-pill-title">Evidence-Based</div><div class="md-hero-pill-sub">1,000+ Sources</div></div></div>'
+                '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-green">✓</div><div><div class="md-hero-pill-title">Evidence-Based</div><div class="md-hero-pill-sub">' + format(int(MEDICAL_REFERENCE_COUNT), ",") + '+ Sources</div></div></div>'
                 '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-violet">🔒</div><div><div class="md-hero-pill-title">Private &amp; Secure</div><div class="md-hero-pill-sub">Your data is safe</div></div></div>'
                 '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-blue">🌐</div><div><div class="md-hero-pill-title">Multi-Language</div><div class="md-hero-pill-sub">5+ Languages</div></div></div>'
                 '<div class="md-hero-pill"><div class="md-hero-pill-icon md-hp-pink">⏰</div><div><div class="md-hero-pill-title">Available 24/7</div><div class="md-hero-pill-sub">Always here for you</div></div></div>'
@@ -4841,11 +5133,12 @@ if st.session_state.mode == "chat":
 
             # ── Smart Actions (each one routes to a real feature) ────
             st.markdown('<div class="md-smart-head"><div class="md-smart-title">Smart Actions</div></div>', unsafe_allow_html=True)
-            sa_cols = st.columns(3)
+            sa_cols = st.columns(4)
             sa_specs = [
                 ("sa_sym", "🩺", "md-si-cyan", "Symptoms Checker", "Guided 7-step clinical assessment", "assessment"),
                 ("sa_ins", "📈", "md-si-violet", "AI Insights", "Get tailored insight from your profile", "insights"),
                 ("sa_rec", "📋", "md-si-green", "Health Records", "Upload a PDF or image report", "records"),
+                ("sa_rx", "📝", "md-si-blue", "Prescription Reader", "Read handwritten prescriptions with confidence flags", "rx_reader"),
             ]
             for i, (sk, ic, cls, nm, ds, action) in enumerate(sa_specs):
                 with sa_cols[i]:
@@ -5041,6 +5334,7 @@ if st.session_state.mode == "chat":
                 engine_used = msg.get("engine", "")
                 msg_sources = msg.get("sources", [])
                 is_image_response = "Image Analysis" in msg_sources or engine_used == "groq-vision"
+                is_rx_response = "Prescription Reader" in msg_sources or str(engine_used).startswith("rx-reader")
                 is_pdf_response = "PDF Report Analysis" in msg_sources
 
                 engine_html = ""
@@ -5050,8 +5344,12 @@ if st.session_state.mode == "chat":
                     engine_html = '<span class="engine-badge engine-groq">Llama (fallback)</span>'
                 elif engine_used == "groq-vision":
                     engine_html = '<span class="engine-badge engine-vision">Llama Vision (fallback)</span>'
+                elif str(engine_used).startswith("rx-reader"):
+                    engine_html = '<span class="engine-badge engine-vision">Prescription Reader</span>'
 
-                if is_image_response:
+                if is_rx_response:
+                    source_tags = '<span class="source-tag">📝 Prescription Reader</span>'
+                elif is_image_response:
                     source_tags = '<span class="source-tag">📷 Image Analysis</span>'
                 elif is_pdf_response:
                     source_tags = '<span class="source-tag">📄 PDF Report Analysis</span>'
@@ -5063,7 +5361,7 @@ if st.session_state.mode == "chat":
 
                 conf_level = msg.get("confidence")
                 conf_pct = msg.get("confidence_pct")
-                if conf_level and conf_pct and not is_image_response and engine_used != "system":
+                if conf_level and conf_pct and not is_image_response and not is_rx_response and engine_used != "system":
                     conf_level = conf_level if conf_level in ("high", "medium", "low") else "low"
                     conf_label = {"high": "High Confidence", "medium": "Medium Confidence", "low": "Low Confidence"}.get(conf_level, "")
                     conf_color = {"high": "#22c55e", "medium": "#f59e0b", "low": "#ef4444"}.get(conf_level, "#64748b")
@@ -5274,17 +5572,38 @@ if st.session_state.mode == "chat":
                 st.session_state.uploader_key += 1
             else:
                 st.session_state.messages.append({"role": "user", "type": "image", "content": effective_user_input.strip()})
-                with st.spinner("Analysing your image..."):
-                    uploaded_image.seek(0)
-                    reply, vision_engine = medichat_vision(effective_user_input, encode_image(uploaded_image), st.session_state.messages, lang_instruction)
-                    reply = strip_excessive_disclaimers(reply)
-                st.session_state.last_image_context = (
-                    "User uploaded image: " + uploaded_image.name + "\n"
-                    "User's question about image: " + (effective_user_input.strip() if effective_user_input.strip() else "(no question, just the image)") + "\n"
-                    "Your visual analysis: " + reply
-                )
-                st.session_state.last_sources = ["Image Analysis"]
-                st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75, "engine": vision_engine})
+                if looks_like_prescription_request(effective_user_input):
+                    with st.spinner("Reading prescription handwriting..."):
+                        uploaded_image.seek(0)
+                        rx_result = read_prescription(
+                            uploaded_image.read(),
+                            user_note=effective_user_input,
+                            lang_instruction=lang_instruction,
+                        )
+                        reply = strip_excessive_disclaimers(rx_result.get("reading", ""))
+                        vision_engine = "rx-reader:" + rx_result.get("model_used", "unknown")
+                        conf_map = {"high": 88, "medium": 72, "low": 56}
+                        conf_level = rx_result.get("overall_confidence", "medium")
+                        conf_pct = conf_map.get(conf_level, 70)
+                    st.session_state.last_image_context = (
+                        "User uploaded prescription image: " + uploaded_image.name + "\n"
+                        "User's prompt: " + (effective_user_input.strip() if effective_user_input.strip() else "(no question provided)") + "\n"
+                        "Prescription transcription: " + reply
+                    )
+                    st.session_state.last_sources = ["Prescription Reader"]
+                    st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": conf_level, "confidence_pct": conf_pct, "engine": vision_engine})
+                else:
+                    with st.spinner("Analysing your image..."):
+                        uploaded_image.seek(0)
+                        reply, vision_engine = medichat_vision(effective_user_input, encode_image(uploaded_image), st.session_state.messages, lang_instruction)
+                        reply = strip_excessive_disclaimers(reply)
+                    st.session_state.last_image_context = (
+                        "User uploaded image: " + uploaded_image.name + "\n"
+                        "User's question about image: " + (effective_user_input.strip() if effective_user_input.strip() else "(no question, just the image)") + "\n"
+                        "Your visual analysis: " + reply
+                    )
+                    st.session_state.last_sources = ["Image Analysis"]
+                    st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75, "engine": vision_engine})
                 st.session_state.uploader_key += 1
         else:
             user_msg = {"role": "user", "type": "text", "content": effective_user_input.strip()}
@@ -6061,6 +6380,94 @@ elif st.session_state.mode == "records":
             if st.button("Remove", key="del_rec_" + str(r.get("id", "")), use_container_width=False):
                 delete_health_record(r.get("id"))
                 st.rerun()
+
+elif st.session_state.mode == "rx_reader":
+    # ── Prescription Reader ────────────────────────────────────────
+    st.markdown(
+        '<div class="md-greet-wrap"><div class="md-greet">Prescription Reader</div>'
+        '<div class="md-subgreet">Upload a handwritten prescription photo. MediChat will transcribe text only, with confidence grading and an AU drug-name cross-check.</div></div>',
+        unsafe_allow_html=True
+    )
+    with st.form("rx_reader_form", clear_on_submit=False):
+        rx_img = st.file_uploader("Upload prescription image (JPG, PNG)", type=["jpg", "jpeg", "png"], key="rx_uploader")
+        rx_note = st.text_input("Optional context", placeholder="e.g. GP script from today, hard to read medication line")
+        rx_submit = st.form_submit_button("Read prescription", use_container_width=True, type="primary")
+
+    if rx_submit:
+        if not rx_img:
+            st.error("Please upload a prescription image first.")
+        else:
+            with st.spinner("Reading prescription text..."):
+                try:
+                    rx_img.seek(0)
+                    st.session_state.rx_reader_result = read_prescription(
+                        rx_img.read(),
+                        user_note=rx_note,
+                        lang_instruction=LANGUAGES[st.session_state.selected_language]["lang_instruction"],
+                    )
+                except Exception as e:
+                    st.session_state.rx_reader_result = None
+                    st.error("Prescription reader failed. Please retry with a clearer image. Error: " + str(e))
+
+    rx_result = st.session_state.get("rx_reader_result")
+    if rx_result:
+        conf = (rx_result.get("overall_confidence") or "unknown").upper()
+        model_used = rx_result.get("model_used", "unknown")
+        st.markdown(
+            '<div class="md-rcard" style="margin-top:0.55rem;">'
+            '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;">'
+            '<span class="md-metric-status md-status-info">Model: ' + ui_text(model_used, 40) + '</span>'
+            '<span class="md-metric-status md-status-good">Overall confidence: ' + ui_text(conf, 10) + '</span>'
+            '</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown('<div class="md-rcard" style="margin-top:0.65rem;">' + markdown_to_html(rx_result.get("reading", "")) + '</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="md-inline-note" style="margin-top:0.65rem;">'
+            'Safety guardrail: this feature is transcription only. It does not prescribe therapy or confirm diagnosis. '
+            'Always confirm the script with a pharmacist or the prescriber.'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+elif st.session_state.mode == "privacy":
+    # ── Privacy & Consent ─────────────────────────────────────────
+    st.markdown(
+        '<div class="md-greet-wrap"><div class="md-greet">Privacy & Consent</div>'
+        '<div class="md-subgreet">MediChat uses HIPAA-style technical safeguards and is designed to align with the Australian Privacy Principles (APPs) and NDB obligations.</div></div>',
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        '<div class="md-rcard">'
+        '<div style="font-weight:800;color:var(--md-text-1);font-size:0.95rem;margin-bottom:0.45rem;">Alignment with Data Handling Standards</div>'
+        '<div style="font-size:0.84rem;color:var(--md-text-2);line-height:1.6;">'
+        '<strong>APP-first design:</strong> collection minimisation, purpose limitation, patient access and correction workflows, and secure retention controls.<br>'
+        '<strong>NDB-ready response:</strong> breach assessment and notification process aligned with the Australian Notifiable Data Breaches scheme for eligible incidents.<br>'
+        '<strong>HIPAA-style safeguards:</strong> role-aware access controls, auditability, and encrypted transit/storage patterns where supported by deployment infrastructure.<br>'
+        '<strong>Consent & transparency:</strong> users can continue in Guest mode with lower data retention, or create a profile with explicit consent flow.'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        '<div class="md-rcard" style="margin-top:0.7rem;">'
+        '<div style="font-weight:800;color:var(--md-text-1);font-size:0.95rem;margin-bottom:0.45rem;">Clinical Guardrails</div>'
+        '<div style="font-size:0.84rem;color:var(--md-text-2);line-height:1.6;">'
+        'MediChat is intentionally restricted from issuing final diagnoses or exact medication dose instructions. '
+        'It provides educational guidance, triage cues, and clear escalation advice to licensed clinicians.'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        '<div class="md-rcard" style="margin-top:0.7rem;">'
+        '<div style="font-size:0.84rem;color:var(--md-text-2);line-height:1.6;">'
+        'Privacy policy link: <a href="' + ui_escape(PRIVACY_POLICY_URL) + '" target="_blank">Open Privacy Policy (APP + NDB)</a>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
 
 elif st.session_state.mode == "insights":
     # ── AI Insights ─────────────────────────────────────────────────
