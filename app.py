@@ -5924,7 +5924,7 @@ with st.sidebar:
 
     # ── Primary nav ─────────────────────────────────────────────
     _mode = st.session_state.mode
-    if st.session_state.is_guest and not st.session_state.is_authenticated:
+    if not st.session_state.is_authenticated:
         nav_items = [
             ("home", "Home", "chat", ":material/home:"),
             ("new", "New Chat", "chat", ":material/chat_bubble:"),
