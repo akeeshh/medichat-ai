@@ -47,7 +47,7 @@ def _safe_secret(name, default=None):
         return default
 
 APP_TITLE = "MediChat Ai"
-APP_SUBTITLE = "Your AI Health Assistant"
+APP_SUBTITLE = "Your Ai Health Assistant"
 APP_VERSION_LABEL = APP_TITLE
 MEDICAL_REFERENCE_TARGET = max(1000, _safe_int_env("MEDICHAT_REFERENCE_TARGET", 5000))
 PRIVACY_POLICY_URL = _safe_secret(
@@ -55,7 +55,12 @@ PRIVACY_POLICY_URL = _safe_secret(
     os.environ.get("PRIVACY_POLICY_URL", "?mode=privacy"),
 )
 
-st.set_page_config(page_title=APP_VERSION_LABEL, page_icon="🏥", layout="wide")
+st.set_page_config(
+    page_title=APP_VERSION_LABEL,
+    page_icon="🏥",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 # ── Firebase Initialization (cross-session analytics) ────────────────
 @st.cache_resource
@@ -4202,6 +4207,423 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
 </style>
 """, unsafe_allow_html=True)
 
+# ── Annotated QA polish pass (wins over all prior Streamlit/CSS output) ──
+st.markdown("""
+<style>
+/* 5, 13: remove Streamlit chrome/collapse text entirely */
+header[data-testid="stHeader"],
+[data-testid="stHeader"],
+.stAppHeader,
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+[data-testid="collapsedControl"],
+#MainMenu,
+footer {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    min-height: 0 !important;
+}
+
+/* 11: compact desktop fit */
+.main .block-container {
+    max-width: 1180px !important;
+    padding: 0.65rem 1.15rem 1.55rem 1.15rem !important;
+}
+.stApp {
+    background:
+        radial-gradient(circle at 46% 0%, rgba(59, 130, 246, 0.075), transparent 30%),
+        radial-gradient(circle at 92% 4%, rgba(139, 92, 246, 0.06), transparent 30%),
+        #f7f9fd !important;
+}
+
+/* 2, 3, 4: bigger logo, correct title/subtitle spacing */
+[data-testid="stSidebar"] {
+    width: 270px !important;
+    min-width: 270px !important;
+}
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+    padding: 1.05rem 0.9rem 1rem !important;
+}
+.md-logo-wrap {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.92rem !important;
+    padding: 1rem 0.55rem 1.35rem !important;
+    margin-bottom: 0.35rem !important;
+}
+.md-logo-image,
+.md-logo-mark {
+    width: 64px !important;
+    height: 64px !important;
+    min-width: 64px !important;
+    border-radius: 20px !important;
+    object-fit: cover !important;
+    box-shadow: 0 16px 36px rgba(37,99,235,0.16) !important;
+}
+.md-logo-text {
+    font-size: 1.24rem !important;
+    line-height: 1.05 !important;
+    font-weight: 850 !important;
+    color: #0f172a !important;
+}
+.md-logo-sub {
+    font-size: 0.78rem !important;
+    line-height: 1.25 !important;
+    color: #8a9ab3 !important;
+    margin-top: 0.25rem !important;
+}
+
+/* 1: no filled/highlighted home state, only subtle blue text/icon */
+.md-nav-active .stButton > button,
+[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    color: #2563eb !important;
+}
+[data-testid="stSidebar"] .stButton > button {
+    margin: 0.16rem 0 !important;
+    min-height: 44px !important;
+    height: 44px !important;
+    border-radius: 14px !important;
+    font-size: 0.95rem !important;
+}
+[data-testid="stSidebar"] .stButton > button:has([data-testid="stIconMaterial"]) [data-testid="stIconMaterial"] {
+    width: 24px !important;
+    min-width: 24px !important;
+    margin-right: 0.82rem !important;
+    font-size: 1.12rem !important;
+    overflow: visible !important;
+}
+
+/* 6, 7, 8, 9, 10: sidebar footer stack */
+.sb-title-language {
+    display: block !important;
+    margin-top: 1.15rem !important;
+    padding-top: 0.85rem !important;
+    height: auto !important;
+    min-height: 16px !important;
+    overflow: visible !important;
+    color: #94a3b8 !important;
+    letter-spacing: 0.13em !important;
+}
+.md-side-safe-wrap {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.38rem !important;
+    margin: 0.7rem 0 0.45rem !important;
+}
+.md-side-safe-pill {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.45rem !important;
+    min-height: 34px !important;
+    padding: 0.42rem 0.58rem !important;
+    border-radius: 12px !important;
+    border: 1px solid #e4efff !important;
+    background: rgba(255,255,255,0.82) !important;
+    color: #1e3a8a !important;
+    font-size: 0.7rem !important;
+    font-weight: 700 !important;
+    line-height: 1.15 !important;
+}
+.md-side-safe-pill .material-symbols-rounded {
+    font-size: 1rem !important;
+    color: #2563eb !important;
+}
+.md-sidebar-bottom-spacer {
+    height: clamp(0.75rem, 8vh, 5.5rem) !important;
+}
+.md-care-note {
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.7rem !important;
+    padding: 0.78rem !important;
+    border-radius: 14px !important;
+    background: rgba(248,250,252,0.92) !important;
+    border: 1px solid #e8eef6 !important;
+}
+.md-care-title { font-size: 0.78rem !important; }
+.md-care-copy,
+.md-care-note a { font-size: 0.68rem !important; }
+.md-sidebar-bottom {
+    margin-top: 0.6rem !important;
+    padding-top: 0 !important;
+    position: static !important;
+    background: transparent !important;
+}
+.md-sidebar-bottom .stButton > button,
+.st-key-nav_privacy_bottom .stButton > button {
+    min-height: 36px !important;
+    height: 36px !important;
+    justify-content: center !important;
+    color: #334155 !important;
+    font-weight: 650 !important;
+}
+.sb-footer {
+    text-align: center !important;
+    color: #94a3b8 !important;
+    font-size: 0.64rem !important;
+    line-height: 1.35 !important;
+    margin: 0.35rem 0 0 !important;
+    padding: 0 !important;
+}
+
+/* 12, 14: Apple-like greeting */
+.md-home-head-left,
+.md-home-greet-wrap {
+    text-align: left !important;
+    max-width: 1180px !important;
+    margin: 0.35rem auto 0.85rem !important;
+}
+.md-greet {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif !important;
+    font-size: clamp(1.9rem, 2.2vw, 2.35rem) !important;
+    line-height: 1.08 !important;
+    letter-spacing: 0 !important;
+    font-weight: 850 !important;
+    color: #0f172a !important;
+}
+.md-subgreet {
+    display: block !important;
+    margin-top: 0.38rem !important;
+    font-size: 1.02rem !important;
+    line-height: 1.35 !important;
+    color: #64748b !important;
+    text-align: left !important;
+}
+
+/* 15-22: quick actions should be compact pill cards with only one line */
+.st-key-qa_headache .stButton > button,
+.st-key-qa_tired .stButton > button,
+.st-key-qa_symptoms .stButton > button,
+.st-key-qa_sleep .stButton > button {
+    min-height: 48px !important;
+    height: 48px !important;
+    border-radius: 999px !important;
+    padding: 0 1rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    background: rgba(255,255,255,0.96) !important;
+    border: 1px solid #d8eafd !important;
+    box-shadow: 0 8px 18px rgba(15,23,42,0.045) !important;
+}
+.st-key-qa_headache .stButton > button [data-testid="stIconMaterial"],
+.st-key-qa_tired .stButton > button [data-testid="stIconMaterial"],
+.st-key-qa_symptoms .stButton > button [data-testid="stIconMaterial"],
+.st-key-qa_sleep .stButton > button [data-testid="stIconMaterial"] {
+    width: 22px !important;
+    min-width: 22px !important;
+    height: 22px !important;
+    margin-right: 0.48rem !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    font-size: 1.12rem !important;
+}
+.st-key-qa_headache .stButton > button p,
+.st-key-qa_tired .stButton > button p,
+.st-key-qa_symptoms .stButton > button p,
+.st-key-qa_sleep .stButton > button p {
+    white-space: nowrap !important;
+    color: #0f172a !important;
+    font-size: 0.98rem !important;
+    font-weight: 680 !important;
+    line-height: 1 !important;
+}
+
+/* 23, 24: smaller chat box/buttons */
+form#home_chat_form {
+    max-width: 100% !important;
+    padding: 0.78rem !important;
+    border-radius: 24px !important;
+    box-shadow: 0 14px 34px rgba(15,23,42,0.07) !important;
+}
+form#home_chat_form [data-testid="stTextArea"] textarea {
+    min-height: 98px !important;
+    height: 98px !important;
+    border-radius: 18px !important;
+    padding: 0.82rem 0.95rem !important;
+    font-size: 0.98rem !important;
+}
+form#home_chat_form [data-testid="stFormSubmitButton"] > button {
+    min-height: 40px !important;
+    height: 40px !important;
+    font-size: 0.86rem !important;
+}
+form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"] {
+    padding: 0 0.9rem !important;
+    min-width: 104px !important;
+}
+form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
+form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+    width: 44px !important;
+    min-width: 44px !important;
+}
+.md-home-composer-note {
+    font-size: 0.72rem !important;
+    margin: 0.35rem 0 1.05rem !important;
+}
+
+/* 25-30: guest feature cards as small pills with exact labels */
+.md-guest-head {
+    font-size: 0.88rem !important;
+    font-weight: 800 !important;
+    margin: 0.85rem 0 0.45rem !important;
+}
+.st-key-guest_vision_card .stButton > button,
+.st-key-guest_symptom_card .stButton > button,
+.st-key-guest_rx_card .stButton > button {
+    min-height: 42px !important;
+    height: 42px !important;
+    border-radius: 999px !important;
+    padding: 0 0.8rem !important;
+    text-align: center !important;
+    justify-content: center !important;
+    background: rgba(255,255,255,0.96) !important;
+    border: 1px solid #d8eafd !important;
+    box-shadow: 0 6px 14px rgba(15,23,42,0.035) !important;
+}
+.st-key-guest_vision_card .stButton > button p,
+.st-key-guest_symptom_card .stButton > button p,
+.st-key-guest_rx_card .stButton > button p {
+    white-space: nowrap !important;
+    font-size: 0.86rem !important;
+    font-weight: 650 !important;
+    color: #0f172a !important;
+}
+
+/* 31, 32: small health tip, no Learn more button rendered */
+.md-tip-center {
+    min-height: 64px !important;
+    margin-top: 0.95rem !important;
+    padding: 0.72rem 0.85rem !important;
+    border-radius: 18px !important;
+}
+.md-tip-center-icon {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 14px !important;
+    font-size: 1.15rem !important;
+}
+.md-tip-center-eyebrow { font-size: 0.62rem !important; }
+.md-tip-center-title { font-size: 0.92rem !important; }
+.md-tip-center-desc { font-size: 0.74rem !important; }
+.st-key-tip_learn_more {
+    display: none !important;
+}
+
+/* 34: custom compact error */
+.md-mini-error {
+    margin-top: 0.5rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    max-width: 560px !important;
+    padding: 0.5rem 0.7rem !important;
+    border-radius: 12px !important;
+    background: #fff1f2 !important;
+    border: 1px solid #fecdd3 !important;
+    color: #be123c !important;
+    font-size: 0.78rem !important;
+    line-height: 1.35 !important;
+}
+
+@media (min-width: 1200px) {
+    .main .block-container {
+        padding-top: 0.55rem !important;
+    }
+}
+@media (max-width: 980px) {
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
+    .md-greet, .md-subgreet, .md-home-head-left, .md-home-greet-wrap {
+        text-align: center !important;
+    }
+    .md-subgreet {
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ── Sidebar lock: Streamlit's native collapse button can hide navigation ──
+st.markdown("""
+<style>
+/* Keep the navigation visible even if Streamlit previously stored a collapsed state. */
+section[data-testid="stSidebar"],
+[data-testid="stSidebar"],
+[data-testid="stSidebar"][aria-expanded="false"],
+[data-testid="stSidebar"][aria-expanded="true"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 270px !important;
+    min-width: 270px !important;
+    max-width: 270px !important;
+    transform: none !important;
+    margin-left: 0 !important;
+    left: 0 !important;
+    z-index: 1000 !important;
+}
+section[data-testid="stSidebar"] > div,
+[data-testid="stSidebar"] > div,
+[data-testid="stSidebarContent"],
+[data-testid="stSidebarUserContent"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 270px !important;
+    min-width: 270px !important;
+    transform: none !important;
+}
+
+/* Remove every variant of the Streamlit sidebar collapse/expand arrow. */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarNavCollapseButton"],
+button[aria-label*="sidebar" i],
+button[aria-label*="collapse" i],
+button[aria-label*="expand" i],
+button[title*="sidebar" i],
+button[title*="collapse" i],
+button[title*="expand" i],
+[class*="collapsedControl"],
+[class*="sidebarCollapse"],
+[class*="SidebarCollapse"],
+[class*="collapseButton"],
+[class*="CollapseButton"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* The old collapse icon sometimes leaks as raw Material text in Streamlit. */
+[data-testid="stSidebar"] *:has(> [data-testid="stMarkdownContainer"] p),
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p:has(span) {
+    overflow: visible !important;
+}
+[data-testid="stSidebar"] button:has([data-testid="stIconMaterial"]) {
+    overflow: visible !important;
+}
+
+@media (min-width: 981px) {
+    .stAppViewContainer,
+    [data-testid="stAppViewContainer"] {
+        margin-left: 0 !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
 GROQ_API_KEY = _safe_secret("GROQ_API_KEY", os.environ.get("GROQ_API_KEY", ""))
 GROQ_ACTIVE = bool(GROQ_API_KEY)
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_ACTIVE else None
@@ -5944,7 +6366,7 @@ with st.sidebar:
             ("new", "New Chat", "chat", ":material/chat_bubble:"),
             ("symptom", "Symptoms Checker", "assessment", ":material/stethoscope:"),
             ("rx", "Prescription Reader", "rx_reader", ":material/document_scanner:"),
-            ("insights", "AI Insights", "insights", ":material/auto_awesome:"),
+            ("insights", "Ai Insights", "insights", ":material/auto_awesome:"),
         ]
     else:
         nav_items = [
@@ -5956,7 +6378,7 @@ with st.sidebar:
             ("rx", "Prescription Reader", "rx_reader", ":material/document_scanner:"),
             ("meds", "Medications", "medications", ":material/pill:"),
             ("appts", "Appointments", "appointments", ":material/calendar_month:"),
-            ("insights", "AI Insights", "insights", ":material/auto_awesome:"),
+            ("insights", "Ai Insights", "insights", ":material/auto_awesome:"),
         ]
     for nav_key, nav_label, target_mode, nav_icon in nav_items:
         is_active = (target_mode == _mode and nav_key != "new") or (nav_key == "home" and _mode == "chat")
@@ -5965,7 +6387,7 @@ with st.sidebar:
             is_active = False
         active_cls = "md-nav-active" if is_active else ""
         st.markdown('<div class="' + active_cls + '">', unsafe_allow_html=True)
-        if st.button(nav_label, key="nav_" + nav_key, use_container_width=True, icon=nav_icon, type=("primary" if is_active else "secondary")):
+        if st.button(nav_label, key="nav_" + nav_key, use_container_width=True, icon=nav_icon, type="secondary"):
             try:
                 st.query_params.clear()
             except Exception:
@@ -6092,7 +6514,17 @@ with st.sidebar:
 
     L = LANGUAGES[st.session_state.selected_language]
 
+    st.markdown(
+        '<div class="md-side-safe-wrap">'
+        '<div class="md-side-safe-pill"><span class="material-symbols-rounded">verified_user</span><span>HIPAA-style safeguards</span></div>'
+        '<div class="md-side-safe-pill"><span class="material-symbols-rounded">menu_book</span><span>3,500 medical references</span></div>'
+        '<div class="md-side-safe-pill"><span class="material-symbols-rounded">emergency</span><span>Emergency-aware triage</span></div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
     st.markdown("---")
+    st.markdown('<div class="md-sidebar-bottom-spacer"></div>', unsafe_allow_html=True)
 
     # Care boundary note
     st.markdown(
@@ -6124,7 +6556,7 @@ with st.sidebar:
         st.session_state.mode = "privacy"
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sb-footer">' + APP_TITLE + '</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sb-footer">© 2026 ' + APP_TITLE + '. All rights reserved.</div>', unsafe_allow_html=True)
 
 L = LANGUAGES[st.session_state.selected_language]
 
@@ -6362,32 +6794,21 @@ if st.session_state.mode == "chat":
             _tod = "night"
         _disp_name = (st.session_state.patient_name if st.session_state.patient_name and st.session_state.patient_name != "Guest" else "")
         _greet = "Good " + _tod + (", " + _disp_name if _disp_name else "") + " 👋"
-        hd_left, hd_right = st.columns([1.9, 1], gap="small")
-        with hd_left:
-            st.markdown(
-                '<div class="md-greet-wrap md-home-greet-wrap md-home-head-left">'
-                '<div class="md-greet">' + ui_text(_greet, 80) + '</div>'
-                '<div class="md-subgreet">How can I help you today?</div>'
-                '</div>',
-                unsafe_allow_html=True
-            )
-        with hd_right:
-            st.markdown(
-                '<div class="md-safeguards-wrap">'
-                '<span class="md-safe-pill"><span class="material-symbols-rounded">verified_user</span>HIPAA-style safeguards</span>'
-                '<span class="md-safe-pill"><span class="material-symbols-rounded">menu_book</span>3,500 medical references</span>'
-                '<span class="md-safe-pill"><span class="material-symbols-rounded">emergency</span>Emergency-aware triage</span>'
-                '</div>',
-                unsafe_allow_html=True
-            )
+        st.markdown(
+            '<div class="md-greet-wrap md-home-greet-wrap md-home-head-left">'
+            '<div class="md-greet">' + ui_text(_greet, 80) + '</div>'
+            '<div class="md-subgreet">How can I help you today?</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
 
         # Quick action cards
         qa_cols = st.columns(4, gap="small")
         qa_specs = [
-            ("qa_headache", "I have a headache\nGet AI insights", "I have a headache and would like to understand what might be causing it.", ":material/neurology:"),
-            ("qa_tired", "Feeling tired\nUnderstand why", "I have been feeling unusually tired lately. What could be the reason?", ":material/mood:"),
-            ("qa_symptoms", "Check my symptoms\nAnalyze symptoms", "_route_assessment", ":material/search:"),
-            ("qa_sleep", "Improve my sleep\nSleep better", "Can you suggest ways to improve my sleep quality?", ":material/bedtime:"),
+            ("qa_headache", "I have a headache", "I have a headache and would like to understand what might be causing it.", ":material/neurology:"),
+            ("qa_tired", "Feeling tired", "I have been feeling unusually tired lately. What could be the reason?", ":material/mood:"),
+            ("qa_symptoms", "Check my symptoms", "_route_assessment", ":material/search:"),
+            ("qa_sleep", "Improve my sleep", "Can you suggest ways to improve my sleep quality?", ":material/bedtime:"),
         ]
         for i, (qa_key, qa_label, qa_query, qa_icon) in enumerate(qa_specs):
             with qa_cols[i]:
@@ -6412,10 +6833,10 @@ if st.session_state.mode == "chat":
                     "Start a chat",
                     placeholder="Ask anything about your health...",
                     label_visibility="collapsed",
-                    height=120,
+                    height=100,
                     key="home_chat_input_" + str(st.session_state.chat_input_key),
                 )
-                ac1, ac2, ac_spacer, ac3 = st.columns([0.72, 0.72, 3.1, 0.48])
+                ac1, ac2, ac_spacer, ac3 = st.columns([0.48, 0.48, 4.2, 0.34])
                 with ac1:
                     home_upload_clicked = st.form_submit_button("Upload", icon=":material/attach_file:", use_container_width=True)
                 with ac2:
@@ -6521,20 +6942,20 @@ if st.session_state.mode == "chat":
                 g1, g2, g3 = st.columns(3, gap="small")
                 with g1:
                     st.markdown('<div class="md-guest-card md-guest-blue">', unsafe_allow_html=True)
-                    if st.button("Vision Ai\nUpload scans or reports", key="guest_vision_card", use_container_width=True, icon=":material/image_search:"):
+                    if st.button("Vision Ai - Xrays and reports scans", key="guest_vision_card", use_container_width=True, icon=":material/image_search:"):
                         st.session_state.home_show_vision_upload = True
                         st.session_state.home_show_voice = False
                         st.rerun()
                     st.markdown('</div>', unsafe_allow_html=True)
                 with g2:
                     st.markdown('<div class="md-guest-card md-guest-purple">', unsafe_allow_html=True)
-                    if st.button("Symptoms Checker\nGuided safe triage", key="guest_symptom_card", use_container_width=True, icon=":material/stethoscope:"):
+                    if st.button("Symptoms Check", key="guest_symptom_card", use_container_width=True, icon=":material/stethoscope:"):
                         st.session_state.mode = "assessment"
                         st.rerun()
                     st.markdown('</div>', unsafe_allow_html=True)
                 with g3:
                     st.markdown('<div class="md-guest-card md-guest-green">', unsafe_allow_html=True)
-                    if st.button("Prescription Reader\nRead handwriting", key="guest_rx_card", use_container_width=True, icon=":material/document_scanner:"):
+                    if st.button("Prescription reading", key="guest_rx_card", use_container_width=True, icon=":material/document_scanner:"):
                         st.session_state.mode = "rx_reader"
                         st.rerun()
                     st.markdown('</div>', unsafe_allow_html=True)
@@ -6543,9 +6964,9 @@ if st.session_state.mode == "chat":
             if st.session_state.is_authenticated:
                 st.markdown('<div class="md-smart-head"><div class="md-smart-title">Smart Actions</div></div>', unsafe_allow_html=True)
                 sa_specs = [
-                    ("sa_sym", "Symptoms Checker\nGuided AI assessment of your symptoms", "assessment", ":material/stethoscope:", "md-smart-purple"),
+                    ("sa_sym", "Symptoms Checker\nGuided Ai assessment of your symptoms", "assessment", ":material/stethoscope:", "md-smart-purple"),
                     ("sa_rec", "Health Records\nUpload and manage your medical reports", "records", ":material/medical_information:", "md-smart-green"),
-                    ("sa_ins", "AI Insights\nPersonalized insights based on your data", "insights", ":material/monitor_heart:", "md-smart-pink"),
+                    ("sa_ins", "Ai Insights\nPersonalized insights based on your data", "insights", ":material/monitor_heart:", "md-smart-pink"),
                     ("sa_appt", "Appointments\nSchedule and manage your appointments", "appointments", ":material/calendar_month:", "md-smart-blue"),
                 ]
                 sa_cols = st.columns(4, gap="small")
@@ -6566,12 +6987,6 @@ if st.session_state.mode == "chat":
                 '</div>',
                 unsafe_allow_html=True
             )
-            tip_col_a, tip_col_b = st.columns([5, 1.2])
-            with tip_col_b:
-                if st.button("Learn more", key="tip_learn_more", use_container_width=True):
-                    st.session_state.mode = "insights"
-                    st.rerun()
-
         if home_side is not None:
             with home_side:
                 # ── Profile Snapshot (REAL data only) ────────────────────
@@ -7120,7 +7535,7 @@ if st.session_state.mode == "chat":
                         _lines.append(_entry)
                     past_chats_summary = "\n".join(_lines)
 
-            with st.spinner("MediChat is thinking..."):
+            with st.spinner("MediChat is analysing"):
                 final_text = ""
                 stream_metadata = None
                 try:
@@ -7132,7 +7547,10 @@ if st.session_state.mode == "chat":
                             final_text = event[1]
                             stream_metadata = event[2]
                 except Exception as e:
-                    st.error("MediChat had trouble generating a response. Please try again.")
+                    st.markdown(
+                        '<div class="md-mini-error">MediChat had trouble generating a response. Please try again.</div>',
+                        unsafe_allow_html=True
+                    )
                     st.stop()
 
             final_text = strip_excessive_disclaimers(final_text)
