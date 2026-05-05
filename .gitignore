@@ -2,3 +2,5 @@ __pycache__/
 *.py[cod]
 *.pyo
 .streamlit/secrets.toml
+.venv/
+medichat-local-check.png

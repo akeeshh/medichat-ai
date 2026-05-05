@@ -40,11 +40,17 @@ def _safe_int_env(name, default):
     except Exception:
         return default
 
+def _safe_secret(name, default=None):
+    try:
+        return st.secrets[name]
+    except Exception:
+        return default
+
 APP_TITLE = "MediChat Ai"
 APP_SUBTITLE = "Your AI Health Assistant"
 APP_VERSION_LABEL = APP_TITLE
 MEDICAL_REFERENCE_TARGET = max(1000, _safe_int_env("MEDICHAT_REFERENCE_TARGET", 5000))
-PRIVACY_POLICY_URL = st.secrets.get(
+PRIVACY_POLICY_URL = _safe_secret(
     "PRIVACY_POLICY_URL",
     os.environ.get("PRIVACY_POLICY_URL", "?mode=privacy"),
 )
@@ -58,7 +64,7 @@ def init_firebase():
     if not FIREBASE_AVAILABLE:
         return None
     try:
-        firebase_config = st.secrets.get("firebase", {})
+        firebase_config = _safe_secret("firebase", {})
         if not firebase_config or not firebase_config.get("project_id"):
             return None
         if not firebase_admin._apps:
@@ -73,7 +79,7 @@ firestore_db = init_firebase()
 FIREBASE_ACTIVE = firestore_db is not None
 
 # ── Persistent Patient Profiles (email + PIN, Firestore-backed) ──────
-PROFILE_SALT = st.secrets.get("PROFILE_SALT", os.environ.get("PROFILE_SALT", "medichat-default-change-me"))
+PROFILE_SALT = _safe_secret("PROFILE_SALT", os.environ.get("PROFILE_SALT", "medichat-default-change-me"))
 
 def hash_email(email):
     return hashlib.sha256((email.lower().strip() + PROFILE_SALT).encode()).hexdigest()
@@ -4196,13 +4202,11 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
 </style>
 """, unsafe_allow_html=True)
 
-GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", os.environ.get("GROQ_API_KEY", ""))
-if not GROQ_API_KEY:
-    st.error("API key not found.")
-    st.stop()
-groq_client = Groq(api_key=GROQ_API_KEY)
+GROQ_API_KEY = _safe_secret("GROQ_API_KEY", os.environ.get("GROQ_API_KEY", ""))
+GROQ_ACTIVE = bool(GROQ_API_KEY)
+groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_ACTIVE else None
 
-ANTHROPIC_API_KEY = st.secrets.get("ANTHROPIC_API_KEY", os.environ.get("ANTHROPIC_API_KEY", ""))
+ANTHROPIC_API_KEY = _safe_secret("ANTHROPIC_API_KEY", os.environ.get("ANTHROPIC_API_KEY", ""))
 CLAUDE_MODEL = "claude-haiku-4-5"
 anthropic_client = None
 if ANTHROPIC_AVAILABLE and ANTHROPIC_API_KEY:
@@ -4216,6 +4220,8 @@ CLAUDE_ACTIVE = anthropic_client is not None
 
 def transcribe_voice_note(audio_file):
     """Transcribe a browser-recorded or uploaded audio note with Groq Whisper."""
+    if not GROQ_ACTIVE or groq_client is None:
+        return ""
     if not audio_file:
         return ""
     try:
@@ -4499,7 +4505,7 @@ AU_TOP_DRUGS_FALLBACK = {
 }
 
 def load_known_drugs():
-    csv_path = st.secrets.get("AU_DRUGS_CSV_PATH", os.environ.get("AU_DRUGS_CSV_PATH", ""))
+    csv_path = _safe_secret("AU_DRUGS_CSV_PATH", os.environ.get("AU_DRUGS_CSV_PATH", ""))
     known = set(AU_TOP_DRUGS_FALLBACK)
     if not csv_path:
         return known
@@ -5146,6 +5152,14 @@ def medichat_rag(question, all_messages, lang_instruction="", patient_name=""):
     if memory_context:
         system += "WHAT THIS PATIENT HAS TOLD YOU ALREADY (ANCHOR ON THIS):\n" + memory_context + "\n\n"
     system += "MEDICAL KNOWLEDGE CONTEXT (from PubMed and real doctor-patient conversations):\n" + context
+
+    if not GROQ_ACTIVE or groq_client is None:
+        fallback = (
+            "MediChat Ai is running in local preview mode without an AI API key. "
+            "The dashboard UI is available, but chat responses need GROQ_API_KEY or ANTHROPIC_API_KEY configured."
+        )
+        yield ("done", fallback, {"memory": memory, "sources": sources, "confidence": "Not available", "confidence_pct": 0, "engine": "preview"})
+        return
 
     msgs = [{"role": "system", "content": system}] + history + [{"role": "user", "content": question}]
     r = groq_client.chat.completions.create(
@@ -6114,7 +6128,7 @@ with st.sidebar:
 
 L = LANGUAGES[st.session_state.selected_language]
 
-ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", os.environ.get("ADMIN_PASSWORD", "MediChatAdmin@2026"))
+ADMIN_PASSWORD = _safe_secret("ADMIN_PASSWORD", os.environ.get("ADMIN_PASSWORD", "MediChatAdmin@2026"))
 _query_params = st.query_params
 _admin_requested = _query_params.get("admin", "") != ""
 _mode_from_url = str(_query_params.get("mode", "") or "").strip()
