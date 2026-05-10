@@ -49,6 +49,27 @@ def _safe_secret(name, default=None):
 APP_TITLE = "MediChat Ai"
 APP_SUBTITLE = "Your Ai Health Assistant"
 APP_VERSION_LABEL = APP_TITLE
+
+@st.cache_data(show_spinner=False)
+def get_brand_logo_data_uri():
+    """Return the MediChat brand logo (icon + wordmark) as a base64 data URI.
+    Reads assets/MediChat logo.png. Returns None if the file is not present so
+    the renderer can fall back to the Material Symbol mark cleanly."""
+    candidates = []
+    try:
+        candidates.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "MediChat logo.png"))
+    except Exception:
+        pass
+    candidates.append(os.path.join("assets", "MediChat logo.png"))
+    for path in candidates:
+        try:
+            if os.path.exists(path):
+                with open(path, "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode("ascii")
+                return "data:image/png;base64," + b64
+        except Exception:
+            continue
+    return None
 MEDICAL_REFERENCE_TARGET = max(1000, _safe_int_env("MEDICHAT_REFERENCE_TARGET", 5000))
 PRIVACY_POLICY_URL = _safe_secret(
     "PRIVACY_POLICY_URL",
@@ -459,13 +480,50 @@ def delete_health_record(rec_id):
     return True
 
 # ── Daily Metrics (water, sleep) ─────────────────────────────────────
+DAILY_METRIC_DEFAULTS = {
+    "water_glasses": 0,
+    "sleep_hours": None,
+    "mood": None,
+    "steps": None,
+    "heart_rate_resting": None,
+}
+
 def get_daily_metrics(date_key=None):
     date_key = date_key or _today_key()
     if st.session_state.get("is_authenticated"):
         all_dm = (get_user_doc() or {}).get("daily_metrics", {}) or {}
     else:
         all_dm = _ensure_guest_store()["daily_metrics"]
-    return all_dm.get(date_key, {"water_glasses": 0, "sleep_hours": None, "mood": None})
+    # Merge with defaults so missing keys are explicit None rather than KeyError-prone.
+    raw = all_dm.get(date_key, {})
+    return {**DAILY_METRIC_DEFAULTS, **raw}
+
+def heart_rate_status(bpm):
+    """Return (label, css_status_class) for a resting heart rate, or (None, None)."""
+    if bpm is None:
+        return (None, None)
+    try:
+        v = int(bpm)
+    except Exception:
+        return (None, None)
+    if 60 <= v <= 100:
+        return ("Normal", "md-status-good")
+    if v < 60:
+        return ("Low", "md-status-info")
+    return ("High", "md-status-warn")
+
+def sleep_status(hours):
+    if hours is None:
+        return (None, None)
+    try:
+        v = float(hours)
+    except Exception:
+        return (None, None)
+    if 7 <= v <= 9:
+        return ("Good", "md-status-good")
+    if 6 <= v < 7 or 9 < v <= 10:
+        return ("Fair", "md-status-info")
+    return ("Low" if v < 6 else "High", "md-status-warn")
 
 def update_daily_metric(field, value, date_key=None):
     date_key = date_key or _today_key()
@@ -491,7 +549,7 @@ def get_metrics_history(days=7):
     out = []
     for i in range(days - 1, -1, -1):
         d = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
-        out.append((d, all_dm.get(d, {"water_glasses": 0, "sleep_hours": None})))
+        out.append((d, {**DAILY_METRIC_DEFAULTS, **all_dm.get(d, {})}))
     return out
 
 # ── Deterministic-but-realistic vitals (no wearable yet) ─────────────
@@ -1682,6 +1740,11 @@ st.markdown("""
 .main .block-container {
     max-width: 1280px !important;
     padding: 1.4rem 1.6rem 2rem 1.6rem !important;
+}
+
+/* Remove leaked sidebar collapse glyph container ("keyboard_double_arrow_left"). */
+[data-testid="stSidebar"] > div > div:first-child {
+    display: none !important;
 }
 * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
 
@@ -4045,20 +4108,40 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
 .st-key-qa_tired .stButton > button [data-testid="stIconMaterial"],
 .st-key-qa_symptoms .stButton > button [data-testid="stIconMaterial"],
 .st-key-qa_sleep .stButton > button [data-testid="stIconMaterial"] {
-    width: 42px !important;
-    min-width: 42px !important;
-    height: 42px !important;
-    border-radius: 14px !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    border-radius: 12px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    margin-right: 0.7rem !important;
-    font-size: 1.2rem !important;
+    margin-right: 0.55rem !important;
+    font-size: 1.05rem !important;
+    flex-shrink: 0 !important;
 }
-.st-key-qa_headache .stButton > button [data-testid="stIconMaterial"] { background: #e8efff; color: #2563eb !important; }
-.st-key-qa_tired .stButton > button [data-testid="stIconMaterial"] { background: #e8f9f0; color: #16a34a !important; }
-.st-key-qa_symptoms .stButton > button [data-testid="stIconMaterial"] { background: #efe9ff; color: #7c3aed !important; }
-.st-key-qa_sleep .stButton > button [data-testid="stIconMaterial"] { background: #eef2ff; color: #6366f1 !important; }
+.st-key-qa_headache .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-qa_tired .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-qa_symptoms .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-qa_sleep .stButton > button [data-testid="stMarkdownContainer"] {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+    width: auto !important;
+}
+.st-key-qa_headache .stButton > button [data-testid="stMarkdownContainer"] p,
+.st-key-qa_tired .stButton > button [data-testid="stMarkdownContainer"] p,
+.st-key-qa_symptoms .stButton > button [data-testid="stMarkdownContainer"] p,
+.st-key-qa_sleep .stButton > button [data-testid="stMarkdownContainer"] p {
+    white-space: normal !important;
+    text-overflow: clip !important;
+    overflow: visible !important;
+    max-width: 100% !important;
+    width: auto !important;
+}
+.st-key-qa_headache .stButton > button [data-testid="stIconMaterial"] { background: linear-gradient(135deg,#ffe4e6,#fecdd3) !important; color: #e11d48 !important; }
+.st-key-qa_tired .stButton > button [data-testid="stIconMaterial"] { background: linear-gradient(135deg,#fef3c7,#fde68a) !important; color: #d97706 !important; }
+.st-key-qa_symptoms .stButton > button [data-testid="stIconMaterial"] { background: linear-gradient(135deg,#ede9fe,#ddd6fe) !important; color: #7c3aed !important; }
+.st-key-qa_sleep .stButton > button [data-testid="stIconMaterial"] { background: linear-gradient(135deg,#e0e7ff,#c7d2fe) !important; color: #4f46e5 !important; }
 .st-key-qa_headache .stButton > button p,
 .st-key-qa_tired .stButton > button p,
 .st-key-qa_symptoms .stButton > button p,
@@ -4620,6 +4703,1306 @@ button[title*="expand" i],
     [data-testid="stAppViewContainer"] {
         margin-left: 0 !important;
     }
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ── Mockup parity overrides (home dashboard visual match) ─────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+html, body, [class*="css"], [data-testid="stAppViewContainer"], .stApp, .stMarkdown, p, span, button, input, textarea {
+    font-family: 'Manrope', system-ui, -apple-system, Segoe UI, Roboto, sans-serif !important;
+}
+
+.stApp {
+    background:
+        radial-gradient(circle at 40% -8%, rgba(59,130,246,0.08), transparent 34%),
+        #f7f9fe !important;
+}
+.main .block-container {
+    max-width: 1380px !important;
+    padding-top: 0.1rem !important;
+}
+[data-testid="stAppViewContainer"] .main {
+    padding-top: 0 !important;
+}
+[data-testid="stVerticalBlock"] > [data-testid="element-container"]:first-child {
+    margin-top: 0 !important;
+}
+
+.md-top-icons-fixed {
+    position: fixed;
+    top: 1.9rem;
+    right: 3.2rem;
+    z-index: 200;
+    display: flex;
+    gap: 0.95rem;
+    color: #1f2a44;
+}
+.md-top-icons-fixed .material-symbols-rounded {
+    font-size: 1.35rem !important;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #e7ecf7;
+    box-shadow: 0 6px 18px rgba(15,23,42,0.06);
+}
+.md-notify-icon {
+    position: relative;
+}
+.md-notify-icon::after {
+    content: "";
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: #3b82f6;
+}
+
+.md-home-greet-wrap {
+    margin-top: -0.35rem !important;
+    margin-bottom: 0.45rem !important;
+}
+.md-greet {
+    font-size: 2.42rem !important;
+    letter-spacing: -0.03em !important;
+    color: #0f172a !important;
+    font-weight: 800 !important;
+}
+.md-subgreet {
+    font-size: 0.92rem !important;
+    color: #64748b !important;
+    font-weight: 550 !important;
+}
+
+.md-logo-mark {
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 18px !important;
+    background: linear-gradient(145deg, #f2f7ff, #eaf2ff) !important;
+    border: 1px solid #d9e8ff !important;
+    color: #1d8cf8 !important;
+    box-shadow: none !important;
+}
+.md-logo-mark .material-symbols-rounded {
+    font-size: 1.6rem !important;
+    color: #1d8cf8 !important;
+}
+
+/* Sidebar edge + rhythm polish */
+[data-testid="stSidebar"] {
+    border-right: 1px solid #e9eef8 !important;
+    box-shadow: 8px 0 28px rgba(15, 23, 42, 0.04) !important;
+}
+[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div {
+    padding-right: 0.12rem !important;
+}
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+    row-gap: 0.18rem !important;
+}
+.md-logo-wrap {
+    position: relative;
+    border-bottom: none !important;
+    margin-bottom: 1rem !important;
+    padding-bottom: 1.05rem !important;
+}
+.md-logo-wrap::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(
+        to right,
+        rgba(203, 213, 225, 0.2) 0%,
+        rgba(203, 213, 225, 0.95) 25%,
+        rgba(203, 213, 225, 0.95) 75%,
+        rgba(203, 213, 225, 0.2) 100%
+    );
+}
+
+.st-key-qa_headache .stButton > button,
+.st-key-qa_tired .stButton > button,
+.st-key-qa_symptoms .stButton > button,
+.st-key-qa_sleep .stButton > button {
+    min-height: 48px !important;
+    height: 48px !important;
+    border-radius: 999px !important;
+    padding: 0 1.05rem !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    background: rgba(255,255,255,0.96) !important;
+    border: 1px solid #dce8fa !important;
+    box-shadow: none !important;
+}
+.st-key-qa_headache .stButton > button p,
+.st-key-qa_tired .stButton > button p,
+.st-key-qa_symptoms .stButton > button p,
+.st-key-qa_sleep .stButton > button p {
+    font-size: 0.92rem !important;
+    font-weight: 650 !important;
+    white-space: nowrap !important;
+}
+
+/* Sidebar nav icon/text spacing */
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button {
+    padding: 0 0.9rem !important;
+    min-height: 48px !important;
+    height: 48px !important;
+    font-weight: 700 !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button [data-testid="stIconMaterial"] {
+    margin-right: 1.1rem !important;
+    min-width: 24px !important;
+    width: 24px !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button p {
+    letter-spacing: 0 !important;
+    font-weight: 700 !important;
+}
+
+/* Put more breathing room between logo/title and first nav item ("Home"). */
+[data-testid="stSidebar"] div.st-key-nav_home {
+    margin-top: 0.85rem !important;
+}
+
+/* Keep privacy + copyright pinned to the true bottom of the sidebar column. */
+[data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {
+    min-height: calc(100vh - 10px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+.md-side-profile {
+    margin-top: auto !important;
+}
+.md-sidebar-bottom {
+    margin-top: 0.35rem !important;
+}
+.sb-footer {
+    margin-top: 0.45rem !important;
+    margin-bottom: 0.2rem !important;
+}
+
+.md-ref-ask-shell {
+    background: #ffffff !important;
+    border: 1px solid #e4eaf6 !important;
+    border-radius: 24px !important;
+    box-shadow: 0 24px 52px rgba(99,102,241,0.08) !important;
+    padding: 0.1rem !important;
+}
+form#home_chat_form {
+    padding: 1rem 1rem 0.95rem 1rem !important;
+}
+form#home_chat_form [data-testid="stTextArea"] textarea {
+    min-height: 140px !important;
+    border-radius: 16px !important;
+}
+form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
+form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+    background: linear-gradient(135deg, #2f8cff, #6b4bff) !important;
+}
+
+.md-home-composer-note {
+    text-align: center !important;
+    margin-top: 0.75rem !important;
+}
+
+.st-key-sa_sym .stButton > button,
+.st-key-sa_rec .stButton > button,
+.st-key-sa_ins .stButton > button,
+.st-key-sa_appt .stButton > button {
+    min-height: 220px !important;
+    border-radius: 20px !important;
+    box-shadow: 0 16px 34px rgba(15,23,42,0.055) !important;
+}
+
+.md-rcard {
+    border-radius: 20px !important;
+    padding: 1.15rem 1.2rem !important;
+}
+.md-snap-card {
+    margin-top: 0 !important;
+}
+.md-rcard-title {
+    font-size: 1.02rem !important;
+}
+.md-rcard-link {
+    font-size: 0.84rem !important;
+    color: #2563eb !important;
+}
+.md-snap-status {
+    font-size: 0.83rem;
+    font-weight: 700;
+    color: #16a34a;
+    margin-left: 0.45rem;
+}
+.md-spark {
+    margin-top: 0.22rem;
+}
+
+.md-daily-card {
+    margin-top: 0.55rem;
+    border-radius: 20px;
+    border: 1px solid #dbe7fb;
+    background: linear-gradient(145deg, #eff8ff, #e8f2ff);
+    padding: 1rem 1.1rem 1rem 1.1rem;
+    position: relative;
+    overflow: hidden;
+}
+.md-daily-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 86px;
+    align-items: center;
+    gap: 0.6rem;
+}
+.md-daily-illust {
+    width: 86px;
+    height: 100px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: -0.25rem;
+}
+.md-daily-illust svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 6px 14px rgba(37, 99, 235, 0.18));
+}
+.md-daily-header {
+    color: #2563eb;
+    font-size: 1.03rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.65rem;
+}
+.md-daily-star {
+    color: #60a5fa;
+}
+.md-daily-title {
+    font-size: 1.15rem;
+    font-weight: 750;
+    color: #0f172a;
+    margin-bottom: 0.35rem;
+}
+.md-daily-desc {
+    font-size: 0.92rem;
+    color: #475569;
+    line-height: 1.5;
+}
+.md-daily-dots {
+    display: flex;
+    gap: 0.35rem;
+    margin-top: 0.85rem;
+}
+.md-daily-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: #bfd6fb;
+    transition: all 0.18s ease;
+}
+.md-daily-dots span:first-child {
+    background: #3b82f6;
+    width: 18px;
+}
+
+.sb-title-language,
+.md-side-safe-wrap,
+.md-care-note,
+.md-sidebar-bottom-spacer,
+.st-key-home_overview_see_all,
+.st-key-view_all_recent {
+    display: none !important;
+}
+
+.md-premium {
+    background: linear-gradient(135deg, #f5f2ff, #edf4ff) !important;
+    border: 1px solid #e1d8ff !important;
+    border-radius: 16px !important;
+    box-shadow: 0 12px 28px rgba(99,102,241,0.14) !important;
+    color: #31558f !important;
+}
+.md-premium-title {
+    color: #2563eb !important;
+    font-size: 1.03rem !important;
+}
+.md-premium-desc {
+    color: #5b708f !important;
+    font-size: 0.86rem !important;
+}
+.st-key-guest_to_signin .stButton > button {
+    border-radius: 999px !important;
+    background: linear-gradient(135deg, #2f8cff, #6b4bff) !important;
+    color: #fff !important;
+    border: none !important;
+    font-weight: 700 !important;
+}
+.st-key-sidebar_premium_cta .stButton > button {
+    border-radius: 999px !important;
+    background: linear-gradient(135deg, #3b82f6, #6366f1) !important;
+    color: #fff !important;
+    border: none !important;
+    font-weight: 700 !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    margin: 0.25rem 1.6rem 0.4rem 0 !important;
+    width: calc(100% - 1.6rem) !important;
+    box-sizing: border-box !important;
+    box-shadow: 0 8px 18px rgba(99,102,241,0.28) !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+    letter-spacing: 0.005em !important;
+}
+.st-key-sidebar_premium_cta .stButton > button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 10px 22px rgba(99,102,241,0.36) !important;
+}
+.st-key-sidebar_premium_cta .stButton > button p {
+    color: #fff !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.005em !important;
+}
+
+/* Mockup-styled Premium upsell card */
+.md-premium-card {
+    margin: 0.85rem 1.6rem 0.4rem 0;
+    padding: 0.95rem 0.95rem 0.55rem 0.95rem;
+    border-radius: 18px;
+    background: linear-gradient(160deg, #eef4ff 0%, #e0eaff 60%, #dbe8ff 100%);
+    border: 1px solid #d3deff;
+    box-shadow: 0 10px 24px rgba(79,70,229,0.10);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+.md-premium-card-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+}
+.md-premium-card-icon {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    box-shadow: 0 8px 16px rgba(79,70,229,0.32);
+    flex-shrink: 0;
+}
+.md-premium-card-icon svg {
+    display: block;
+}
+.md-premium-card-text {
+    flex: 1;
+    min-width: 0;
+}
+.md-premium-card-title {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #2563eb;
+    line-height: 1.2;
+    margin-bottom: 0.18rem;
+    letter-spacing: -0.005em;
+}
+.md-premium-card-desc {
+    font-size: 0.74rem;
+    color: #475569;
+    line-height: 1.35;
+    font-weight: 500;
+}
+
+.md-sidebar-icon-row {
+    display: flex;
+    justify-content: center;
+    gap: 1.1rem;
+    margin: 0.15rem 0 0.5rem 0;
+}
+.md-sidebar-icon-row .material-symbols-rounded {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: 1px solid #e3eaf8;
+    color: #475569;
+    background: #ffffff;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem !important;
+}
+
+.md-sidebar-bottom .stButton > button {
+    min-height: 36px !important;
+    border-radius: 10px !important;
+    font-size: 0.82rem !important;
+    color: #334155 !important;
+}
+.sb-footer {
+    text-align: center;
+    color: #94a3b8 !important;
+    font-size: 0.72rem !important;
+    margin-top: 0.5rem !important;
+}
+
+/* --- Overlap hotfix: cards/chips --- */
+.st-key-sa_sym .stButton > button,
+.st-key-sa_rec .stButton > button,
+.st-key-sa_ins .stButton > button,
+.st-key-sa_appt .stButton > button {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    gap: 0.42rem !important;
+    text-align: left !important;
+    padding: 1rem 1rem 2.25rem 1rem !important;
+    min-height: 196px !important;
+    overflow: visible !important;
+}
+.st-key-sa_sym .stButton > button > span:first-child,
+.st-key-sa_rec .stButton > button > span:first-child,
+.st-key-sa_ins .stButton > button > span:first-child,
+.st-key-sa_appt .stButton > button > span:first-child {
+    display: block !important;
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
+    line-height: 0 !important;
+    margin: 0 0 0.72rem 0 !important;
+    overflow: visible !important;
+}
+.st-key-sa_sym .stButton > button [data-testid="stIconMaterial"],
+.st-key-sa_rec .stButton > button [data-testid="stIconMaterial"],
+.st-key-sa_ins .stButton > button [data-testid="stIconMaterial"],
+.st-key-sa_appt .stButton > button [data-testid="stIconMaterial"] {
+    margin: 0 !important;
+    display: inline-flex !important;
+    position: static !important;
+}
+.st-key-sa_sym .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-sa_rec .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-sa_ins .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-sa_appt .stButton > button [data-testid="stMarkdownContainer"] {
+    margin: 0 !important;
+    width: 100% !important;
+}
+.st-key-sa_sym .stButton > button p,
+.st-key-sa_rec .stButton > button p,
+.st-key-sa_ins .stButton > button p,
+.st-key-sa_appt .stButton > button p {
+    margin: 0 !important;
+    white-space: pre-line !important;
+    line-height: 1.35 !important;
+    font-size: 0.9rem !important;
+}
+.st-key-sa_sym .stButton > button p::first-line,
+.st-key-sa_rec .stButton > button p::first-line,
+.st-key-sa_ins .stButton > button p::first-line,
+.st-key-sa_appt .stButton > button p::first-line {
+    font-size: 1.03rem !important;
+    font-weight: 780 !important;
+}
+
+.st-key-qa_headache .stButton > button p,
+.st-key-qa_tired .stButton > button p,
+.st-key-qa_symptoms .stButton > button p,
+.st-key-qa_sleep .stButton > button p {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+@media (max-width: 980px) {
+    .md-top-icons-fixed {
+        position: static;
+        justify-content: flex-end;
+        margin-bottom: 0.45rem;
+    }
+    .md-snap-card {
+        margin-top: 0 !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ── Final Sidebar Seam Polish ─────────────────────────────────────────
+st.markdown("""
+<style>
+/* Force one continuous canvas. Sidebar uses the same base tone as the app
+   (no white panel, no hairline shadow), so there is no visible edge between
+   sidebar and main — the mockup's seamless feel. */
+[data-testid="stAppViewContainer"] {
+    background: #f7f9fe !important;
+}
+section[data-testid="stSidebar"],
+[data-testid="stSidebar"] {
+    position: relative !important;
+    border-right: none !important;
+    background: #f4f5f9 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+}
+section[data-testid="stSidebar"]::after,
+[data-testid="stSidebar"]::after,
+section[data-testid="stSidebar"]::before,
+[data-testid="stSidebar"]::before {
+    display: none !important;
+    content: none !important;
+    background: none !important;
+}
+/* Streamlit also draws a separator on the sidebar resize handle — kill it. */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarResizeHandle"] {
+    display: none !important;
+}
+[data-testid="stSidebarContent"] {
+    border-right: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    height: 100% !important;
+}
+[data-testid="stSidebarUserContent"] {
+    background: transparent !important;
+}
+/* Streamlit's cache-class wrappers default to the sidebar's full 270px width
+   even when they sit INSIDE the sidebar's content padding, causing children
+   to overflow ~12-14px past the right edge. Constrain them so percentages
+   and child widths resolve against the actual padded content area. */
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] > div,
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] > div > div,
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+[data-testid="stMain"],
+.main {
+    background: transparent !important;
+}
+
+/* Keep sidebar internals from drawing harsh dividing lines. */
+[data-testid="stSidebar"] hr {
+    border: 0 !important;
+    height: 1px !important;
+    background: linear-gradient(
+        to right,
+        rgba(203, 213, 225, 0.0),
+        rgba(203, 213, 225, 0.75),
+        rgba(203, 213, 225, 0.0)
+    ) !important;
+    margin: 0.72rem 0 !important;
+}
+
+/* Match reference sidebar nav styling. */
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+    row-gap: 0.06rem !important;
+}
+[data-testid="stSidebar"] div.st-key-nav_home {
+    margin-top: 0.55rem !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button {
+    min-height: 46px !important;
+    height: 46px !important;
+    border-radius: 14px !important;
+    padding: 0 0.92rem !important;
+    /* Streamlit's inner emotion-cache wrapper renders ~14px wider than the
+       sidebar's padded content area, so we offset only on the right side
+       to keep the pill visually inset on both edges. */
+    margin: 0 1.6rem 0 0 !important;
+    width: calc(100% - 1.6rem) !important;
+    box-sizing: border-box !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+    justify-content: flex-start !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button > div {
+    display: flex !important;
+    align-items: center !important;
+    gap: 2.6rem !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button [data-testid="stIconMaterial"] {
+    background: transparent !important;
+    width: 24px !important;
+    min-width: 24px !important;
+    height: 24px !important;
+    margin-right: 0 !important;
+    color: #7c7a93 !important;
+    font-size: 1.06rem !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button p {
+    font-weight: 560 !important;
+    font-size: 0.84rem !important;
+    color: #7c7a93 !important;
+    margin-left: 0.62rem !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button:hover {
+    background: #eef4ff !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button:hover [data-testid="stIconMaterial"] {
+    color: #2563eb !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button:hover p {
+    color: #2563eb !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button[kind="primary"] {
+    background: #e6f0ff !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button[kind="primary"] [data-testid="stIconMaterial"] {
+    color: #2563eb !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button[kind="primary"] p {
+    color: #2563eb !important;
+    font-weight: 700 !important;
+}
+.md-nav-active .stButton > button {
+    background: #e6f0ff !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+.md-nav-active div[class*="st-key-nav_"] .stButton > button,
+[data-testid="stSidebar"] .md-nav-active .stButton > button {
+    background: #e6f0ff !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+.md-nav-active .stButton > button [data-testid="stIconMaterial"] {
+    color: #2563eb !important;
+}
+.md-nav-active div[class*="st-key-nav_"] .stButton > button [data-testid="stIconMaterial"],
+[data-testid="stSidebar"] .md-nav-active .stButton > button [data-testid="stIconMaterial"] {
+    color: #2563eb !important;
+}
+.md-nav-active .stButton > button p {
+    color: #2563eb !important;
+    font-weight: 700 !important;
+}
+[data-testid="stSidebar"] .md-nav-active .stButton > button p {
+    color: #2563eb !important;
+    font-weight: 700 !important;
+}
+
+.md-logo-wrap {
+    margin-bottom: 0.78rem !important;
+    padding-bottom: 0.95rem !important;
+}
+.md-logo-mark {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 14px !important;
+    background: radial-gradient(circle at 30% 30%, #f6f2ff 0%, #e8f0ff 80%) !important;
+    border: 1px solid #d6e2fa !important;
+    box-shadow: none !important;
+}
+.md-logo-mark .material-symbols-rounded {
+    color: #2f80ed !important;
+    font-size: 1.42rem !important;
+}
+
+/* Pin lower section to the true bottom of sidebar. */
+[data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {
+    min-height: calc(100vh - 8px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+.md-side-profile {
+    margin-top: auto !important;
+}
+.md-sidebar-bottom {
+    margin-top: auto !important;
+}
+.sb-footer {
+    margin-top: 0.35rem !important;
+    margin-bottom: 0.2rem !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ── Sidebar Hard-Lock Layout (strict final pass) ─────────────────────
+st.markdown("""
+<style>
+/* Single source of truth for sidebar layout. */
+[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {
+    min-height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Logo divider: short, centred, minimalist line. Replaces the heavy full-width
+   border-bottom set on .md-logo-wrap earlier in the stylesheet. */
+[data-testid="stSidebar"] .md-logo-wrap {
+    margin-bottom: 1.2rem !important;
+    padding-bottom: 1.08rem !important;
+    position: relative !important;
+    border-bottom: none !important;
+}
+[data-testid="stSidebar"] .md-logo-wrap::after {
+    content: "" !important;
+    position: absolute !important;
+    left: 15% !important;
+    right: 15% !important;
+    bottom: -0.48rem !important;
+    height: 1px !important;
+    background: #e2e8f0 !important;
+    z-index: 0 !important;
+}
+[data-testid="stSidebar"] div.st-key-nav_home {
+    margin-top: 1.85rem !important;
+}
+
+/* Match mockup nav weight and spacing. */
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button {
+    min-height: 48px !important;
+    height: 48px !important;
+    border-radius: 14px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0 !important;
+    position: relative !important;
+    z-index: 2 !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button > span:first-child {
+    margin-right: 1.35rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button [data-testid="stIconMaterial"] {
+    width: 24px !important;
+    min-width: 24px !important;
+    height: 24px !important;
+    margin-right: 0 !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button > div[data-testid="stMarkdownContainer"] {
+    margin: 0 !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button > div[data-testid="stMarkdownContainer"] p {
+    margin: 0 !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.01em !important;
+}
+
+/* Prevent divider/active-state visual overlap. */
+[data-testid="stSidebar"] hr {
+    margin-top: 0.9rem !important;
+    margin-bottom: 0.9rem !important;
+}
+
+/* Bottom stack: one flow layout only (no absolute overlap). */
+[data-testid="stSidebar"] .md-sidebar-bottom-spacer {
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+[data-testid="stSidebar"] .md-side-profile {
+    margin-top: 0 !important;
+    /* Same Streamlit inner-wrapper compensation as the nav pills + premium card. */
+    margin-right: 1.6rem !important;
+    margin-left: 0 !important;
+    width: calc(100% - 1.6rem) !important;
+    box-sizing: border-box !important;
+}
+[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] > div:has(.md-side-profile-top) {
+    margin-top: 0.4rem !important;
+}
+[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] > div:has(.md-sidebar-bottom) {
+    margin-top: auto !important;
+}
+[data-testid="stSidebar"] .md-sidebar-bottom {
+    position: static !important;
+    margin-top: 0.35rem !important;
+    padding: 0 0.9rem 0 !important;
+}
+[data-testid="stSidebar"] div.st-key-nav_privacy_bottom {
+    margin-top: 0 !important;
+    margin-bottom: 2rem !important;
+}
+[data-testid="stSidebar"] .sb-footer {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 1.05rem !important;
+    margin: 0 !important;
+    text-align: center !important;
+}
+
+/* No sidebar scrolling; keep a clean single-page rail. */
+[data-testid="stSidebar"],
+[data-testid="stSidebarContent"],
+[data-testid="stSidebarUserContent"] {
+    overflow-y: hidden !important;
+    overflow-x: hidden !important;
+}
+
+/* Remove settings/moon mini row entirely. */
+.md-sidebar-icon-row {
+    display: none !important;
+}
+
+/* Home/chat attachment and voice buttons: icon only. */
+[data-testid="stSidebar"] .stButton > button p {
+    font-weight: 700 !important;
+}
+/* Specificity needs to beat .stForm [data-testid="stFormSubmitButton"] > button[kind="secondary"]
+   which sets height:44px, border-radius:14px, and a clinical border. */
+.st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button,
+.st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button,
+.st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button[kind="secondary"],
+.st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button[kind="secondary"],
+.st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"],
+.st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"] {
+    min-width: 36px !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--md-border) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transition: border-color 0.15s ease, background 0.15s ease !important;
+}
+.st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button:hover,
+.st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button:hover,
+.st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button[kind="secondary"]:hover,
+.st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button[kind="secondary"]:hover {
+    border-color: var(--md-brand-1) !important;
+    background: var(--md-soft-blue) !important;
+}
+.st-key-chat_upload_btn button,
+.st-key-chat_voice_btn button {
+    min-width: 44px !important;
+    width: 44px !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    padding: 0 !important;
+    border-radius: 999px !important;
+}
+.st-key-home_upload_btn button > div,
+.st-key-home_voice_btn button > div,
+.st-key-chat_upload_btn button > div,
+.st-key-chat_voice_btn button > div {
+    justify-content: center !important;
+    gap: 0 !important;
+}
+.st-key-home_upload_btn button p,
+.st-key-home_voice_btn button p,
+.st-key-chat_upload_btn button p,
+.st-key-chat_voice_btn button p {
+    display: none !important;
+}
+.st-key-home_upload_btn button [data-testid="stIconMaterial"],
+.st-key-home_voice_btn button [data-testid="stIconMaterial"] {
+    margin: 0 !important;
+    color: var(--md-text-2) !important;
+    font-size: 18px !important;
+}
+.st-key-home_upload_btn button:hover [data-testid="stIconMaterial"],
+.st-key-home_voice_btn button:hover [data-testid="stIconMaterial"] {
+    color: var(--md-brand-2) !important;
+}
+.st-key-chat_upload_btn button [data-testid="stIconMaterial"],
+.st-key-chat_voice_btn button [data-testid="stIconMaterial"] {
+    margin: 0 !important;
+}
+/* Tighten attach + voice columns and widen the send column. Streamlit doesn't
+   render id="home_chat_form" on the DOM, and .md-ref-ask-shell doesn't actually
+   wrap the form (markdown opens the div in a separate container). Scope via
+   :has() on the unique send-button key. */
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stHorizontalBlock"] {
+    gap: 0 !important;
+    column-gap: 0 !important;
+    padding-left: 0.6rem !important;
+    align-items: center !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stColumn"]:nth-child(1),
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stColumn"]:nth-child(2) {
+    flex: 0 0 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    width: 36px !important;
+    padding: 0 !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stColumn"]:nth-child(2) {
+    margin-left: 0.4rem !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stColumn"]:nth-child(4) {
+    flex: 0 0 50px !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+    width: 50px !important;
+    padding: 0 !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+}
+
+/* Home greeting positioning and vertical stacking. */
+.md-home-greet-wrap {
+    margin: -0.9rem 0 0.85rem 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.18rem !important;
+    width: 100% !important;
+    max-width: none !important;
+    text-align: left !important;
+}
+.md-home-greet-wrap .md-greet,
+.md-home-greet-wrap .md-subgreet {
+    margin: 0 !important;
+    text-align: left !important;
+    align-self: flex-start !important;
+}
+.md-home-greet-wrap .md-greet {
+    font-size: 2.6rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1.15 !important;
+    color: #0b1220 !important;
+}
+.md-home-greet-wrap .md-subgreet {
+    margin-top: 0.4rem !important;
+    line-height: 1.25 !important;
+    font-size: 0.98rem !important;
+    color: #64748b !important;
+    font-weight: 500 !important;
+}
+
+/* Streamlit's default main block padding-top is 96px (reserves space for the
+   deploy header). In headless mode the header is hidden, so we collapse it
+   to bring the greeting up to ~24px from the top of the main column. */
+.stMainBlockContainer,
+[data-testid="stMainBlockContainer"] {
+    padding-top: 1.5rem !important;
+}
+/* Streamlit injects multiple zero-height stElementContainer wrappers (from
+   <style> markdowns and the position:fixed top icons div). The default
+   stVerticalBlock gap (1rem) compounds these into ~80px of phantom space
+   above the first visible element. Tighten — but not to zero, or real
+   sibling elements (greeting → chips) collide. */
+.stMainBlockContainer > [data-testid="stVerticalBlock"] {
+    gap: 0.6rem !important;
+    row-gap: 0.6rem !important;
+}
+
+/* Fix 3: Chat composer textarea — kill the dark border. Streamlit doesn't
+   render id="home_chat_form" on the DOM form, so we scope via the home send
+   button key using :has(). The composer wrap keeps its outer border; only
+   the inner textarea loses its line. */
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea {
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    min-height: 88px !important;
+    height: 88px !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea:focus {
+    outline: none !important;
+    border: 1px solid transparent !important;
+    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.15) !important;
+}
+/* Trim the inner gap between the textarea and the icon row so the composer
+   feels compact rather than airy. */
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stVerticalBlock"] {
+    gap: 0.5rem !important;
+    row-gap: 0.5rem !important;
+}
+
+/* Fix 4a: Soft gradient glow under the composer. Pure decoration. */
+.md-composer-glow {
+    height: 24px;
+    margin: -8px auto 0 auto;
+    width: 92%;
+    background: linear-gradient(90deg, rgba(6,182,212,0.18) 0%, rgba(139,92,246,0.18) 50%, rgba(236,72,153,0.10) 100%);
+    filter: blur(16px);
+    opacity: 0.35;
+    pointer-events: none;
+    border-radius: 999px;
+}
+
+/* Fix 4b: Send button — circular gradient with paper-plane icon. Scoped via
+   the unique button key. */
+.st-key-home_send_btn [data-testid="stFormSubmitButton"] > button,
+.st-key-home_send_btn [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
+.st-key-home_send_btn [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    border-radius: 50% !important;
+    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%) !important;
+    border: none !important;
+    box-shadow: 0 8px 22px rgba(99, 102, 241, 0.34) !important;
+    padding: 0 !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+.st-key-home_send_btn [data-testid="stFormSubmitButton"] > button:hover {
+    transform: scale(1.05) !important;
+    box-shadow: 0 12px 28px rgba(99, 102, 241, 0.45) !important;
+}
+.st-key-home_send_btn [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"] {
+    color: #ffffff !important;
+    font-size: 18px !important;
+    margin: 0 !important;
+}
+.st-key-home_send_btn [data-testid="stFormSubmitButton"] > button p {
+    display: none !important;
+}
+
+/* Fix 4c: Shield icon before disclaimer text. */
+.md-home-composer-note {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.4rem !important;
+    width: 100% !important;
+}
+.md-home-composer-note .md-disclaimer-shield {
+    font-size: 14px !important;
+    color: var(--md-text-3) !important;
+    line-height: 1 !important;
+}
+
+/* Tighten the gap between the disclaimer line and the Smart Actions header.
+   Streamlit's stElementContainer wrappers prevent margin collapse, so total
+   gap = note margin-bottom + head margin-top. */
+.md-home-composer-note {
+    margin-bottom: 0.4rem !important;
+}
+.md-smart-head {
+    margin-top: 4.6rem !important;
+}
+
+/* More breathing room between greeting and the chips/composer block below. */
+.md-home-greet-wrap {
+    margin-bottom: 3.55rem !important;
+}
+
+/* Brand logo image (replaces icon + text + subtitle). The PNG already includes
+   the wordmark and tagline, so we just center it cleanly in the sidebar. */
+.md-logo-image-wrap {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 0.4rem 0 0.85rem 0 !important;
+    background: transparent !important;
+    width: 100% !important;
+    position: relative !important;
+    border-bottom: none !important;
+    margin-bottom: 0.6rem !important;
+}
+/* Thin centered separator line under the logo — restored after the brand-image swap. */
+.md-logo-image-wrap::after {
+    content: "" !important;
+    display: block !important;
+    position: absolute !important;
+    left: 15% !important;
+    right: 15% !important;
+    bottom: 0 !important;
+    height: 1px !important;
+    background: #e2e8f0 !important;
+    pointer-events: none !important;
+}
+.md-logo-image {
+    max-width: 200px !important;
+    width: 100% !important;
+    height: auto !important;
+    display: block !important;
+    margin: 0 auto !important;
+}
+
+/* Sidebar selectbox styling — kept subtle, matches surrounding nav. */
+[data-testid="stSidebar"] [data-testid="stSelectbox"] {
+    margin: 0.4rem 0.6rem 0.6rem 0 !important;
+    width: calc(100% - 0.6rem) !important;
+}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] label {
+    font-size: 0.78rem !important;
+    color: #475569 !important;
+    font-weight: 600 !important;
+}
+
+/* Daily Health Tip carousel — 4 live-data slides auto-rotating every 3s.
+   Pure CSS animation, no JS, no Streamlit re-runs. */
+.md-tip-carousel {
+    position: relative;
+    margin: 1.6rem 0 1rem 0;
+    height: 196px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #f0f7ff 0%, #f5f1ff 50%, #fef2ff 100%);
+    border: 1px solid #dde7fb;
+    box-shadow: 0 12px 28px rgba(99,102,241,0.08);
+    overflow: hidden;
+}
+.md-tip-slide {
+    position: absolute;
+    inset: 0;
+    padding: 1.4rem 1.6rem 1.8rem 1.6rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 130px;
+    gap: 1.2rem;
+    align-items: center;
+    opacity: 0;
+    animation: tipCycle 12s infinite ease-in-out;
+}
+.md-tip-slide:nth-child(1) { animation-delay: 0s; }
+.md-tip-slide:nth-child(2) { animation-delay: 3s; }
+.md-tip-slide:nth-child(3) { animation-delay: 6s; }
+.md-tip-slide:nth-child(4) { animation-delay: 9s; }
+@keyframes tipCycle {
+    0% { opacity: 0; transform: translateX(14px); }
+    3% { opacity: 1; transform: translateX(0); }
+    25% { opacity: 1; transform: translateX(0); }
+    28% { opacity: 0; transform: translateX(-14px); }
+    100% { opacity: 0; }
+}
+.md-tip-eyebrow {
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #2563eb;
+    margin-bottom: 0.45rem;
+}
+.md-tip-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.2;
+    margin-bottom: 0.4rem;
+    letter-spacing: -0.01em;
+}
+.md-tip-desc {
+    font-size: 0.92rem;
+    color: #475569;
+    line-height: 1.45;
+    margin-bottom: 0.7rem;
+    max-width: 56ch;
+}
+.md-tip-metric {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: rgba(255,255,255,0.85);
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #1e3a8a;
+    border: 1px solid rgba(59,130,246,0.18);
+}
+.md-tip-metric .material-symbols-rounded {
+    font-size: 16px !important;
+    color: #3b82f6;
+}
+.md-tip-illust {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.55);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.8);
+    justify-self: end;
+}
+.md-tip-illust-svg svg {
+    width: 88px;
+    height: 88px;
+    filter: drop-shadow(0 6px 14px rgba(37,99,235,0.18));
+}
+.md-tip-illust .material-symbols-rounded {
+    font-size: 60px !important;
+}
+.md-tip-water .md-tip-eyebrow { color: #0891b2; }
+.md-tip-water .md-tip-metric { color: #0e7490; border-color: rgba(8,145,178,0.22); }
+.md-tip-water .md-tip-metric .material-symbols-rounded { color: #06b6d4; }
+
+.md-tip-sleep .md-tip-eyebrow { color: #7c3aed; }
+.md-tip-sleep .md-tip-metric { color: #5b21b6; border-color: rgba(124,58,237,0.22); }
+.md-tip-sleep .md-tip-metric .material-symbols-rounded { color: #8b5cf6; }
+.md-tip-sleep .md-tip-illust .material-symbols-rounded { color: #8b5cf6; }
+
+.md-tip-move .md-tip-eyebrow { color: #16a34a; }
+.md-tip-move .md-tip-metric { color: #166534; border-color: rgba(22,163,74,0.22); }
+.md-tip-move .md-tip-metric .material-symbols-rounded { color: #16a34a; }
+.md-tip-move .md-tip-illust .material-symbols-rounded { color: #16a34a; }
+
+.md-tip-vitals .md-tip-eyebrow { color: #e11d48; }
+.md-tip-vitals .md-tip-metric { color: #9f1239; border-color: rgba(225,29,72,0.22); }
+.md-tip-vitals .md-tip-metric .material-symbols-rounded { color: #ef4444; }
+.md-tip-vitals .md-tip-illust .material-symbols-rounded { color: #ef4444; }
+
+.md-tip-indicators {
+    position: absolute;
+    bottom: 0.7rem;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    z-index: 5;
+}
+.md-tip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.22);
+    transition: all 0.3s ease;
+}
+.md-tip-dot.dot-1 { animation: tipDot 12s infinite ease-in-out; animation-delay: 0s; }
+.md-tip-dot.dot-2 { animation: tipDot 12s infinite ease-in-out; animation-delay: 3s; }
+.md-tip-dot.dot-3 { animation: tipDot 12s infinite ease-in-out; animation-delay: 6s; }
+.md-tip-dot.dot-4 { animation: tipDot 12s infinite ease-in-out; animation-delay: 9s; }
+@keyframes tipDot {
+    0%, 25% { background: #3b82f6; width: 18px; }
+    28%, 100% { background: rgba(59, 130, 246, 0.22); width: 6px; }
+}
+
+/* Remove left/right borders from the home chat textarea. */
+[class*="st-key-home_chat_input_"] [data-testid="stTextAreaRootElement"],
+[class*="st-key-home_chat_input_"] [data-baseweb="base-input"] {
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-top: 0 !important;
+    border-bottom: 0 !important;
+    box-shadow: none !important;
+}
+[class*="st-key-home_chat_input_"] textarea {
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-top: 0 !important;
+    border-bottom: 0 !important;
+    box-shadow: none !important;
+}
+[class*="st-key-home_chat_input_"] textarea:focus {
+    border: 0 !important;
+    box-shadow: none !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -6301,6 +7684,7 @@ if "session_started" not in st.session_state:
     st.session_state.messages = []
     st.session_state.qcount = 0
     st.session_state.feedback = {}
+    st.session_state.nav_clicked = False
     st.session_state.patient_memory = {"symptoms": [], "conditions": [], "medications": []}
     st.session_state.uploader_key = 0
     st.session_state.last_pdf_context = ""
@@ -6338,60 +7722,62 @@ if "session_started" not in st.session_state:
     st.session_state.voice_audio_key = 0
 
 with st.sidebar:
-    _logo_path = os.path.join(os.path.dirname(__file__), "assets", "medichat-logo.jpeg")
-    _logo_block = '<div class="md-logo-mark">⚕</div>'
-    if os.path.exists(_logo_path):
-        try:
-            with open(_logo_path, "rb") as _lf:
-                _logo_b64 = base64.b64encode(_lf.read()).decode("utf-8")
-            _logo_block = '<img class="md-logo-image" src="data:image/jpeg;base64,' + _logo_b64 + '" alt="MediChat logo" />'
-        except Exception:
-            pass
-    st.markdown(
-        '<div class="md-logo-wrap">'
-        + _logo_block +
-        '<div>'
-        '<div class="md-logo-text">' + APP_TITLE + '</div>'
-        '<div class="md-logo-sub">' + APP_SUBTITLE + '</div>'
-        '</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
+    _brand_logo_uri = get_brand_logo_data_uri()
+    if _brand_logo_uri:
+        st.markdown(
+            '<div class="md-logo-wrap md-logo-image-wrap">'
+            '<img class="md-logo-image" src="' + _brand_logo_uri + '" alt="' + ui_escape(APP_TITLE) + '"/>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    else:
+        # Fallback if the asset is missing — keep the Material Symbol mark + text.
+        _logo_block = '<div class="md-logo-mark"><span class="material-symbols-rounded">medical_services</span></div>'
+        st.markdown(
+            '<div class="md-logo-wrap">'
+            + _logo_block +
+            '<div>'
+            '<div class="md-logo-text">' + APP_TITLE + '</div>'
+            '<div class="md-logo-sub">' + APP_SUBTITLE + '</div>'
+            '</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
 
     # ── Primary nav ─────────────────────────────────────────────
     _mode = st.session_state.mode
-    if not st.session_state.is_authenticated:
-        nav_items = [
-            ("home", "Home", "chat", ":material/home:"),
-            ("new", "New Chat", "chat", ":material/chat_bubble:"),
-            ("symptom", "Symptoms Checker", "assessment", ":material/stethoscope:"),
-            ("rx", "Prescription Reader", "rx_reader", ":material/document_scanner:"),
-            ("insights", "Ai Insights", "insights", ":material/auto_awesome:"),
-        ]
-    else:
-        nav_items = [
-            ("home", "Home", "chat", ":material/home:"),
-            ("new", "New Chat", "chat", ":material/chat_bubble:"),
-            ("overview", "Health Overview", "overview", ":material/monitoring:"),
-            ("symptom", "Symptoms Checker", "assessment", ":material/stethoscope:"),
-            ("records", "Health Records", "records", ":material/lab_profile:"),
-            ("rx", "Prescription Reader", "rx_reader", ":material/document_scanner:"),
-            ("meds", "Medications", "medications", ":material/pill:"),
-            ("appts", "Appointments", "appointments", ":material/calendar_month:"),
-            ("insights", "Ai Insights", "insights", ":material/auto_awesome:"),
-        ]
+    nav_items = [
+        ("home", "Home", "chat", ":material/home:"),
+        ("new", "New Chat", "chat", ":material/chat_bubble:"),
+        ("overview", "Health Overview", "overview", ":material/monitoring:"),
+        ("symptom", "Symptoms Checker", "assessment", ":material/stethoscope:"),
+        ("prescription", "Prescription Reader", "rx_reader", ":material/description:"),
+        ("records", "Health Records", "records", ":material/lab_profile:"),
+        ("meds", "Medications", "medications", ":material/pill:"),
+        ("insights", "Ai Insights", "insights", ":material/auto_awesome:"),
+        ("appts", "Appointments", "appointments", ":material/calendar_month:"),
+    ]
+    _nav_clicked = st.session_state.get("nav_clicked", False)
     for nav_key, nav_label, target_mode, nav_icon in nav_items:
-        is_active = (target_mode == _mode and nav_key != "new") or (nav_key == "home" and _mode == "chat")
-        # 'home' is the default chat view; 'new' is also chat but starts fresh
-        if nav_key == "home" and _mode != "chat":
-            is_active = False
+        # Home and New Chat both target chat mode; differentiate by message presence
+        # so exactly one is active at a time. Both also gated on nav_clicked so that
+        # nothing is highlighted on a fresh load — the active state appears only
+        # after the user explicitly navigates.
+        if nav_key == "home":
+            is_active = _nav_clicked and (_mode == "chat") and not st.session_state.messages
+        elif nav_key == "new":
+            is_active = _nav_clicked and (_mode == "chat") and bool(st.session_state.messages)
+        else:
+            is_active = (target_mode == _mode)
+        _btn_type = "primary" if is_active else "secondary"
         active_cls = "md-nav-active" if is_active else ""
         st.markdown('<div class="' + active_cls + '">', unsafe_allow_html=True)
-        if st.button(nav_label, key="nav_" + nav_key, use_container_width=True, icon=nav_icon, type="secondary"):
+        if st.button(nav_label, key="nav_" + nav_key, use_container_width=True, icon=nav_icon, type=_btn_type):
             try:
                 st.query_params.clear()
             except Exception:
                 pass
+            st.session_state.nav_clicked = True
             if nav_key == "new":
                 start_new_chat_session()
             else:
@@ -6399,7 +7785,44 @@ with st.sidebar:
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
+    # Divider sits between Appointments (last nav item) and the profile chip.
     st.markdown("---")
+
+    # ── Profile chip — sits where the Premium card used to. Live-updates with auth state. ──
+    if st.session_state.is_authenticated:
+        _profile_nm = st.session_state.patient_name or "Patient"
+        _profile_em = st.session_state.user_email_display or ""
+        _profile_in = (_profile_nm[0] if _profile_nm and _profile_nm != "Patient" else (_profile_em[0] if _profile_em else "P")).upper()
+        _profile_sub = _profile_em if _profile_em else "View profile"
+    else:
+        _profile_nm = "Guest"
+        _profile_in = "G"
+        _profile_sub = "Sign in to save your data"
+    st.markdown(
+        '<div class="md-side-profile md-side-profile-top">'
+        '<div class="md-side-avatar">' + ui_escape(_profile_in) + '</div>'
+        '<div style="flex:1;min-width:0;">'
+        '<div class="md-side-pname">' + ui_text(_profile_nm, 30) + '</div>'
+        '<div class="md-side-psub">' + ui_text(_profile_sub, 40) + '</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    # ── Language selector — sits directly under the profile/Guest tile ──
+    _lang_keys_top = list(LANGUAGES.keys())
+    _current_lang_top = st.session_state.get("selected_language", "English")
+    _lang_idx_top = _lang_keys_top.index(_current_lang_top) if _current_lang_top in _lang_keys_top else 0
+    st.selectbox(
+        "🌐 Language",
+        options=_lang_keys_top,
+        index=_lang_idx_top,
+        key="lang_selector",
+        label_visibility="visible",
+    )
+    if st.session_state.lang_selector != st.session_state.selected_language:
+        st.session_state.selected_language = st.session_state.lang_selector
+        st.rerun()
 
     if st.session_state.is_authenticated:
         _name = st.session_state.patient_name or "Patient"
@@ -6491,72 +7914,17 @@ with st.sidebar:
             st.markdown('</div>', unsafe_allow_html=True)
         st.markdown("---")
     elif st.session_state.is_guest:
-        st.markdown(
-            '<div style="display:flex;align-items:center;gap:0.5rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:0.55rem 0.75rem;margin-bottom:0.6rem;font-size:0.78rem;color:#475569;">'
-            '<span>👤</span><span>Guest session — not saved</span>'
-            '</div>',
-            unsafe_allow_html=True
-        )
-        if FIREBASE_ACTIVE and st.button("Sign in / create profile", use_container_width=True, key="guest_to_signin"):
-            st.session_state.is_guest = False
-            st.rerun()
-        st.markdown("---")
-
-    st.markdown('<div class="sb-title sb-title-language">Language</div>', unsafe_allow_html=True)
-    lang_options = list(LANGUAGES.keys())
-    lang_display = [LANGUAGES[l]["flag"] + " " + l for l in lang_options]
-    selected_idx = lang_options.index(st.session_state.selected_language)
-    chosen = st.selectbox("", lang_display, index=selected_idx, label_visibility="collapsed")
-    new_lang = lang_options[lang_display.index(chosen)]
-    if new_lang != st.session_state.selected_language:
-        st.session_state.selected_language = new_lang
-        st.rerun()
+        pass
 
     L = LANGUAGES[st.session_state.selected_language]
 
-    st.markdown(
-        '<div class="md-side-safe-wrap">'
-        '<div class="md-side-safe-pill"><span class="material-symbols-rounded">verified_user</span><span>HIPAA-style safeguards</span></div>'
-        '<div class="md-side-safe-pill"><span class="material-symbols-rounded">menu_book</span><span>3,500 medical references</span></div>'
-        '<div class="md-side-safe-pill"><span class="material-symbols-rounded">emergency</span><span>Emergency-aware triage</span></div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown("---")
-    st.markdown('<div class="md-sidebar-bottom-spacer"></div>', unsafe_allow_html=True)
-
-    # Care boundary note
-    st.markdown(
-        '<div class="md-care-note">'
-        '<div class="md-care-title">Care boundaries</div>'
-        '<div class="md-care-copy">MediChat gives general health information. For urgent symptoms, use local emergency services or a qualified clinician.</div>'
-        '<div style="margin-top:0.35rem;font-size:0.72rem;"><a href="' + ui_escape(PRIVACY_POLICY_URL) + '" target="_blank">Privacy Policy (APP + NDB)</a></div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    # Bottom profile chip
-    if st.session_state.is_authenticated:
-        _nm = st.session_state.patient_name or "Patient"
-        _em = st.session_state.user_email_display or ""
-        _in = (_nm[0] if _nm and _nm != "Patient" else (_em[0] if _em else "P")).upper()
-        st.markdown(
-            '<div class="md-side-profile">'
-            '<div class="md-side-avatar">' + ui_escape(_in) + '</div>'
-            '<div style="flex:1;min-width:0;">'
-            '<div class="md-side-pname">' + ui_text(_nm, 30) + '</div>'
-            '<div class="md-side-psub">View profile</div>'
-            '</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
+    # Profile chip + language selector rendered above. Privacy & Consent + footer at the bottom.
     st.markdown('<div class="md-sidebar-bottom">', unsafe_allow_html=True)
     if st.button("Privacy & Consent", key="nav_privacy_bottom", use_container_width=True):
         st.session_state.mode = "privacy"
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('<div class="sb-footer">© 2026 ' + APP_TITLE + '. All rights reserved.</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 L = LANGUAGES[st.session_state.selected_language]
 
@@ -6574,7 +7942,10 @@ if _mode_from_url in _url_modes:
         pass
 
 if st.session_state.is_guest and not st.session_state.is_authenticated:
-    _guest_allowed_modes = {"chat", "assessment", "rx_reader", "insights", "privacy"}
+    _guest_allowed_modes = {
+        "chat", "overview", "assessment", "records", "rx_reader",
+        "medications", "appointments", "insights", "history", "privacy"
+    }
     if st.session_state.mode not in _guest_allowed_modes:
         st.session_state.mode = "chat"
 
@@ -6782,6 +8153,13 @@ home_empty_chat = st.session_state.mode == "chat" and not st.session_state.messa
 if st.session_state.mode == "chat":
     # ── New Dashboard Home (only on empty chat) ─────────────────────
     if not st.session_state.messages:
+        st.markdown(
+            '<div class="md-top-icons-fixed">'
+            '<span class="material-symbols-rounded">search</span>'
+            '<span class="material-symbols-rounded md-notify-icon">notifications</span>'
+            '</div>',
+            unsafe_allow_html=True
+        )
         _local_now = get_user_local_now()
         _hour = _local_now.hour
         if 5 <= _hour < 12:
@@ -6802,31 +8180,27 @@ if st.session_state.mode == "chat":
             unsafe_allow_html=True
         )
 
-        # Quick action cards
-        qa_cols = st.columns(4, gap="small")
-        qa_specs = [
-            ("qa_headache", "I have a headache", "I have a headache and would like to understand what might be causing it.", ":material/neurology:"),
-            ("qa_tired", "Feeling tired", "I have been feeling unusually tired lately. What could be the reason?", ":material/mood:"),
-            ("qa_symptoms", "Check my symptoms", "_route_assessment", ":material/search:"),
-            ("qa_sleep", "Improve my sleep", "Can you suggest ways to improve my sleep quality?", ":material/bedtime:"),
-        ]
-        for i, (qa_key, qa_label, qa_query, qa_icon) in enumerate(qa_specs):
-            with qa_cols[i]:
-                if st.button(qa_label, key=qa_key, use_container_width=True, icon=qa_icon):
-                    if qa_query == "_route_assessment":
-                        st.session_state.mode = "assessment"
-                        st.rerun()
-                    else:
-                        st.session_state.pending_user_input = qa_query
-                        st.rerun()
-
-        if st.session_state.is_authenticated:
-            home_main, home_side = st.columns([2.3, 1], gap="large")
-        else:
-            home_main = st.container()
-            home_side = None
+        home_main, home_side = st.columns([1.9, 1.3], gap="medium")
 
         with home_main:
+            # Quick action cards
+            qa_cols = st.columns(4, gap="small")
+            qa_specs = [
+                ("qa_headache", "I have a headache", "I have a headache and would like to understand what might be causing it.", ":material/neurology:"),
+                ("qa_tired", "Feeling tired", "I have been feeling unusually tired lately. What could be the reason?", ":material/mood:"),
+                ("qa_symptoms", "Check my symptoms", "_route_assessment", ":material/search:"),
+                ("qa_sleep", "Improve my sleep", "Can you suggest ways to improve my sleep quality?", ":material/bedtime:"),
+            ]
+            for i, (qa_key, qa_label, qa_query, qa_icon) in enumerate(qa_specs):
+                with qa_cols[i]:
+                    if st.button(qa_label, key=qa_key, use_container_width=True, icon=qa_icon):
+                        if qa_query == "_route_assessment":
+                            st.session_state.mode = "assessment"
+                            st.rerun()
+                        else:
+                            st.session_state.pending_user_input = qa_query
+                            st.rerun()
+
             st.markdown('<div class="md-ref-ask-shell">', unsafe_allow_html=True)
             with st.form("home_chat_form", clear_on_submit=True):
                 home_user_input = st.text_area(
@@ -6838,12 +8212,13 @@ if st.session_state.mode == "chat":
                 )
                 ac1, ac2, ac_spacer, ac3 = st.columns([0.48, 0.48, 4.2, 0.34])
                 with ac1:
-                    home_upload_clicked = st.form_submit_button("Upload", icon=":material/attach_file:", use_container_width=True)
+                    home_upload_clicked = st.form_submit_button(" ", key="home_upload_btn", icon=":material/attach_file:", use_container_width=True)
                 with ac2:
-                    home_voice_clicked = st.form_submit_button("Voice", icon=":material/mic:", use_container_width=True)
+                    home_voice_clicked = st.form_submit_button(" ", key="home_voice_btn", icon=":material/mic:", use_container_width=True)
                 with ac3:
-                    home_submit = st.form_submit_button("➤", use_container_width=True, type="primary")
+                    home_submit = st.form_submit_button(" ", key="home_send_btn", icon=":material/send:", use_container_width=True, type="primary")
             st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown('<div class="md-composer-glow"></div>', unsafe_allow_html=True)
             if home_upload_clicked:
                 st.session_state.home_show_vision_upload = True
                 st.session_state.home_show_voice = False
@@ -6933,63 +8308,99 @@ if st.session_state.mode == "chat":
                         st.rerun()
 
             st.markdown(
-                '<div class="md-home-composer-note">MediChat Ai can make mistakes. Please consult a healthcare professional for medical advice.</div>',
+                '<div class="md-home-composer-note"><span class="material-symbols-rounded md-disclaimer-shield">verified_user</span>MediChat Ai can make mistakes. Please consult a healthcare professional for medical advice.</div>',
                 unsafe_allow_html=True
             )
 
-            if not st.session_state.is_authenticated:
-                st.markdown('<div class="md-guest-head">Start with a feature</div>', unsafe_allow_html=True)
-                g1, g2, g3 = st.columns(3, gap="small")
-                with g1:
-                    st.markdown('<div class="md-guest-card md-guest-blue">', unsafe_allow_html=True)
-                    if st.button("Vision Ai - Xrays and reports scans", key="guest_vision_card", use_container_width=True, icon=":material/image_search:"):
-                        st.session_state.home_show_vision_upload = True
-                        st.session_state.home_show_voice = False
+            # ── Smart Actions (available for all users) ───────────────
+            st.markdown('<div class="md-smart-head"><div class="md-smart-title">Smart Actions</div></div>', unsafe_allow_html=True)
+            sa_specs = [
+                ("sa_sym", "Symptoms Checker\nGuided AI assessment of your symptoms", "assessment", ":material/stethoscope:", "md-smart-purple"),
+                ("sa_rec", "Health Records\nUpload and manage your medical reports", "records", ":material/medical_information:", "md-smart-green"),
+                ("sa_ins", "AI Insights\nPersonalized insights based on your data", "insights", ":material/monitor_heart:", "md-smart-pink"),
+                ("sa_appt", "Appointments\nSchedule and manage your appointments", "appointments", ":material/calendar_month:", "md-smart-blue"),
+            ]
+            sa_cols = st.columns(4, gap="small")
+            for i, (sk, label, action, icon_name, accent_cls) in enumerate(sa_specs):
+                with sa_cols[i]:
+                    if st.button(label, key=sk, use_container_width=True, icon=icon_name):
+                        st.session_state.mode = action
                         st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
-                with g2:
-                    st.markdown('<div class="md-guest-card md-guest-purple">', unsafe_allow_html=True)
-                    if st.button("Symptoms Check", key="guest_symptom_card", use_container_width=True, icon=":material/stethoscope:"):
-                        st.session_state.mode = "assessment"
-                        st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
-                with g3:
-                    st.markdown('<div class="md-guest-card md-guest-green">', unsafe_allow_html=True)
-                    if st.button("Prescription reading", key="guest_rx_card", use_container_width=True, icon=":material/document_scanner:"):
-                        st.session_state.mode = "rx_reader"
-                        st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
 
-            # ── Smart Actions (each one routes to a real feature) ────
-            if st.session_state.is_authenticated:
-                st.markdown('<div class="md-smart-head"><div class="md-smart-title">Smart Actions</div></div>', unsafe_allow_html=True)
-                sa_specs = [
-                    ("sa_sym", "Symptoms Checker\nGuided Ai assessment of your symptoms", "assessment", ":material/stethoscope:", "md-smart-purple"),
-                    ("sa_rec", "Health Records\nUpload and manage your medical reports", "records", ":material/medical_information:", "md-smart-green"),
-                    ("sa_ins", "Ai Insights\nPersonalized insights based on your data", "insights", ":material/monitor_heart:", "md-smart-pink"),
-                    ("sa_appt", "Appointments\nSchedule and manage your appointments", "appointments", ":material/calendar_month:", "md-smart-blue"),
-                ]
-                sa_cols = st.columns(4, gap="small")
-                for i, (sk, label, action, icon_name, accent_cls) in enumerate(sa_specs):
-                    with sa_cols[i]:
-                        if st.button(label, key=sk, use_container_width=True, icon=icon_name):
-                            st.session_state.mode = action
-                            st.rerun()
-
-            st.markdown(
-                '<div class="md-tip-center">'
-                '<div class="md-tip-center-icon material-symbols-rounded">directions_walk</div>'
-                '<div class="md-tip-center-body">'
-                '<div class="md-tip-center-eyebrow">Health tip for you</div>'
-                '<div class="md-tip-center-title">Walk After Meals</div>'
-                '<div class="md-tip-center-desc">A 10-minute walk after eating can help blood sugar levels and digestion.</div>'
+            # ── Daily Health Tip carousel (4 live-data slides, 3s rotation) ──
+            _tip_daily = get_daily_metrics()
+            _tip_water_raw = _tip_daily.get("water_glasses")
+            _tip_sleep_raw = _tip_daily.get("sleep_hours")
+            _tip_steps_raw = _tip_daily.get("steps")
+            _tip_hr_raw = _tip_daily.get("heart_rate_resting")
+            _tip_water_metric = (str(int(_tip_water_raw)) + " / 8 glasses today") if _tip_water_raw is not None else "Not logged today — tap Health Overview to log"
+            _tip_sleep_metric = ("Last night: " + ("%.1f" % float(_tip_sleep_raw)) + "h") if _tip_sleep_raw else "Sleep not logged — log it on Health Overview"
+            _tip_steps_metric = (format(int(_tip_steps_raw), ",") + " / 10,000 steps") if _tip_steps_raw else "Steps not logged — log them on Health Overview"
+            _tip_hr_metric = ("Resting HR " + str(int(_tip_hr_raw)) + " BPM") if _tip_hr_raw else "Heart rate not logged — log it on Health Overview"
+            _tip_glass_svg = (
+                '<svg viewBox="0 0 86 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
+                '<defs><linearGradient id="mdGlassC" x1="0" y1="0" x2="0" y2="1">'
+                '<stop offset="0%" stop-color="#bfdbfe" stop-opacity="0.55"/>'
+                '<stop offset="100%" stop-color="#60a5fa" stop-opacity="0.85"/>'
+                '</linearGradient></defs>'
+                '<ellipse cx="43" cy="92" rx="30" ry="4" fill="#1e3a8a" opacity="0.08"/>'
+                '<path d="M22 30 L64 30 L60 88 Q60 92 56 92 L30 92 Q26 92 26 88 Z" fill="url(#mdGlassC)" stroke="#3b82f6" stroke-width="1.6" stroke-linejoin="round"/>'
+                '<ellipse cx="43" cy="30" rx="21" ry="3.4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.4"/>'
+                '<path d="M30 42 Q34 46 32 52 Q30 56 33 60" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.85"/>'
+                '<circle cx="48" cy="58" r="2" fill="#ffffff" opacity="0.7"/>'
+                '<circle cx="38" cy="72" r="1.4" fill="#ffffff" opacity="0.6"/>'
+                '</svg>'
+            )
+            _tip_html = (
+                '<div class="md-tip-carousel">'
+                '<div class="md-tip-slide md-tip-water">'
+                '<div>'
+                '<div class="md-tip-eyebrow">Hydration tip</div>'
+                '<div class="md-tip-title">Stay hydrated</div>'
+                '<div class="md-tip-desc">Drinking enough water helps maintain energy and supports overall health.</div>'
+                '<div class="md-tip-metric"><span class="material-symbols-rounded">water_drop</span>' + _tip_water_metric + '</div>'
                 '</div>'
-                '</div>',
-                unsafe_allow_html=True
+                '<div class="md-tip-illust md-tip-illust-svg">' + _tip_glass_svg + '</div>'
+                '</div>'
+                '<div class="md-tip-slide md-tip-sleep">'
+                '<div>'
+                '<div class="md-tip-eyebrow">Sleep insight</div>'
+                '<div class="md-tip-title">Wind down earlier</div>'
+                '<div class="md-tip-desc">Quality sleep boosts recovery, mood, and immunity. Aim for 7–9 hours every night.</div>'
+                '<div class="md-tip-metric"><span class="material-symbols-rounded">bedtime</span>' + _tip_sleep_metric + '</div>'
+                '</div>'
+                '<div class="md-tip-illust"><span class="material-symbols-rounded">bedtime</span></div>'
+                '</div>'
+                '<div class="md-tip-slide md-tip-move">'
+                '<div>'
+                '<div class="md-tip-eyebrow">Movement</div>'
+                '<div class="md-tip-title">Keep moving</div>'
+                '<div class="md-tip-desc">A short walk after meals helps regulate blood sugar and energy levels through the day.</div>'
+                '<div class="md-tip-metric"><span class="material-symbols-rounded">directions_walk</span>' + _tip_steps_metric + '</div>'
+                '</div>'
+                '<div class="md-tip-illust"><span class="material-symbols-rounded">directions_walk</span></div>'
+                '</div>'
+                '<div class="md-tip-slide md-tip-vitals">'
+                '<div>'
+                '<div class="md-tip-eyebrow">Vitals check</div>'
+                '<div class="md-tip-title">Heart in good rhythm</div>'
+                '<div class="md-tip-desc">A resting heart rate of 60–100 BPM is typical for healthy adults. Keep moving and resting well.</div>'
+                '<div class="md-tip-metric"><span class="material-symbols-rounded">favorite</span>' + _tip_hr_metric + '</div>'
+                '</div>'
+                '<div class="md-tip-illust"><span class="material-symbols-rounded">favorite</span></div>'
+                '</div>'
+                '<div class="md-tip-indicators">'
+                '<span class="md-tip-dot dot-1"></span>'
+                '<span class="md-tip-dot dot-2"></span>'
+                '<span class="md-tip-dot dot-3"></span>'
+                '<span class="md-tip-dot dot-4"></span>'
+                '</div>'
+                '</div>'
             )
-        if home_side is not None:
-            with home_side:
-                # ── Profile Snapshot (REAL data only) ────────────────────
+            st.markdown(_tip_html, unsafe_allow_html=True)
+
+        with home_side:
+            # ── Profile Snapshot ────────────────────────────────────────
                 _mem_now = st.session_state.patient_memory or {}
                 _cond_n = len(_mem_now.get("conditions") or [])
                 _med_n = len(_mem_now.get("medications") or [])
@@ -7009,30 +8420,47 @@ if st.session_state.mode == "chat":
                             _last_visit_str = "recently"
 
                 _snap_title = "Health Overview"
-                _heart_rate_display = "Not connected"
-                _steps_display = "Not connected"
-                _sleep_hours = get_daily_metrics().get("sleep_hours")
-                _sleep_display = (str(_sleep_hours) + "h") if _sleep_hours else "Not connected"
-                _water_count = int(get_daily_metrics().get("water_glasses", 0) or 0)
-                _water_display = (str(_water_count) + " / 8 glasses") if _water_count else "Not connected"
+                _daily = get_daily_metrics()
+                # Real values only — no fake fallbacks. Missing → "—" with no status pill.
+                _hr = _daily.get("heart_rate_resting")
+                _steps_val = _daily.get("steps")
+                _sleep_hours = _daily.get("sleep_hours")
+                _water_count = _daily.get("water_glasses")
+
+                _heart_rate_display = (str(int(_hr)) + " BPM") if _hr else "—"
+                _hr_status, _hr_cls = heart_rate_status(_hr)
+                _heart_rate_status_text = _hr_status or ""
+
+                _steps_display = (f"{int(_steps_val):,} / 10,000") if _steps_val else "—"
+                _steps_status_text = (str(min(100, int(round((int(_steps_val) / 10000) * 100)))) + "%") if _steps_val else ""
+
+                _sleep_display = (f"{float(_sleep_hours):.1f}h") if _sleep_hours else "—"
+                _sl_status, _sl_cls = sleep_status(_sleep_hours)
+                _sleep_status_text = _sl_status or ""
+
+                _wc_int = int(_water_count) if _water_count is not None else None
+                _water_display = (f"{_wc_int} / 8 glasses") if _wc_int is not None else "—"
+                _water_status_text = (str(min(100, int(round((_wc_int / 8) * 100)))) + "%") if _wc_int else ""
+
                 _tiles = [
-                    ("md-accent-pink", "favorite", "Heart Rate", _heart_rate_display, "md-line-pink"),
-                    ("md-accent-green", "directions_walk", "Steps", _steps_display, "md-line-green"),
-                    ("md-accent-purple", "bedtime", "Sleep", _sleep_display, "md-line-purple"),
-                    ("md-accent-blue", "water_drop", "Water Intake", _water_display, "md-line-blue"),
+                    ("md-accent-pink", "favorite", "Heart Rate", _heart_rate_display, _heart_rate_status_text, "md-line-pink"),
+                    ("md-accent-green", "directions_walk", "Steps", _steps_display, _steps_status_text, "md-line-green"),
+                    ("md-accent-purple", "bedtime", "Sleep", _sleep_display, _sleep_status_text, "md-line-purple"),
+                    ("md-accent-blue", "water_drop", "Water Intake", _water_display, _water_status_text, "md-line-blue"),
                 ]
                 snap_html = (
                     '<div class="md-rcard md-snap-card">'
-                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div></div>'
+                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><div class="md-rcard-link">See all</div></div>'
                     '<div class="md-snap-grid">'
                 )
-                for _cls, _icon, _lbl, _val, _line_cls in _tiles:
+                for _cls, _icon, _lbl, _val, _status, _line_cls in _tiles:
                     snap_html += (
                         '<div class="md-snap-tile">'
                         '<div class="md-snap-icon ' + _cls + ' material-symbols-rounded">' + ui_escape(_icon) + '</div>'
                         '<div class="md-snap-text">'
-                        '<div class="md-snap-label">' + ui_text(_lbl, 40) + '</div>'
-                        '<div class="md-snap-value">' + ui_text(_val, 40) + '</div>'
+                        '<div><div class="md-snap-label">' + ui_text(_lbl, 40) + '</div>'
+                        '<div class="md-snap-value">' + ui_text(_val, 40) + '</div></div>'
+                        '<div class="md-snap-status">' + ui_text(_status, 20) + '</div>'
                         '</div>'
                         '<svg class="md-spark ' + _line_cls + '" viewBox="0 0 96 28" aria-hidden="true"><path d="M2 18 C12 18 14 11 24 14 S38 24 48 15 S62 2 72 10 S84 19 94 13" /></svg>'
                         '</div>'
@@ -7046,8 +8474,11 @@ if st.session_state.mode == "chat":
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 # Recent Conversations (real, from Firestore)
-                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div></div>'
-                _recent = list_conversations(st.session_state.user_email_hash, limit=4)
+                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><div class="md-rcard-link">See all</div></div>'
+                if st.session_state.is_authenticated and st.session_state.user_email_hash:
+                    _recent = list_conversations(st.session_state.user_email_hash, limit=4)
+                else:
+                    _recent = []  # Real conversations only — no mock entries.
                 if _recent:
                     for _r in _recent:
                         _rt = (_r.get("title") or "Chat")[:32]
@@ -7068,7 +8499,10 @@ if st.session_state.mode == "chat":
                             _ago = ""
                         recent_html += '<div class="md-conv-row"><div class="md-conv-bubble material-symbols-rounded">chat_bubble</div><div class="md-conv-title">' + ui_text(_rt, 40) + '</div><div class="md-conv-time">' + ui_text(_ago, 20) + '</div></div>'
                 else:
-                    recent_html += '<div class="md-conv-row md-conv-empty">No recent conversations yet.</div>'
+                    if st.session_state.is_authenticated:
+                        recent_html += '<div class="md-conv-row md-conv-empty">No recent conversations yet — start a chat to see it here.</div>'
+                    else:
+                        recent_html += '<div class="md-conv-row md-conv-empty">Sign in to save and revisit your conversations.</div>'
                 recent_html += '</div>'
                 st.markdown(recent_html, unsafe_allow_html=True)
                 st.markdown('<div class="md-view-all-wrap">', unsafe_allow_html=True)
@@ -7076,19 +8510,7 @@ if st.session_state.mode == "chat":
                     st.session_state.mode = "history"
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
-                st.markdown(
-                    '<div class="md-urgent-card">'
-                    '<div class="md-urgent-icon material-symbols-rounded">call</div>'
-                    '<div class="md-urgent-body">'
-                    '<div class="md-urgent-title">Need urgent help?</div>'
-                    '<div class="md-urgent-desc">Contact emergency services</div>'
-                    '</div>'
-                    '<div class="md-urgent-arrow material-symbols-rounded">arrow_forward</div>'
-                    '</div>',
-                    unsafe_allow_html=True
-                )
-                if st.button("Open emergency guidance", key="open_emergency_guidance", use_container_width=True):
-                    st.info(get_emergency_guidance_text())
+                # Daily Health Tip carousel is rendered below Smart Actions in home_main.
 
     mem = st.session_state.patient_memory
 
@@ -7268,9 +8690,9 @@ if st.session_state.mode == "chat":
             )
             fc1, fc2, fc_spacer, fc3 = st.columns([0.72, 0.72, 3.1, 0.48])
             with fc1:
-                chat_upload_clicked = st.form_submit_button("Upload", icon=":material/attach_file:", use_container_width=True)
+                chat_upload_clicked = st.form_submit_button(" ", key="chat_upload_btn", icon=":material/attach_file:", use_container_width=True)
             with fc2:
-                chat_voice_clicked = st.form_submit_button("Voice", icon=":material/mic:", use_container_width=True)
+                chat_voice_clicked = st.form_submit_button(" ", key="chat_voice_btn", icon=":material/mic:", use_container_width=True)
             with fc3:
                 submit = st.form_submit_button("➤", use_container_width=True, type="primary")
 
@@ -8058,6 +9480,8 @@ elif st.session_state.mode == "overview":
     today = get_daily_metrics()
     water_n = int(today.get("water_glasses", 0) or 0)
     sleep_h = today.get("sleep_hours")
+    steps_n = today.get("steps")
+    hr_n = today.get("heart_rate_resting")
 
     # Wearable sync placeholder (no simulated data)
     st.markdown(
@@ -8110,6 +9534,43 @@ elif st.session_state.mode == "overview":
         with wcol_b:
             if st.button("Reset", key="water_reset", use_container_width=True):
                 update_daily_metric("water_glasses", 0)
+                st.rerun()
+
+    ov_e, ov_f = st.columns(2)
+    with ov_e:
+        steps_disp = (f"{int(steps_n):,} / 10,000") if steps_n else "—"
+        steps_pct = min(100, int(round((int(steps_n) / 10000) * 100))) if steps_n else 0
+        st.markdown(
+            '<div class="md-rcard"><div class="md-metric-row" style="border:none;">'
+            '<div class="md-metric-icon md-hp-green">🚶</div>'
+            '<div class="md-metric-mid"><div class="md-metric-label">Steps today</div>'
+            '<div class="md-metric-value">' + ui_text(steps_disp, 24) + '</div></div>'
+            + ('<div class="md-metric-status md-status-info">' + str(steps_pct) + '%</div>' if steps_n else '')
+            + '</div></div>',
+            unsafe_allow_html=True
+        )
+        with st.form("steps_form_today", clear_on_submit=True):
+            st_in = st.number_input("Log steps today", min_value=0, max_value=100000, step=500, value=int(steps_n) if steps_n else 0, key="steps_input")
+            if st.form_submit_button("Save steps", use_container_width=True):
+                update_daily_metric("steps", int(st_in))
+                st.rerun()
+    with ov_f:
+        hr_disp = (str(int(hr_n)) + " BPM") if hr_n else "—"
+        _hr_lbl, _hr_cls_p = heart_rate_status(hr_n)
+        hr_status_html = ('<div class="md-metric-status ' + (_hr_cls_p or "md-status-info") + '">' + (_hr_lbl or "") + '</div>') if hr_n else ''
+        st.markdown(
+            '<div class="md-rcard"><div class="md-metric-row" style="border:none;">'
+            '<div class="md-metric-icon md-hp-pink">❤</div>'
+            '<div class="md-metric-mid"><div class="md-metric-label">Resting heart rate</div>'
+            '<div class="md-metric-value">' + ui_text(hr_disp, 16) + '</div></div>'
+            + hr_status_html
+            + '</div></div>',
+            unsafe_allow_html=True
+        )
+        with st.form("hr_form_today", clear_on_submit=True):
+            hr_in = st.number_input("Log resting HR (BPM)", min_value=30, max_value=220, step=1, value=int(hr_n) if hr_n else 70, key="hr_input")
+            if st.form_submit_button("Save heart rate", use_container_width=True):
+                update_daily_metric("heart_rate_resting", int(hr_in))
                 st.rerun()
 
     # 7-day history table
