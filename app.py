@@ -48,26 +48,44 @@ APP_TITLE = "MediChat Ai"
 APP_SUBTITLE = "Your Ai Health Assistant"
 APP_VERSION_LABEL = APP_TITLE
 
-@st.cache_data(show_spinner=False)
-def get_brand_logo_data_uri():
-    """Return the MediChat brand logo (icon + wordmark) as a base64 data URI.
-    Reads assets/MediChat logo.png. Returns None if the file is not present so
-    the renderer can fall back to the Material Symbol mark cleanly."""
+def _resolve_asset_path(filename):
+    """Locate an asset by filename, preferring the path relative to this script
+    (works regardless of CWD), then plain assets/ for local-launch convenience."""
     candidates = []
     try:
-        candidates.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "MediChat logo.png"))
+        candidates.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", filename))
     except Exception:
         pass
-    candidates.append(os.path.join("assets", "MediChat logo.png"))
+    candidates.append(os.path.join("assets", filename))
     for path in candidates:
-        try:
-            if os.path.exists(path):
-                with open(path, "rb") as f:
-                    b64 = base64.b64encode(f.read()).decode("ascii")
-                return "data:image/png;base64," + b64
-        except Exception:
-            continue
+        if os.path.exists(path):
+            return path
     return None
+
+@st.cache_data(show_spinner=False)
+def _load_asset_data_uri_cached(path, mtime):
+    """Cache key is (path, mtime) so the cache invalidates automatically when
+    the file changes on disk — no stale None after a missing-asset boot."""
+    with open(path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode("ascii")
+    ext = os.path.splitext(path)[1].lstrip(".").lower() or "png"
+    if ext == "jpg":
+        ext = "jpeg"
+    return "data:image/" + ext + ";base64," + b64
+
+def load_asset_data_uri(filename):
+    """Return an asset as a base64 data URI, or None if missing/unreadable."""
+    path = _resolve_asset_path(filename)
+    if not path:
+        return None
+    try:
+        return _load_asset_data_uri_cached(path, os.path.getmtime(path))
+    except Exception:
+        return None
+
+def get_brand_logo_data_uri():
+    """Backwards-compatible accessor for the MediChat brand logo."""
+    return load_asset_data_uri("MediChat logo.png")
 MEDICAL_REFERENCE_TARGET = max(1000, _safe_int_env("MEDICHAT_REFERENCE_TARGET", 5000))
 PRIVACY_POLICY_URL = _safe_secret(
     "PRIVACY_POLICY_URL",
@@ -8413,18 +8431,13 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
     """, unsafe_allow_html=True)
 
     _auth_shield_html = '<div class="md-auth-shield material-symbols-rounded">shield_person</div>'
-    _auth_shield_path = os.path.join(os.path.dirname(__file__), "assets", "auth_welcome_shield.png")
-    if os.path.exists(_auth_shield_path):
-        try:
-            with open(_auth_shield_path, "rb") as _shield_file:
-                _auth_shield_b64 = base64.b64encode(_shield_file.read()).decode("utf-8")
-            _auth_shield_html = (
-                '<div class="md-auth-shield md-auth-shield-image">'
-                '<img src="data:image/png;base64,' + _auth_shield_b64 + '" alt="MediChat welcome shield icon">'
-                '</div>'
-            )
-        except Exception:
-            pass
+    _auth_shield_uri = load_asset_data_uri("auth_welcome_shield.png")
+    if _auth_shield_uri:
+        _auth_shield_html = (
+            '<div class="md-auth-shield md-auth-shield-image">'
+            '<img src="' + _auth_shield_uri + '" alt="MediChat welcome shield icon">'
+            '</div>'
+        )
 
     st.markdown(
         '<div class="md-auth-welcome-card">'
