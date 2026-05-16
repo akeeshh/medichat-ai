@@ -49,11 +49,6 @@ MediChat is a web-based clinical AI chatbot that allows users to:
 | 9–10 | Testing & Evaluation |
 | 11–12 | Final Report & Demo |
 
----
+------
 
-## 🚀 Project Status
-> Currently in **Week 3 — Setup & Integration Phase**
-
----
-
-*ICT654 — Southern Institute of Science and Technology College (SISTC), Melbourne, Australia*
+*ICT654 — SISTC, Melbourne, Australia*
