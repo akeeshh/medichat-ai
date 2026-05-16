@@ -5931,19 +5931,22 @@ st.markdown("""
 
 /* Brand logo image (replaces icon + text + subtitle). The PNG already includes
    the wordmark and tagline, so we just center it cleanly in the sidebar. */
-.md-logo-image-wrap {
-    display: flex !important;
+[data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
+    display: grid !important;
+    place-items: center !important;
+    justify-items: center !important;
     justify-content: center !important;
     align-items: center !important;
+    width: 100% !important;
+    max-width: 242px !important;
+    margin: 0 auto 0.6rem auto !important;
     padding: 0.4rem 0 0.85rem 0 !important;
     background: transparent !important;
-    width: 100% !important;
     position: relative !important;
     border-bottom: none !important;
-    margin-bottom: 0.6rem !important;
 }
 /* Thin centered separator line under the logo — restored after the brand-image swap. */
-.md-logo-image-wrap::after {
+[data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap::after {
     content: "" !important;
     display: block !important;
     position: absolute !important;
@@ -5954,9 +5957,9 @@ st.markdown("""
     background: #e2e8f0 !important;
     pointer-events: none !important;
 }
-.md-logo-image {
+[data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
     max-width: 200px !important;
-    width: 100% !important;
+    width: min(200px, 100%) !important;
     height: auto !important;
     display: block !important;
     margin: 0 auto !important;
@@ -6154,12 +6157,24 @@ st.markdown("""
     border: none !important;
     box-shadow: none !important;
 }
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] > div,
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stTextArea"] > div,
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextAreaRootElement"],
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stTextAreaRootElement"],
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] [data-baseweb="base-input"],
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stTextArea"] [data-baseweb="base-input"] {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+}
 [data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea,
 [data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stTextArea"] textarea {
     border: none !important;
     box-shadow: none !important;
     background: #ffffff !important;
     resize: none !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
 }
 [data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea::-webkit-resizer,
 [data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stTextArea"] textarea::-webkit-resizer {
@@ -6417,12 +6432,18 @@ st.markdown("""
 /* Final send-button alignment lock: center arrow/icon perfectly. */
 .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button,
 [data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    display: grid !important;
+    place-items: center !important;
     text-align: center !important;
     padding: 0 !important;
     line-height: 1 !important;
+}
+.st-key-home_send_btn [data-testid="stFormSubmitButton"] > button > div,
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button > div {
+    display: grid !important;
+    place-items: center !important;
+    margin: 0 !important;
+    width: auto !important;
 }
 .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"],
 [data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"] {
@@ -6431,6 +6452,8 @@ st.markdown("""
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
+    width: 1em !important;
+    height: 1em !important;
     transform: translate(0, 0) !important;
 }
 
@@ -6536,7 +6559,7 @@ st.markdown("""
         row-gap: 0.3rem !important;
     }
     .md-home-greet-wrap {
-        margin: -0.3rem 0 0.34rem 0 !important;
+        margin: 0.12rem 0 1.02rem 0 !important;
     }
     .md-home-greet-wrap .md-greet {
         font-size: 1.92rem !important;
@@ -6545,6 +6568,12 @@ st.markdown("""
     .md-home-greet-wrap .md-subgreet {
         margin-top: 0.1rem !important;
         font-size: 0.9rem !important;
+    }
+    [data-testid="stHorizontalBlock"]:has(.st-key-qa_headache),
+    [data-testid="stHorizontalBlock"]:has(.st-key-qa_tired),
+    [data-testid="stHorizontalBlock"]:has(.st-key-qa_symptoms),
+    [data-testid="stHorizontalBlock"]:has(.st-key-qa_sleep) {
+        margin-top: 0.28rem !important;
     }
     .st-key-qa_headache .stButton > button,
     .st-key-qa_tired .stButton > button,
@@ -9542,8 +9571,8 @@ if st.session_state.mode == "chat":
             # Quick action cards
             qa_cols = st.columns(4, gap="small")
             qa_specs = [
-                ("qa_headache", "I have a headache", "I have a headache and would like to understand what might be causing it.", ":material/neurology:"),
-                ("qa_tired", "Feeling tired", "I have been feeling unusually tired lately. What could be the reason?", ":material/mood:"),
+                ("qa_headache", "I have a headache", "I have a headache and would like to understand what might be causing it.", ":material/sick:"),
+                ("qa_tired", "Feeling tired", "I have been feeling unusually tired lately. What could be the reason?", ":material/sentiment_dissatisfied:"),
                 ("qa_symptoms", "Check my symptoms", "_route_assessment", ":material/search:"),
                 ("qa_sleep", "Improve my sleep", "Can you suggest ways to improve my sleep quality?", ":material/bedtime:"),
             ]
@@ -9669,16 +9698,21 @@ if st.session_state.mode == "chat":
             # ── Smart Actions (available for all users) ───────────────
             st.markdown('<div class="md-smart-head"><div class="md-smart-title">Smart Actions</div></div>', unsafe_allow_html=True)
             sa_specs = [
-                ("sa_sym", "Symptoms Checker\nGuided symptom assessment", "assessment", ":material/stethoscope:", "md-smart-purple"),
+                ("sa_sym", "Vision Ai\nAnalyze images", "vision", ":material/image_search:", "md-smart-purple"),
                 ("sa_rec", "Health Records\nUpload medical reports", "records", ":material/medical_information:", "md-smart-green"),
-                ("sa_ins", "AI Insights\nPersonalized insights", "insights", ":material/monitor_heart:", "md-smart-pink"),
+                ("sa_ins", "Prescription Reader\nScan prescriptions", "rx_reader", ":material/local_pharmacy:", "md-smart-pink"),
                 ("sa_appt", "Appointments\nManage appointments", "appointments", ":material/calendar_month:", "md-smart-blue"),
             ]
             sa_cols = st.columns(4, gap="small")
             for i, (sk, label, action, icon_name, accent_cls) in enumerate(sa_specs):
                 with sa_cols[i]:
                     if st.button(label, key=sk, use_container_width=True, icon=icon_name):
-                        st.session_state.mode = action
+                        if action == "vision":
+                            st.session_state.mode = "chat"
+                            st.session_state.home_show_voice = False
+                            st.session_state.home_show_vision_upload = True
+                        else:
+                            st.session_state.mode = action
                         st.rerun()
 
             # ── Daily Health Tip carousel (4 live-data slides, 3s rotation) ──
@@ -9828,7 +9862,7 @@ if st.session_state.mode == "chat":
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 # Recent Conversations (real, from Firestore)
-                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="?mode=history">See all</a></div>'
+                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="/?mode=history" target="_self" rel="noopener">See all</a></div>'
                 if st.session_state.is_authenticated and st.session_state.user_email_hash:
                     _recent = list_conversations(st.session_state.user_email_hash, limit=4)
                 else:
@@ -10105,7 +10139,7 @@ if st.session_state.mode == "chat":
             with fc2:
                 chat_voice_clicked = st.form_submit_button(" ", key="chat_voice_btn", icon=":material/mic:", use_container_width=True)
             with fc3:
-                submit = st.form_submit_button("➤", use_container_width=True, type="primary")
+                submit = st.form_submit_button("➤", key="chat_send_btn", use_container_width=True, type="primary")
 
         if chat_upload_clicked:
             st.session_state.home_show_vision_upload = True
@@ -10226,8 +10260,51 @@ if st.session_state.mode == "chat":
         st.markdown('<div class="md-home-composer-note">MediChat Ai can make mistakes. Please consult a healthcare professional for medical advice.</div>', unsafe_allow_html=True)
     st.markdown('<div id="page-bottom-anchor" style="height:1px;"></div>', unsafe_allow_html=True)
 
+    # Enter-to-send (Shift+Enter keeps newline) for both home and in-chat composers.
+    import streamlit.components.v1 as _components
+    _components.html(
+        """
+        <script>
+            (function () {
+                const host = window.parent;
+                if (!host || !host.document) return;
+                if (host.__medichatEnterSendBound) return;
+                host.__medichatEnterSendBound = true;
+
+                function isComposerTextarea(el) {
+                    if (!el || el.tagName !== "TEXTAREA") return false;
+                    const label = (el.getAttribute("aria-label") || "").trim();
+                    return label === "Start a chat" || label === "Your message";
+                }
+
+                function findSendButton(textarea) {
+                    const form = textarea.closest('[data-testid="stForm"]');
+                    if (!form) return null;
+                    return form.querySelector(
+                        '.st-key-home_send_btn button, .st-key-chat_send_btn button, ' +
+                        '[data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"], ' +
+                        '[data-testid="stFormSubmitButton"] > button[kind="primary"]'
+                    );
+                }
+
+                host.document.addEventListener("keydown", function (ev) {
+                    if (ev.defaultPrevented) return;
+                    if (ev.key !== "Enter") return;
+                    if (ev.shiftKey || ev.ctrlKey || ev.metaKey || ev.altKey || ev.isComposing) return;
+                    const target = ev.target;
+                    if (!isComposerTextarea(target)) return;
+
+                    ev.preventDefault();
+                    const btn = findSendButton(target);
+                    if (btn && !btn.disabled) btn.click();
+                }, true);
+            })();
+        </script>
+        """,
+        height=0,
+    )
+
     if st.session_state.messages:
-        import streamlit.components.v1 as _components
         _components.html(
             """
             <script>
