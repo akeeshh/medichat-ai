@@ -5485,9 +5485,26 @@ st.markdown("""
     background: #f8fbff !important;
     box-shadow: 0 6px 12px rgba(15, 23, 42, 0.04) !important;
 }
+/* Fallback for Streamlit builds where the icon is rendered as a direct child
+   of the button rather than inside the first span wrapper. */
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > [data-testid="stIconMaterial"] {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    border-radius: 12px !important;
+    margin-right: 0.92rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #f8fbff !important;
+    box-shadow: 0 6px 12px rgba(15, 23, 42, 0.04) !important;
+}
 [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button [data-testid="stIconMaterial"] {
     font-size: 1.28rem !important;
     color: #5a6f8c !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > span:first-child [data-testid="stIconMaterial"] {
     margin-right: 0 !important;
 }
 [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > div[data-testid="stMarkdownContainer"] {
@@ -5523,25 +5540,38 @@ st.markdown("""
     background: #ffffff !important;
     border-color: #cddcff !important;
 }
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button[kind="primary"] > [data-testid="stIconMaterial"] {
+    background: #ffffff !important;
+    border-color: #cddcff !important;
+}
 
 /* Per-item icon tile colors. */
 [data-testid="stSidebar"] div.st-key-nav_home .stButton > button > span:first-child { background: #eef4ff !important; border-color: #d6e3ff !important; }
+[data-testid="stSidebar"] div.st-key-nav_home .stButton > button > [data-testid="stIconMaterial"] { background: #eef4ff !important; border-color: #d6e3ff !important; }
 [data-testid="stSidebar"] div.st-key-nav_home .stButton > button [data-testid="stIconMaterial"] { color: #2563eb !important; }
 [data-testid="stSidebar"] div.st-key-nav_new .stButton > button > span:first-child { background: #eefbff !important; border-color: #cdeef8 !important; }
+[data-testid="stSidebar"] div.st-key-nav_new .stButton > button > [data-testid="stIconMaterial"] { background: #eefbff !important; border-color: #cdeef8 !important; }
 [data-testid="stSidebar"] div.st-key-nav_new .stButton > button [data-testid="stIconMaterial"] { color: #0e9fbc !important; }
 [data-testid="stSidebar"] div.st-key-nav_overview .stButton > button > span:first-child { background: #effcf7 !important; border-color: #d3f2e6 !important; }
+[data-testid="stSidebar"] div.st-key-nav_overview .stButton > button > [data-testid="stIconMaterial"] { background: #effcf7 !important; border-color: #d3f2e6 !important; }
 [data-testid="stSidebar"] div.st-key-nav_overview .stButton > button [data-testid="stIconMaterial"] { color: #14a26f !important; }
 [data-testid="stSidebar"] div.st-key-nav_symptom .stButton > button > span:first-child { background: #f4f0ff !important; border-color: #e5dbff !important; }
+[data-testid="stSidebar"] div.st-key-nav_symptom .stButton > button > [data-testid="stIconMaterial"] { background: #f4f0ff !important; border-color: #e5dbff !important; }
 [data-testid="stSidebar"] div.st-key-nav_symptom .stButton > button [data-testid="stIconMaterial"] { color: #7c4dff !important; }
 [data-testid="stSidebar"] div.st-key-nav_prescription .stButton > button > span:first-child { background: #fff7ed !important; border-color: #fde2bf !important; }
+[data-testid="stSidebar"] div.st-key-nav_prescription .stButton > button > [data-testid="stIconMaterial"] { background: #fff7ed !important; border-color: #fde2bf !important; }
 [data-testid="stSidebar"] div.st-key-nav_prescription .stButton > button [data-testid="stIconMaterial"] { color: #f59e0b !important; }
 [data-testid="stSidebar"] div.st-key-nav_records .stButton > button > span:first-child { background: #eefbfd !important; border-color: #cceef3 !important; }
+[data-testid="stSidebar"] div.st-key-nav_records .stButton > button > [data-testid="stIconMaterial"] { background: #eefbfd !important; border-color: #cceef3 !important; }
 [data-testid="stSidebar"] div.st-key-nav_records .stButton > button [data-testid="stIconMaterial"] { color: #0f9db3 !important; }
 [data-testid="stSidebar"] div.st-key-nav_meds .stButton > button > span:first-child { background: #fff1f2 !important; border-color: #ffd8de !important; }
+[data-testid="stSidebar"] div.st-key-nav_meds .stButton > button > [data-testid="stIconMaterial"] { background: #fff1f2 !important; border-color: #ffd8de !important; }
 [data-testid="stSidebar"] div.st-key-nav_meds .stButton > button [data-testid="stIconMaterial"] { color: #ef4444 !important; }
 [data-testid="stSidebar"] div.st-key-nav_insights .stButton > button > span:first-child { background: #eef2ff !important; border-color: #d8e1ff !important; }
+[data-testid="stSidebar"] div.st-key-nav_insights .stButton > button > [data-testid="stIconMaterial"] { background: #eef2ff !important; border-color: #d8e1ff !important; }
 [data-testid="stSidebar"] div.st-key-nav_insights .stButton > button [data-testid="stIconMaterial"] { color: #4f46e5 !important; }
 [data-testid="stSidebar"] div.st-key-nav_appts .stButton > button > span:first-child { background: #edf4ff !important; border-color: #d8e6ff !important; }
+[data-testid="stSidebar"] div.st-key-nav_appts .stButton > button > [data-testid="stIconMaterial"] { background: #edf4ff !important; border-color: #d8e6ff !important; }
 [data-testid="stSidebar"] div.st-key-nav_appts .stButton > button [data-testid="stIconMaterial"] { color: #2563eb !important; }
 [data-testid="stSidebar"] .md-side-profile-top {
     border-radius: 18px !important;
