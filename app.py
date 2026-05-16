@@ -1995,6 +1995,19 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
 }
 .md-rcard-title { font-size: 0.88rem; font-weight: 700; color: var(--md-text-1); }
 .md-rcard-link { font-size: 0.72rem; color: var(--md-brand-2); font-weight: 600; }
+.md-rcard-link-btn {
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 8px;
+    padding: 0.08rem 0.34rem;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+}
+.md-rcard-link-btn:hover {
+    border-color: #d6e2fb;
+    background: #f7fbff;
+}
 
 /* Health Overview metric rows */
 .md-metric-row {
@@ -3148,7 +3161,6 @@ st.markdown("""
     box-shadow: 0 8px 24px rgba(15,23,42,0.045);
 }
 
-.md-auth-hero,
 .md-name-card,
 .md-feedback-panel,
 .md-download-card,
@@ -3158,36 +3170,6 @@ st.markdown("""
     border: 1px solid var(--md-border);
     border-radius: var(--md-radius-lg);
     box-shadow: var(--md-shadow-sm);
-}
-.md-auth-hero {
-    max-width: 680px;
-    margin: 0.6rem auto 1.2rem auto;
-    padding: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-.md-auth-icon {
-    width: 54px;
-    height: 54px;
-    border-radius: 16px;
-    background: var(--md-soft-blue);
-    color: var(--md-brand-3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.45rem;
-    flex-shrink: 0;
-}
-.md-auth-title {
-    font-size: 1.35rem;
-    font-weight: 800;
-    color: var(--md-text-1);
-    letter-spacing: -0.015em;
-    line-height: 1.2;
-    margin-bottom: 0.25rem;
-}
-.md-auth-subtitle,
 .md-name-subtitle {
     color: var(--md-text-2);
     font-size: 0.9rem;
@@ -3424,20 +3406,6 @@ st.markdown("""
     }
     .md-hero-pills {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .md-auth-hero {
-        align-items: flex-start;
-        margin-top: 0.2rem;
-        padding: 1rem;
-    }
-    .md-auth-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 13px;
-        font-size: 1.15rem;
-    }
-    .md-auth-title {
-        font-size: 1.08rem;
     }
     .md-smart-card {
         min-height: 114px !important;
@@ -4894,16 +4862,17 @@ html, body, [class*="css"], [data-testid="stAppViewContainer"], .stApp, .stMarkd
 
 .md-ref-ask-shell {
     background: #ffffff !important;
-    border: 1px solid #e4eaf6 !important;
+    border: 1px solid #e7ebf5 !important;
     border-radius: 24px !important;
-    box-shadow: 0 24px 52px rgba(99,102,241,0.08) !important;
-    padding: 0.1rem !important;
+    box-shadow: 0 16px 34px rgba(15,23,42,0.06) !important;
+    padding: 0.52rem 0.68rem 0.6rem 0.68rem !important;
 }
 form#home_chat_form {
-    padding: 1rem 1rem 0.95rem 1rem !important;
+    padding: 0.74rem 0.72rem 0.62rem 0.72rem !important;
 }
 form#home_chat_form [data-testid="stTextArea"] textarea {
-    min-height: 140px !important;
+    min-height: 132px !important;
+    height: 132px !important;
     border-radius: 16px !important;
 }
 form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
@@ -5444,6 +5413,14 @@ section[data-testid="stSidebar"]::before,
 st.markdown("""
 <style>
 /* Single source of truth for sidebar layout. */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #f9fbff 0%, #f6f8ff 100%) !important;
+    border-right: 1px solid #e2e8f0 !important;
+    box-shadow: inset -1px 0 0 rgba(255,255,255,0.92) !important;
+}
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+    padding: 1.06rem 1rem 1.2rem 1rem !important;
+}
 [data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {
     min-height: 100vh !important;
     display: flex !important;
@@ -5469,41 +5446,148 @@ st.markdown("""
     z-index: 0 !important;
 }
 [data-testid="stSidebar"] div.st-key-nav_home {
-    margin-top: 1.85rem !important;
+    margin-top: 0.62rem !important;
 }
 
-/* Match mockup nav weight and spacing. */
-[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button {
-    min-height: 48px !important;
-    height: 48px !important;
+/* Unified nav style for all profiles/pages (guest, signed-in, auth). */
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button {
+    min-height: 56px !important;
+    height: 56px !important;
     border-radius: 14px !important;
-    font-weight: 700 !important;
+    margin-bottom: 0.52rem !important;
+    font-weight: 650 !important;
+    font-size: 1.01rem !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    color: #4c5d78 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: flex-start !important;
-    gap: 0 !important;
+    padding-left: 0.64rem !important;
+    overflow: visible !important;
     position: relative !important;
     z-index: 2 !important;
 }
-[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button > span:first-child {
-    margin-right: 1.35rem !important;
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button:hover {
+    background: #ffffff !important;
+    border-color: #e2eaf9 !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > span:first-child {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    border-radius: 12px !important;
+    margin-right: 0.92rem !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #f8fbff !important;
+    box-shadow: 0 6px 12px rgba(15, 23, 42, 0.04) !important;
 }
-[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button [data-testid="stIconMaterial"] {
-    width: 24px !important;
-    min-width: 24px !important;
-    height: 24px !important;
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button [data-testid="stIconMaterial"] {
+    font-size: 1.28rem !important;
+    color: #5a6f8c !important;
     margin-right: 0 !important;
 }
-[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button > div[data-testid="stMarkdownContainer"] {
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > div[data-testid="stMarkdownContainer"] {
     margin: 0 !important;
 }
-[data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button > div[data-testid="stMarkdownContainer"] p {
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > div[data-testid="stMarkdownContainer"] p {
     margin: 0 !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.01em !important;
+    font-size: 1.01rem !important;
+    font-weight: 650 !important;
+    color: #4b5d78 !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button[kind="primary"] {
+    background: linear-gradient(180deg, #eef4ff, #edf3ff) !important;
+    border: 1px solid #d4e3ff !important;
+    color: #2563eb !important;
+    box-shadow: 0 8px 18px rgba(59, 130, 246, 0.08) !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button[kind="primary"]::before {
+    content: "" !important;
+    position: absolute !important;
+    left: -0.86rem !important;
+    top: 10px !important;
+    bottom: 10px !important;
+    width: 3px !important;
+    border-radius: 999px !important;
+    background: #2f67ff !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button[kind="primary"] p,
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button[kind="primary"] [data-testid="stIconMaterial"] {
+    color: #2563eb !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button[kind="primary"] > span:first-child {
+    background: #ffffff !important;
+    border-color: #cddcff !important;
+}
+
+/* Per-item icon tile colors. */
+[data-testid="stSidebar"] div.st-key-nav_home .stButton > button > span:first-child { background: #eef4ff !important; border-color: #d6e3ff !important; }
+[data-testid="stSidebar"] div.st-key-nav_home .stButton > button [data-testid="stIconMaterial"] { color: #2563eb !important; }
+[data-testid="stSidebar"] div.st-key-nav_new .stButton > button > span:first-child { background: #eefbff !important; border-color: #cdeef8 !important; }
+[data-testid="stSidebar"] div.st-key-nav_new .stButton > button [data-testid="stIconMaterial"] { color: #0e9fbc !important; }
+[data-testid="stSidebar"] div.st-key-nav_overview .stButton > button > span:first-child { background: #effcf7 !important; border-color: #d3f2e6 !important; }
+[data-testid="stSidebar"] div.st-key-nav_overview .stButton > button [data-testid="stIconMaterial"] { color: #14a26f !important; }
+[data-testid="stSidebar"] div.st-key-nav_symptom .stButton > button > span:first-child { background: #f4f0ff !important; border-color: #e5dbff !important; }
+[data-testid="stSidebar"] div.st-key-nav_symptom .stButton > button [data-testid="stIconMaterial"] { color: #7c4dff !important; }
+[data-testid="stSidebar"] div.st-key-nav_prescription .stButton > button > span:first-child { background: #fff7ed !important; border-color: #fde2bf !important; }
+[data-testid="stSidebar"] div.st-key-nav_prescription .stButton > button [data-testid="stIconMaterial"] { color: #f59e0b !important; }
+[data-testid="stSidebar"] div.st-key-nav_records .stButton > button > span:first-child { background: #eefbfd !important; border-color: #cceef3 !important; }
+[data-testid="stSidebar"] div.st-key-nav_records .stButton > button [data-testid="stIconMaterial"] { color: #0f9db3 !important; }
+[data-testid="stSidebar"] div.st-key-nav_meds .stButton > button > span:first-child { background: #fff1f2 !important; border-color: #ffd8de !important; }
+[data-testid="stSidebar"] div.st-key-nav_meds .stButton > button [data-testid="stIconMaterial"] { color: #ef4444 !important; }
+[data-testid="stSidebar"] div.st-key-nav_insights .stButton > button > span:first-child { background: #eef2ff !important; border-color: #d8e1ff !important; }
+[data-testid="stSidebar"] div.st-key-nav_insights .stButton > button [data-testid="stIconMaterial"] { color: #4f46e5 !important; }
+[data-testid="stSidebar"] div.st-key-nav_appts .stButton > button > span:first-child { background: #edf4ff !important; border-color: #d8e6ff !important; }
+[data-testid="stSidebar"] div.st-key-nav_appts .stButton > button [data-testid="stIconMaterial"] { color: #2563eb !important; }
+[data-testid="stSidebar"] .md-side-profile-top {
+    border-radius: 18px !important;
+    border: 1px solid #dce6fb !important;
+    box-shadow: 0 10px 20px rgba(15,23,42,0.05) !important;
+    margin-top: 0.3rem !important;
+}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] {
+    margin: 1.48rem 0.25rem 0.9rem 0 !important;
+    width: 242px !important;
+    max-width: 242px !important;
+}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] label {
+    margin-bottom: 0.34rem !important;
+    color: #50617f !important;
+    font-weight: 620 !important;
+    font-size: 0.86rem !important;
+}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] > div {
+    width: 100% !important;
+}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] {
+    width: 100% !important;
+    min-height: 56px !important;
+    height: 56px !important;
+    border-radius: 18px !important;
+    border: 1px solid #dce6fb !important;
+    background: #ffffff !important;
+    box-shadow: 0 10px 20px rgba(15,23,42,0.05) !important;
+    overflow: hidden !important;
+}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+    min-height: 56px !important;
+    height: 56px !important;
+    border: none !important;
+    border-radius: 18px !important;
+    background: transparent !important;
+    padding: 0 0.95rem !important;
+    display: flex !important;
+    align-items: center !important;
+}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"] {
+    padding: 0 !important;
+    font-size: 1rem !important;
+    font-weight: 560 !important;
+    color: #1f2937 !important;
 }
 
 /* Prevent divider/active-state visual overlap. */
@@ -5542,6 +5626,21 @@ st.markdown("""
     margin-top: 0 !important;
     margin-bottom: 2rem !important;
 }
+[data-testid="stSidebar"] div.st-key-nav_privacy_bottom .stButton > button {
+    justify-content: center !important;
+    text-align: center !important;
+}
+[data-testid="stSidebar"] div.st-key-nav_privacy_bottom .stButton > button > span:first-child {
+    margin-right: 0 !important;
+}
+[data-testid="stSidebar"] div.st-key-nav_privacy_bottom .stButton > button > div[data-testid="stMarkdownContainer"] {
+    width: 100% !important;
+    margin: 0 !important;
+}
+[data-testid="stSidebar"] div.st-key-nav_privacy_bottom .stButton > button > div[data-testid="stMarkdownContainer"] p {
+    width: 100% !important;
+    text-align: center !important;
+}
 [data-testid="stSidebar"] .sb-footer {
     position: absolute !important;
     left: 0 !important;
@@ -5564,7 +5663,7 @@ st.markdown("""
     display: none !important;
 }
 
-/* Home/chat attachment and voice buttons: icon only. */
+/* Home/chat attachment and voice buttons: home uses icon + label pills. */
 [data-testid="stSidebar"] .stButton > button p {
     font-weight: 700 !important;
 }
@@ -5576,23 +5675,24 @@ st.markdown("""
 .st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button[kind="secondary"],
 .st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"],
 .st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"] {
-    min-width: 36px !important;
-    width: 36px !important;
-    height: 36px !important;
-    min-height: 36px !important;
-    padding: 0 !important;
-    border-radius: 10px !important;
-    border: 1px solid var(--md-border) !important;
-    background: transparent !important;
+    min-width: 112px !important;
+    width: 112px !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    padding: 0 0.95rem !important;
+    border-radius: 999px !important;
+    border: 1px solid #dde6f4 !important;
+    background: #ffffff !important;
     box-shadow: none !important;
-    transition: border-color 0.15s ease, background 0.15s ease !important;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease !important;
 }
 .st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button:hover,
 .st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button:hover,
 .st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button[kind="secondary"]:hover,
 .st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button[kind="secondary"]:hover {
-    border-color: var(--md-brand-1) !important;
-    background: var(--md-soft-blue) !important;
+    border-color: #cbd8ef !important;
+    background: #fbfdff !important;
+    transform: translateY(-1px) !important;
 }
 .st-key-chat_upload_btn button,
 .st-key-chat_voice_btn button {
@@ -5604,14 +5704,24 @@ st.markdown("""
     border-radius: 999px !important;
 }
 .st-key-home_upload_btn button > div,
-.st-key-home_voice_btn button > div,
+.st-key-home_voice_btn button > div {
+    justify-content: center !important;
+    gap: 0.42rem !important;
+}
 .st-key-chat_upload_btn button > div,
 .st-key-chat_voice_btn button > div {
     justify-content: center !important;
     gap: 0 !important;
 }
 .st-key-home_upload_btn button p,
-.st-key-home_voice_btn button p,
+.st-key-home_voice_btn button p {
+    display: block !important;
+    margin: 0 !important;
+    font-size: 1.04rem !important;
+    font-weight: 620 !important;
+    line-height: 1 !important;
+    color: #1f2937 !important;
+}
 .st-key-chat_upload_btn button p,
 .st-key-chat_voice_btn button p {
     display: none !important;
@@ -5619,47 +5729,19 @@ st.markdown("""
 .st-key-home_upload_btn button [data-testid="stIconMaterial"],
 .st-key-home_voice_btn button [data-testid="stIconMaterial"] {
     margin: 0 !important;
-    color: var(--md-text-2) !important;
+    color: #475569 !important;
     font-size: 18px !important;
 }
 .st-key-home_upload_btn button:hover [data-testid="stIconMaterial"],
 .st-key-home_voice_btn button:hover [data-testid="stIconMaterial"] {
-    color: var(--md-brand-2) !important;
+    color: #334155 !important;
 }
 .st-key-chat_upload_btn button [data-testid="stIconMaterial"],
 .st-key-chat_voice_btn button [data-testid="stIconMaterial"] {
     margin: 0 !important;
 }
-/* Tighten attach + voice columns and widen the send column. Streamlit doesn't
-   render id="home_chat_form" on the DOM, and .md-ref-ask-shell doesn't actually
-   wrap the form (markdown opens the div in a separate container). Scope via
-   :has() on the unique send-button key. */
-[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stHorizontalBlock"] {
-    gap: 0 !important;
-    column-gap: 0 !important;
-    padding-left: 0.6rem !important;
-    align-items: center !important;
-}
-[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stColumn"]:nth-child(1),
-[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stColumn"]:nth-child(2) {
-    flex: 0 0 36px !important;
-    min-width: 36px !important;
-    max-width: 36px !important;
-    width: 36px !important;
-    padding: 0 !important;
-}
-[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stColumn"]:nth-child(2) {
-    margin-left: 0.4rem !important;
-}
-[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stColumn"]:nth-child(4) {
-    flex: 0 0 50px !important;
-    min-width: 50px !important;
-    max-width: 50px !important;
-    width: 50px !important;
-    padding: 0 !important;
-    display: flex !important;
-    justify-content: flex-end !important;
-}
+/* Home composer/card layout is controlled by the cross-profile lock block below
+   to avoid overlapping legacy selector conflicts. */
 
 /* Home greeting positioning and vertical stacking. */
 .md-home-greet-wrap {
@@ -5715,32 +5797,45 @@ st.markdown("""
    button key using :has(). The composer wrap keeps its outer border; only
    the inner textarea loses its line. */
 [data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea {
-    border: 1px solid transparent !important;
+    border: none !important;
     box-shadow: none !important;
-    background: transparent !important;
-    min-height: 88px !important;
-    height: 88px !important;
+    background: #ffffff !important;
+    resize: none !important;
+    overflow: auto !important;
+    min-height: 136px !important;
+    height: 136px !important;
+    padding: 0.45rem 0.2rem !important;
+    font-size: 1.03rem !important;
+    color: #334155 !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea::-webkit-resizer {
+    display: none !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea::placeholder {
+    color: #8b98af !important;
+    opacity: 1 !important;
+    font-size: 1.03rem !important;
 }
 [data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea:focus {
     outline: none !important;
-    border: 1px solid transparent !important;
-    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.15) !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 /* Trim the inner gap between the textarea and the icon row so the composer
    feels compact rather than airy. */
 [data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stVerticalBlock"] {
-    gap: 0.5rem !important;
-    row-gap: 0.5rem !important;
+    gap: 0.72rem !important;
+    row-gap: 0.72rem !important;
 }
 
 /* Fix 4a: Soft gradient glow under the composer. Pure decoration. */
 .md-composer-glow {
-    height: 24px;
-    margin: -8px auto 0 auto;
-    width: 92%;
-    background: linear-gradient(90deg, rgba(6,182,212,0.18) 0%, rgba(139,92,246,0.18) 50%, rgba(236,72,153,0.10) 100%);
-    filter: blur(16px);
-    opacity: 0.35;
+    height: 30px;
+    margin: -2px auto 0 auto;
+    width: 86%;
+    background: linear-gradient(90deg, rgba(59,130,246,0.18) 0%, rgba(139,92,246,0.22) 50%, rgba(59,130,246,0.18) 100%);
+    filter: blur(20px);
+    opacity: 0.52;
     pointer-events: none;
     border-radius: 999px;
 }
@@ -5750,10 +5845,10 @@ st.markdown("""
 .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button,
 .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
 .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button[kind="primary"] {
-    width: 44px !important;
-    min-width: 44px !important;
-    height: 44px !important;
-    min-height: 44px !important;
+    width: 56px !important;
+    min-width: 56px !important;
+    height: 56px !important;
+    min-height: 56px !important;
     border-radius: 50% !important;
     background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%) !important;
     border: none !important;
@@ -5767,7 +5862,7 @@ st.markdown("""
 }
 .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"] {
     color: #ffffff !important;
-    font-size: 18px !important;
+    font-size: 1.35rem !important;
     margin: 0 !important;
 }
 .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button p {
@@ -5792,6 +5887,7 @@ st.markdown("""
    Streamlit's stElementContainer wrappers prevent margin collapse, so total
    gap = note margin-bottom + head margin-top. */
 .md-home-composer-note {
+    margin-top: 0.28rem !important;
     margin-bottom: 0.4rem !important;
 }
 .md-smart-head {
@@ -5834,17 +5930,20 @@ st.markdown("""
     height: auto !important;
     display: block !important;
     margin: 0 auto !important;
+    transform: none !important;
 }
 
 /* Sidebar selectbox styling — kept subtle, matches surrounding nav. */
 [data-testid="stSidebar"] [data-testid="stSelectbox"] {
-    margin: 0.4rem 0.6rem 0.6rem 0 !important;
-    width: calc(100% - 0.6rem) !important;
+    margin: 1.48rem 0.25rem 0.9rem 0 !important;
+    width: 242px !important;
+    max-width: 242px !important;
 }
 [data-testid="stSidebar"] [data-testid="stSelectbox"] label {
-    font-size: 0.78rem !important;
-    color: #475569 !important;
-    font-weight: 600 !important;
+    margin-bottom: 0.34rem !important;
+    color: #50617f !important;
+    font-weight: 620 !important;
+    font-size: 0.86rem !important;
 }
 
 /* Daily Health Tip carousel — 4 live-data slides auto-rotating every 3s.
@@ -5868,12 +5967,12 @@ st.markdown("""
     gap: 1.2rem;
     align-items: center;
     opacity: 0;
-    animation: tipCycle 12s infinite ease-in-out;
+    animation: tipCycle 20s infinite ease-in-out;
 }
 .md-tip-slide:nth-child(1) { animation-delay: 0s; }
-.md-tip-slide:nth-child(2) { animation-delay: 3s; }
-.md-tip-slide:nth-child(3) { animation-delay: 6s; }
-.md-tip-slide:nth-child(4) { animation-delay: 9s; }
+.md-tip-slide:nth-child(2) { animation-delay: 5s; }
+.md-tip-slide:nth-child(3) { animation-delay: 10s; }
+.md-tip-slide:nth-child(4) { animation-delay: 15s; }
 @keyframes tipCycle {
     0% { opacity: 0; transform: translateX(14px); }
     3% { opacity: 1; transform: translateX(0); }
@@ -5975,10 +6074,10 @@ st.markdown("""
     background: rgba(59, 130, 246, 0.22);
     transition: all 0.3s ease;
 }
-.md-tip-dot.dot-1 { animation: tipDot 12s infinite ease-in-out; animation-delay: 0s; }
-.md-tip-dot.dot-2 { animation: tipDot 12s infinite ease-in-out; animation-delay: 3s; }
-.md-tip-dot.dot-3 { animation: tipDot 12s infinite ease-in-out; animation-delay: 6s; }
-.md-tip-dot.dot-4 { animation: tipDot 12s infinite ease-in-out; animation-delay: 9s; }
+.md-tip-dot.dot-1 { animation: tipDot 20s infinite ease-in-out; animation-delay: 0s; }
+.md-tip-dot.dot-2 { animation: tipDot 20s infinite ease-in-out; animation-delay: 5s; }
+.md-tip-dot.dot-3 { animation: tipDot 20s infinite ease-in-out; animation-delay: 10s; }
+.md-tip-dot.dot-4 { animation: tipDot 20s infinite ease-in-out; animation-delay: 15s; }
 @keyframes tipDot {
     0%, 25% { background: #3b82f6; width: 18px; }
     28%, 100% { background: rgba(59, 130, 246, 0.22); width: 6px; }
@@ -6004,6 +6103,617 @@ st.markdown("""
     border: 0 !important;
     box-shadow: none !important;
 }
+</style>
+""", unsafe_allow_html=True)
+
+# ── Cross-Profile Main UI Lock (guest + signed-in, not page-specific) ─────────
+st.markdown("""
+<style>
+/* Keep composer/card styling consistent for every profile state. */
+[data-testid="stForm"]:has(.st-key-home_send_btn),
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) {
+    background: #ffffff !important;
+    border: 1px solid #e4ecf8 !important;
+    border-radius: 24px !important;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.07) !important;
+    padding: 0.9rem 0.9rem 0.82rem 0.9rem !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"],
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stTextArea"] {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea,
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stTextArea"] textarea {
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    resize: none !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea::-webkit-resizer,
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stTextArea"] textarea::-webkit-resizer {
+    display: none !important;
+}
+
+/* Force one-line action row alignment (upload + voice + send) on both forms. */
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stHorizontalBlock"]:has(.st-key-home_send_btn),
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    min-height: 56px !important;
+    gap: 0.72rem !important;
+    column-gap: 0.72rem !important;
+}
+
+/* Home: upload/voice pills. */
+.st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button,
+.st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button {
+    min-height: 56px !important;
+    height: 56px !important;
+    min-width: 112px !important;
+    width: 112px !important;
+    border-radius: 999px !important;
+}
+
+/* Active-chat mode: icon pills for upload/voice stay aligned with send. */
+.st-key-chat_upload_btn [data-testid="stFormSubmitButton"] > button,
+.st-key-chat_voice_btn [data-testid="stFormSubmitButton"] > button {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    border-radius: 999px !important;
+    border: 1px solid #dce6f7 !important;
+    background: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06) !important;
+    padding: 0 !important;
+}
+.st-key-chat_upload_btn [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"],
+.st-key-chat_voice_btn [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"] {
+    color: #475569 !important;
+    font-size: 1.08rem !important;
+}
+
+/* Active-chat send button matches home send button shape/gradient. */
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button,
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+    width: 56px !important;
+    min-width: 56px !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    border-radius: 50% !important;
+    border: none !important;
+    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%) !important;
+    box-shadow: 0 8px 22px rgba(99, 102, 241, 0.34) !important;
+    color: #ffffff !important;
+    padding: 0 !important;
+}
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button:hover {
+    transform: scale(1.05) !important;
+    box-shadow: 0 12px 28px rgba(99, 102, 241, 0.45) !important;
+}
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button p {
+    display: none !important;
+}
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"] {
+    color: #ffffff !important;
+    font-size: 1.35rem !important;
+}
+
+/* Right rail: live Health Passport card to fill empty area with useful data. */
+.md-passport-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(246,250,255,0.98));
+    border: 1px solid #d9e6fb !important;
+}
+.md-passport-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+    margin-bottom: 0.42rem;
+}
+.md-passport-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+.md-passport-title-wrap .material-symbols-rounded {
+    color: #2563eb;
+    font-size: 1.15rem !important;
+}
+.md-passport-title {
+    font-size: 0.96rem;
+    font-weight: 740;
+    color: #0f172a;
+}
+.md-passport-pct {
+    font-size: 0.8rem;
+    font-weight: 760;
+    color: #2563eb;
+}
+.md-passport-sub {
+    color: #5b6b84;
+    font-size: 0.76rem;
+    margin-bottom: 0.6rem;
+}
+.md-passport-progress {
+    height: 8px;
+    border-radius: 999px;
+    background: #eaf0fb;
+    overflow: hidden;
+    margin-bottom: 0.68rem;
+}
+.md-passport-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #3b82f6 0%, #6366f1 56%, #8b5cf6 100%);
+}
+.md-passport-check {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.3rem 0;
+    border-top: 1px solid #e7edf8;
+}
+.md-passport-check:first-of-type {
+    border-top: none;
+}
+.md-passport-check-left {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+}
+.md-passport-check-left .material-symbols-rounded {
+    font-size: 1.02rem !important;
+}
+.md-passport-check.ok .md-passport-check-left .material-symbols-rounded {
+    color: #10b981;
+}
+.md-passport-check.todo .md-passport-check-left .material-symbols-rounded {
+    color: #94a3b8;
+}
+.md-passport-check-label {
+    color: #334155;
+    font-size: 0.8rem;
+    font-weight: 560;
+}
+.md-passport-status {
+    font-size: 0.68rem;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 0.16rem 0.44rem;
+    white-space: nowrap;
+}
+.md-passport-status.ok {
+    background: #e8fbf3;
+    color: #047857;
+}
+.md-passport-status.todo {
+    background: #eef2ff;
+    color: #475569;
+}
+
+.st-key-home_passport_records .stButton > button,
+.st-key-home_passport_overview .stButton > button,
+.st-key-home_passport_meds .stButton > button {
+    min-height: 40px !important;
+    height: 40px !important;
+    border-radius: 12px !important;
+    font-size: 0.8rem !important;
+    font-weight: 650 !important;
+}
+
+/* Final quick-action tile remodel: clean icons, clean spacing, no crumbled text. */
+.st-key-qa_headache .stButton > button,
+.st-key-qa_tired .stButton > button,
+.st-key-qa_symptoms .stButton > button,
+.st-key-qa_sleep .stButton > button {
+    min-height: 56px !important;
+    height: 56px !important;
+    border-radius: 999px !important;
+    padding: 0 0.92rem !important;
+    border: 1px solid #d9e6fb !important;
+    background: #ffffff !important;
+    box-shadow: 0 8px 20px rgba(15,23,42,0.045) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    gap: 0 !important;
+}
+.st-key-qa_headache .stButton > button:hover,
+.st-key-qa_tired .stButton > button:hover,
+.st-key-qa_symptoms .stButton > button:hover,
+.st-key-qa_sleep .stButton > button:hover {
+    border-color: #bfd7fb !important;
+    box-shadow: 0 12px 26px rgba(59,130,246,0.10) !important;
+    transform: translateY(-1px) !important;
+}
+.st-key-qa_headache .stButton > button [data-testid="stIconMaterial"],
+.st-key-qa_tired .stButton > button [data-testid="stIconMaterial"],
+.st-key-qa_symptoms .stButton > button [data-testid="stIconMaterial"],
+.st-key-qa_sleep .stButton > button [data-testid="stIconMaterial"] {
+    width: 28px !important;
+    min-width: 28px !important;
+    height: 28px !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-right: 0.55rem !important;
+    font-size: 1rem !important;
+    border: 1px solid rgba(255,255,255,0.65) !important;
+}
+.st-key-qa_headache .stButton > button [data-testid="stIconMaterial"] { background: linear-gradient(145deg,#ffe7ee,#ffd7e2) !important; color: #e11d48 !important; }
+.st-key-qa_tired .stButton > button [data-testid="stIconMaterial"] { background: linear-gradient(145deg,#fff5d9,#ffeeb8) !important; color: #c97a00 !important; }
+.st-key-qa_symptoms .stButton > button [data-testid="stIconMaterial"] { background: linear-gradient(145deg,#efeaff,#e1d7ff) !important; color: #7c3aed !important; }
+.st-key-qa_sleep .stButton > button [data-testid="stIconMaterial"] { background: linear-gradient(145deg,#e7edff,#d7e1ff) !important; color: #4f46e5 !important; }
+
+.st-key-qa_headache .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-qa_tired .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-qa_symptoms .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-qa_sleep .stButton > button [data-testid="stMarkdownContainer"] {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+.st-key-qa_headache .stButton > button p,
+.st-key-qa_tired .stButton > button p,
+.st-key-qa_symptoms .stButton > button p,
+.st-key-qa_sleep .stButton > button p {
+    margin: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 0.97rem !important;
+    font-weight: 690 !important;
+    line-height: 1.15 !important;
+    color: #1f2f46 !important;
+}
+.st-key-qa_headache .stButton > button p::first-line,
+.st-key-qa_tired .stButton > button p::first-line,
+.st-key-qa_symptoms .stButton > button p::first-line,
+.st-key-qa_sleep .stButton > button p::first-line {
+    font-size: 0.97rem !important;
+    font-weight: 690 !important;
+    color: #1f2f46 !important;
+}
+
+/* Final send-button alignment lock: center arrow/icon perfectly. */
+.st-key-home_send_btn [data-testid="stFormSubmitButton"] > button,
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+}
+.st-key-home_send_btn [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"],
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"] {
+    margin: 0 !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transform: translate(0, 0) !important;
+}
+
+/* Hard-lock composer action row at 100% browser zoom (desktop + laptop). */
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stHorizontalBlock"]:has(.st-key-home_send_btn),
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 0.72rem !important;
+    column-gap: 0.72rem !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stHorizontalBlock"]:has(.st-key-home_send_btn) [data-testid="stColumn"],
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"] {
+    display: flex !important;
+    align-items: center !important;
+    min-height: 56px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stHorizontalBlock"]:has(.st-key-home_send_btn) [data-testid="stColumn"]:nth-child(1),
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stHorizontalBlock"]:has(.st-key-home_send_btn) [data-testid="stColumn"]:nth-child(2) {
+    flex: 0 0 116px !important;
+    min-width: 116px !important;
+    max-width: 116px !important;
+    width: 116px !important;
+    margin: 0 !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stHorizontalBlock"]:has(.st-key-home_send_btn) [data-testid="stColumn"]:nth-child(3) {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stHorizontalBlock"]:has(.st-key-home_send_btn) [data-testid="stColumn"]:nth-child(4),
+[data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) {
+    flex: 0 0 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+    width: 56px !important;
+    margin: 0 !important;
+    justify-content: flex-end !important;
+}
+.st-key-home_upload_btn [data-testid="stFormSubmitButton"],
+.st-key-home_voice_btn [data-testid="stFormSubmitButton"],
+.st-key-home_send_btn [data-testid="stFormSubmitButton"],
+.st-key-chat_upload_btn [data-testid="stFormSubmitButton"],
+.st-key-chat_voice_btn [data-testid="stFormSubmitButton"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* Compact first-screen desktop pass so home fits cleanly without scroll. */
+@media (min-width: 1200px) and (min-height: 760px) {
+    [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+        padding: 0.74rem 0.8rem 0.7rem 0.8rem !important;
+    }
+    [data-testid="stSidebar"] .md-logo-wrap {
+        margin-bottom: 0.62rem !important;
+        padding-bottom: 0.62rem !important;
+    }
+    [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button {
+        min-height: 44px !important;
+        height: 44px !important;
+        margin-bottom: 0.26rem !important;
+        font-size: 0.92rem !important;
+        padding-left: 0.56rem !important;
+    }
+    [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > span:first-child {
+        width: 34px !important;
+        min-width: 34px !important;
+        height: 34px !important;
+        border-radius: 11px !important;
+        margin-right: 0.64rem !important;
+    }
+    [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button [data-testid="stIconMaterial"] {
+        font-size: 1.06rem !important;
+    }
+    [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > div[data-testid="stMarkdownContainer"] p {
+        font-size: 0.88rem !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] {
+        margin-top: 0.68rem !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"],
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        min-height: 46px !important;
+        height: 46px !important;
+        border-radius: 14px !important;
+    }
+    [data-testid="stSidebar"] .md-side-profile-top {
+        margin-top: 0.1rem !important;
+    }
+
+    .stMainBlockContainer,
+    [data-testid="stMainBlockContainer"] {
+        padding-top: 0.64rem !important;
+        padding-bottom: 0.3rem !important;
+    }
+    .stMainBlockContainer > [data-testid="stVerticalBlock"] {
+        gap: 0.3rem !important;
+        row-gap: 0.3rem !important;
+    }
+    .md-home-greet-wrap {
+        margin: -0.3rem 0 0.34rem 0 !important;
+    }
+    .md-home-greet-wrap .md-greet {
+        font-size: 1.92rem !important;
+        line-height: 1.08 !important;
+    }
+    .md-home-greet-wrap .md-subgreet {
+        margin-top: 0.1rem !important;
+        font-size: 0.9rem !important;
+    }
+    .st-key-qa_headache .stButton > button,
+    .st-key-qa_tired .stButton > button,
+    .st-key-qa_symptoms .stButton > button,
+    .st-key-qa_sleep .stButton > button {
+        min-height: 54px !important;
+        height: 54px !important;
+        padding: 0 0.82rem !important;
+    }
+    .st-key-qa_headache .stButton > button p,
+    .st-key-qa_tired .stButton > button p,
+    .st-key-qa_symptoms .stButton > button p,
+    .st-key-qa_sleep .stButton > button p {
+        font-size: 0.9rem !important;
+    }
+    [data-testid="stForm"]:has(.st-key-home_send_btn) {
+        padding: 0.62rem 0.66rem 0.6rem 0.66rem !important;
+        border-radius: 20px !important;
+    }
+    [data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea {
+        min-height: 94px !important;
+        height: 94px !important;
+        font-size: 0.95rem !important;
+    }
+    .md-home-composer-note {
+        margin-top: 0.06rem !important;
+        margin-bottom: 0.12rem !important;
+        font-size: 0.72rem !important;
+    }
+    .md-smart-head {
+        margin-top: 0.54rem !important;
+    }
+    .st-key-sa_sym .stButton > button,
+    .st-key-sa_rec .stButton > button,
+    .st-key-sa_ins .stButton > button,
+    .st-key-sa_appt .stButton > button {
+        min-height: 176px !important;
+        border-radius: 16px !important;
+        padding: 0.84rem 0.82rem !important;
+    }
+    .st-key-sa_sym .stButton > button p,
+    .st-key-sa_rec .stButton > button p,
+    .st-key-sa_ins .stButton > button p,
+    .st-key-sa_appt .stButton > button p {
+        font-size: 0.86rem !important;
+        line-height: 1.32 !important;
+    }
+    .md-tip-carousel {
+        margin: 0.58rem 0 0.38rem 0 !important;
+        height: 136px !important;
+        border-radius: 16px !important;
+    }
+    .md-tip-slide {
+        padding: 0.7rem 0.84rem 0.86rem 0.84rem !important;
+        grid-template-columns: minmax(0, 1fr) 78px !important;
+        gap: 0.62rem !important;
+    }
+    .md-tip-title {
+        font-size: 0.98rem !important;
+        margin-bottom: 0.1rem !important;
+    }
+    .md-tip-desc {
+        font-size: 0.74rem !important;
+        margin-bottom: 0.24rem !important;
+        line-height: 1.22 !important;
+        max-width: 34ch !important;
+    }
+    .md-tip-metric {
+        font-size: 0.7rem !important;
+        padding: 0.2rem 0.5rem !important;
+    }
+    .md-tip-illust {
+        width: 78px !important;
+        height: 78px !important;
+    }
+    .md-tip-illust .material-symbols-rounded {
+        font-size: 36px !important;
+    }
+    .md-rcard {
+        padding: 0.76rem 0.84rem !important;
+        border-radius: 14px !important;
+    }
+    .md-snap-grid {
+        gap: 0.42rem !important;
+    }
+    .md-passport-sub {
+        margin-bottom: 0.22rem !important;
+        font-size: 0.72rem !important;
+    }
+    .md-passport-progress {
+        margin-bottom: 0.36rem !important;
+    }
+    .md-passport-check {
+        padding: 0.08rem 0 !important;
+    }
+    .md-passport-check:nth-of-type(n+4) {
+        display: none !important;
+    }
+    .st-key-home_passport_records .stButton > button,
+    .st-key-home_passport_overview .stButton > button,
+    .st-key-home_passport_meds .stButton > button {
+        min-height: 32px !important;
+        height: 32px !important;
+        font-size: 0.74rem !important;
+    }
+    div.st-key-home_passport_records,
+    div.st-key-home_passport_overview,
+    div.st-key-home_passport_meds {
+        display: none !important;
+    }
+}
+
+/* Final desktop text-overlap safety pass (home cards + quick actions + overview rows). */
+.st-key-qa_headache .stButton > button,
+.st-key-qa_tired .stButton > button,
+.st-key-qa_symptoms .stButton > button,
+.st-key-qa_sleep .stButton > button {
+    min-width: 0 !important;
+    gap: 0 !important;
+    align-items: center !important;
+}
+.st-key-qa_headache .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-qa_tired .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-qa_symptoms .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-qa_sleep .stButton > button [data-testid="stMarkdownContainer"] {
+    min-width: 0 !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+.st-key-qa_headache .stButton > button p,
+.st-key-qa_tired .stButton > button p,
+.st-key-qa_symptoms .stButton > button p,
+.st-key-qa_sleep .stButton > button p {
+    margin: 0 !important;
+    white-space: normal !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    line-height: 1.14 !important;
+}
+
+.st-key-sa_sym .stButton > button,
+.st-key-sa_rec .stButton > button,
+.st-key-sa_ins .stButton > button,
+.st-key-sa_appt .stButton > button {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    padding-right: 3.1rem !important;
+}
+.st-key-sa_sym .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-sa_rec .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-sa_ins .stButton > button [data-testid="stMarkdownContainer"],
+.st-key-sa_appt .stButton > button [data-testid="stMarkdownContainer"] {
+    width: 100% !important;
+    min-width: 0 !important;
+}
+.st-key-sa_sym .stButton > button p,
+.st-key-sa_rec .stButton > button p,
+.st-key-sa_ins .stButton > button p,
+.st-key-sa_appt .stButton > button p {
+    margin: 0 !important;
+    white-space: pre-line !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+    line-height: 1.3 !important;
+}
+.st-key-sa_sym .stButton > button p::first-line,
+.st-key-sa_rec .stButton > button p::first-line,
+.st-key-sa_ins .stButton > button p::first-line,
+.st-key-sa_appt .stButton > button p::first-line {
+    line-height: 1.22 !important;
+}
+
+.md-snap-tile {
+    min-height: 64px !important;
+}
+.md-snap-text {
+    min-width: 0 !important;
+}
+.md-snap-text > div {
+    min-width: 0 !important;
+}
+.md-snap-label {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+.md-snap-value {
+    white-space: nowrap !important;
+    font-size: 0.9rem !important;
+    line-height: 1.18 !important;
+}
+.md-snap-status {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -7751,7 +8461,7 @@ with st.sidebar:
         ("new", "New Chat", "chat", ":material/chat_bubble:"),
         ("overview", "Health Overview", "overview", ":material/monitoring:"),
         ("symptom", "Symptoms Checker", "assessment", ":material/stethoscope:"),
-        ("prescription", "Prescription Reader", "rx_reader", ":material/description:"),
+        ("prescription", "Prescription Reader", "rx_reader", ":material/local_pharmacy:"),
         ("records", "Health Records", "records", ":material/lab_profile:"),
         ("meds", "Medications", "medications", ":material/pill:"),
         ("insights", "Ai Insights", "insights", ":material/auto_awesome:"),
@@ -7790,8 +8500,14 @@ with st.sidebar:
 
     # ── Profile chip — sits where the Premium card used to. Live-updates with auth state. ──
     if st.session_state.is_authenticated:
-        _profile_nm = st.session_state.patient_name or "Patient"
         _profile_em = st.session_state.user_email_display or ""
+        _saved_name = (st.session_state.patient_name or "").strip()
+        if _saved_name and _saved_name.lower() != "guest":
+            _profile_nm = _saved_name
+        elif _profile_em and "@" in _profile_em:
+            _profile_nm = _profile_em.split("@", 1)[0].replace(".", " ").replace("_", " ").title() or "Patient"
+        else:
+            _profile_nm = "Patient"
         _profile_in = (_profile_nm[0] if _profile_nm and _profile_nm != "Patient" else (_profile_em[0] if _profile_em else "P")).upper()
         _profile_sub = _profile_em if _profile_em else "View profile"
     else:
@@ -7825,19 +8541,6 @@ with st.sidebar:
         st.rerun()
 
     if st.session_state.is_authenticated:
-        _name = st.session_state.patient_name or "Patient"
-        _email = st.session_state.user_email_display or ""
-        _initial = (_name[0] if _name and _name != "Patient" else (_email[0] if _email else "P")).upper()
-        st.markdown(
-            '<div style="display:flex;align-items:center;gap:0.6rem;background:linear-gradient(135deg,#edf6fc,#d6edf9);border:1px solid #b0daf2;border-radius:12px;padding:0.6rem 0.8rem;margin-bottom:0.6rem;">'
-            '<div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#2176ae,#144272);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + ui_escape(_initial) + '</div>'
-            '<div style="flex:1;min-width:0;">'
-            '<div style="font-size:0.8rem;font-weight:600;color:#0c2d48;line-height:1.1;">' + ui_text(_name, 30) + '</div>'
-            '<div style="font-size:0.65rem;color:#1a5b8a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Profile saved</div>'
-            '</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
         if st.button("Sign out", use_container_width=True, key="profile_logout"):
             for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context", "rx_reader_result", "rx_uploader_key"]:
                 if k in st.session_state:
@@ -7931,8 +8634,23 @@ L = LANGUAGES[st.session_state.selected_language]
 ADMIN_PASSWORD = _safe_secret("ADMIN_PASSWORD", os.environ.get("ADMIN_PASSWORD", "MediChatAdmin@2026"))
 _query_params = st.query_params
 _admin_requested = _query_params.get("admin", "") != ""
+_force_auth_requested = str(_query_params.get("force_auth", "") or "").strip().lower() in {"1", "true", "yes", "on"}
 _mode_from_url = str(_query_params.get("mode", "") or "").strip()
 _url_modes = {"chat", "overview", "assessment", "records", "rx_reader", "medications", "appointments", "insights", "history", "privacy"}
+
+if _force_auth_requested:
+    st.session_state.is_authenticated = False
+    st.session_state.is_guest = False
+    st.session_state.user_email_hash = ""
+    st.session_state.user_email_display = ""
+    st.session_state.current_conversation_id = ""
+    st.session_state.messages = []
+    st.session_state.mode = "chat"
+    try:
+        del st.query_params["force_auth"]
+    except Exception:
+        pass
+
 if _mode_from_url in _url_modes:
     if st.session_state.mode != _mode_from_url:
         st.session_state.mode = _mode_from_url
@@ -7983,27 +8701,611 @@ _is_admin = st.session_state.admin_authenticated
 # ── Patient Profile Auth Gate ────────────────────────────────────────
 # Only enforced when Firebase is connected and user is not admin.
 # Users can also continue as Guest (no persistence).
-if FIREBASE_ACTIVE and not _is_admin and not st.session_state.is_authenticated and not st.session_state.is_guest and st.session_state.mode != "privacy":
+if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.session_state.is_guest) and st.session_state.mode != "privacy":
+    st.markdown("""
+    <style>
+    /* Premium auth page polish, scoped to auth-only render path. */
+    [data-testid="stForm"] {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+    /* Sidebar/nav styles are intentionally NOT overridden here so auth, guest,
+       and signed-in profiles share the same global sidebar design system. */
+
+    .md-auth-welcome-card {
+        position: relative;
+        display: grid;
+        grid-template-columns: 124px minmax(0, 1fr);
+        align-items: center;
+        gap: 1.25rem;
+        padding: 1.9rem 2.2rem 1.85rem 1.6rem;
+        border-radius: 28px;
+        background:
+            radial-gradient(circle at 10% 12%, rgba(191, 219, 254, 0.42), transparent 46%),
+            radial-gradient(circle at 93% 90%, rgba(167, 139, 250, 0.2), transparent 48%),
+            linear-gradient(132deg, rgba(255,255,255,0.995) 0%, rgba(249,252,255,0.995) 50%, rgba(240,246,255,0.99) 100%);
+        border: 1px solid #d4e3ff;
+        box-shadow: 0 22px 48px rgba(59, 130, 246, 0.11), 0 5px 16px rgba(15, 23, 42, 0.06);
+        overflow: hidden;
+        isolation: isolate;
+    }
+    .md-auth-welcome-card::before {
+        content: "";
+        position: absolute;
+        left: -15%;
+        bottom: -58%;
+        width: 82%;
+        height: 94%;
+        border-radius: 999px;
+        background: radial-gradient(ellipse at center, rgba(129, 140, 248, 0.24) 0%, rgba(147, 197, 253, 0.1) 42%, transparent 78%);
+        transform: rotate(-8deg);
+        pointer-events: none;
+        z-index: -1;
+    }
+    .md-auth-welcome-card::after {
+        content: "";
+        position: absolute;
+        left: -16%;
+        right: -16%;
+        bottom: -64px;
+        height: 128px;
+        border-radius: 999px;
+        background: radial-gradient(120% 100% at 50% 0%, rgba(167, 139, 250, 0.18), rgba(147, 197, 253, 0.14) 42%, rgba(255, 255, 255, 0) 78%);
+        pointer-events: none;
+        opacity: 0.56;
+    }
+    .md-auth-deco-dots {
+        position: absolute;
+        right: 2.2rem;
+        top: 1.25rem;
+        width: 90px;
+        height: 48px;
+        background-image: radial-gradient(rgba(99, 102, 241, 0.28) 1.4px, transparent 1.4px);
+        background-size: 10px 10px;
+        opacity: 0.55;
+        pointer-events: none;
+    }
+    .md-auth-shield {
+        width: 112px;
+        height: 112px;
+        border-radius: 33px;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        flex-shrink: 0;
+        font-size: 3rem !important;
+        background:
+            radial-gradient(circle at 26% 20%, rgba(255,255,255,0.56), transparent 44%),
+            linear-gradient(145deg, #3b82f6 0%, #6366f1 58%, #8b5cf6 100%);
+        box-shadow: 0 20px 38px rgba(99, 102, 241, 0.34);
+        position: relative;
+        left: auto;
+        top: auto;
+        transform: none;
+        margin-left: 0.2rem;
+    }
+    .md-auth-shield.md-auth-shield-image {
+        width: 118px;
+        height: 118px;
+        border-radius: 0;
+        background: transparent !important;
+        box-shadow: none !important;
+        margin-left: 0;
+    }
+    .md-auth-shield.md-auth-shield-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+        transform: none;
+        transform-origin: center center;
+        filter: drop-shadow(0 14px 24px rgba(59, 130, 246, 0.26));
+    }
+    .md-auth-welcome-content {
+        flex: 1 1 auto;
+        min-width: 0;
+        text-align: center;
+        padding: 0 0.3rem 0 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .md-auth-welcome-title {
+        font-size: clamp(1.9rem, 2.7vw, 2.65rem);
+        font-weight: 820;
+        letter-spacing: -0.02em;
+        color: #0f172a;
+        line-height: 1.1;
+        margin: 0 0 0.45rem 0;
+        text-align: center;
+        width: 100%;
+    }
+    .md-auth-welcome-copy {
+        font-size: clamp(1.02rem, 1.38vw, 1.22rem);
+        color: #334155;
+        line-height: 1.5;
+        max-width: 62ch;
+        white-space: normal;
+        text-align: center;
+    }
+    .md-auth-chip-row {
+        display: flex;
+        gap: 0.86rem;
+        flex-wrap: wrap;
+        row-gap: 0.72rem;
+        margin-top: 1.28rem;
+        position: relative;
+        z-index: 1;
+        justify-content: center;
+        width: 100%;
+    }
+    .md-auth-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.62rem 1.12rem;
+        border-radius: 15px;
+        background: rgba(255,255,255,0.92);
+        border: 1px solid #dbe6fd;
+        box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
+        color: #334155;
+        font-size: 0.98rem;
+        font-weight: 630;
+    }
+    .md-auth-chip .material-symbols-rounded {
+        color: #2563eb;
+        font-size: 1rem !important;
+    }
+
+    [data-baseweb="tab-list"] {
+        gap: 2.35rem !important;
+        border-bottom: 1px solid #dbe5f1 !important;
+        margin-top: 1.5rem !important;
+        margin-bottom: 0.8rem !important;
+    }
+    button[role="tab"] {
+        padding: 0.34rem 0 0.95rem 0 !important;
+        font-size: 1.08rem !important;
+        font-weight: 600 !important;
+        color: #475569 !important;
+        border-bottom: 2px solid transparent !important;
+    }
+    button[role="tab"][aria-selected="true"] {
+        color: #3255e8 !important;
+        font-weight: 760 !important;
+        border-bottom-color: transparent !important;
+    }
+    [data-baseweb="tab-highlight"] {
+        height: 3px !important;
+        border-radius: 999px !important;
+        background: linear-gradient(90deg, #3b82f6, #6366f1) !important;
+    }
+    [data-baseweb="tab-panel"] {
+        padding-top: 0.85rem !important;
+        border-top: none !important;
+    }
+    [data-baseweb="tab-list"] + div,
+    [data-baseweb="tab-list"] + div > div {
+        border-top: none !important;
+        box-shadow: none !important;
+    }
+
+    [data-testid="stForm"]:has(.st-key-si_email),
+    [data-testid="stForm"]:has(.st-key-su_email) {
+        background: rgba(255,255,255,0.98) !important;
+        border: 1px solid #dbe6fb !important;
+        border-radius: 28px !important;
+        padding: 1.82rem 1.72rem 1.38rem 1.72rem !important;
+        box-shadow: 0 22px 44px rgba(15, 23, 42, 0.08), 0 3px 10px rgba(15, 23, 42, 0.04) !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"] label,
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] label {
+        font-size: 0.98rem !important;
+        color: #1e293b !important;
+        font-weight: 630 !important;
+        margin-bottom: 0.35rem !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"],
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] {
+        margin-bottom: 0.42rem !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"] input,
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] input {
+        min-height: 56px !important;
+        border-radius: 15px !important;
+        border: 1px solid #d8e4fa !important;
+        background: #ffffff !important;
+        box-shadow: none !important;
+        font-size: 1.03rem !important;
+        line-height: 1.3 !important;
+        padding: 0.78rem 0.95rem !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 56px !important;
+        height: 56px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) .st-key-si_pin [data-testid="stTextInputRootElement"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 56px !important;
+        height: 56px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"],
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] {
+        display: flex !important;
+        align-items: center !important;
+        overflow: visible !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] [data-baseweb="base-input"] {
+        min-height: 56px !important;
+        height: 56px !important;
+        display: flex !important;
+        align-items: center !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        width: auto !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] > div:has([data-testid="stTextInputIcon"]),
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] > div:has([data-testid="stTextInputIcon"]) {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputIcon"],
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputIcon"] {
+        width: 40px !important;
+        min-width: 40px !important;
+        height: 40px !important;
+        margin-left: 0.56rem !important;
+        margin-right: 0.44rem !important;
+        border-radius: 11px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: transparent !important;
+        border: none !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"] input:focus,
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] input:focus {
+        border-color: #93c5fd !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14) !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"] [data-testid="stIconMaterial"],
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] [data-testid="stIconMaterial"] {
+        color: #4a5f86 !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        font-size: 1.14rem !important;
+    }
+    .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button,
+    .st-key-auth_signup_submit [data-testid="stFormSubmitButton"] > button {
+        height: 60px !important;
+        min-height: 60px !important;
+        border-radius: 17px !important;
+        border: none !important;
+        background: linear-gradient(102deg, #3b82f6 0%, #5577f3 45%, #7466f3 73%, #8b5cf6 100%) !important;
+        box-shadow: 0 18px 34px rgba(99, 102, 241, 0.28) !important;
+        color: #ffffff !important;
+        font-size: 1.06rem !important;
+        font-weight: 750 !important;
+    }
+    .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button:hover,
+    .st-key-auth_signup_submit [data-testid="stFormSubmitButton"] > button:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 20px 34px rgba(99, 102, 241, 0.32) !important;
+    }
+    .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button {
+        position: relative !important;
+        padding-right: 3.25rem !important;
+    }
+    .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"] {
+        display: none !important;
+    }
+    .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button::after {
+        content: "→";
+        position: absolute;
+        right: 1.25rem;
+        top: 50%;
+        transform: translateY(-54%);
+        font-size: 1.55rem;
+        font-weight: 400;
+        opacity: 0.96;
+        line-height: 1;
+    }
+
+    .md-auth-signin-actions {
+        margin-top: 0.95rem;
+        padding: 0;
+    }
+    .md-auth-or-divider {
+        position: relative;
+        text-align: center;
+        margin: 0.55rem 0 0.9rem 0;
+    }
+    .md-auth-or-divider::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        border-top: 1px solid #e2e8f5;
+        transform: translateY(-50%);
+    }
+    .md-auth-or-divider span {
+        position: relative;
+        background: transparent;
+        color: #64748b;
+        padding: 0 0.72rem;
+        font-size: 0.95rem;
+        font-weight: 560;
+    }
+    .md-auth-signin-actions .stButton > button {
+        height: 53px !important;
+        min-height: 53px !important;
+        border-radius: 14px !important;
+        border: 1px solid #d8e4f8 !important;
+        background: #ffffff !important;
+        color: #27364e !important;
+        font-size: 1.02rem !important;
+        font-weight: 640 !important;
+    }
+    .md-auth-signin-actions .stButton > button:hover {
+        border-color: #b9d2ff !important;
+        background: #f9fbff !important;
+    }
+    .md-auth-meta {
+        margin-top: 0.95rem;
+        padding-top: 0.95rem;
+        border-top: 1px solid #e4ebf9;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .md-auth-security-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.55rem;
+        color: #475569;
+        font-size: 0.92rem;
+        line-height: 1.5;
+    }
+    .md-auth-security-note .material-symbols-rounded {
+        color: #2563eb;
+        font-size: 1.18rem !important;
+        margin-top: 0.08rem;
+    }
+    .md-auth-forgot-link {
+        color: #2563eb !important;
+        text-decoration: underline;
+        font-size: 0.95rem;
+        font-weight: 650;
+        white-space: nowrap;
+    }
+    .md-auth-privacy-foot {
+        margin-top: 1.2rem;
+        color: #64748b;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+    .md-auth-privacy-foot a {
+        color: #1d4ed8 !important;
+        font-weight: 620;
+    }
+
+    .md-auth-side-card {
+        border-radius: 24px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(249,251,255,0.99));
+        border: 1px solid #dbe6fb;
+        box-shadow: 0 18px 38px rgba(15, 23, 42, 0.07);
+        padding: 1.55rem 1.45rem 1.3rem 1.45rem;
+        margin-top: 1.42rem;
+        max-width: 372px;
+        margin-left: auto;
+    }
+    .md-auth-side-title {
+        font-size: 2rem;
+        font-weight: 820;
+        color: #0f172a;
+        margin: 0;
+        line-height: 1.12;
+    }
+    .md-auth-side-subline {
+        width: 46px;
+        height: 2.5px;
+        border-radius: 999px;
+        background: #5b6cf9;
+        margin: 0.68rem 0 1.2rem 0;
+    }
+    .md-auth-benefit {
+        display: grid;
+        grid-template-columns: 56px 1fr;
+        gap: 0.9rem;
+        align-items: start;
+        margin-bottom: 1.35rem;
+    }
+    .md-auth-benefit-ic {
+        width: 56px;
+        height: 56px;
+        border-radius: 20px;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        color: #2563eb;
+        font-size: 1.5rem !important;
+        background: linear-gradient(145deg, #eef4ff, #e8f0ff);
+    }
+    .md-auth-benefit:nth-of-type(2) .md-auth-benefit-ic { color: #6366f1; background: linear-gradient(145deg, #eef2ff, #eceeff); }
+    .md-auth-benefit:nth-of-type(3) .md-auth-benefit-ic { color: #0f766e; background: linear-gradient(145deg, #ecfeff, #e6f7f4); }
+    .md-auth-benefit-title {
+        margin: 0;
+        font-size: 1.01rem;
+        font-weight: 730;
+        color: #0f172a;
+        line-height: 1.35;
+    }
+    .md-auth-benefit-copy {
+        margin-top: 0.18rem;
+        color: #475569;
+        font-size: 0.91rem;
+        line-height: 1.5;
+    }
+    .md-auth-side-bottom {
+        margin-top: 1.28rem;
+        padding-top: 1rem;
+        border-top: 1px dashed #dbe5f1;
+        display: flex;
+        gap: 0.6rem;
+        color: #334155;
+        font-size: 0.93rem;
+        line-height: 1.5;
+    }
+    .md-auth-side-bottom .material-symbols-rounded {
+        color: #0f766e;
+        font-size: 1.1rem !important;
+        margin-top: 0.05rem;
+    }
+
+    @media (max-width: 1280px) {
+        .md-auth-welcome-title {
+            font-size: 2rem;
+        }
+    }
+    @media (max-width: 980px) {
+        .md-auth-side-card {
+            max-width: 100%;
+        }
+        .md-auth-welcome-card {
+            padding: 1.35rem 1.15rem;
+            border-radius: 22px;
+            gap: 1rem;
+        }
+        .md-auth-shield {
+            width: 80px;
+            height: 80px;
+            border-radius: 24px;
+            font-size: 2.2rem !important;
+            position: static;
+            transform: none;
+        }
+        .md-auth-chip-row {
+            gap: 0.5rem;
+        }
+        .md-auth-chip {
+            font-size: 0.8rem;
+            padding: 0.42rem 0.68rem;
+        }
+        .md-auth-welcome-copy {
+            white-space: normal;
+        }
+        .md-auth-welcome-content {
+            padding-left: 0;
+            padding-right: 0;
+        }
+        [data-testid="stForm"]:has(.st-key-si_email),
+        [data-testid="stForm"]:has(.st-key-su_email) {
+            padding: 1.15rem 1rem 1.05rem 1rem !important;
+            border-radius: 22px !important;
+        }
+        .md-auth-signin-actions {
+            padding: 0;
+        }
+    }
+    @media (max-width: 720px) {
+        [data-baseweb="tab-list"] {
+            gap: 1.05rem !important;
+        }
+        button[role="tab"] {
+            font-size: 0.93rem !important;
+            padding-bottom: 0.7rem !important;
+        }
+        .md-auth-meta {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    _auth_shield_html = '<div class="md-auth-shield material-symbols-rounded">shield_person</div>'
+    _auth_shield_path = os.path.join(os.path.dirname(__file__), "assets", "auth_welcome_shield.png")
+    if os.path.exists(_auth_shield_path):
+        try:
+            with open(_auth_shield_path, "rb") as _shield_file:
+                _auth_shield_b64 = base64.b64encode(_shield_file.read()).decode("utf-8")
+            _auth_shield_html = (
+                '<div class="md-auth-shield md-auth-shield-image">'
+                '<img src="data:image/png;base64,' + _auth_shield_b64 + '" alt="MediChat welcome shield icon">'
+                '</div>'
+            )
+        except Exception:
+            pass
+
     st.markdown(
-        '<div class="md-auth-hero">'
-        '<div class="md-auth-icon">⚕</div>'
-        '<div>'
-        '<div class="md-auth-title">Welcome to MediChat</div>'
-        '<div class="md-auth-subtitle">Sign in to keep your health profile across visits, or continue as a guest for a one-off conversation.</div>'
+        '<div class="md-auth-welcome-card">'
+        '<div class="md-auth-deco-dots"></div>'
+        + _auth_shield_html +
+        '<div class="md-auth-welcome-content">'
+        '<div class="md-auth-welcome-title">Welcome to MediChat</div>'
+        '<div class="md-auth-welcome-copy">Sign in to keep your health profile across visits, or continue as a guest for a one-time conversation.</div>'
+        '<div class="md-auth-chip-row">'
+        '<span class="md-auth-chip"><span class="material-symbols-rounded">lock</span>Private</span>'
+        '<span class="md-auth-chip"><span class="material-symbols-rounded">person_check</span>Secure guest mode</span>'
+        '<span class="md-auth-chip"><span class="material-symbols-rounded">verified</span>APP + HIPAA standard</span>'
+        '<span class="md-auth-chip"><span class="material-symbols-rounded">verified_user</span>Health data protected</span>'
+        '</div>'
         '</div>'
         '</div>',
         unsafe_allow_html=True
     )
-    auth_c1, auth_c2, auth_c3 = st.columns([1, 3, 1])
-    with auth_c2:
+
+    auth_main_col, auth_side_col = st.columns([2.35, 0.85], gap="large")
+
+    with auth_main_col:
         view = st.session_state.auth_view
         if view == "choose":
             tab_signin, tab_signup, tab_guest = st.tabs(["Sign in", "Create profile", "Guest"])
             with tab_signin:
                 with st.form("signin_form", clear_on_submit=False):
-                    si_email = st.text_input("Email", placeholder="you@example.com", key="si_email")
-                    si_pin = st.text_input("4-8 digit PIN", type="password", max_chars=8, key="si_pin")
-                    si_btn = st.form_submit_button("Sign in", use_container_width=True, type="primary")
+                    si_email = st.text_input("Email", placeholder="you@example.com", key="si_email", icon=":material/mail:")
+                    si_pin = st.text_input("4-8 digit PIN", type="password", max_chars=8, key="si_pin", icon=":material/lock:")
+                    si_btn = st.form_submit_button(
+                        "Sign in",
+                        key="auth_signin_submit",
+                        use_container_width=True,
+                        type="primary",
+                        icon=":material/arrow_forward:"
+                    )
+
+                st.markdown('<div class="md-auth-signin-actions">', unsafe_allow_html=True)
+                st.markdown('<div class="md-auth-or-divider"><span>or</span></div>', unsafe_allow_html=True)
+                if st.button("Continue as Guest", key="go_guest_btn_signin", use_container_width=True, icon=":material/person:"):
+                    st.session_state.is_guest = True
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+
+                st.markdown(
+                    '<div class="md-auth-meta">'
+                    '<div class="md-auth-security-note">'
+                    '<span class="material-symbols-rounded">shield_lock</span>'
+                    '<span>We use secure, privacy-first authentication for your health information.</span>'
+                    '</div>'
+                    '<a class="md-auth-forgot-link" href="' + ui_escape(PRIVACY_POLICY_URL) + '" target="_blank">Forgot PIN?</a>'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
+
                 if si_btn:
                     if not si_email or "@" not in si_email or not si_pin or not si_pin.isdigit() or len(si_pin) < 4 or len(si_pin) > 8:
                         st.error("Please enter a valid email and a 4-8 digit numeric PIN.")
@@ -8016,10 +9318,9 @@ if FIREBASE_ACTIVE and not _is_admin and not st.session_state.is_authenticated a
                             st.session_state.patient_name = profile.get("name", "") or ""
                             st.session_state.patient_memory = profile.get("patient_memory", {"symptoms": [], "conditions": [], "medications": []})
                             st.session_state.selected_language = profile.get("language", "English")
-                            # Load most recent conversation (if any) so user picks up where they left off.
                             recent = list_conversations(profile["email_hash"], limit=1)
                             if recent:
-                                conv = load_conversation(profile["email_hash"], recent[0]["id"])
+                                conv = load_conversation(st.session_state.user_email_hash, recent[0]["id"])
                                 if conv:
                                     st.session_state.current_conversation_id = recent[0]["id"]
                                     st.session_state.messages = conv.get("messages", []) or []
@@ -8034,13 +9335,20 @@ if FIREBASE_ACTIVE and not _is_admin and not st.session_state.is_authenticated a
                             st.error("No profile found for that email. Switch to 'Create profile' to start one.")
                         elif status == "wrong_pin":
                             st.error("Incorrect PIN. Try again or recover your account by creating a new profile with a different email.")
+
             with tab_signup:
                 with st.form("signup_form", clear_on_submit=False):
-                    su_email = st.text_input("Email", placeholder="you@example.com", key="su_email")
-                    su_name = st.text_input("First name (optional)", key="su_name", max_chars=30)
-                    su_pin = st.text_input("Choose a 4-8 digit PIN", type="password", max_chars=8, key="su_pin")
-                    su_pin2 = st.text_input("Confirm PIN", type="password", max_chars=8, key="su_pin2")
-                    su_btn = st.form_submit_button("Create profile", use_container_width=True, type="primary")
+                    su_email = st.text_input("Email", placeholder="you@example.com", key="su_email", icon=":material/mail:")
+                    su_name = st.text_input("First name (optional)", key="su_name", max_chars=30, icon=":material/person:")
+                    su_pin = st.text_input("Choose a 4-8 digit PIN", type="password", max_chars=8, key="su_pin", icon=":material/lock:")
+                    su_pin2 = st.text_input("Confirm PIN", type="password", max_chars=8, key="su_pin2", icon=":material/password:")
+                    su_btn = st.form_submit_button(
+                        "Create profile",
+                        key="auth_signup_submit",
+                        use_container_width=True,
+                        type="primary",
+                        icon=":material/person_add:"
+                    )
                 if su_btn:
                     if not su_email or "@" not in su_email:
                         st.error("Please enter a valid email.")
@@ -8061,24 +9369,49 @@ if FIREBASE_ACTIVE and not _is_admin and not st.session_state.is_authenticated a
                             st.session_state.patient_name = profile.get("name", "") or ""
                             st.success("Profile created. Welcome to MediChat.")
                             st.rerun()
+
             with tab_guest:
                 st.markdown(
-                    '<div style="padding:0.8rem 0;font-size:0.88rem;color:#334155;line-height:1.6;">'
+                    '<div class="md-auth-privacy-foot" style="margin-top:0.3rem;">'
                     'Guest mode lets you try MediChat without an account. Your conversation lives only for this session. '
-                    'When you close the tab, everything is forgotten. Switch to a profile any time for continuity across visits.'
+                    'When you close the tab, everything is forgotten, switch to a profile any time for continuity across visits.'
                     '</div>',
                     unsafe_allow_html=True
                 )
-                if st.button("Continue as Guest", use_container_width=True, key="go_guest_btn"):
+                if st.button("Continue as Guest", use_container_width=True, key="go_guest_btn", icon=":material/person:"):
                     st.session_state.is_guest = True
                     st.rerun()
-        st.caption("Guest mode minimizes data collection. Signed profiles store irreversible email hashes and salted PIN hashes only, designed to align with APP and HIPAA-style safeguards.")
+
         st.markdown(
-            '<div style="font-size:0.76rem;color:#475569;line-height:1.5;margin-top:0.35rem;">'
-            'Privacy policy includes Australian Privacy Principles (APPs), consent handling, and Notifiable Data Breach (NDB) response commitments.'
-            '</div>'
-            '<div style="margin-top:0.35rem;font-size:0.78rem;">'
+            '<div class="md-auth-privacy-foot">'
+            'Guest mode minimizes data collection. Signed profiles store irreversible email hashes and salted PIN hashes only, designed to align with APP and HIPAA-style safeguards.<br><br>'
+            'Privacy policy includes Australian Privacy Principles (APPs), consent handling, and Notifiable Data Breach (NDB) response commitments.<br>'
             '<a href="' + ui_escape(PRIVACY_POLICY_URL) + '" target="_blank">Open Privacy Policy (APP + NDB)</a>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+    with auth_side_col:
+        st.markdown(
+            '<div class="md-auth-side-card">'
+            '<h3 class="md-auth-side-title">Why sign in?</h3>'
+            '<div class="md-auth-side-subline"></div>'
+            '<div class="md-auth-benefit">'
+            '<div class="md-auth-benefit-ic material-symbols-rounded">folder_managed</div>'
+            '<div><p class="md-auth-benefit-title">Save your health history</p><div class="md-auth-benefit-copy">Keep your conversations, symptoms, and insights in one place.</div></div>'
+            '</div>'
+            '<div class="md-auth-benefit">'
+            '<div class="md-auth-benefit-ic material-symbols-rounded">badge</div>'
+            '<div><p class="md-auth-benefit-title">Access your Health Passport</p><div class="md-auth-benefit-copy">View and manage your verified health information anytime.</div></div>'
+            '</div>'
+            '<div class="md-auth-benefit">'
+            '<div class="md-auth-benefit-ic material-symbols-rounded">sync</div>'
+            '<div><p class="md-auth-benefit-title">Sync reports & medications</p><div class="md-auth-benefit-copy">Automatically sync your reports and medications across devices.</div></div>'
+            '</div>'
+            '<div class="md-auth-side-bottom">'
+            '<span class="material-symbols-rounded">shield_locked</span>'
+            '<span>Your health data is encrypted and protected at all times.</span>'
+            '</div>'
             '</div>',
             unsafe_allow_html=True
         )
@@ -8153,13 +9486,6 @@ home_empty_chat = st.session_state.mode == "chat" and not st.session_state.messa
 if st.session_state.mode == "chat":
     # ── New Dashboard Home (only on empty chat) ─────────────────────
     if not st.session_state.messages:
-        st.markdown(
-            '<div class="md-top-icons-fixed">'
-            '<span class="material-symbols-rounded">search</span>'
-            '<span class="material-symbols-rounded md-notify-icon">notifications</span>'
-            '</div>',
-            unsafe_allow_html=True
-        )
         _local_now = get_user_local_now()
         _hour = _local_now.hour
         if 5 <= _hour < 12:
@@ -8180,7 +9506,7 @@ if st.session_state.mode == "chat":
             unsafe_allow_html=True
         )
 
-        home_main, home_side = st.columns([1.9, 1.3], gap="medium")
+        home_main, home_side = st.columns([2.38, 0.95], gap="medium")
 
         with home_main:
             # Quick action cards
@@ -8201,7 +9527,6 @@ if st.session_state.mode == "chat":
                             st.session_state.pending_user_input = qa_query
                             st.rerun()
 
-            st.markdown('<div class="md-ref-ask-shell">', unsafe_allow_html=True)
             with st.form("home_chat_form", clear_on_submit=True):
                 home_user_input = st.text_area(
                     "Start a chat",
@@ -8210,14 +9535,13 @@ if st.session_state.mode == "chat":
                     height=100,
                     key="home_chat_input_" + str(st.session_state.chat_input_key),
                 )
-                ac1, ac2, ac_spacer, ac3 = st.columns([0.48, 0.48, 4.2, 0.34])
+                ac1, ac2, ac_spacer, ac3 = st.columns([0.56, 0.56, 4.0, 0.56], vertical_alignment="center")
                 with ac1:
-                    home_upload_clicked = st.form_submit_button(" ", key="home_upload_btn", icon=":material/attach_file:", use_container_width=True)
+                    home_upload_clicked = st.form_submit_button("Upload", key="home_upload_btn", icon=":material/attach_file:", use_container_width=True)
                 with ac2:
-                    home_voice_clicked = st.form_submit_button(" ", key="home_voice_btn", icon=":material/mic:", use_container_width=True)
+                    home_voice_clicked = st.form_submit_button("Voice", key="home_voice_btn", icon=":material/mic:", use_container_width=True)
                 with ac3:
                     home_submit = st.form_submit_button(" ", key="home_send_btn", icon=":material/send:", use_container_width=True, type="primary")
-            st.markdown('</div>', unsafe_allow_html=True)
             st.markdown('<div class="md-composer-glow"></div>', unsafe_allow_html=True)
             if home_upload_clicked:
                 st.session_state.home_show_vision_upload = True
@@ -8315,10 +9639,10 @@ if st.session_state.mode == "chat":
             # ── Smart Actions (available for all users) ───────────────
             st.markdown('<div class="md-smart-head"><div class="md-smart-title">Smart Actions</div></div>', unsafe_allow_html=True)
             sa_specs = [
-                ("sa_sym", "Symptoms Checker\nGuided AI assessment of your symptoms", "assessment", ":material/stethoscope:", "md-smart-purple"),
-                ("sa_rec", "Health Records\nUpload and manage your medical reports", "records", ":material/medical_information:", "md-smart-green"),
-                ("sa_ins", "AI Insights\nPersonalized insights based on your data", "insights", ":material/monitor_heart:", "md-smart-pink"),
-                ("sa_appt", "Appointments\nSchedule and manage your appointments", "appointments", ":material/calendar_month:", "md-smart-blue"),
+                ("sa_sym", "Symptoms Checker\nGuided symptom assessment", "assessment", ":material/stethoscope:", "md-smart-purple"),
+                ("sa_rec", "Health Records\nUpload medical reports", "records", ":material/medical_information:", "md-smart-green"),
+                ("sa_ins", "AI Insights\nPersonalized insights", "insights", ":material/monitor_heart:", "md-smart-pink"),
+                ("sa_appt", "Appointments\nManage appointments", "appointments", ":material/calendar_month:", "md-smart-blue"),
             ]
             sa_cols = st.columns(4, gap="small")
             for i, (sk, label, action, icon_name, accent_cls) in enumerate(sa_specs):
@@ -8450,7 +9774,7 @@ if st.session_state.mode == "chat":
                 ]
                 snap_html = (
                     '<div class="md-rcard md-snap-card">'
-                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><div class="md-rcard-link">See all</div></div>'
+                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><a class="md-rcard-link md-rcard-link-btn" href="?mode=overview">See all</a></div>'
                     '<div class="md-snap-grid">'
                 )
                 for _cls, _icon, _lbl, _val, _status, _line_cls in _tiles:
@@ -8474,7 +9798,7 @@ if st.session_state.mode == "chat":
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 # Recent Conversations (real, from Firestore)
-                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><div class="md-rcard-link">See all</div></div>'
+                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="?mode=history">See all</a></div>'
                 if st.session_state.is_authenticated and st.session_state.user_email_hash:
                     _recent = list_conversations(st.session_state.user_email_hash, limit=4)
                 else:
@@ -8510,6 +9834,63 @@ if st.session_state.mode == "chat":
                     st.session_state.mode = "history"
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
+
+                # Live Health Passport (fills empty right-rail area with a real, usable feature).
+                _records_total = len(list_health_records())
+                _meds_total = len(list_medications())
+                _appts_total = len(list_appointments())
+                _vitals_logged = bool(_hr or _steps_val or _sleep_hours or (_water_count is not None and int(_water_count) > 0))
+                _has_history = bool(_convs_total) if st.session_state.is_authenticated else bool(st.session_state.messages)
+                _profile_ready = bool(st.session_state.is_authenticated and st.session_state.user_email_hash)
+                _passport_checks = [
+                    ("Profile linked", _profile_ready),
+                    ("Chat history", _has_history),
+                    ("Vitals logged", _vitals_logged),
+                    ("Records uploaded", _records_total > 0),
+                    ("Medications synced", _meds_total > 0),
+                    ("Appointments tracked", _appts_total > 0),
+                ]
+                _passport_done = sum(1 for _, _ok in _passport_checks if _ok)
+                _passport_total = len(_passport_checks)
+                _passport_pct = int(round((_passport_done / _passport_total) * 100)) if _passport_total else 0
+
+                _passport_html = (
+                    '<div class="md-rcard md-passport-card">'
+                    '<div class="md-passport-head">'
+                    '<div class="md-passport-title-wrap"><span class="material-symbols-rounded">badge</span><div class="md-passport-title">Health Passport</div></div>'
+                    '<div class="md-passport-pct">' + str(_passport_pct) + '% ready</div>'
+                    '</div>'
+                    '<div class="md-passport-sub">Live profile completeness across vitals, records, medications, and appointments.</div>'
+                    '<div class="md-passport-progress"><div class="md-passport-fill" style="width:' + str(_passport_pct) + '%;"></div></div>'
+                )
+                for _label, _ok in _passport_checks:
+                    _row_cls = "ok" if _ok else "todo"
+                    _icon = "check_circle" if _ok else "radio_button_unchecked"
+                    _status = "Complete" if _ok else "Pending"
+                    _passport_html += (
+                        '<div class="md-passport-check ' + _row_cls + '">'
+                        '<div class="md-passport-check-left">'
+                        '<span class="material-symbols-rounded">' + _icon + '</span>'
+                        '<span class="md-passport-check-label">' + ui_text(_label, 40) + '</span>'
+                        '</div>'
+                        '<span class="md-passport-status ' + _row_cls + '">' + _status + '</span>'
+                        '</div>'
+                    )
+                _passport_html += '</div>'
+                st.markdown(_passport_html, unsafe_allow_html=True)
+
+                _pp1, _pp2 = st.columns(2, gap="small")
+                with _pp1:
+                    if st.button("Open Records", key="home_passport_records", use_container_width=True, icon=":material/folder_managed:"):
+                        st.session_state.mode = "records"
+                        st.rerun()
+                with _pp2:
+                    if st.button("Update Vitals", key="home_passport_overview", use_container_width=True, icon=":material/monitoring:"):
+                        st.session_state.mode = "overview"
+                        st.rerun()
+                if st.button("Sync Medications", key="home_passport_meds", use_container_width=True, icon=":material/pill:"):
+                    st.session_state.mode = "medications"
+                    st.rerun()
                 # Daily Health Tip carousel is rendered below Smart Actions in home_main.
 
     mem = st.session_state.patient_memory
@@ -8688,7 +10069,7 @@ if st.session_state.mode == "chat":
                 height=120,
                 key="chat_input_" + str(st.session_state.chat_input_key),
             )
-            fc1, fc2, fc_spacer, fc3 = st.columns([0.72, 0.72, 3.1, 0.48])
+            fc1, fc2, fc_spacer, fc3 = st.columns([0.72, 0.72, 3.1, 0.48], vertical_alignment="center")
             with fc1:
                 chat_upload_clicked = st.form_submit_button(" ", key="chat_upload_btn", icon=":material/attach_file:", use_container_width=True)
             with fc2:
