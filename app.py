@@ -8,7 +8,6 @@ except ImportError:
 from sentence_transformers import SentenceTransformer
 from datasets import load_dataset
 import faiss
-import numpy as np
 import os
 import base64
 import hashlib
@@ -18,7 +17,6 @@ import io
 import re
 import time
 import difflib
-import random
 from datetime import datetime, timedelta, date as _date
 try:
     from zoneinfo import ZoneInfo
@@ -552,24 +550,6 @@ def get_metrics_history(days=7):
         out.append((d, {**DAILY_METRIC_DEFAULTS, **all_dm.get(d, {})}))
     return out
 
-# ── Deterministic-but-realistic vitals (no wearable yet) ─────────────
-def simulate_heart_rate():
-    """Pseudo-random based on current 5-minute window. 60-90 BPM range."""
-    seed = int(time.time() // 300)
-    h = hashlib.md5(str(seed).encode()).hexdigest()
-    n = int(h[:6], 16)
-    return 64 + (n % 26)  # 64-89
-
-def simulate_steps_today(target=10000):
-    """Day-progressive estimate. Hash today's date for daily seed, scale by hour."""
-    seed = int(datetime.now().strftime("%Y%m%d"))
-    h = hashlib.md5(str(seed).encode()).hexdigest()
-    n = int(h[:6], 16)
-    daily_target = 7000 + (n % 5000)  # personal target 7-12k
-    hr = datetime.now().hour
-    progress_pct = max(0.05, min(1.0, (hr - 6) / 16))  # active 6am-10pm
-    return int(daily_target * progress_pct), daily_target
-
 def log_query_to_firestore(query_data):
     """Write anonymised query metadata to Firestore. Silent failure if Firebase unavailable."""
     if not FIREBASE_ACTIVE:
@@ -627,20 +607,6 @@ def get_user_local_now():
         except Exception:
             pass
     return datetime.now()
-
-def get_emergency_guidance_text():
-    tz_name = ""
-    try:
-        tz_name = getattr(st.context, "timezone", "") or ""
-    except Exception:
-        tz_name = ""
-    if "Australia" in tz_name:
-        return "If this is an emergency, call 000 immediately."
-    if "America" in tz_name or "US/" in tz_name:
-        return "If this is an emergency, call 911 immediately."
-    if "Europe/London" in tz_name:
-        return "If this is an emergency, call 999 immediately."
-    return "If this is an emergency, contact your local emergency number immediately."
 
 def reset_prescription_reader_state():
     st.session_state.rx_reader_result = None
@@ -1509,15 +1475,6 @@ st.markdown("""
     }
     [data-testid="stSidebar"] .stMarkdown { color: var(--clinical-900); }
     .sb-title { font-size: 0.65rem; font-weight: 700; color: var(--neutral-500); text-transform: uppercase; letter-spacing: 0.12em; margin: 0.7rem 0 0.45rem 0; }
-    .sb-stat-card { background: var(--clinical-50); border: 1px solid var(--clinical-100); border-radius: 10px; padding: 0.55rem 0.75rem; margin-bottom: 0.35rem; }
-    .sb-stat-num { font-size: 1.3rem; font-weight: 700; color: var(--clinical-700) !important; line-height: 1; font-family: 'Inter', sans-serif; }
-    .sb-stat-label { font-size: 0.62rem; color: var(--neutral-500) !important; font-weight: 500; margin-top: 0.1rem; }
-    .sb-feature { display: flex; align-items: center; gap: 0.5rem; background: var(--clinical-50); border: 1px solid var(--clinical-100); border-radius: 8px; padding: 0.4rem 0.65rem; margin-bottom: 0.3rem; }
-    .sb-feature-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-    .sb-feature-name { font-size: 0.72rem; font-weight: 500; color: var(--clinical-900) !important; }
-    .sb-feature-status { font-size: 0.6rem; color: var(--clinical-500) !important; margin-left: auto; font-weight: 600; }
-    .sb-tip { font-size: 0.7rem; color: var(--neutral-600) !important; padding: 0.25rem 0; border-bottom: 1px solid var(--clinical-50); line-height: 1.5; }
-    .sb-memory-item { font-size: 0.68rem; color: var(--clinical-700) !important; padding: 0.2rem 0; border-bottom: 1px solid var(--clinical-50); }
     .sb-footer { font-size: 0.62rem; color: var(--neutral-500) !important; text-align: center; padding-top: 0.8rem; border-top: 1px solid var(--clinical-50); line-height: 1.6; }
 
     /* ── Symptom Assessment Card ─────────────────────────────────── */
@@ -1749,29 +1706,6 @@ st.markdown("""
 * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
 
 /* Compliance / status strip */
-.md-statusbar {
-    display: flex; align-items: center; gap: 1.4rem;
-    padding: 0.55rem 1rem;
-    background: var(--md-surface);
-    border: 1px solid var(--md-border);
-    border-radius: 14px;
-    margin-bottom: 1.2rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--md-text-2);
-    box-shadow: var(--md-shadow-sm);
-    flex-wrap: wrap;
-}
-.md-statusbar .md-stat-item { display: inline-flex; align-items: center; gap: 0.4rem; }
-.md-statusbar .md-stat-icon-blue { color: #2563eb; }
-.md-statusbar .md-stat-icon-green { color: #059669; }
-.md-statusbar .md-stat-icon-cyan { color: #0891b2; }
-.md-statusbar .md-pulse {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: #10b981;
-    box-shadow: 0 0 0 0 rgba(16,185,129,0.5);
-    animation: mdPulse 2s infinite;
-}
 @keyframes mdPulse {
     0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
     70% { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
@@ -1796,7 +1730,6 @@ st.markdown("""
 }
 
 /* Quick action chips */
-.md-chips { display: flex; gap: 0.55rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
 .md-chip {
     background: var(--md-surface);
     border: 1px solid var(--md-border);
@@ -1812,7 +1745,6 @@ st.markdown("""
     transition: all .18s ease;
 }
 .md-chip:hover { border-color: var(--md-brand-1); transform: translateY(-1px); box-shadow: var(--md-shadow-md); }
-.md-chip-emoji { font-size: 1rem; line-height: 1; }
 /* Style streamlit columns containing chip buttons to match */
 div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chip-btn,
 .md-chip-row .stButton > button {
@@ -1841,112 +1773,13 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
 }
 
 /* Hero card */
-.md-hero {
-    background: linear-gradient(180deg, #ffffff 0%, #f1faff 100%);
-    border: 1px solid var(--md-border);
-    border-radius: 22px;
-    padding: 2.2rem 1.8rem 1.8rem 1.8rem;
-    text-align: center;
-    box-shadow: var(--md-shadow-md);
-    margin-bottom: 1.2rem;
-    position: relative;
-    overflow: hidden;
-}
-.md-hero::before {
-    content: "";
-    position: absolute; top: -120px; right: -120px;
-    width: 280px; height: 280px;
-    background: radial-gradient(circle, rgba(6,182,212,0.12), transparent 70%);
-    border-radius: 50%;
-}
-.md-hero::after {
-    content: "";
-    position: absolute; bottom: -100px; left: -80px;
-    width: 220px; height: 220px;
-    background: radial-gradient(circle, rgba(139,92,246,0.10), transparent 70%);
-    border-radius: 50%;
-}
-.md-hero-orb {
-    width: 78px; height: 78px;
-    border-radius: 50%;
-    background:
-        radial-gradient(circle at 30% 30%, #ffffff, transparent 40%),
-        linear-gradient(135deg, #06b6d4, #8b5cf6);
-    margin: 0 auto 1rem auto;
-    display: flex; align-items: center; justify-content: center;
-    color: white; font-size: 1.9rem;
-    box-shadow: 0 12px 28px rgba(6,182,212,0.32), 0 0 0 6px rgba(6,182,212,0.08);
-    position: relative;
-    animation: mdFloat 4s ease-in-out infinite;
-}
 @keyframes mdFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-.md-hero-title {
-    font-size: 1.55rem;
-    font-weight: 700;
-    color: var(--md-text-1);
-    letter-spacing: -0.02em;
-    margin-bottom: 0.45rem;
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    position: relative;
-}
-.md-hero-verified {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 22px; height: 22px;
-    background: var(--md-accent-blue);
-    color: white;
-    border-radius: 50%;
-    font-size: 0.75rem;
-    font-weight: 800;
-}
-.md-hero-desc {
-    color: var(--md-text-2);
-    font-size: 0.92rem;
-    line-height: 1.6;
-    max-width: 560px;
-    margin: 0 auto 1.4rem auto;
-    position: relative;
-}
-.md-hero-pills {
-    display: flex; gap: 0.7rem; flex-wrap: wrap; justify-content: center;
-    position: relative;
-}
-.md-hero-pill {
-    background: var(--md-surface);
-    border: 1px solid var(--md-border);
-    border-radius: 14px;
-    padding: 0.55rem 0.85rem;
-    display: flex; align-items: center; gap: 0.55rem;
-    box-shadow: var(--md-shadow-sm);
-    flex: 1 1 200px;
-    max-width: 230px;
-}
-.md-hero-pill-icon {
-    width: 32px; height: 32px;
-    border-radius: 9px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1rem;
-    flex-shrink: 0;
-}
 .md-hp-green { background: var(--md-soft-green); color: #047857; }
 .md-hp-violet { background: var(--md-soft-violet); color: #6d28d9; }
 .md-hp-blue { background: var(--md-soft-blue); color: #1d4ed8; }
 .md-hp-pink { background: var(--md-soft-pink); color: #be185d; }
-.md-hero-pill-title {
-    font-size: 0.78rem; font-weight: 600; color: var(--md-text-1); line-height: 1.1;
-}
-.md-hero-pill-sub {
-    font-size: 0.68rem; color: var(--md-text-3); margin-top: 0.15rem;
-}
 
 /* Composer wrapper */
-.md-composer-wrap {
-    background: var(--md-surface);
-    border: 1px solid var(--md-border);
-    border-radius: 18px;
-    padding: 1rem 1.2rem;
-    margin-bottom: 0.8rem;
-    box-shadow: var(--md-shadow-sm);
-}
 
 /* Smart Actions panel */
 .md-smart-head {
@@ -1954,31 +1787,7 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
     margin: 0.4rem 0 0.6rem 0;
 }
 .md-smart-title { font-size: 1rem; font-weight: 700; color: var(--md-text-1); }
-.md-smart-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.7rem; }
 @media (max-width: 900px) { .md-smart-grid { grid-template-columns: repeat(2, 1fr); } }
-.md-smart-card {
-    background: var(--md-surface);
-    border: 1px solid var(--md-border);
-    border-radius: 14px;
-    padding: 0.9rem 1rem;
-    transition: all .18s ease;
-    cursor: pointer;
-}
-.md-smart-card:hover { transform: translateY(-2px); box-shadow: var(--md-shadow-md); border-color: var(--md-brand-1); }
-.md-smart-icon {
-    width: 38px; height: 38px;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.05rem;
-    margin-bottom: 0.5rem;
-}
-.md-si-cyan { background: var(--md-soft-blue); color: #0891b2; }
-.md-si-blue { background: #eff6ff; color: #1d4ed8; }
-.md-si-green { background: var(--md-soft-green); color: #047857; }
-.md-si-violet { background: var(--md-soft-violet); color: #6d28d9; }
-.md-si-pink { background: var(--md-soft-pink); color: #be185d; }
-.md-smart-name { font-size: 0.86rem; font-weight: 600; color: var(--md-text-1); margin-bottom: 0.2rem; }
-.md-smart-desc { font-size: 0.72rem; color: var(--md-text-2); line-height: 1.4; }
 
 /* Right column dashboard cards */
 .md-rcard {
@@ -2055,8 +1864,6 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
     box-shadow: var(--md-shadow-sm);
     display: flex; align-items: center; gap: 0.8rem;
 }
-.md-tip-icon { font-size: 2rem; }
-.md-tip-body { flex: 1; }
 .md-tip-eyebrow { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--md-brand-2); margin-bottom: 0.2rem; }
 .md-tip-title { font-size: 0.95rem; font-weight: 700; color: var(--md-text-1); margin-bottom: 0.2rem; }
 .md-tip-desc { font-size: 0.75rem; color: var(--md-text-2); line-height: 1.45; }
@@ -2129,16 +1936,6 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
 }
 
 /* Premium card */
-.md-premium {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: white;
-    border-radius: 16px;
-    padding: 1rem;
-    margin: 0.8rem 0;
-    box-shadow: 0 8px 24px rgba(99,102,241,0.25);
-}
-.md-premium-title { font-size: 0.88rem; font-weight: 700; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem; }
-.md-premium-desc { font-size: 0.72rem; opacity: 0.92; line-height: 1.4; margin-bottom: 0.7rem; }
 .md-premium .stButton > button {
     background: white !important;
     color: #6366f1 !important;
@@ -2677,13 +2474,6 @@ st.markdown("""
     padding: 0.34rem 0.68rem !important;
 }
 
-form#home_chat_form {
-    background: rgba(255, 255, 255, 0.98) !important;
-    border: 1px solid #e7edf6 !important;
-    border-radius: 28px !important;
-    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08) !important;
-    padding: 1rem 1rem 0.95rem 1rem !important;
-}
 
 form#home_chat_form [data-testid="stTextArea"] textarea,
 [data-testid="stForm"] [data-testid="stTextArea"] textarea {
@@ -2715,10 +2505,6 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
     white-space: nowrap !important;
 }
 
-.md-ref-ask-shell {
-    margin-bottom: 0.85rem;
-    animation: mdFadeUp 0.42s ease both;
-}
 
 @keyframes mdFadeUp {
     from { opacity: 0; transform: translateY(8px); }
@@ -2731,72 +2517,6 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
     color: #64748b !important;
 }
 
-.md-action-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem;
-}
-.md-action-card {
-    position: relative;
-    min-height: 172px;
-    display: flex;
-    flex-direction: column;
-    text-decoration: none !important;
-    color: #101827 !important;
-    padding: 1.15rem 1.1rem;
-    border-radius: 24px;
-    background:
-        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.82));
-    border: 1px solid rgba(226, 232, 240, 0.96);
-    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.055);
-    backdrop-filter: blur(18px);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    animation: mdFadeUp 0.48s ease both;
-}
-.md-action-card:hover {
-    transform: translateY(-4px) scale(1.01);
-    border-color: rgba(147, 197, 253, 0.95);
-    box-shadow: 0 24px 54px rgba(15, 23, 42, 0.09);
-}
-.md-action-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 16px;
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.55rem !important;
-    margin-bottom: 1.15rem;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45);
-}
-.md-action-name {
-    color: #111827;
-    font-size: 0.98rem;
-    font-weight: 760;
-    line-height: 1.2;
-    margin-bottom: 0.42rem;
-}
-.md-action-desc {
-    color: #64748b;
-    font-size: 0.82rem;
-    line-height: 1.45;
-    padding-right: 0.4rem;
-}
-.md-action-arrow {
-    position: absolute;
-    right: 1rem;
-    bottom: 1rem;
-    width: 34px;
-    height: 34px;
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    color: #0f172a;
-    background: rgba(255,255,255,0.92);
-    border: 1px solid #e6edf7;
-    font-size: 1.15rem !important;
-}
 .md-accent-purple { background: #f2ebff; color: #7c3aed; }
 .md-accent-green { background: #e9fbf3; color: #10b981; }
 .md-accent-pink { background: #fff0f6; color: #ef4f85; }
@@ -3103,63 +2823,6 @@ st.markdown("""
 /* Keep the app clinical and calm: remove decorative orb treatment. */
 .md-hero::before,
 .md-hero::after,
-.md-hero-orb {
-    display: none !important;
-}
-.md-hero {
-    text-align: center;
-    padding: 2.2rem 1.75rem 1.6rem 1.75rem;
-    border-radius: 24px;
-    background:
-        linear-gradient(135deg, rgba(239,246,255,0.94), rgba(255,255,255,0.98) 48%, rgba(245,243,255,0.88));
-    border: 1px solid rgba(219,234,254,0.95);
-    box-shadow: 0 18px 48px rgba(15,23,42,0.07);
-}
-.md-hero-mark {
-    width: 64px;
-    height: 64px;
-    border-radius: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.55rem;
-    font-weight: 800;
-    background:
-        radial-gradient(circle at 28% 20%, rgba(255,255,255,0.75), transparent 36%),
-        linear-gradient(135deg, #38bdf8, #2563eb 55%, #8b5cf6);
-    box-shadow: 0 16px 36px rgba(79,70,229,0.24);
-    margin: 0 auto 1.1rem auto;
-}
-.md-hero-title {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-    font-size: 1.28rem;
-    margin-bottom: 0.7rem;
-}
-.md-hero-desc {
-    margin-left: auto;
-    margin-right: auto;
-    max-width: 520px;
-    color: #52627a;
-}
-.md-hero-pills {
-    justify-content: center;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.65rem;
-    margin-top: 1.35rem;
-}
-.md-hero-pill {
-    max-width: none;
-    min-height: 66px;
-    border-radius: 16px;
-    background: rgba(255,255,255,0.78);
-    box-shadow: 0 8px 24px rgba(15,23,42,0.045);
-}
 
 .md-name-card,
 .md-feedback-panel,
@@ -3184,14 +2847,6 @@ st.markdown("""
     font-weight: 750;
     color: var(--md-text-1);
     margin-bottom: 0.15rem;
-}
-.md-feedback-panel {
-    padding: 1rem;
-    margin-top: 1rem;
-}
-.md-download-card {
-    padding: 1rem;
-    margin-top: 0.9rem;
 }
 .md-file-preview {
     display: flex;
@@ -3230,45 +2885,15 @@ st.markdown("""
     font-size: 0.82rem;
     line-height: 1.5;
 }
-.md-care-note {
-    background: #f8fafc;
-    border: 1px solid var(--md-border);
-    border-radius: 14px;
-    padding: 0.85rem;
-    margin: 0.8rem 0;
-}
-.md-care-title {
-    font-size: 0.82rem;
-    font-weight: 750;
-    color: var(--md-text-1);
-    margin-bottom: 0.25rem;
-}
-.md-care-copy {
-    color: var(--md-text-2);
-    font-size: 0.72rem;
-    line-height: 1.45;
-}
 .md-home-composer-note {
     font-size: 0.74rem;
     color: #64748b;
     text-align: center;
     margin: -0.3rem 0 1rem 0;
 }
-.md-home-composer-wrap {
-    margin-top: -0.2rem;
-    margin-bottom: 1.3rem;
-}
 .md-home-composer-wrap + div [data-testid="stForm"],
-.md-home-composer-wrap ~ div [data-testid="stForm"] {
-    border-radius: 22px !important;
-}
 .md-smart-head {
     margin-top: 1rem !important;
-}
-.md-smart-card {
-    min-height: 132px;
-    border-radius: 18px !important;
-    box-shadow: 0 12px 30px rgba(15,23,42,0.045) !important;
 }
 .md-smart-card + div .stButton > button,
 .md-smart-card ~ div .stButton > button {
@@ -3383,32 +3008,12 @@ st.markdown("""
     .main .block-container {
         padding: 0.95rem 0.8rem 1.9rem 0.8rem !important;
     }
-    .md-statusbar {
-        gap: 0.55rem;
-        align-items: flex-start;
-        margin-top: 0.2rem;
-    }
-    .md-statusbar span[style*="margin-left:auto"] {
-        margin-left: 0 !important;
-    }
     .md-greet {
         font-size: 1.45rem;
         line-height: 1.25;
     }
     .md-subgreet {
         font-size: 0.86rem;
-    }
-    .md-hero {
-        padding: 1.15rem;
-    }
-    .md-hero-title {
-        font-size: 1.2rem;
-    }
-    .md-hero-pills {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .md-smart-card {
-        min-height: 114px !important;
     }
     .bot-bubble,
     .user-bubble {
@@ -3428,18 +3033,8 @@ st.markdown("""
 }
 
 @media (max-width: 640px) {
-    .md-chip-row [data-testid="stHorizontalBlock"] {
-        gap: 0.5rem !important;
-    }
     .md-smart-head {
         margin-top: 0.4rem !important;
-    }
-    .md-smart-card {
-        min-height: 106px !important;
-    }
-    .md-statusbar {
-        font-size: 0.68rem;
-        padding: 0.55rem 0.7rem;
     }
     .md-file-preview {
         align-items: flex-start;
@@ -3452,9 +3047,6 @@ st.markdown("""
         flex-direction: column;
         gap: 0.1rem;
     }
-    .md-hero-pills {
-        grid-template-columns: 1fr;
-    }
     .confidence-row {
         flex-wrap: wrap;
     }
@@ -3466,9 +3058,6 @@ st.markdown("""
 st.markdown("""
 <style>
 /* Quick option pills */
-.md-chip-row-compact [data-testid="stHorizontalBlock"] {
-    gap: 0.75rem !important;
-}
 .md-chip-row-compact .stButton > button {
     min-height: 46px !important;
     border-radius: 999px !important;
@@ -3490,10 +3079,6 @@ st.markdown("""
     overflow: visible !important;
     font-size: 1.1rem !important;
 }
-.md-chip-row-compact [data-testid="column"]:nth-child(1) [data-testid="stIconMaterial"] { color: #ff4f88 !important; }
-.md-chip-row-compact [data-testid="column"]:nth-child(2) [data-testid="stIconMaterial"] { color: #f59e0b !important; }
-.md-chip-row-compact [data-testid="column"]:nth-child(3) [data-testid="stIconMaterial"] { color: #2687ff !important; }
-.md-chip-row-compact [data-testid="column"]:nth-child(4) [data-testid="stIconMaterial"] { color: #7c3aed !important; }
 .md-chip-row-compact .stButton > button:hover {
     border-color: #93c5fd !important;
     box-shadow: 0 12px 28px rgba(59,130,246,0.12) !important;
@@ -3501,28 +3086,7 @@ st.markdown("""
 }
 
 /* Home composer controls: compact upload/voice pills and round send */
-form#home_chat_form {
-    padding: 1rem 1rem 0.85rem 1rem !important;
-}
-form#home_chat_form [data-testid="stFormSubmitButton"] > button {
-    height: 48px !important;
-    min-height: 48px !important;
-    border-radius: 999px !important;
-}
 form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
-form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primary"] {
-    width: 52px !important;
-    min-width: 52px !important;
-    padding: 0 !important;
-    justify-content: center !important;
-    box-shadow: 0 14px 30px rgba(79,70,229,0.28) !important;
-}
-form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"] {
-    padding: 0 1rem !important;
-    border: 1px solid #d7e8fb !important;
-    background: rgba(255,255,255,0.92) !important;
-    box-shadow: 0 5px 14px rgba(15,23,42,0.035) !important;
-}
 form#chat_form {
     background: rgba(255, 255, 255, 0.98) !important;
     border: 1px solid #e7edf6 !important;
@@ -3633,12 +3197,6 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
 }
 
 /* Guest mode: make the limited dashboard feel intentional */
-.md-guest-head {
-    margin: 1.15rem 0 0.55rem 0;
-    color: #111827;
-    font-size: 1rem;
-    font-weight: 780;
-}
 .md-guest-card .stButton > button {
     min-height: 112px !important;
     border-radius: 22px !important;
@@ -3721,11 +3279,6 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     overflow: visible !important;
     line-height: 1 !important;
     text-align: center !important;
-}
-.sb-title-language {
-    letter-spacing: 0.12em !important;
-    white-space: nowrap !important;
-    overflow: visible !important;
 }
 [data-testid="stSidebar"] [data-testid="stSelectbox"] {
     overflow: visible !important;
@@ -4007,9 +3560,6 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     border-radius: 14px !important;
     padding: 0.66rem !important;
 }
-.md-care-note {
-    border-radius: 14px !important;
-}
 
 @media (max-width: 980px) {
     [data-testid="stSidebar"] {
@@ -4022,26 +3572,6 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
 .md-home-head-left {
     text-align: left !important;
     margin-bottom: 0.8rem !important;
-}
-.md-safeguards-wrap {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 0.45rem;
-    margin-top: 0.35rem;
-}
-.md-safe-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.32rem;
-    padding: 0.42rem 0.58rem;
-    border-radius: 999px;
-    border: 1px solid #deebff;
-    background: rgba(255,255,255,0.92);
-    color: #1e3a8a;
-    font-size: 0.71rem;
-    font-weight: 640;
-    white-space: nowrap;
 }
 .md-safe-pill .material-symbols-rounded {
     font-size: 0.95rem !important;
@@ -4143,51 +3673,6 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
 }
 
 /* Center health tip card + learn more CTA */
-.md-tip-center {
-    display: flex;
-    align-items: center;
-    gap: 0.95rem;
-    margin-top: 1.1rem;
-    padding: 1.05rem 1.1rem;
-    border-radius: 20px;
-    border: 1px solid #e2ecfb;
-    background: linear-gradient(135deg, #edf8ff, #fffaf1);
-}
-.md-tip-center-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
-    background: rgba(255,255,255,0.75);
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    color: #2563eb;
-    font-size: 1.4rem !important;
-    flex-shrink: 0;
-}
-.md-tip-center-body {
-    min-width: 0;
-}
-.md-tip-center-eyebrow {
-    font-size: 0.7rem;
-    color: #0ea5e9;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
-    font-weight: 780;
-    margin-bottom: 0.2rem;
-}
-.md-tip-center-title {
-    font-size: 1.05rem;
-    color: #0f172a;
-    font-weight: 780;
-    line-height: 1.2;
-}
-.md-tip-center-desc {
-    font-size: 0.86rem;
-    color: #64748b;
-    line-height: 1.4;
-    margin-top: 0.2rem;
-}
 .st-key-tip_learn_more .stButton > button {
     margin-top: 0.9rem !important;
     min-height: 40px !important;
@@ -4198,40 +3683,6 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
 }
 
 /* Emergency help card */
-.md-urgent-card {
-    margin-top: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    border-radius: 18px;
-    padding: 0.9rem 1rem;
-    background: linear-gradient(135deg, #3b82f6, #6366f1);
-    color: #fff;
-    box-shadow: 0 16px 34px rgba(59,130,246,0.24);
-}
-.md-urgent-icon, .md-urgent-arrow {
-    width: 34px;
-    height: 34px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.16);
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem !important;
-}
-.md-urgent-body {
-    flex: 1;
-    min-width: 0;
-}
-.md-urgent-title {
-    font-size: 0.95rem;
-    font-weight: 780;
-    line-height: 1.2;
-}
-.md-urgent-desc {
-    font-size: 0.79rem;
-    opacity: 0.95;
-}
 .st-key-open_emergency_guidance .stButton > button {
     margin-top: 0.6rem !important;
     border-radius: 12px !important;
@@ -4240,11 +3691,6 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
 }
 
 @media (max-width: 980px) {
-    .md-safeguards-wrap {
-        justify-content: flex-start;
-        margin-top: 0;
-        margin-bottom: 0.5rem;
-    }
     .st-key-qa_headache .stButton > button,
     .st-key-qa_tired .stButton > button,
     .st-key-qa_symptoms .stButton > button,
@@ -4349,54 +3795,11 @@ footer {
 }
 
 /* 6, 7, 8, 9, 10: sidebar footer stack */
-.sb-title-language {
-    display: block !important;
-    margin-top: 1.15rem !important;
-    padding-top: 0.85rem !important;
-    height: auto !important;
-    min-height: 16px !important;
-    overflow: visible !important;
-    color: #94a3b8 !important;
-    letter-spacing: 0.13em !important;
-}
-.md-side-safe-wrap {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 0.38rem !important;
-    margin: 0.7rem 0 0.45rem !important;
-}
-.md-side-safe-pill {
-    display: flex !important;
-    align-items: center !important;
-    gap: 0.45rem !important;
-    min-height: 34px !important;
-    padding: 0.42rem 0.58rem !important;
-    border-radius: 12px !important;
-    border: 1px solid #e4efff !important;
-    background: rgba(255,255,255,0.82) !important;
-    color: #1e3a8a !important;
-    font-size: 0.7rem !important;
-    font-weight: 700 !important;
-    line-height: 1.15 !important;
-}
 .md-side-safe-pill .material-symbols-rounded {
     font-size: 1rem !important;
     color: #2563eb !important;
 }
-.md-sidebar-bottom-spacer {
-    height: clamp(0.75rem, 8vh, 5.5rem) !important;
-}
-.md-care-note {
-    margin-top: 0.5rem !important;
-    margin-bottom: 0.7rem !important;
-    padding: 0.78rem !important;
-    border-radius: 14px !important;
-    background: rgba(248,250,252,0.92) !important;
-    border: 1px solid #e8eef6 !important;
-}
-.md-care-title { font-size: 0.78rem !important; }
 .md-care-copy,
-.md-care-note a { font-size: 0.68rem !important; }
 .md-sidebar-bottom {
     margin-top: 0.6rem !important;
     padding-top: 0 !important;
@@ -4484,44 +3887,13 @@ footer {
 }
 
 /* 23, 24: smaller chat box/buttons */
-form#home_chat_form {
-    max-width: 100% !important;
-    padding: 0.78rem !important;
-    border-radius: 24px !important;
-    box-shadow: 0 14px 34px rgba(15,23,42,0.07) !important;
-}
-form#home_chat_form [data-testid="stTextArea"] textarea {
-    min-height: 98px !important;
-    height: 98px !important;
-    border-radius: 18px !important;
-    padding: 0.82rem 0.95rem !important;
-    font-size: 0.98rem !important;
-}
-form#home_chat_form [data-testid="stFormSubmitButton"] > button {
-    min-height: 40px !important;
-    height: 40px !important;
-    font-size: 0.86rem !important;
-}
-form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"] {
-    padding: 0 0.9rem !important;
-    min-width: 104px !important;
-}
 form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
-form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primary"] {
-    width: 44px !important;
-    min-width: 44px !important;
-}
 .md-home-composer-note {
     font-size: 0.72rem !important;
     margin: 0.35rem 0 1.05rem !important;
 }
 
 /* 25-30: guest feature cards as small pills with exact labels */
-.md-guest-head {
-    font-size: 0.88rem !important;
-    font-weight: 800 !important;
-    margin: 0.85rem 0 0.45rem !important;
-}
 .st-key-guest_vision_card .stButton > button,
 .st-key-guest_symptom_card .stButton > button,
 .st-key-guest_rx_card .stButton > button {
@@ -4545,21 +3917,6 @@ form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primary"] 
 }
 
 /* 31, 32: small health tip, no Learn more button rendered */
-.md-tip-center {
-    min-height: 64px !important;
-    margin-top: 0.95rem !important;
-    padding: 0.72rem 0.85rem !important;
-    border-radius: 18px !important;
-}
-.md-tip-center-icon {
-    width: 42px !important;
-    height: 42px !important;
-    border-radius: 14px !important;
-    font-size: 1.15rem !important;
-}
-.md-tip-center-eyebrow { font-size: 0.62rem !important; }
-.md-tip-center-title { font-size: 0.92rem !important; }
-.md-tip-center-desc { font-size: 0.74rem !important; }
 .st-key-tip_learn_more {
     display: none !important;
 }
@@ -4700,15 +4057,6 @@ html, body, [class*="css"], [data-testid="stAppViewContainer"], .stApp, .stMarkd
     margin-top: 0 !important;
 }
 
-.md-top-icons-fixed {
-    position: fixed;
-    top: 1.9rem;
-    right: 3.2rem;
-    z-index: 200;
-    display: flex;
-    gap: 0.95rem;
-    color: #1f2a44;
-}
 .md-top-icons-fixed .material-symbols-rounded {
     font-size: 1.35rem !important;
     width: 34px;
@@ -4720,19 +4068,6 @@ html, body, [class*="css"], [data-testid="stAppViewContainer"], .stApp, .stMarkd
     background: rgba(255,255,255,0.9);
     border: 1px solid #e7ecf7;
     box-shadow: 0 6px 18px rgba(15,23,42,0.06);
-}
-.md-notify-icon {
-    position: relative;
-}
-.md-notify-icon::after {
-    content: "";
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: #3b82f6;
 }
 
 .md-home-greet-wrap {
@@ -4860,25 +4195,7 @@ html, body, [class*="css"], [data-testid="stAppViewContainer"], .stApp, .stMarkd
     margin-bottom: 0.2rem !important;
 }
 
-.md-ref-ask-shell {
-    background: #ffffff !important;
-    border: 1px solid #e7ebf5 !important;
-    border-radius: 24px !important;
-    box-shadow: 0 16px 34px rgba(15,23,42,0.06) !important;
-    padding: 0.52rem 0.68rem 0.6rem 0.68rem !important;
-}
-form#home_chat_form {
-    padding: 0.74rem 0.72rem 0.62rem 0.72rem !important;
-}
-form#home_chat_form [data-testid="stTextArea"] textarea {
-    min-height: 132px !important;
-    height: 132px !important;
-    border-radius: 16px !important;
-}
 form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
-form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primary"] {
-    background: linear-gradient(135deg, #2f8cff, #6b4bff) !important;
-}
 
 .md-home-composer-note {
     text-align: center !important;
@@ -4918,75 +4235,6 @@ form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primary"] 
     margin-top: 0.22rem;
 }
 
-.md-daily-card {
-    margin-top: 0.55rem;
-    border-radius: 20px;
-    border: 1px solid #dbe7fb;
-    background: linear-gradient(145deg, #eff8ff, #e8f2ff);
-    padding: 1rem 1.1rem 1rem 1.1rem;
-    position: relative;
-    overflow: hidden;
-}
-.md-daily-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 86px;
-    align-items: center;
-    gap: 0.6rem;
-}
-.md-daily-illust {
-    width: 86px;
-    height: 100px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: -0.25rem;
-}
-.md-daily-illust svg {
-    width: 100%;
-    height: auto;
-    display: block;
-    filter: drop-shadow(0 6px 14px rgba(37, 99, 235, 0.18));
-}
-.md-daily-header {
-    color: #2563eb;
-    font-size: 1.03rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    margin-bottom: 0.65rem;
-}
-.md-daily-star {
-    color: #60a5fa;
-}
-.md-daily-title {
-    font-size: 1.15rem;
-    font-weight: 750;
-    color: #0f172a;
-    margin-bottom: 0.35rem;
-}
-.md-daily-desc {
-    font-size: 0.92rem;
-    color: #475569;
-    line-height: 1.5;
-}
-.md-daily-dots {
-    display: flex;
-    gap: 0.35rem;
-    margin-top: 0.85rem;
-}
-.md-daily-dots span {
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: #bfd6fb;
-    transition: all 0.18s ease;
-}
-.md-daily-dots span:first-child {
-    background: #3b82f6;
-    width: 18px;
-}
 
 .sb-title-language,
 .md-side-safe-wrap,
@@ -4997,21 +4245,6 @@ form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primary"] 
     display: none !important;
 }
 
-.md-premium {
-    background: linear-gradient(135deg, #f5f2ff, #edf4ff) !important;
-    border: 1px solid #e1d8ff !important;
-    border-radius: 16px !important;
-    box-shadow: 0 12px 28px rgba(99,102,241,0.14) !important;
-    color: #31558f !important;
-}
-.md-premium-title {
-    color: #2563eb !important;
-    font-size: 1.03rem !important;
-}
-.md-premium-desc {
-    color: #5b708f !important;
-    font-size: 0.86rem !important;
-}
 .st-key-guest_to_signin .stButton > button {
     border-radius: 999px !important;
     background: linear-gradient(135deg, #2f8cff, #6b4bff) !important;
@@ -5045,63 +4278,7 @@ form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primary"] 
 }
 
 /* Mockup-styled Premium upsell card */
-.md-premium-card {
-    margin: 0.85rem 1.6rem 0.4rem 0;
-    padding: 0.95rem 0.95rem 0.55rem 0.95rem;
-    border-radius: 18px;
-    background: linear-gradient(160deg, #eef4ff 0%, #e0eaff 60%, #dbe8ff 100%);
-    border: 1px solid #d3deff;
-    box-shadow: 0 10px 24px rgba(79,70,229,0.10);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-}
-.md-premium-card-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.7rem;
-}
-.md-premium-card-icon {
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
-    border-radius: 12px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #3b82f6, #6366f1);
-    box-shadow: 0 8px 16px rgba(79,70,229,0.32);
-    flex-shrink: 0;
-}
-.md-premium-card-icon svg {
-    display: block;
-}
-.md-premium-card-text {
-    flex: 1;
-    min-width: 0;
-}
-.md-premium-card-title {
-    font-size: 0.92rem;
-    font-weight: 800;
-    color: #2563eb;
-    line-height: 1.2;
-    margin-bottom: 0.18rem;
-    letter-spacing: -0.005em;
-}
-.md-premium-card-desc {
-    font-size: 0.74rem;
-    color: #475569;
-    line-height: 1.35;
-    font-weight: 500;
-}
 
-.md-sidebar-icon-row {
-    display: flex;
-    justify-content: center;
-    gap: 1.1rem;
-    margin: 0.15rem 0 0.5rem 0;
-}
 .md-sidebar-icon-row .material-symbols-rounded {
     width: 32px;
     height: 32px;
@@ -5197,11 +4374,6 @@ form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primary"] 
 }
 
 @media (max-width: 980px) {
-    .md-top-icons-fixed {
-        position: static;
-        justify-content: flex-end;
-        margin-bottom: 0.45rem;
-    }
     .md-snap-card {
         margin-top: 0 !important;
     }
@@ -5627,12 +4799,6 @@ st.markdown("""
 }
 
 /* Bottom stack: one flow layout only (no absolute overlap). */
-[data-testid="stSidebar"] .md-sidebar-bottom-spacer {
-    display: none !important;
-    height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
 [data-testid="stSidebar"] .md-side-profile {
     margin-top: 0 !important;
     /* Same Streamlit inner-wrapper compensation as the nav pills + premium card. */
@@ -5689,9 +4855,6 @@ st.markdown("""
 }
 
 /* Remove settings/moon mini row entirely. */
-.md-sidebar-icon-row {
-    display: none !important;
-}
 
 /* Home/chat attachment and voice buttons: home uses icon + label pills. */
 [data-testid="stSidebar"] .stButton > button p {
@@ -7588,7 +6751,6 @@ def assess_triage_tier(text, conversation_text="", memory=None):
 
     matched_concern = [kw for kw in CONCERN_KEYWORDS if kw in combined]
     has_chronic = bool(memory.get("conditions"))
-    has_meds = bool(memory.get("medications"))
     if matched_concern or (has_chronic and any(s in combined for s in ["worse", "new symptom", "different"])):
         reasons = matched_concern[:3] if matched_concern else ["Chronic condition + new or worsening symptom"]
         return {
@@ -7698,51 +6860,6 @@ def get_sources_used(idxs):
     if dialog_count > 0:
         sources.append("Doctor-Patient Data (" + str(dialog_count) + ")")
     return sources
-
-def medichat_rag(question, all_messages, lang_instruction="", patient_name=""):
-    emb = embedder.encode([question]).astype("float32")
-    distances, idxs = index.search(emb, k=6)
-    context = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
-    sources = get_sources_used(idxs[0])
-    confidence_level, confidence_pct = calculate_confidence(distances[0].tolist())
-    memory = extract_patient_memory(all_messages)
-    memory_context = build_memory_context(memory)
-    history = []
-    for m in all_messages[-10:]:
-        if m.get("type") == "text":
-            history.append({"role": m["role"], "content": m["content"]})
-
-    system = (
-        "You are MediChat, a clinically competent AI health assistant. "
-        "Patients often come to you after doctors have dismissed their concerns. "
-        "Your job is to reason like a skilled GP: integrate the full symptom picture, "
-        "offer likely possibilities and risk level, and give useful next-step guidance.\n\n"
-        "Safety boundary: never present a final diagnosis, never prescribe medication, and never provide new dosage instructions.\n\n"
-    )
-    if patient_name:
-        system += "The patient's name is " + patient_name + ". Use their name sparingly, maximum once per response.\n\n"
-    if lang_instruction:
-        system += lang_instruction + "\n\n"
-    if memory_context:
-        system += "WHAT THIS PATIENT HAS TOLD YOU ALREADY (ANCHOR ON THIS):\n" + memory_context + "\n\n"
-    system += "MEDICAL KNOWLEDGE CONTEXT (from PubMed and real doctor-patient conversations):\n" + context
-
-    if not GROQ_ACTIVE or groq_client is None:
-        fallback = (
-            "MediChat Ai is running in local preview mode without an AI API key. "
-            "The dashboard UI is available, but chat responses need GROQ_API_KEY or ANTHROPIC_API_KEY configured."
-        )
-        yield ("done", fallback, {"memory": memory, "sources": sources, "confidence": "Not available", "confidence_pct": 0, "engine": "preview"})
-        return
-
-    msgs = [{"role": "system", "content": system}] + history + [{"role": "user", "content": question}]
-    r = groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=msgs,
-        temperature=0.4,
-        max_tokens=1024
-    )
-    return r.choices[0].message.content, memory, sources, confidence_level, confidence_pct
 
 def sanitize_rag_context(raw_context):
     if not raw_context:
@@ -7979,7 +7096,6 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
     )
 
     full_response = ""
-    stream_error = None
 
     if CLAUDE_ACTIVE:
         try:
@@ -8011,7 +7127,6 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
             yield ("done", full_response, {"memory": memory, "sources": sources, "confidence": confidence_level, "confidence_pct": confidence_pct, "engine": "claude"})
             return
         except Exception as e:
-            stream_error = e
             print("Claude stream failed, falling back to Groq:", e)
             full_response = ""
 
@@ -10456,7 +9571,7 @@ if st.session_state.mode == "chat":
                         elif kind == "done":
                             final_text = event[1]
                             stream_metadata = event[2]
-                except Exception as e:
+                except Exception:
                     st.markdown(
                         '<div class="md-mini-error">MediChat had trouble generating a response. Please try again.</div>',
                         unsafe_allow_html=True
