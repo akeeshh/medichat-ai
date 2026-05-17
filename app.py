@@ -5111,7 +5111,11 @@ st.markdown("""
 }
 
 /* Brand logo image (replaces icon + text + subtitle). The PNG already includes
-   the wordmark and tagline, so we just center it cleanly in the sidebar. */
+   the wordmark and tagline, so we just center it cleanly in the sidebar.
+   Streamlit's stMarkdownContainer for sidebar markdown has a ~13px right offset
+   vs widget containers (selectbox, profile card), which left this wrap
+   misaligned and overflowing the right edge. translateX counter-shifts to
+   align with the rest of the sidebar column. */
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
     display: grid !important;
     place-items: center !important;
@@ -5121,6 +5125,7 @@ st.markdown("""
     width: 100% !important;
     max-width: 242px !important;
     margin: 0 auto 0.6rem auto !important;
+    transform: translateX(-13px) !important;
     padding: 0.4rem 0 0.85rem 0 !important;
     background: transparent !important;
     position: relative !important;
@@ -5176,12 +5181,15 @@ st.markdown("""
     position: absolute;
     inset: 0;
     padding: 1.4rem 1.6rem 1.8rem 1.6rem;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 130px;
-    gap: 1.2rem;
+    display: block;
     align-items: center;
     opacity: 0;
     animation: tipCycle 20s infinite ease-in-out;
+}
+/* First child = text column, fills 100% width. */
+.md-tip-slide > div:first-child {
+    width: 100%;
+    min-width: 0;
 }
 .md-tip-slide:nth-child(1) { animation-delay: 0s; }
 .md-tip-slide:nth-child(2) { animation-delay: 5s; }
@@ -5215,7 +5223,8 @@ st.markdown("""
     color: #475569;
     line-height: 1.45;
     margin-bottom: 0.7rem;
-    max-width: 56ch;
+    /* Use full available width — illustration is absolute-positioned now. */
+    max-width: none;
 }
 .md-tip-metric {
     display: inline-flex;
@@ -5233,24 +5242,31 @@ st.markdown("""
     font-size: 16px !important;
     color: #3b82f6;
 }
+/* Illustration is now a soft corner accent — absolute-positioned in the
+   top-right of the slide so the text below uses the full tile width.
+   Smaller circle + faded opacity keeps it as decoration, not competition. */
 .md-tip-illust {
+    position: absolute;
+    top: 1.2rem;
+    right: 1.4rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 130px;
-    height: 130px;
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
     background: rgba(255,255,255,0.55);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.8);
-    justify-self: end;
+    opacity: 0.65;
+    pointer-events: none;
 }
 .md-tip-illust-svg svg {
-    width: 88px;
-    height: 88px;
+    width: 52px;
+    height: 52px;
     filter: drop-shadow(0 6px 14px rgba(37,99,235,0.18));
 }
 .md-tip-illust .material-symbols-rounded {
-    font-size: 60px !important;
+    font-size: 36px !important;
 }
 .md-tip-water .md-tip-eyebrow { color: #0891b2; }
 .md-tip-water .md-tip-metric { color: #0e7490; border-color: rgba(8,145,178,0.22); }
@@ -5316,6 +5332,1671 @@ st.markdown("""
 [class*="st-key-home_chat_input_"] textarea:focus {
     border: 0 !important;
     box-shadow: none !important;
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   Sidebar "posh" polish — final pass. Darker nav labels for stronger
+   readability, refined hover lift, gradient divider under the logo, softer
+   profile + selectbox cards, polished bottom finish with hairline divider
+   above Privacy & Consent.
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* Refined sidebar surface — softer vertical gradient, cleaner right edge. */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #fbfcff 0%, #f4f7fd 100%) !important;
+    border-right: 1px solid #e6ecf6 !important;
+}
+
+/* Nav labels — darker for contrast, subtle hover lift + shadow. */
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button {
+    color: #1f2a3d !important;
+    transition: background-color 0.18s ease, border-color 0.18s ease,
+                box-shadow 0.18s ease, transform 0.18s ease !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > div[data-testid="stMarkdownContainer"] p {
+    color: #1f2a3d !important;
+    font-weight: 660 !important;
+    letter-spacing: -0.005em !important;
+    /* Looser line-height so descenders (g, p, y, q, j) render fully and
+       don't get clipped by the tight 1.1 default. */
+    line-height: 1.45 !important;
+    padding-bottom: 1px !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button:hover {
+    background: #ffffff !important;
+    border-color: #d6e2f6 !important;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06) !important;
+    transform: translateY(-1px) !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button:hover > div[data-testid="stMarkdownContainer"] p {
+    color: #0f172a !important;
+}
+
+/* Logo divider — gradient hairline that fades at both ends. */
+[data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap::after {
+    left: 8% !important;
+    right: 8% !important;
+    height: 1px !important;
+    background: linear-gradient(90deg, transparent 0%, #b9c8e6 50%, transparent 100%) !important;
+    bottom: -0.6rem !important;
+}
+
+/* Profile card — subtle gradient + softer shadow. */
+[data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
+    background: linear-gradient(180deg, #ffffff 0%, #fafcff 100%) !important;
+    border: 1px solid #dbe5f7 !important;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06) !important;
+    padding: 0.78rem 0.86rem !important;
+}
+
+/* Language selectbox — tracker-style label, match profile card visual weight. */
+[data-testid="stSidebar"] [data-testid="stSelectbox"] {
+    margin: 0.95rem 0 0.6rem 0 !important;
+}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] label {
+    color: #94a3b8 !important;
+    font-weight: 700 !important;
+    font-size: 0.62rem !important;
+    letter-spacing: 0.16em !important;
+    text-transform: uppercase !important;
+    margin-bottom: 0.42rem !important;
+}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] {
+    border-radius: 14px !important;
+    border: 1px solid #dbe5f7 !important;
+    background: linear-gradient(180deg, #ffffff 0%, #fafcff 100%) !important;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.04) !important;
+    min-height: 48px !important;
+    height: 48px !important;
+}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+    min-height: 48px !important;
+    height: 48px !important;
+}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"] {
+    color: #1f2a3d !important;
+    font-weight: 600 !important;
+}
+
+/* Polished bottom finish — hairline divider, refined typography. */
+[data-testid="stSidebar"] .md-sidebar-bottom {
+    padding-top: 0.85rem !important;
+    margin-top: 0.6rem !important;
+    border-top: 1px solid #d6e0f0 !important;
+}
+[data-testid="stSidebar"] div.st-key-nav_privacy_bottom .stButton > button {
+    color: #5a6b86 !important;
+    font-size: 0.84rem !important;
+    font-weight: 620 !important;
+    letter-spacing: 0.02em !important;
+    border-radius: 12px !important;
+    transition: background-color 0.18s ease, color 0.18s ease !important;
+}
+[data-testid="stSidebar"] div.st-key-nav_privacy_bottom .stButton > button:hover {
+    background: #f1f5fc !important;
+    color: #1f2a3d !important;
+}
+[data-testid="stSidebar"] .sb-footer {
+    color: #98a4ba !important;
+    font-size: 0.66rem !important;
+    letter-spacing: 0.04em !important;
+    border-top: none !important;
+    padding-top: 0.5rem !important;
+    bottom: 0.95rem !important;
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   Compact mode for laptop screens (≤900px viewport height OR ≤1500px wide).
+   Targets the common case of 1366×768 / 1440×900 displays at 100% browser
+   zoom, where the full-size layout overflows. Shrinks paddings, font sizes,
+   button heights, and gaps so above-the-fold elements stay visible without
+   forcing the user to manually zoom out.
+   ──────────────────────────────────────────────────────────────────────── */
+@media (max-height: 900px), (max-width: 1500px) {
+    /* Main column: trim outer padding so cards sit closer to the top. */
+    [data-testid="stMainBlockContainer"] {
+        padding: 0.5rem 2.2rem 0.6rem !important;
+    }
+    [data-testid="stMain"] [data-testid="stVerticalBlock"] {
+        gap: 0.55rem !important;
+    }
+
+    /* Greeting + hero headings — pull the eye in faster. */
+    .md-home-greet-wrap { margin: -0.6rem 0 0.5rem 0 !important; }
+    .md-home-greet-wrap .md-greet { font-size: 1.95rem !important; line-height: 1.1 !important; }
+    .md-home-greet-wrap .md-subgreet { font-size: 0.86rem !important; margin-top: 0.25rem !important; }
+    .md-hero, .md-hero-card {
+        padding: 1rem 1.2rem !important;
+    }
+    .md-hero-title, .md-hero h1, .md-hero h2 {
+        font-size: 1.7rem !important;
+        line-height: 1.15 !important;
+    }
+    .md-hero-subtitle, .md-hero p {
+        font-size: 0.86rem !important;
+        line-height: 1.35 !important;
+    }
+
+    /* Forms (sign-in, composer) — tighter internal padding. */
+    [data-testid="stForm"],
+    [data-testid="stForm"]:has(.st-key-si_email),
+    [data-testid="stForm"]:has(.st-key-su_email) {
+        padding: 0.7rem 0.95rem 0.62rem !important;
+        border-radius: 18px !important;
+    }
+    [data-testid="stForm"] [data-testid="stVerticalBlock"] {
+        gap: 0.3rem !important;
+    }
+
+    /* Auth welcome card — balanced proportions, fills the tile cleanly.
+       margin-bottom gives the tabs/columns row below clear separation. */
+    .md-auth-welcome-card {
+        padding: 1rem 1.6rem 1.1rem 1.3rem !important;
+        grid-template-columns: 96px minmax(0, 1fr) !important;
+        gap: 1.2rem !important;
+        border-radius: 20px !important;
+        align-items: center !important;
+        margin-bottom: 0.6rem !important;
+    }
+    .md-auth-shield, .md-auth-shield.md-auth-shield-image {
+        width: 88px !important;
+        height: 88px !important;
+        font-size: 2.4rem !important;
+        border-radius: 26px !important;
+    }
+    .md-auth-welcome-content {
+        align-items: center !important;
+        text-align: center !important;
+        padding: 0 !important;
+    }
+    .md-auth-welcome-title {
+        font-size: clamp(1.45rem, 1.95vw, 1.85rem) !important;
+        margin-bottom: 0.28rem !important;
+        text-align: center !important;
+        width: 100% !important;
+    }
+    .md-auth-welcome-copy {
+        font-size: clamp(0.85rem, 1vw, 0.96rem) !important;
+        line-height: 1.4 !important;
+        text-align: center !important;
+        max-width: none !important;
+    }
+    .md-auth-chip-row {
+        gap: 0.55rem !important;
+        margin-top: 0.65rem !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+    }
+    .md-auth-chip {
+        font-size: 0.78rem !important;
+        padding: 0.32rem 0.72rem !important;
+    }
+    .md-auth-deco-dots { display: none !important; }
+
+    /* "Why sign in?" right-column feature list — aggressively compact.
+       margin-top pushes the card down to match the sign-in tile's top edge:
+       the left column has a tab-strip (~36px) + its margin (~6px) above the
+       form, so we offset by ~3.2rem to visually align both card tops. */
+    .md-auth-side-card {
+        padding: 0.85rem 0.95rem 0.7rem 0.95rem !important;
+        margin-top: 3.2rem !important;
+        border-radius: 18px !important;
+    }
+    .md-auth-side-title { font-size: 1.3rem !important; line-height: 1.1 !important; }
+    .md-auth-side-subline { margin: 0.4rem 0 0.7rem 0 !important; }
+    .md-auth-benefit {
+        grid-template-columns: 34px 1fr !important;
+        gap: 0.55rem !important;
+        margin-bottom: 0.55rem !important;
+    }
+    .md-auth-benefit-ic {
+        width: 34px !important;
+        height: 34px !important;
+        border-radius: 11px !important;
+        font-size: 1rem !important;
+    }
+    .md-auth-benefit-title { font-size: 0.82rem !important; line-height: 1.2 !important; }
+    .md-auth-benefit-copy { font-size: 0.72rem !important; line-height: 1.3 !important; margin-top: 0.08rem !important; }
+    .md-auth-side-bottom {
+        margin-top: 0.55rem !important;
+        padding-top: 0.5rem !important;
+        font-size: 0.72rem !important;
+        line-height: 1.3 !important;
+    }
+    .md-auth-side-bottom .material-symbols-rounded { font-size: 0.9rem !important; }
+
+    /* Sign-in form fields — tighter row heights. */
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"],
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] {
+        margin-bottom: 0.3rem !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"] label,
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] label {
+        font-size: 0.82rem !important;
+        margin-bottom: 0.18rem !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) input,
+    [data-testid="stForm"]:has(.st-key-su_email) input {
+        min-height: 38px !important;
+        height: 38px !important;
+        font-size: 0.88rem !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stFormSubmitButton"] > button,
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stFormSubmitButton"] > button {
+        min-height: 42px !important;
+        height: 42px !important;
+        font-size: 0.92rem !important;
+    }
+
+    /* Main column outer gap — keep cards close together. */
+    [data-testid="stMain"] [data-testid="stVerticalBlock"] {
+        gap: 0.25rem !important;
+    }
+    [data-testid="stMainBlockContainer"] {
+        padding: 0.3rem 2rem 0.4rem !important;
+    }
+    /* Tabs pill bar — compact sizing. Keeps the centered pill design but
+       trims paddings, font, and gap. The generous margin-top is intentional:
+       it gives the welcome card above (with its soft glow ::after) enough
+       breathing room so the pill doesn't visually collide. */
+    [data-testid="stTabs"] [data-baseweb="tab-list"] {
+        margin-top: 1.8rem !important;
+        margin-bottom: 1rem !important;
+        gap: 0.3rem !important;
+        padding: 0.26rem !important;
+        max-width: 380px !important;
+        border-radius: 12px !important;
+    }
+    [data-testid="stTabs"] button[role="tab"] {
+        padding: 0.42rem 0.95rem !important;
+        font-size: 0.86rem !important;
+        border-radius: 8px !important;
+    }
+    /* Extra breathing room after the form, before the "or" divider +
+       Continue as Guest, so the secondary action doesn't crowd the
+       primary Sign in button. */
+    .md-auth-signin-actions {
+        margin-top: 1.4rem !important;
+    }
+    /* Push the post-form privacy meta a bit further down for clearer
+       grouping with the page footer. */
+    .md-auth-meta {
+        margin-top: 1.25rem !important;
+    }
+
+    /* Sidebar: shrink nav pills + logo to fit 9 buttons + footer in 768px. */
+    [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+        padding: 0.55rem 1rem 0.8rem 1rem !important;
+    }
+    [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
+        max-width: 140px !important;
+        width: min(140px, 100%) !important;
+    }
+    [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
+        padding: 0.2rem 0 0.5rem 0 !important;
+        margin-bottom: 0.4rem !important;
+    }
+    [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button {
+        min-height: 38px !important;
+        height: 38px !important;
+        margin-bottom: 0.18rem !important;
+        font-size: 0.88rem !important;
+        padding-left: 0.5rem !important;
+    }
+    [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > div[data-testid="stMarkdownContainer"] p {
+        font-size: 0.88rem !important;
+    }
+    [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > span:first-child,
+    [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > [data-testid="stIconMaterial"] {
+        width: 26px !important;
+        min-width: 26px !important;
+        height: 26px !important;
+        border-radius: 8px !important;
+        margin-right: 0.55rem !important;
+    }
+    [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button [data-testid="stIconMaterial"] {
+        font-size: 0.95rem !important;
+    }
+    [data-testid="stSidebar"] div.st-key-nav_home {
+        margin-top: 2.5rem !important;
+    }
+    [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
+        padding: 0.55rem 0.65rem !important;
+    }
+    [data-testid="stSidebar"] .md-side-avatar {
+        width: 32px !important;
+        min-width: 32px !important;
+        height: 32px !important;
+        font-size: 0.82rem !important;
+    }
+    /* Language picker — minimal text-link style. Sits as a subtle inline
+       row at the very bottom of the sidebar (above Privacy & Consent),
+       reading as: "🌐  English  ▾" with no chip background by default. On
+       hover it picks up the lightest indigo wash so it still reads as
+       interactive. Compact 26px, almost invisible until you look for it.
+       Label is collapsed in Python. */
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] {
+        margin: 0.25rem 0 0.2rem 0 !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] > label,
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-testid="stWidgetLabel"] {
+        display: none !important;
+        height: 0 !important;
+        margin: 0 !important;
+    }
+    /* Outer shell — borderless + transparent by default. Hover lifts the
+       OUTER container only (not its inner wrapper) so we get one clean
+       white card, not two stacked. Same look as sidebar nav buttons. */
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] {
+        min-height: 26px !important;
+        height: 26px !important;
+        background: transparent !important;
+        border: 1px solid transparent !important;
+        box-shadow: none !important;
+        border-radius: 8px !important;
+        transition:
+            background 0.18s ease,
+            border-color 0.18s ease,
+            box-shadow 0.2s ease,
+            transform 0.18s ease !important;
+    }
+    /* Inner wrapper — never paint its own background/border, always inherit
+       from the outer so there's only one visible "tile". */
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        min-height: 26px !important;
+        height: 26px !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"]:hover {
+        background: #ffffff !important;
+        border-color: #d6e2f6 !important;
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06) !important;
+        transform: translateY(-1px) !important;
+    }
+    /* Completely remove the combobox input from the visible/interactive
+       layer. Clicks on the parent still open the dropdown, but the user
+       can no longer focus or type into the input — it reads as a true
+       button-style picker. */
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] input[role="combobox"] {
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        height: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        margin: 0 !important;
+        opacity: 0 !important;
+        position: absolute !important;
+        left: -9999px !important;
+        pointer-events: none !important;
+        caret-color: transparent !important;
+    }
+    /* Make the entire trigger clickable as a button to open the dropdown. */
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] {
+        cursor: pointer !important;
+    }
+
+    /* Replace the displayed full language name with a 3-letter code.
+       Only affects the SELECTED value inside the sidebar trigger — the
+       dropdown options (rendered in a body-level portal) still show the
+       full names. Scoped via [data-testid="stSidebar"]. */
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value] {
+        font-size: 0 !important;
+        line-height: 1 !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value]::before {
+        font-size: 0.7rem !important;
+        font-weight: 700 !important;
+        color: #475569 !important;
+        letter-spacing: 0.06em !important;
+        line-height: 1 !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="English"]::before   { content: "ENG"; }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="Tamil"]::before     { content: "TAM"; }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="Sinhala"]::before   { content: "SIN"; }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="Hindi"]::before     { content: "HIN"; }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="Malayalam"]::before { content: "MAL"; }
+
+    /* Hairline divider between the language picker and the Privacy & Consent
+       button at the bottom of the sidebar. */
+    [data-testid="stSidebar"] .md-sidebar-bottom-divider {
+        height: 1px !important;
+        background: #d6e0f0 !important;
+        margin: 0.45rem -0.4rem 0.55rem -0.4rem !important;
+    }
+    /* Globe glyph at the start — sits tight against the text. */
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] {
+        position: relative !important;
+        padding-left: 0.8rem !important;
+        padding-right: 0.2rem !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"]::before {
+        content: "🌐";
+        position: absolute;
+        left: 0.18rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.7rem;
+        line-height: 1;
+        pointer-events: none;
+        opacity: 0.85;
+    }
+    /* Displayed value styling is now handled by the [value]::before rules
+       further below (3-letter language codes). */
+    /* Tiny chevron, gentle muted color. */
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] svg {
+        width: 11px !important;
+        height: 11px !important;
+        fill: #94a3b8 !important;
+        opacity: 0.85 !important;
+    }
+    [data-testid="stSidebar"] .md-sidebar-bottom {
+        padding-top: 0.55rem !important;
+        margin-top: 0.4rem !important;
+    }
+    [data-testid="stSidebar"] div.st-key-nav_privacy_bottom {
+        margin-bottom: 1rem !important;
+    }
+    [data-testid="stSidebar"] div.st-key-nav_privacy_bottom .stButton > button {
+        min-height: 36px !important;
+        height: 36px !important;
+    }
+    [data-testid="stSidebar"] .sb-footer {
+        bottom: 0.5rem !important;
+    }
+
+    /* ────────────────────────────────────────────────────────────────────
+       Apple-style polish — home dashboard at 1366×768.
+       Goals: nothing wraps mid-word, vertical rhythm reads cleanly, every
+       tile fits its content on one line where possible, icons sit in
+       softly tinted square containers (consistent across chips + cards),
+       send button matches the brand indigo without dominating.
+       ──────────────────────────────────────────────────────────────────── */
+
+    /* Greeting — slightly tighter, brand black. */
+    .md-home-greet-wrap .md-greet {
+        font-size: 1.7rem !important;
+        line-height: 1.08 !important;
+        font-weight: 720 !important;
+        letter-spacing: -0.018em !important;
+    }
+    .md-home-greet-wrap .md-subgreet {
+        font-size: 0.82rem !important;
+        margin-top: 0.18rem !important;
+        color: #64748b !important;
+    }
+
+    /* ── Quick-action chips ──
+       Pill row sits clearly below greeting (1.1rem breathing room). Each
+       chip: short single-line label, soft indigo-tinted icon square,
+       generous internal padding. Hover gives a small lift + indigo border
+       tint, no shape change. Icons are forced to monochrome indigo so
+       emoji-style material symbols don't break the unified palette. */
+    [data-testid="stHorizontalBlock"]:has(.st-key-qa_headache) {
+        margin-top: 1.1rem !important;
+        margin-bottom: 0.4rem !important;
+    }
+    .st-key-qa_headache .stButton > button,
+    .st-key-qa_tired .stButton > button,
+    .st-key-qa_symptoms .stButton > button,
+    .st-key-qa_sleep .stButton > button {
+        min-height: 48px !important;
+        height: 48px !important;
+        padding: 0 0.85rem !important;
+        border-radius: 14px !important;
+        background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%) !important;
+        border: 1px solid #e6ecf6 !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.85) inset,
+            0 2px 5px rgba(15, 23, 42, 0.03) !important;
+        gap: 0.6rem !important;
+        transition:
+            transform 0.18s ease,
+            border-color 0.18s ease,
+            box-shadow 0.2s ease !important;
+    }
+    .st-key-qa_headache .stButton > button p,
+    .st-key-qa_tired .stButton > button p,
+    .st-key-qa_symptoms .stButton > button p,
+    .st-key-qa_sleep .stButton > button p {
+        font-size: 0.83rem !important;
+        font-weight: 620 !important;
+        color: #1f2a3d !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        -webkit-line-clamp: 1 !important;
+        line-height: 1.1 !important;
+        letter-spacing: -0.005em !important;
+        margin: 0 !important;
+    }
+    /* Force a single, on-theme indigo for every quick-chip icon — even
+       emoji-style material symbols. */
+    .st-key-qa_headache .stButton > button [data-testid="stIconMaterial"],
+    .st-key-qa_tired .stButton > button [data-testid="stIconMaterial"],
+    .st-key-qa_symptoms .stButton > button [data-testid="stIconMaterial"],
+    .st-key-qa_sleep .stButton > button [data-testid="stIconMaterial"] {
+        width: 26px !important;
+        height: 26px !important;
+        min-width: 26px !important;
+        font-size: 1.05rem !important;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.14) 0%, rgba(139, 92, 246, 0.12) 100%) !important;
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: #4f46e5 !important;
+        border-radius: 8px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24 !important;
+    }
+    .st-key-qa_headache .stButton > button:hover,
+    .st-key-qa_tired .stButton > button:hover,
+    .st-key-qa_symptoms .stButton > button:hover,
+    .st-key-qa_sleep .stButton > button:hover {
+        background: #ffffff !important;
+        border-color: rgba(99, 102, 241, 0.35) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.9) inset,
+            0 8px 18px rgba(79, 70, 229, 0.1) !important;
+        transform: translateY(-1px) !important;
+    }
+    .st-key-qa_headache .stButton > button:hover [data-testid="stIconMaterial"],
+    .st-key-qa_tired .stButton > button:hover [data-testid="stIconMaterial"],
+    .st-key-qa_symptoms .stButton > button:hover [data-testid="stIconMaterial"],
+    .st-key-qa_sleep .stButton > button:hover [data-testid="stIconMaterial"] {
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+
+    /* ── Composer (Apple-style) ──
+       The composer reads as one clean white card: textarea sits flush at
+       top with no inner box, action row below it has icon-only Upload /
+       Voice ghost circles on the left and a refined indigo Send pill on
+       the right. No double-borders, no grey defaults from baseweb. */
+    [data-testid="stForm"]:has(.st-key-home_send_btn) {
+        background: #ffffff !important;
+        border: 1px solid #e6ecf6 !important;
+        border-radius: 22px !important;
+        padding: 0.95rem 1rem 0.85rem 1rem !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.9) inset,
+            0 8px 24px rgba(15, 23, 42, 0.05) !important;
+    }
+    /* Textarea + baseweb wrappers — strip all background + borders so the
+       form's white surface flows through. */
+    [data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextAreaRootElement"],
+    [data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextAreaRootElement"] [data-baseweb="base-input"] {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+    [data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea {
+        min-height: 72px !important;
+        height: 72px !important;
+        font-size: 0.92rem !important;
+        padding: 0.2rem 0.2rem !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: #1f2a3d !important;
+    }
+    [data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea::placeholder {
+        color: #94a3b8 !important;
+        font-size: 0.92rem !important;
+    }
+    [data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea:focus {
+        outline: none !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Upload + Voice — small clean pills with paperclip/mic icon + text
+       label. Both fill 100% of their column so they have identical width
+       and align perfectly along their left edges; content is centered
+       inside each pill. Override the original 112×56 pill rules so they
+       read as compact secondary actions instead of dominant chips. */
+    .st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button,
+    .st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button,
+    .st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button[kind="secondary"],
+    .st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button[kind="secondary"],
+    .st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"],
+    .st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"] {
+        min-width: 0 !important;
+        width: 100% !important;
+        min-height: 36px !important;
+        height: 36px !important;
+        padding: 0 0.85rem !important;
+        border-radius: 999px !important;
+        border: 1px solid #e6ecf6 !important;
+        background: #ffffff !important;
+        box-shadow: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.45rem !important;
+        transition:
+            background 0.18s ease,
+            border-color 0.18s ease,
+            transform 0.15s ease !important;
+    }
+    /* Kill the baseweb 8px margin-right on the inner icon wrap so the
+       icon and label sit side-by-side without a stray gap. */
+    .st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button > span:first-child,
+    .st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button > span:first-child {
+        margin: 0 !important;
+    }
+    .st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button:hover,
+    .st-key-home_voice_btn [data-testid="stFormSubmitButton"] > button:hover {
+        background: #f7f9ff !important;
+        border-color: rgba(99, 102, 241, 0.32) !important;
+        transform: translateY(-1px) !important;
+    }
+    .st-key-home_upload_btn button p,
+    .st-key-home_voice_btn button p {
+        display: block !important;
+        margin: 0 !important;
+        font-size: 0.83rem !important;
+        font-weight: 600 !important;
+        line-height: 1 !important;
+        color: #1f2a3d !important;
+    }
+    .st-key-home_upload_btn button [data-testid="stIconMaterial"],
+    .st-key-home_voice_btn button [data-testid="stIconMaterial"] {
+        margin: 0 !important;
+        color: #1f2a3d !important;
+        -webkit-text-fill-color: #1f2a3d !important;
+        font-size: 1rem !important;
+    }
+
+    /* Send button — round indigo gradient ball, the primary action. */
+    .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button,
+    .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
+    .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+        min-width: 42px !important;
+        width: 42px !important;
+        min-height: 42px !important;
+        height: 42px !important;
+        border-radius: 50% !important;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 55%),
+            linear-gradient(135deg, #4f46e5 0%, #6366f1 55%, #8b5cf6 100%) !important;
+        border: none !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.22) inset,
+            0 8px 18px rgba(79, 70, 229, 0.34) !important;
+        padding: 0 !important;
+        transition: transform 0.15s ease, box-shadow 0.2s ease !important;
+    }
+    .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button:hover {
+        transform: translateY(-1px) scale(1.04) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.26) inset,
+            0 12px 24px rgba(79, 70, 229, 0.42) !important;
+    }
+    .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"] {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        font-size: 1.15rem !important;
+        margin: 0 !important;
+    }
+    /* The submit button has a 2-column grid (icon | label). With a blank
+       label (" "), the empty stMarkdownContainer still occupies a grid
+       track, pushing the icon left. Collapse the whole label container so
+       the icon sits dead-center. Switch the button to flex centering too
+       so any residual grid-gap doesn't bias the layout. */
+    .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0 !important;
+    }
+    .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button [data-testid="stMarkdownContainer"] {
+        display: none !important;
+    }
+    /* Baseweb wraps the icon in an outer <span> with margin-right: 8px (the
+       gap it would use between icon + label). With the label hidden, that
+       margin shoves the icon left. Zero it out so the icon sits dead-center. */
+    .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button > span:first-child {
+        margin: 0 !important;
+    }
+    /* Glow under composer — softer in compact mode. */
+    .md-composer-glow {
+        height: 18px !important;
+        opacity: 0.35 !important;
+    }
+    .md-home-composer-note {
+        font-size: 0.72rem !important;
+        margin-top: 0.6rem !important;
+        margin-bottom: 0.4rem !important;
+        color: #94a3b8 !important;
+    }
+
+    /* ── Smart Actions header ── */
+    .md-smart-head {
+        margin-top: 5rem !important;
+        margin-bottom: 0.95rem !important;
+    }
+    .md-smart-title {
+        font-size: 0.86rem !important;
+        font-weight: 700 !important;
+        color: #1f2a3d !important;
+        letter-spacing: -0.005em !important;
+    }
+
+    /* ── Smart Actions cards (Apple-style premium polish) ──
+       Crisp white card with a subtle vertical gradient and a glossy top-
+       edge inset highlight. Each card is named with its own --accent CSS
+       variable so the icon container, hover border, hover shadow, and
+       arrow all pick up the matching color in one place. */
+    .st-key-sa_sym  .stButton > button { --accent: 124, 58, 237; --accent-soft: 237, 233, 254; --accent-soft2: 221, 214, 254; }
+    .st-key-sa_rec  .stButton > button { --accent:  16, 185, 129; --accent-soft: 209, 250, 229; --accent-soft2: 167, 243, 208; }
+    .st-key-sa_ins  .stButton > button { --accent: 219,  39, 119; --accent-soft: 252, 231, 243; --accent-soft2: 251, 207, 232; }
+    .st-key-sa_appt .stButton > button { --accent:  37,  99, 235; --accent-soft: 219, 234, 254; --accent-soft2: 191, 219, 254; }
+    .st-key-sa_sym .stButton > button,
+    .st-key-sa_rec .stButton > button,
+    .st-key-sa_ins .stButton > button,
+    .st-key-sa_appt .stButton > button {
+        position: relative !important;
+        min-height: 152px !important;
+        height: 152px !important;
+        padding: 1.05rem 0.7rem 1.55rem 0.7rem !important;
+        border-radius: 18px !important;
+        background: linear-gradient(180deg, #ffffff 0%, #f8faff 100%) !important;
+        border: 1px solid rgba(15, 23, 42, 0.06) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.95) inset,
+            0 1px 2px rgba(15, 23, 42, 0.04),
+            0 8px 20px rgba(15, 23, 42, 0.04) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        text-align: center !important;
+        gap: 0.6rem !important;
+        transition:
+            transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+            box-shadow 0.22s ease,
+            border-color 0.22s ease !important;
+    }
+    /* Hover: lift, deepen shadow with the card's accent tint, border picks
+       up the accent. Smooth easing for the iOS spring feel. */
+    .st-key-sa_sym .stButton > button:hover,
+    .st-key-sa_rec .stButton > button:hover,
+    .st-key-sa_ins .stButton > button:hover,
+    .st-key-sa_appt .stButton > button:hover {
+        transform: translateY(-2px) !important;
+        border-color: rgba(var(--accent), 0.35) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.95) inset,
+            0 2px 4px rgba(15, 23, 42, 0.04),
+            0 14px 32px rgba(var(--accent), 0.18) !important;
+    }
+    .st-key-sa_sym .stButton > button:active,
+    .st-key-sa_rec .stButton > button:active,
+    .st-key-sa_ins .stButton > button:active,
+    .st-key-sa_appt .stButton > button:active {
+        transform: translateY(0) !important;
+    }
+    /* Markdown container — centered, full width so wrap is symmetric. */
+    .st-key-sa_sym .stButton > button > div[data-testid="stMarkdownContainer"],
+    .st-key-sa_rec .stButton > button > div[data-testid="stMarkdownContainer"],
+    .st-key-sa_ins .stButton > button > div[data-testid="stMarkdownContainer"],
+    .st-key-sa_appt .stButton > button > div[data-testid="stMarkdownContainer"] {
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        text-align: center !important;
+    }
+    /* Icon span — centered at top. */
+    .st-key-sa_sym .stButton > button > span:first-child,
+    .st-key-sa_rec .stButton > button > span:first-child,
+    .st-key-sa_ins .stButton > button > span:first-child,
+    .st-key-sa_appt .stButton > button > span:first-child {
+        flex: 0 0 auto !important;
+        margin: 0 0 0.15rem 0 !important;
+        display: inline-flex !important;
+        justify-content: center !important;
+    }
+    .st-key-sa_sym .stButton > button:hover,
+    .st-key-sa_rec .stButton > button:hover,
+    .st-key-sa_ins .stButton > button:hover,
+    .st-key-sa_appt .stButton > button:hover {
+        transform: translateY(-1px) !important;
+        border-color: #d6e2f6 !important;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06) !important;
+    }
+    /* Icon tile — premium gradient background derived from the card's
+       --accent. Inset highlight on top + soft drop shadow tinted with the
+       accent give the iOS app-icon depth. */
+    .st-key-sa_sym .stButton > button [data-testid="stIconMaterial"],
+    .st-key-sa_rec .stButton > button [data-testid="stIconMaterial"],
+    .st-key-sa_ins .stButton > button [data-testid="stIconMaterial"],
+    .st-key-sa_appt .stButton > button [data-testid="stIconMaterial"] {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+        border-radius: 10px !important;
+        font-size: 1.12rem !important;
+        font-weight: 500 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 !important;
+        color: rgb(var(--accent)) !important;
+        -webkit-text-fill-color: rgb(var(--accent)) !important;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 60%),
+            linear-gradient(135deg, rgb(var(--accent-soft)) 0%, rgb(var(--accent-soft2)) 100%) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.6) inset,
+            0 0 0 1px rgba(var(--accent), 0.08),
+            0 4px 10px rgba(var(--accent), 0.16) !important;
+        transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease !important;
+    }
+    /* Hover: icon lifts subtly + shadow deepens. */
+    .st-key-sa_sym .stButton > button:hover [data-testid="stIconMaterial"],
+    .st-key-sa_rec .stButton > button:hover [data-testid="stIconMaterial"],
+    .st-key-sa_ins .stButton > button:hover [data-testid="stIconMaterial"],
+    .st-key-sa_appt .stButton > button:hover [data-testid="stIconMaterial"] {
+        transform: translateY(-1px) scale(1.04) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.7) inset,
+            0 0 0 1px rgba(var(--accent), 0.14),
+            0 8px 18px rgba(var(--accent), 0.28) !important;
+    }
+    .st-key-sa_sym .stButton > button p,
+    .st-key-sa_rec .stButton > button p,
+    .st-key-sa_ins .stButton > button p,
+    .st-key-sa_appt .stButton > button p {
+        font-size: 0.64rem !important;
+        line-height: 1.3 !important;
+        color: #6b7280 !important;
+        font-weight: 530 !important;
+        margin: 0 !important;
+        /* Break only between words, not characters. Override the inherited
+           `overflow-wrap: anywhere` that was breaking text per-letter. */
+        overflow-wrap: break-word !important;
+        word-break: normal !important;
+        white-space: normal !important;
+    }
+    /* Inner markdown container — full width minus icon. */
+    .st-key-sa_sym .stButton > button > div[data-testid="stMarkdownContainer"],
+    .st-key-sa_rec .stButton > button > div[data-testid="stMarkdownContainer"],
+    .st-key-sa_ins .stButton > button > div[data-testid="stMarkdownContainer"],
+    .st-key-sa_appt .stButton > button > div[data-testid="stMarkdownContainer"] {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: visible !important;
+    }
+    /* Tighten the outer icon span — kill any baseweb margin/padding so it
+       sits flush at the icon's content size (~32px) instead of inflating to
+       ~48px and starving the text column. */
+    .st-key-sa_sym .stButton > button > span:first-child,
+    .st-key-sa_rec .stButton > button > span:first-child,
+    .st-key-sa_ins .stButton > button > span:first-child,
+    .st-key-sa_appt .stButton > button > span:first-child {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: auto !important;
+        min-width: 0 !important;
+    }
+    /* Bold title — refined SF Pro-style weight + tight tracking. */
+    .st-key-sa_sym .stButton > button p strong,
+    .st-key-sa_rec .stButton > button p strong,
+    .st-key-sa_ins .stButton > button p strong,
+    .st-key-sa_appt .stButton > button p strong {
+        font-size: 0.82rem !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        line-height: 1.2 !important;
+        letter-spacing: -0.015em !important;
+        display: inline !important;
+    }
+    /* Arrow chip — ghost circle bottom-right, picks up the card's accent
+       on hover and slides forward like an iOS disclosure indicator. */
+    .st-key-sa_sym .stButton > button::after,
+    .st-key-sa_rec .stButton > button::after,
+    .st-key-sa_ins .stButton > button::after,
+    .st-key-sa_appt .stButton > button::after {
+        content: "arrow_forward" !important;
+        font-family: "Material Symbols Rounded", "Material Symbols Outlined" !important;
+        position: absolute !important;
+        bottom: 0.5rem !important;
+        right: 0.5rem !important;
+        left: auto !important;
+        transform: none !important;
+        width: 20px !important;
+        height: 20px !important;
+        font-size: 0.78rem !important;
+        font-weight: 500 !important;
+        line-height: 1 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 999px !important;
+        background: rgba(var(--accent), 0.1) !important;
+        border: none !important;
+        color: rgb(var(--accent)) !important;
+        -webkit-text-fill-color: rgb(var(--accent)) !important;
+        transition:
+            background 0.22s ease,
+            color 0.22s ease,
+            transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+            box-shadow 0.22s ease !important;
+    }
+    .st-key-sa_sym .stButton > button:hover::after,
+    .st-key-sa_rec .stButton > button:hover::after,
+    .st-key-sa_ins .stButton > button:hover::after,
+    .st-key-sa_appt .stButton > button:hover::after {
+        background: rgb(var(--accent)) !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        transform: translateX(3px) !important;
+        box-shadow: 0 4px 10px rgba(var(--accent), 0.35) !important;
+    }
+
+    /* ────────────────────────────────────────────────────────────────────
+       Apple-style polish — page hero (Prescription Reader, etc.)
+       Replaces the heavy bold dark-navy heading with a refined two-column
+       layout: tinted icon square + title + muted subtitle. Sits as a soft
+       card at the top of the page so the form below feels intentional. */
+    .md-page-hero {
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr);
+        gap: 1rem;
+        align-items: center;
+        margin: 0.4rem 0 1.3rem 0;
+        padding: 1.1rem 1.25rem;
+        border-radius: 18px;
+        background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%);
+        border: 1px solid #e6ecf6;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.9) inset,
+            0 6px 18px rgba(15, 23, 42, 0.04);
+    }
+    .md-page-hero-ic {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%);
+        color: #4f46e5;
+    }
+    .md-page-hero-ic .material-symbols-rounded {
+        font-size: 1.55rem !important;
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: #4f46e5 !important;
+    }
+    .md-page-hero-text { min-width: 0; }
+    .md-page-hero-title {
+        font-size: 1.45rem;
+        font-weight: 720;
+        color: #0f172a;
+        line-height: 1.15;
+        letter-spacing: -0.018em;
+        margin-bottom: 0.2rem;
+    }
+    .md-page-hero-sub {
+        font-size: 0.86rem;
+        line-height: 1.45;
+        color: #64748b;
+    }
+
+    /* ── Prescription Reader form polish ──
+       Style the form shell as a single clean card. The file uploader
+       dropzone becomes a soft tinted area with a refined dashed border;
+       the "Read prescription" submit picks up our brand indigo gradient. */
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) {
+        background: #ffffff !important;
+        border: 1px solid #e6ecf6 !important;
+        border-radius: 18px !important;
+        padding: 1.1rem !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.9) inset,
+            0 8px 22px rgba(15, 23, 42, 0.04) !important;
+    }
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stFileUploaderDropzone"],
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stFileUploader"] section {
+        background: linear-gradient(180deg, #f7f9ff 0%, #eef1ff 100%) !important;
+        border: 1.5px dashed rgba(99, 102, 241, 0.32) !important;
+        border-radius: 14px !important;
+        padding: 1.4rem 1.1rem !important;
+        transition: background 0.18s ease, border-color 0.18s ease !important;
+    }
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stFileUploaderDropzone"]:hover,
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stFileUploader"] section:hover {
+        background: linear-gradient(180deg, #eef1ff 0%, #e7eaff 100%) !important;
+        border-color: rgba(99, 102, 241, 0.55) !important;
+    }
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stFileUploaderDropzoneInstructions"] {
+        color: #475569 !important;
+    }
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stFileUploaderDropzone"] button {
+        background: #ffffff !important;
+        border: 1px solid #d8e4fa !important;
+        color: #4f46e5 !important;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+    }
+    /* Text input ("Optional context") inside the rx form. */
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stTextInput"] label {
+        font-size: 0.82rem !important;
+        color: #475569 !important;
+        font-weight: 600 !important;
+        margin-bottom: 0.3rem !important;
+    }
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stTextInputRootElement"] {
+        background: #ffffff !important;
+        border: 1px solid #e6ecf6 !important;
+        border-radius: 12px !important;
+        box-shadow: none !important;
+        min-height: 42px !important;
+        height: 42px !important;
+    }
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stTextInputRootElement"]:focus-within {
+        border-color: rgba(99, 102, 241, 0.45) !important;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+    }
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stTextInput"] input {
+        font-size: 0.9rem !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    /* Read prescription / Clear buttons. */
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"] {
+        min-height: 44px !important;
+        height: 44px !important;
+        border-radius: 12px !important;
+        border: none !important;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 50%),
+            linear-gradient(108deg, #4f46e5 0%, #6366f1 55%, #8b5cf6 100%) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.22) inset,
+            0 8px 18px rgba(79, 70, 229, 0.28) !important;
+        color: #ffffff !important;
+        font-weight: 660 !important;
+    }
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"]:hover {
+        transform: translateY(-1px) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.26) inset,
+            0 12px 24px rgba(79, 70, 229, 0.36) !important;
+    }
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"] {
+        min-height: 44px !important;
+        height: 44px !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(99, 102, 241, 0.22) !important;
+        background: linear-gradient(180deg, #ffffff 0%, #f7f9ff 100%) !important;
+        color: #4338ca !important;
+        font-weight: 650 !important;
+        box-shadow: none !important;
+    }
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"]:hover {
+        border-color: rgba(99, 102, 241, 0.42) !important;
+        background: #eef0ff !important;
+    }
+    /* Checkbox inside the records/rx form — refined indigo accent. */
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stCheckbox"] {
+        margin: 0.2rem 0 0.6rem 0 !important;
+    }
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stCheckbox"] label {
+        font-size: 0.85rem !important;
+        color: #475569 !important;
+        gap: 0.55rem !important;
+    }
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stCheckbox"] label > div:first-child {
+        width: 18px !important;
+        height: 18px !important;
+        border-radius: 5px !important;
+        border-color: rgba(99, 102, 241, 0.4) !important;
+    }
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stCheckbox"] label > div:first-child[data-checked="true"],
+    [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stCheckbox"] input:checked ~ div {
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+        border-color: #4f46e5 !important;
+    }
+    /* "No records uploaded yet." empty state — softer, less italic-heavy. */
+    [data-testid="stMain"] .md-rcard[style*="No records"],
+    [data-testid="stMain"] .md-rcard[style*="text-align:center"]:has-text("No records") {
+        background: linear-gradient(180deg, #f7f9ff 0%, #eef1ff 100%) !important;
+        border: 1px dashed rgba(99, 102, 241, 0.25) !important;
+        color: #64748b !important;
+        font-style: normal !important;
+        font-weight: 500 !important;
+    }
+
+    /* ────────────────────────────────────────────────────────────────────
+       Apple-style polish — Symptom Assessment page.
+       Refines the bespoke .assessment-card / .question-bubble / progress
+       bar to use the brand indigo palette and Inter (not DM Serif). Quick
+       select buttons become clean indigo-tinted chips, and the Next/Cancel
+       row gets a primary-vs-ghost hierarchy that aligns cleanly.
+       ──────────────────────────────────────────────────────────────────── */
+    .assessment-card {
+        border-radius: 18px !important;
+        padding: 1.2rem 1.4rem 1.3rem 1.4rem !important;
+        margin-bottom: 1.1rem !important;
+        border: 1px solid #e6ecf6 !important;
+        background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.9) inset,
+            0 6px 18px rgba(15, 23, 42, 0.04) !important;
+    }
+    /* Assessment card head — icon + title/subtitle column, matching the
+       page-hero pattern used on Health Overview, Medications, etc. */
+    .assessment-card-head {
+        display: grid !important;
+        grid-template-columns: 56px minmax(0, 1fr) !important;
+        gap: 1rem !important;
+        align-items: center !important;
+        margin-bottom: 1.05rem !important;
+    }
+    .assessment-head-text { min-width: 0 !important; }
+    .assessment-title {
+        font-family: 'Inter', sans-serif !important;
+        font-size: 1.35rem !important;
+        font-weight: 720 !important;
+        color: #0f172a !important;
+        letter-spacing: -0.018em !important;
+        line-height: 1.15 !important;
+        margin-bottom: 0.2rem !important;
+    }
+    .assessment-subtitle {
+        color: #64748b !important;
+        font-size: 0.86rem !important;
+        line-height: 1.45 !important;
+        margin-bottom: 0 !important;
+    }
+    .progress-label {
+        font-size: 0.74rem !important;
+        font-weight: 650 !important;
+        margin-bottom: 0.4rem !important;
+    }
+    .progress-label span:first-child {
+        color: #1f2a3d !important;
+        letter-spacing: 0.03em !important;
+    }
+    .progress-label span:last-child {
+        color: #4f46e5 !important;
+        font-weight: 700 !important;
+    }
+    .progress-bar-wrap {
+        height: 6px !important;
+        background: #eef1ff !important;
+        border: none !important;
+        border-radius: 999px !important;
+    }
+    .progress-bar-fill {
+        background: linear-gradient(90deg, #4f46e5 0%, #6366f1 55%, #8b5cf6 100%) !important;
+        border-radius: 999px !important;
+    }
+
+    /* Question bubble — indigo accent border on the left, soft tinted bg. */
+    .question-bubble {
+        background: linear-gradient(180deg, #f7f9ff 0%, #eef1ff 100%) !important;
+        border: 1px solid #e3e8fb !important;
+        border-left: 3px solid #4f46e5 !important;
+        border-radius: 14px !important;
+        padding: 0.95rem 1.15rem !important;
+        margin: 0.85rem 0 0.9rem 0 !important;
+        font-size: 0.96rem !important;
+        font-weight: 600 !important;
+        color: #0f172a !important;
+        line-height: 1.45 !important;
+    }
+
+    /* Quick-select option buttons — clean white chips with indigo on hover/active. */
+    [data-testid="stMain"] .stButton > button[data-testid="stBaseButton-secondary"][class*="opt_"],
+    [data-testid="stMain"] div[class*="st-key-opt_"] .stButton > button {
+        min-height: 44px !important;
+        height: 44px !important;
+        border-radius: 12px !important;
+        border: 1px solid #e6ecf6 !important;
+        background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%) !important;
+        color: #1f2a3d !important;
+        font-size: 0.88rem !important;
+        font-weight: 600 !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.85) inset,
+            0 1px 2px rgba(15, 23, 42, 0.02) !important;
+        transition:
+            background 0.18s ease,
+            border-color 0.18s ease,
+            box-shadow 0.2s ease,
+            transform 0.15s ease !important;
+    }
+    [data-testid="stMain"] div[class*="st-key-opt_"] .stButton > button:hover {
+        background: linear-gradient(180deg, #f7f9ff 0%, #eef1ff 100%) !important;
+        border-color: rgba(99, 102, 241, 0.4) !important;
+        color: #4338ca !important;
+        transform: translateY(-1px) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.9) inset,
+            0 6px 14px rgba(79, 70, 229, 0.1) !important;
+    }
+
+    /* Assessment form (text input + Next / Cancel row). */
+    [data-testid="stForm"][class*="assessment_form_"] {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        margin-top: 0.5rem !important;
+    }
+    [data-testid="stForm"][class*="assessment_form_"] [data-testid="stTextInputRootElement"] {
+        background: #ffffff !important;
+        border: 1px solid #e6ecf6 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+        min-height: 44px !important;
+        height: 44px !important;
+        margin-bottom: 0.7rem !important;
+    }
+    [data-testid="stForm"][class*="assessment_form_"] [data-testid="stTextInputRootElement"]:focus-within {
+        border-color: rgba(99, 102, 241, 0.45) !important;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+    }
+    [data-testid="stForm"][class*="assessment_form_"] [data-testid="stTextInput"] input {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        font-size: 0.9rem !important;
+    }
+    /* Next button — primary indigo gradient. */
+    [data-testid="stForm"][class*="assessment_form_"] [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"] {
+        min-height: 44px !important;
+        height: 44px !important;
+        border-radius: 12px !important;
+        border: none !important;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 50%),
+            linear-gradient(108deg, #4f46e5 0%, #6366f1 55%, #8b5cf6 100%) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.22) inset,
+            0 8px 18px rgba(79, 70, 229, 0.28) !important;
+        color: #ffffff !important;
+        font-weight: 660 !important;
+    }
+    [data-testid="stForm"][class*="assessment_form_"] [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"]:hover {
+        transform: translateY(-1px) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.26) inset,
+            0 12px 24px rgba(79, 70, 229, 0.36) !important;
+    }
+    /* Cancel button — ghost. */
+    [data-testid="stForm"][class*="assessment_form_"] [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"] {
+        min-height: 44px !important;
+        height: 44px !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(99, 102, 241, 0.22) !important;
+        background: linear-gradient(180deg, #ffffff 0%, #f7f9ff 100%) !important;
+        color: #4338ca !important;
+        font-weight: 650 !important;
+        box-shadow: none !important;
+    }
+    [data-testid="stForm"][class*="assessment_form_"] [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"]:hover {
+        border-color: rgba(99, 102, 241, 0.42) !important;
+        background: #eef0ff !important;
+    }
+
+    /* ────────────────────────────────────────────────────────────────────
+       Apple-style polish — Health Overview page.
+       Wearable card uses our soft white shell; metric tiles get cleaner
+       padding; Save buttons (sleep/steps/heart rate) and the +1 glass /
+       Reset buttons all pick up the indigo primary / ghost hierarchy.
+       ──────────────────────────────────────────────────────────────────── */
+    .md-wearable-card {
+        background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%) !important;
+        border: 1px solid #e6ecf6 !important;
+        border-radius: 18px !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.9) inset,
+            0 6px 18px rgba(15, 23, 42, 0.04) !important;
+        padding: 1.05rem 1.15rem !important;
+    }
+    .md-wearable-icon {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.14) 0%, rgba(139, 92, 246, 0.12) 100%) !important;
+        color: #4f46e5 !important;
+        border-radius: 14px !important;
+    }
+    .md-wearable-title {
+        font-size: 0.98rem !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        letter-spacing: -0.005em !important;
+    }
+    .md-wearable-desc {
+        color: #64748b !important;
+        font-size: 0.84rem !important;
+        line-height: 1.45 !important;
+    }
+    .md-wearable-pill {
+        background: linear-gradient(180deg, #ffffff 0%, #f7f9ff 100%) !important;
+        border: 1px solid #e6ecf6 !important;
+        color: #4f46e5 !important;
+        font-weight: 600 !important;
+        font-size: 0.76rem !important;
+        padding: 0.32rem 0.7rem !important;
+        border-radius: 999px !important;
+    }
+    .md-wearable-pill.md-wearable-soon {
+        background: #f1f5f9 !important;
+        color: #94a3b8 !important;
+        border-color: #e2e8f0 !important;
+    }
+
+    /* Metric tile cards — softer surface, refined typography. */
+    [data-testid="stMain"] .md-rcard:has(.md-metric-row) {
+        background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%) !important;
+        border: 1px solid #e6ecf6 !important;
+        border-radius: 16px !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03) !important;
+        padding: 0.8rem 1rem !important;
+    }
+    [data-testid="stMain"] .md-metric-label {
+        font-size: 0.78rem !important;
+        color: #64748b !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.005em !important;
+    }
+    [data-testid="stMain"] .md-metric-value {
+        font-size: 1.05rem !important;
+        font-weight: 720 !important;
+        color: #0f172a !important;
+    }
+
+    /* Save sleep / Save steps / Save heart rate buttons — indigo primary. */
+    [data-testid="stForm"][class*="sleep_form_today"] [data-testid="stFormSubmitButton"] > button,
+    [data-testid="stForm"][class*="steps_form_today"] [data-testid="stFormSubmitButton"] > button,
+    [data-testid="stForm"][class*="hr_form_today"] [data-testid="stFormSubmitButton"] > button {
+        min-height: 42px !important;
+        height: 42px !important;
+        border-radius: 12px !important;
+        border: none !important;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 50%),
+            linear-gradient(108deg, #4f46e5 0%, #6366f1 55%, #8b5cf6 100%) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.22) inset,
+            0 6px 14px rgba(79, 70, 229, 0.24) !important;
+        color: #ffffff !important;
+        font-weight: 660 !important;
+        font-size: 0.88rem !important;
+    }
+    [data-testid="stForm"][class*="sleep_form_today"] [data-testid="stFormSubmitButton"] > button:hover,
+    [data-testid="stForm"][class*="steps_form_today"] [data-testid="stFormSubmitButton"] > button:hover,
+    [data-testid="stForm"][class*="hr_form_today"] [data-testid="stFormSubmitButton"] > button:hover {
+        transform: translateY(-1px) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.26) inset,
+            0 10px 20px rgba(79, 70, 229, 0.32) !important;
+    }
+    /* Number-input arrows inside the save forms — keep them tidy. */
+    [data-testid="stForm"][class*="sleep_form_today"] [data-testid="stNumberInput"],
+    [data-testid="stForm"][class*="steps_form_today"] [data-testid="stNumberInput"],
+    [data-testid="stForm"][class*="hr_form_today"] [data-testid="stNumberInput"] {
+        margin-bottom: 0.55rem !important;
+    }
+    [data-testid="stForm"][class*="sleep_form_today"] [data-testid="stNumberInput"] label,
+    [data-testid="stForm"][class*="steps_form_today"] [data-testid="stNumberInput"] label,
+    [data-testid="stForm"][class*="hr_form_today"] [data-testid="stNumberInput"] label {
+        font-size: 0.78rem !important;
+        color: #64748b !important;
+        font-weight: 600 !important;
+        margin-bottom: 0.28rem !important;
+    }
+    [data-testid="stForm"][class*="sleep_form_today"] [data-testid="stNumberInput"] > div > div,
+    [data-testid="stForm"][class*="steps_form_today"] [data-testid="stNumberInput"] > div > div,
+    [data-testid="stForm"][class*="hr_form_today"] [data-testid="stNumberInput"] > div > div {
+        background: #ffffff !important;
+        border: 1px solid #e6ecf6 !important;
+        border-radius: 12px !important;
+        box-shadow: none !important;
+        min-height: 42px !important;
+        height: 42px !important;
+    }
+    [data-testid="stForm"][class*="sleep_form_today"] [data-testid="stNumberInput"] input,
+    [data-testid="stForm"][class*="steps_form_today"] [data-testid="stNumberInput"] input,
+    [data-testid="stForm"][class*="hr_form_today"] [data-testid="stNumberInput"] input {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        font-size: 0.92rem !important;
+        font-weight: 600 !important;
+        color: #1f2a3d !important;
+    }
+
+    /* "+1 glass" / "Reset" buttons — ghost pills, paired symmetrically. */
+    div[class*="st-key-water_inc"] .stButton > button,
+    div[class*="st-key-water_reset"] .stButton > button {
+        min-height: 42px !important;
+        height: 42px !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(99, 102, 241, 0.22) !important;
+        background: linear-gradient(180deg, #ffffff 0%, #f7f9ff 100%) !important;
+        color: #4338ca !important;
+        font-weight: 650 !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+        font-size: 0.88rem !important;
+    }
+    div[class*="st-key-water_inc"] .stButton > button:hover,
+    div[class*="st-key-water_reset"] .stButton > button:hover {
+        border-color: rgba(99, 102, 241, 0.42) !important;
+        background: #eef0ff !important;
+        transform: translateY(-1px) !important;
+    }
+    /* "+1 glass" gets a hint of primary tint to signal the more common action. */
+    div[class*="st-key-water_inc"] .stButton > button {
+        background: linear-gradient(180deg, #eef0ff 0%, #e3e7ff 100%) !important;
+        border-color: rgba(99, 102, 241, 0.32) !important;
+    }
+
+    /* ────────────────────────────────────────────────────────────────────
+       Apple-style polish — Medications + Appointments forms.
+       Both forms share the same structure: intro header + 2-col text inputs
+       + select/textarea + full-width primary save button. The intro is now
+       moved inside the form (in Python) so the whole thing reads as one
+       cohesive card. Same hierarchy as other redesigned forms.
+       ──────────────────────────────────────────────────────────────────── */
+    [data-testid="stForm"]:has(.md-form-intro) {
+        background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%) !important;
+        border: 1px solid #e6ecf6 !important;
+        border-radius: 18px !important;
+        padding: 1.2rem 1.25rem 1.1rem 1.25rem !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.9) inset,
+            0 8px 22px rgba(15, 23, 42, 0.04) !important;
+    }
+    [data-testid="stForm"]:has(.md-form-intro) .md-form-intro {
+        font-size: 1.05rem !important;
+        font-weight: 720 !important;
+        color: #0f172a !important;
+        letter-spacing: -0.005em !important;
+        margin-bottom: 0.25rem !important;
+    }
+    [data-testid="stForm"]:has(.md-form-intro) .md-form-sub {
+        font-size: 0.84rem !important;
+        color: #64748b !important;
+        line-height: 1.45 !important;
+        margin-bottom: 0.95rem !important;
+    }
+    /* Text inputs + select + textarea labels — small, muted tracker style. */
+    [data-testid="stForm"]:has(.md-form-intro) label[data-testid="stWidgetLabel"] {
+        font-size: 0.78rem !important;
+        color: #64748b !important;
+        font-weight: 600 !important;
+        margin-bottom: 0.3rem !important;
+    }
+    /* Text input fields — clean white, indigo focus. */
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stTextInputRootElement"] {
+        background: #ffffff !important;
+        border: 1px solid #e6ecf6 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+        min-height: 42px !important;
+        height: 42px !important;
+    }
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stTextInputRootElement"]:focus-within {
+        border-color: rgba(99, 102, 241, 0.45) !important;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+    }
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stTextInputRootElement"] [data-baseweb="base-input"] {
+        background: transparent !important;
+        border: none !important;
+    }
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stTextInput"] input {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        font-size: 0.9rem !important;
+    }
+    /* Selectbox (Frequency) — match the text-input shell. */
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stSelectbox"] div[data-baseweb="select"] {
+        background: #ffffff !important;
+        border: 1px solid #e6ecf6 !important;
+        border-radius: 12px !important;
+        min-height: 42px !important;
+        height: 42px !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+    }
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stSelectbox"] div[data-baseweb="select"]:focus-within,
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stSelectbox"] div[data-baseweb="select"]:hover {
+        border-color: rgba(99, 102, 241, 0.35) !important;
+    }
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        min-height: 40px !important;
+        height: 40px !important;
+    }
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stSelectbox"] [role="combobox"] {
+        color: #1f2a3d !important;
+        font-size: 0.9rem !important;
+        font-weight: 600 !important;
+    }
+    /* Textarea (Notes) — same shell as text inputs but taller. */
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stTextAreaRootElement"] {
+        background: #ffffff !important;
+        border: 1px solid #e6ecf6 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+    }
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stTextAreaRootElement"]:focus-within {
+        border-color: rgba(99, 102, 241, 0.45) !important;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+    }
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stTextAreaRootElement"] [data-baseweb="base-input"] {
+        background: transparent !important;
+        border: none !important;
+    }
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stTextArea"] textarea {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        font-size: 0.9rem !important;
+        padding: 0.55rem 0.7rem !important;
+    }
+    /* Save medication / Save appointment — primary indigo gradient. */
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"] {
+        min-height: 44px !important;
+        height: 44px !important;
+        border-radius: 12px !important;
+        border: none !important;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 50%),
+            linear-gradient(108deg, #4f46e5 0%, #6366f1 55%, #8b5cf6 100%) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.22) inset,
+            0 8px 18px rgba(79, 70, 229, 0.28) !important;
+        color: #ffffff !important;
+        font-weight: 660 !important;
+        margin-top: 0.5rem !important;
+    }
+    [data-testid="stForm"]:has(.md-form-intro) [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"]:hover {
+        transform: translateY(-1px) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.26) inset,
+            0 12px 24px rgba(79, 70, 229, 0.36) !important;
+    }
+
+    /* ────────────────────────────────────────────────────────────────────
+       Reusable Apple-style empty-state card (Ai Insights, Recent
+       Conversations, no-records, no-meds, etc.). Tinted indigo bulb icon
+       on a soft white card with friendly copy explaining the next step. */
+    .md-empty-card {
+        text-align: center;
+        padding: 2.4rem 1.6rem;
+        background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%);
+        border: 1px solid #e6ecf6;
+        border-radius: 18px;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.9) inset,
+            0 6px 18px rgba(15, 23, 42, 0.04);
+        margin-top: 0.6rem;
+    }
+    .md-empty-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.14) 0%, rgba(139, 92, 246, 0.12) 100%);
+        margin: 0 auto 0.8rem auto;
+    }
+    .md-empty-icon .material-symbols-rounded {
+        font-size: 1.55rem !important;
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: #4f46e5 !important;
+    }
+    .md-empty-title {
+        font-size: 1.05rem;
+        font-weight: 720;
+        color: #0f172a;
+        letter-spacing: -0.005em;
+        margin-bottom: 0.4rem;
+    }
+    .md-empty-copy {
+        color: #64748b;
+        font-size: 0.88rem;
+        line-height: 1.5;
+        max-width: 420px;
+        margin: 0 auto;
+    }
+
+    /* ────────────────────────────────────────────────────────────────────
+       Classic ℞ (Rx) prescription symbol — used on the Prescription Reader
+       page hero, the sidebar nav, and the Smart Action card. Material
+       Symbols has no Rx glyph, so we render the Unicode U+211E
+       "PRESCRIPTION TAKE" character in a serif face for the authentic
+       pharmacy-pad look. For the nav + smart card we override Streamlit's
+       rendered material icon via a ::before swap. */
+    .md-rx-glyph {
+        font-family: 'DM Serif Display', 'Times New Roman', 'Cambria', serif !important;
+        font-weight: 700 !important;
+        font-size: 1.95rem !important;
+        line-height: 1 !important;
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: #4f46e5 !important;
+        letter-spacing: -0.02em !important;
+        display: inline-block !important;
+        transform: translateY(1px) !important;
+    }
+    /* Nav menu + Smart Action card Prescription Reader use Material
+       Symbols `prescriptions` (paper with Rx). Streamlit's icon param
+       rejects non-emoji Unicode (so we can't pass ℞ directly there). The
+       page hero — which we render via raw HTML — still uses the real ℞
+       serif glyph for the authentic pharmacy-pad look. */
 }
 </style>
 """, unsafe_allow_html=True)
@@ -5698,21 +7379,71 @@ st.markdown("""
         padding-bottom: 0.62rem !important;
     }
     [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button {
-        min-height: 44px !important;
-        height: 44px !important;
-        margin-bottom: 0.26rem !important;
-        font-size: 0.92rem !important;
-        padding-left: 0.56rem !important;
-    }
-    [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > span:first-child {
-        width: 34px !important;
-        min-width: 34px !important;
+        min-height: 34px !important;
         height: 34px !important;
-        border-radius: 11px !important;
-        margin-right: 0.64rem !important;
+        margin-bottom: 0.1rem !important;
+        font-size: 0.85rem !important;
+        padding-left: 0.45rem !important;
+    }
+    [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > span:first-child,
+    [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > [data-testid="stIconMaterial"] {
+        width: 24px !important;
+        min-width: 24px !important;
+        height: 24px !important;
+        border-radius: 7px !important;
+        margin-right: 0.5rem !important;
     }
     [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button [data-testid="stIconMaterial"] {
-        font-size: 1.06rem !important;
+        font-size: 0.9rem !important;
+    }
+    [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
+        max-width: 160px !important;
+        width: min(160px, 100%) !important;
+    }
+    [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
+        padding: 0.15rem 0 0.45rem 0 !important;
+        margin-bottom: 0.3rem !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+        padding: 0.5rem 0.85rem 0.55rem 0.85rem !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] {
+        margin: 0.45rem 0 0.3rem 0 !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"],
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        min-height: 36px !important;
+        height: 36px !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] label {
+        margin-bottom: 0.22rem !important;
+    }
+    [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
+        padding: 0.42rem 0.55rem !important;
+    }
+    [data-testid="stSidebar"] .md-side-avatar {
+        width: 28px !important;
+        min-width: 28px !important;
+        height: 28px !important;
+        font-size: 0.76rem !important;
+    }
+    [data-testid="stSidebar"] .md-side-pname { font-size: 0.78rem !important; }
+    [data-testid="stSidebar"] .md-side-psub { font-size: 0.62rem !important; }
+    [data-testid="stSidebar"] div.st-key-nav_privacy_bottom .stButton > button {
+        min-height: 32px !important;
+        height: 32px !important;
+        font-size: 0.78rem !important;
+    }
+    [data-testid="stSidebar"] div.st-key-nav_privacy_bottom {
+        margin-bottom: 0.5rem !important;
+    }
+    [data-testid="stSidebar"] .md-sidebar-bottom {
+        padding-top: 0.4rem !important;
+        margin-top: 0.25rem !important;
+    }
+    [data-testid="stSidebar"] .sb-footer {
+        font-size: 0.6rem !important;
+        bottom: 0.35rem !important;
     }
     [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > div[data-testid="stMarkdownContainer"] p {
         font-size: 0.88rem !important;
@@ -5807,31 +7538,44 @@ st.markdown("""
         height: 136px !important;
         border-radius: 16px !important;
     }
+    /* Tip carousel in compact mode — text now spans the full tile width.
+       The illustration is absolute-positioned in the top-right corner as
+       a soft decorative accent; not part of any grid track. */
     .md-tip-slide {
-        padding: 0.7rem 0.84rem 0.86rem 0.84rem !important;
-        grid-template-columns: minmax(0, 1fr) 78px !important;
-        gap: 0.62rem !important;
+        padding: 0.85rem 1rem 0.95rem 1rem !important;
+        display: block !important;
+        gap: 0 !important;
+        grid-template-columns: none !important;
+    }
+    .md-tip-slide > div:first-child {
+        width: 100% !important;
+        min-width: 0 !important;
     }
     .md-tip-title {
-        font-size: 0.98rem !important;
-        margin-bottom: 0.1rem !important;
+        font-size: 1rem !important;
+        margin-bottom: 0.18rem !important;
     }
     .md-tip-desc {
-        font-size: 0.74rem !important;
-        margin-bottom: 0.24rem !important;
-        line-height: 1.22 !important;
-        max-width: 34ch !important;
+        font-size: 0.78rem !important;
+        margin-bottom: 0.4rem !important;
+        line-height: 1.4 !important;
+        max-width: none !important;
+        padding-right: 64px !important;
     }
     .md-tip-metric {
-        font-size: 0.7rem !important;
-        padding: 0.2rem 0.5rem !important;
+        font-size: 0.74rem !important;
+        padding: 0.24rem 0.6rem !important;
     }
     .md-tip-illust {
-        width: 78px !important;
-        height: 78px !important;
+        position: absolute !important;
+        top: 0.85rem !important;
+        right: 0.95rem !important;
+        width: 50px !important;
+        height: 50px !important;
+        opacity: 0.6 !important;
     }
     .md-tip-illust .material-symbols-rounded {
-        font-size: 36px !important;
+        font-size: 26px !important;
     }
     .md-rcard {
         padding: 0.76rem 0.84rem !important;
@@ -5904,7 +7648,8 @@ st.markdown("""
 .st-key-sa_appt .stButton > button {
     min-width: 0 !important;
     overflow: hidden !important;
-    padding-right: 3.1rem !important;
+    /* padding-right intentionally NOT set here; the compact-mode block
+       hides the arrow chip so no right-side buffer is needed. */
 }
 .st-key-sa_sym .stButton > button [data-testid="stMarkdownContainer"],
 .st-key-sa_rec .stButton > button [data-testid="stMarkdownContainer"],
@@ -6046,7 +7791,7 @@ LANGUAGES = {
     "Tamil": {
         "flag": "🇱🇰",
         "greeting": "வணக்கம்! இன்று நான் உங்களுக்கு எப்படி உதவலாம்?",
-        "welcome_text": "நான் MediChat — உங்கள் நட்பான Ai சுகாதார உதவியாளர்.<br>உரையாடலில் நீங்கள் சொல்வதை நான் நினைவில் வைத்திருப்பேன்.<br><br>வழிகாட்டப்பட்ட மதிப்பீட்டிற்கு அறிகுறி சரிபார்ப்புக்கு மாறலாம்!",
+        "welcome_text": "நான் MediChat, உங்கள் நட்பான Ai சுகாதார உதவியாளர்.<br>உரையாடலில் நீங்கள் சொல்வதை நான் நினைவில் வைத்திருப்பேன்.<br><br>வழிகாட்டப்பட்ட மதிப்பீட்டிற்கு அறிகுறி சரிபார்ப்புக்கு மாறலாம்!",
         "placeholder": "உங்கள் உடல்நல கேள்வியை இங்கே தட்டச்சு செய்யுங்கள்...",
         "send_btn": "MediChat க்கு அனுப்பவும்",
         "clear_btn": "அழிக்கவும்",
@@ -6081,7 +7826,7 @@ LANGUAGES = {
     "Sinhala": {
         "flag": "🇱🇰",
         "greeting": "ආයුබෝවන්! අද මට ඔබට කෙසේ උදව් කළ හැකිද?",
-        "welcome_text": "මම MediChat — ඔබේ මිත්‍රශීලී Ai සෞඛ්‍ය සහායකයා.<br>ඔබ කියන සෑම දෙයක්ම මම මතක තබා ගනිමි.<br><br>මඟ පෙන්වූ තක්සේරු කිරීම සඳහා රෝග ලක්ෂණ පරීක්ෂාවට මාරු වන්න!",
+        "welcome_text": "මම MediChat, ඔබේ මිත්‍රශීලී Ai සෞඛ්‍ය සහායකයා.<br>ඔබ කියන සෑම දෙයක්ම මම මතක තබා ගනිමි.<br><br>මඟ පෙන්වූ තක්සේරු කිරීම සඳහා රෝග ලක්ෂණ පරීක්ෂාවට මාරු වන්න!",
         "placeholder": "ඔබේ සෞඛ්‍ය ප්‍රශ්නය මෙහි ටයිප් කරන්න...",
         "send_btn": "MediChat වෙත යවන්න",
         "clear_btn": "හිස් කරන්න",
@@ -6116,7 +7861,7 @@ LANGUAGES = {
     "Hindi": {
         "flag": "🇮🇳",
         "greeting": "नमस्ते! आज मैं आपकी कैसे मदद कर सकता हूं?",
-        "welcome_text": "मैं MediChat हूं — आपका मित्रवत Ai स्वास्थ्य सहायक.<br>आप जो कुछ भी बताते हैं मैं याद रखता हूं.<br><br>निर्देशित मूल्यांकन के लिए लक्षण जांच पर स्विच करें!",
+        "welcome_text": "मैं MediChat हूं, आपका मित्रवत Ai स्वास्थ्य सहायक.<br>आप जो कुछ भी बताते हैं मैं याद रखता हूं.<br><br>निर्देशित मूल्यांकन के लिए लक्षण जांच पर स्विच करें!",
         "placeholder": "अपना स्वास्थ्य प्रश्न यहाँ टाइप करें...",
         "send_btn": "MediChat को भेजें",
         "clear_btn": "साफ करें",
@@ -6151,7 +7896,7 @@ LANGUAGES = {
     "Malayalam": {
         "flag": "🇮🇳",
         "greeting": "നമസ്കാരം! ഇന്ന് ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കാം?",
-        "welcome_text": "ഞാൻ MediChat — നിങ്ങളുടെ സൗഹൃദ Ai ആരോഗ്യ സഹായി.<br>നിങ്ങൾ പറയുന്നതെല്ലാം ഞാൻ ഓർത്തിരിക്കും.<br><br>ഗൈഡഡ് അസസ്മെൻ്റിനായി സിംപ്റ്റം ചെക്കിലേക്ക് മാറുക!",
+        "welcome_text": "ഞാൻ MediChat, നിങ്ങളുടെ സൗഹൃദ Ai ആരോഗ്യ സഹായി.<br>നിങ്ങൾ പറയുന്നതെല്ലാം ഞാൻ ഓർത്തിരിക്കും.<br><br>ഗൈഡഡ് അസസ്മെൻ്റിനായി സിംപ്റ്റം ചെക്കിലേക്ക് മാറുക!",
         "placeholder": "നിങ്ങളുടെ ആരോഗ്യ ചോദ്യം ഇവിടെ ടൈപ്പ് ചെയ്യുക...",
         "send_btn": "MediChat-ലേക്ക് അയയ്ക്കുക",
         "clear_btn": "മായ്ക്കുക",
@@ -7653,7 +9398,7 @@ with st.sidebar:
         ("new", "New Chat", "chat", ":material/chat_bubble:"),
         ("overview", "Health Overview", "overview", ":material/monitoring:"),
         ("symptom", "Symptoms Checker", "assessment", ":material/stethoscope:"),
-        ("prescription", "Prescription Reader", "rx_reader", ":material/local_pharmacy:"),
+        ("prescription", "Prescription Reader", "rx_reader", ":material/prescriptions:"),
         ("records", "Health Records", "records", ":material/lab_profile:"),
         ("meds", "Medications", "medications", ":material/pill:"),
         ("insights", "Ai Insights", "insights", ":material/auto_awesome:"),
@@ -7717,20 +9462,8 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-    # ── Language selector — sits directly under the profile/Guest tile ──
-    _lang_keys_top = list(LANGUAGES.keys())
-    _current_lang_top = st.session_state.get("selected_language", "English")
-    _lang_idx_top = _lang_keys_top.index(_current_lang_top) if _current_lang_top in _lang_keys_top else 0
-    st.selectbox(
-        "🌐 Language",
-        options=_lang_keys_top,
-        index=_lang_idx_top,
-        key="lang_selector",
-        label_visibility="visible",
-    )
-    if st.session_state.lang_selector != st.session_state.selected_language:
-        st.session_state.selected_language = st.session_state.lang_selector
-        st.rerun()
+    # Language selector is rendered down in the md-sidebar-bottom block,
+    # just above the Privacy & Consent button.
 
     if st.session_state.is_authenticated:
         if st.button("Sign out", use_container_width=True, key="profile_logout"):
@@ -7813,8 +9546,55 @@ with st.sidebar:
 
     L = LANGUAGES[st.session_state.selected_language]
 
-    # Profile chip + language selector rendered above. Privacy & Consent + footer at the bottom.
+    # ── Sidebar bottom: language picker → Privacy & Consent → footer ──
     st.markdown('<div class="md-sidebar-bottom">', unsafe_allow_html=True)
+
+    # Language selector sits immediately above the Privacy & Consent button.
+    _lang_keys_top = list(LANGUAGES.keys())
+    _current_lang_top = st.session_state.get("selected_language", "English")
+    _lang_idx_top = _lang_keys_top.index(_current_lang_top) if _current_lang_top in _lang_keys_top else 0
+    st.selectbox(
+        "Language",
+        options=_lang_keys_top,
+        index=_lang_idx_top,
+        key="lang_selector",
+        label_visibility="collapsed",
+    )
+    # Lock the combobox input to read-only + remove from tab order so the
+    # picker behaves as a tap-to-open button. Runs from a 0-height iframe
+    # and reaches into the parent document via window.parent.
+    import streamlit.components.v1 as _components_lang
+    _components_lang.html(
+        """
+        <script>
+        (function(){
+            function lock(){
+                try {
+                    var doc = window.parent.document;
+                    var inputs = doc.querySelectorAll('[data-testid="stSidebar"] [data-testid="stSelectbox"] input[role="combobox"]');
+                    inputs.forEach(function(input){
+                        input.setAttribute('readonly', '');
+                        input.setAttribute('tabindex', '-1');
+                        input.setAttribute('inputmode', 'none');
+                    });
+                } catch (e) {}
+            }
+            lock();
+            setTimeout(lock, 200);
+            setTimeout(lock, 800);
+            setInterval(lock, 1500);
+        })();
+        </script>
+        """,
+        height=0,
+    )
+    if st.session_state.lang_selector != st.session_state.selected_language:
+        st.session_state.selected_language = st.session_state.lang_selector
+        st.rerun()
+
+    # Hairline divider between the language picker and Privacy & Consent.
+    st.markdown('<div class="md-sidebar-bottom-divider"></div>', unsafe_allow_html=True)
+
     if st.button("Privacy & Consent", key="nav_privacy_bottom", use_container_width=True):
         st.session_state.mode = "privacy"
         st.rerun()
@@ -8052,28 +9832,71 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         font-size: 1rem !important;
     }
 
+    /* Tabs — centered glass pill bar (Apple-style frosted rail). The rail
+       is a translucent white wash with a subtle backdrop blur so it picks
+       up the page tone behind it; a hairline border + soft inner highlight
+       sell the "glass" depth. The active tab fills with the brand indigo
+       gradient and a colored drop shadow that matches the Sign in button. */
     [data-baseweb="tab-list"] {
-        gap: 2.35rem !important;
-        border-bottom: 1px solid #dbe5f1 !important;
+        gap: 0.4rem !important;
+        border-bottom: none !important;
         margin-top: 1.5rem !important;
-        margin-bottom: 0.8rem !important;
+        margin-bottom: 1rem !important;
+        justify-content: center !important;
+        background: rgba(255, 255, 255, 0.42) !important;
+        backdrop-filter: blur(18px) saturate(160%) !important;
+        -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.6) !important;
+        border-radius: 14px !important;
+        padding: 0.32rem !important;
+        max-width: 440px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.6) inset,
+            0 0 0 1px rgba(15, 23, 42, 0.04),
+            0 8px 24px rgba(15, 23, 42, 0.05) !important;
     }
     button[role="tab"] {
-        padding: 0.34rem 0 0.95rem 0 !important;
-        font-size: 1.08rem !important;
+        padding: 0.55rem 1.25rem !important;
+        font-size: 0.96rem !important;
         font-weight: 600 !important;
-        color: #475569 !important;
-        border-bottom: 2px solid transparent !important;
+        color: #5a6b86 !important;
+        border: none !important;
+        border-bottom: none !important;
+        border-radius: 10px !important;
+        background: transparent !important;
+        transition:
+            color 0.18s ease,
+            background 0.2s ease,
+            box-shadow 0.22s ease,
+            transform 0.18s ease !important;
+    }
+    button[role="tab"]:hover {
+        color: #1f2a3d !important;
+        background: rgba(99, 102, 241, 0.06) !important;
     }
     button[role="tab"][aria-selected="true"] {
-        color: #3255e8 !important;
-        font-weight: 760 !important;
-        border-bottom-color: transparent !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 55%),
+            linear-gradient(108deg, #4f46e5 0%, #6366f1 55%, #7c6ff2 100%) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.22) inset,
+            0 6px 14px rgba(79, 70, 229, 0.28),
+            0 2px 5px rgba(79, 70, 229, 0.15) !important;
+        text-shadow: 0 1px 0 rgba(15, 23, 42, 0.14) !important;
     }
+    button[role="tab"][aria-selected="true"]:hover {
+        color: #ffffff !important;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 55%),
+            linear-gradient(108deg, #4338ca 0%, #5b54e8 55%, #7466f3 100%) !important;
+    }
+    /* Streamlit's underline indicator — superseded by the pill fill. */
     [data-baseweb="tab-highlight"] {
-        height: 3px !important;
-        border-radius: 999px !important;
-        background: linear-gradient(90deg, #3b82f6, #6366f1) !important;
+        display: none !important;
     }
     [data-baseweb="tab-panel"] {
         padding-top: 0.85rem !important;
@@ -8104,40 +9927,44 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
     [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] {
         margin-bottom: 0.42rem !important;
     }
+    /* The white surface + blue border live on the ROOT wrapper, not the
+       <input>, so the icon sits inside the same field instead of next to a
+       separate grey baseweb container. The inner input is transparent. */
     [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"] input,
     [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] input {
-        min-height: 56px !important;
-        border-radius: 15px !important;
-        border: 1px solid #d8e4fa !important;
-        background: #ffffff !important;
+        min-height: 54px !important;
+        border-radius: 0 !important;
+        border: none !important;
+        background: transparent !important;
         box-shadow: none !important;
         font-size: 1.03rem !important;
         line-height: 1.3 !important;
         padding: 0.78rem 0.95rem !important;
     }
-    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] {
-        width: 100% !important;
-        max-width: 100% !important;
-        min-height: 56px !important;
-        height: 56px !important;
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-    }
-    [data-testid="stForm"]:has(.st-key-si_email) .st-key-si_pin [data-testid="stTextInputRootElement"] {
-        width: 100% !important;
-        max-width: 100% !important;
-        min-height: 56px !important;
-        height: 56px !important;
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-    }
     [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"],
     [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 56px !important;
+        height: 56px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
         display: flex !important;
         align-items: center !important;
-        overflow: visible !important;
+        overflow: hidden !important;
+        background: #ffffff !important;
+        border: 1px solid #d8e4fa !important;
+        border-radius: 15px !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+        transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
     }
-    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] [data-baseweb="base-input"] {
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"]:focus-within,
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"]:focus-within {
+        border-color: #93c5fd !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14) !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] [data-baseweb="base-input"],
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] [data-baseweb="base-input"] {
         min-height: 56px !important;
         height: 56px !important;
         display: flex !important;
@@ -8145,12 +9972,21 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         flex: 1 1 auto !important;
         min-width: 0 !important;
         width: auto !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
     }
+    /* Icon column — transparent, but with a subtle hairline divider on its
+       right edge so the user can read at a glance where the click target
+       (typing area) begins. */
     [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] > div:has([data-testid="stTextInputIcon"]),
     [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] > div:has([data-testid="stTextInputIcon"]) {
         background: transparent !important;
         border: none !important;
+        border-right: 1px solid #e6ecf6 !important;
         box-shadow: none !important;
+        padding-right: 0.55rem !important;
+        margin-right: 0.55rem !important;
     }
     [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputIcon"],
     [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputIcon"] {
@@ -8166,35 +10002,73 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         background: transparent !important;
         border: none !important;
     }
-    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"] input:focus,
-    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] input:focus {
-        border-color: #93c5fd !important;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14) !important;
-    }
+    /* Focus state is now handled on the root wrapper via :focus-within above. */
     [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"] [data-testid="stIconMaterial"],
     [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] [data-testid="stIconMaterial"] {
-        color: #4a5f86 !important;
+        color: #6366f1 !important;
         background: transparent !important;
         border: none !important;
         padding: 0 !important;
-        font-size: 1.14rem !important;
+        font-size: 1.16rem !important;
     }
+    /* Show/hide password "eye" button on PIN field — strip baseweb's grey. */
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] button,
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] button {
+        background: transparent !important;
+        border: none !important;
+        color: #6366f1 !important;
+        margin-right: 0.4rem !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] button:hover,
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] button:hover {
+        background: rgba(99, 102, 241, 0.08) !important;
+    }
+    /* Primary submit button — premium glossy indigo gradient with a top
+       highlight (inner 1px), a colored drop shadow, and an arrow that
+       glides to the right on hover. The hover state lifts the button
+       slightly and deepens the shadow for an alive, tactile feel. */
     .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button,
     .st-key-auth_signup_submit [data-testid="stFormSubmitButton"] > button {
         height: 60px !important;
         min-height: 60px !important;
-        border-radius: 17px !important;
+        border-radius: 16px !important;
         border: none !important;
-        background: linear-gradient(102deg, #3b82f6 0%, #5577f3 45%, #7466f3 73%, #8b5cf6 100%) !important;
-        box-shadow: 0 18px 34px rgba(99, 102, 241, 0.28) !important;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 50%),
+            linear-gradient(108deg, #4f46e5 0%, #6366f1 42%, #7c6ff2 72%, #8b5cf6 100%) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.22) inset,
+            0 -1px 0 rgba(15, 23, 42, 0.08) inset,
+            0 14px 30px rgba(79, 70, 229, 0.32),
+            0 4px 10px rgba(79, 70, 229, 0.18) !important;
         color: #ffffff !important;
-        font-size: 1.06rem !important;
-        font-weight: 750 !important;
+        font-size: 1.05rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.005em !important;
+        text-shadow: 0 1px 0 rgba(15, 23, 42, 0.18) !important;
+        transition:
+            transform 0.18s ease,
+            box-shadow 0.22s ease,
+            background 0.25s ease !important;
     }
     .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button:hover,
     .st-key-auth_signup_submit [data-testid="stFormSubmitButton"] > button:hover {
         transform: translateY(-1px) !important;
-        box-shadow: 0 20px 34px rgba(99, 102, 241, 0.32) !important;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 50%),
+            linear-gradient(108deg, #4338ca 0%, #5b54e8 42%, #7466f3 72%, #8b5cf6 100%) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.26) inset,
+            0 -1px 0 rgba(15, 23, 42, 0.1) inset,
+            0 18px 38px rgba(79, 70, 229, 0.38),
+            0 6px 14px rgba(79, 70, 229, 0.22) !important;
+    }
+    .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button:active,
+    .st-key-auth_signup_submit [data-testid="stFormSubmitButton"] > button:active {
+        transform: translateY(0) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.18) inset,
+            0 8px 18px rgba(79, 70, 229, 0.28) !important;
     }
     .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button {
         position: relative !important;
@@ -8213,6 +10087,11 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         font-weight: 400;
         opacity: 0.96;
         line-height: 1;
+        transition: transform 0.22s ease, opacity 0.18s ease;
+    }
+    .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button:hover::after {
+        transform: translateY(-54%) translateX(4px);
+        opacity: 1;
     }
 
     .md-auth-signin-actions {
@@ -8241,19 +10120,50 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         font-size: 0.95rem;
         font-weight: 560;
     }
+    /* "Continue as Guest" — ghost button companion to the primary Sign in.
+       Indigo-tinted surface and border so it visually belongs to the same
+       family without competing for the eye. Hover fills with a slightly
+       deeper indigo wash and lifts subtly to match the primary's motion. */
     .md-auth-signin-actions .stButton > button {
-        height: 53px !important;
-        min-height: 53px !important;
-        border-radius: 14px !important;
-        border: 1px solid #d8e4f8 !important;
-        background: #ffffff !important;
-        color: #27364e !important;
+        height: 54px !important;
+        min-height: 54px !important;
+        border-radius: 16px !important;
+        border: 1px solid rgba(99, 102, 241, 0.22) !important;
+        background: linear-gradient(180deg, #ffffff 0%, #f6f8ff 100%) !important;
+        color: #4338ca !important;
         font-size: 1.02rem !important;
-        font-weight: 640 !important;
+        font-weight: 650 !important;
+        letter-spacing: 0.005em !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.9) inset,
+            0 2px 6px rgba(79, 70, 229, 0.06) !important;
+        transition:
+            transform 0.18s ease,
+            box-shadow 0.2s ease,
+            border-color 0.18s ease,
+            background 0.22s ease !important;
+    }
+    .md-auth-signin-actions .stButton > button [data-testid="stIconMaterial"] {
+        color: #6366f1 !important;
+        font-size: 1.18rem !important;
+        margin-right: 0.18rem !important;
     }
     .md-auth-signin-actions .stButton > button:hover {
-        border-color: #b9d2ff !important;
-        background: #f9fbff !important;
+        border-color: rgba(99, 102, 241, 0.42) !important;
+        background: linear-gradient(180deg, #f5f6ff 0%, #edefff 100%) !important;
+        color: #3730a3 !important;
+        transform: translateY(-1px) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.95) inset,
+            0 8px 18px rgba(79, 70, 229, 0.12) !important;
+    }
+    .md-auth-signin-actions .stButton > button:hover [data-testid="stIconMaterial"] {
+        color: #4f46e5 !important;
+    }
+    .md-auth-signin-actions .stButton > button:active {
+        transform: translateY(0) !important;
+        background: #ebedff !important;
+        box-shadow: 0 2px 6px rgba(79, 70, 229, 0.1) !important;
     }
     .md-auth-meta {
         margin-top: 0.95rem;
@@ -8278,13 +10188,79 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         font-size: 1.18rem !important;
         margin-top: 0.08rem;
     }
-    .md-auth-forgot-link {
-        color: #2563eb !important;
-        text-decoration: underline;
-        font-size: 0.95rem;
-        font-weight: 650;
+    a.md-auth-forgot-link,
+    .md-auth-forgot-row a.md-auth-forgot-link {
+        color: #4f46e5 !important;
+        text-decoration: none !important;
+        font-size: 0.88rem;
+        font-weight: 600;
         white-space: nowrap;
+        transition: color 0.15s ease;
     }
+    a.md-auth-forgot-link:hover,
+    .md-auth-forgot-row a.md-auth-forgot-link:hover {
+        color: #4338ca !important;
+        text-decoration: none !important;
+    }
+    /* Inline row directly below the PIN field — right-aligned link, the
+       conventional place auth-aware users look for "Forgot PIN?". */
+    .md-auth-forgot-row {
+        display: flex;
+        justify-content: flex-end;
+        margin: -0.18rem 0 0.62rem 0;
+    }
+    /* When the meta row is the only thing under the form (the Forgot link
+       has been moved inline), center the security note across the full width
+       so it doesn't look orphaned on the left. */
+    .md-auth-meta.md-auth-meta-solo {
+        justify-content: center;
+        text-align: center;
+    }
+    .md-auth-meta.md-auth-meta-solo .md-auth-security-note {
+        justify-content: center;
+    }
+
+    /* Guest tab — soft card explaining the no-account experience, with the
+       Continue as Guest button spaced clearly below. The card uses a
+       subtle indigo wash (matching the welcome chips) so the tab content
+       feels framed without competing with the white form area on the
+       neighbouring tabs. */
+    .md-auth-guest-intro {
+        margin: 0.8rem 0 1.25rem 0;
+        padding: 1.1rem 1.25rem;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #f6f7ff 0%, #eef1ff 100%);
+        border: 1px solid #e3e8fb;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.8) inset,
+            0 6px 18px rgba(15, 23, 42, 0.04);
+    }
+    .md-auth-guest-title {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-size: 1.05rem;
+        font-weight: 730;
+        color: #1f2a3d;
+        letter-spacing: -0.005em;
+        margin-bottom: 0.45rem;
+    }
+    .md-auth-guest-title .material-symbols-rounded {
+        color: #4f46e5;
+        font-size: 1.18rem !important;
+    }
+    .md-auth-guest-copy {
+        color: #475569;
+        font-size: 0.92rem;
+        line-height: 1.55;
+    }
+    /* When the actions wrapper sits inside the Guest tab there is no
+       preceding "or" divider, so reset the margin-top to align cleanly
+       with the intro card above. */
+    .md-auth-signin-actions.md-auth-signin-actions-guest {
+        margin-top: 0 !important;
+    }
+
     .md-auth-privacy-foot {
         margin-top: 1.2rem;
         color: #64748b;
@@ -8338,8 +10314,10 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         font-size: 1.5rem !important;
         background: linear-gradient(145deg, #eef4ff, #e8f0ff);
     }
-    .md-auth-benefit:nth-of-type(2) .md-auth-benefit-ic { color: #6366f1; background: linear-gradient(145deg, #eef2ff, #eceeff); }
-    .md-auth-benefit:nth-of-type(3) .md-auth-benefit-ic { color: #0f766e; background: linear-gradient(145deg, #ecfeff, #e6f7f4); }
+    /* Tonal variation within a single blue→indigo family — keeps the card
+       cohesive while still giving each row a subtle distinct accent. */
+    .md-auth-benefit:nth-of-type(2) .md-auth-benefit-ic { color: #4f46e5; background: linear-gradient(145deg, #eef2ff, #e7ecff); }
+    .md-auth-benefit:nth-of-type(3) .md-auth-benefit-ic { color: #6366f1; background: linear-gradient(145deg, #f0f1ff, #e8eaff); }
     .md-auth-benefit-title {
         margin: 0;
         font-size: 1.01rem;
@@ -8364,7 +10342,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         line-height: 1.5;
     }
     .md-auth-side-bottom .material-symbols-rounded {
-        color: #0f766e;
+        color: #4f46e5;
         font-size: 1.1rem !important;
         margin-top: 0.05rem;
     }
@@ -8445,7 +10423,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         + _auth_shield_html +
         '<div class="md-auth-welcome-content">'
         '<div class="md-auth-welcome-title">Welcome to MediChat</div>'
-        '<div class="md-auth-welcome-copy">Sign in to keep your health profile across visits, or continue as a guest for a one-time conversation.</div>'
+        '<div class="md-auth-welcome-copy">Sign in to save your health profile across visits, or continue as a guest for a one-time chat.</div>'
         '<div class="md-auth-chip-row">'
         '<span class="md-auth-chip"><span class="material-symbols-rounded">lock</span>Private</span>'
         '<span class="md-auth-chip"><span class="material-symbols-rounded">person_check</span>Secure guest mode</span>'
@@ -8467,6 +10445,12 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
                 with st.form("signin_form", clear_on_submit=False):
                     si_email = st.text_input("Email", placeholder="you@example.com", key="si_email", icon=":material/mail:")
                     si_pin = st.text_input("4-8 digit PIN", type="password", max_chars=8, key="si_pin", icon=":material/lock:")
+                    st.markdown(
+                        '<div class="md-auth-forgot-row">'
+                        '<a class="md-auth-forgot-link" href="' + ui_escape(PRIVACY_POLICY_URL) + '" target="_blank">Forgot PIN?</a>'
+                        '</div>',
+                        unsafe_allow_html=True
+                    )
                     si_btn = st.form_submit_button(
                         "Sign in",
                         key="auth_signin_submit",
@@ -8483,12 +10467,11 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 st.markdown(
-                    '<div class="md-auth-meta">'
+                    '<div class="md-auth-meta md-auth-meta-solo">'
                     '<div class="md-auth-security-note">'
                     '<span class="material-symbols-rounded">shield_lock</span>'
                     '<span>We use secure, privacy-first authentication for your health information.</span>'
                     '</div>'
-                    '<a class="md-auth-forgot-link" href="' + ui_escape(PRIVACY_POLICY_URL) + '" target="_blank">Forgot PIN?</a>'
                     '</div>',
                     unsafe_allow_html=True
                 )
@@ -8559,21 +10542,28 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
 
             with tab_guest:
                 st.markdown(
-                    '<div class="md-auth-privacy-foot" style="margin-top:0.3rem;">'
-                    'Guest mode lets you try MediChat without an account. Your conversation lives only for this session. '
-                    'When you close the tab, everything is forgotten, switch to a profile any time for continuity across visits.'
+                    '<div class="md-auth-guest-intro">'
+                    '<div class="md-auth-guest-title">'
+                    '<span class="material-symbols-rounded">visibility_off</span>'
+                    'No account, no trace'
+                    '</div>'
+                    '<div class="md-auth-guest-copy">'
+                    'Try MediChat without signing up. Your conversation lives only in this tab. Close it and everything is forgotten. '
+                    'Switch to a profile any time for continuity across visits.'
+                    '</div>'
                     '</div>',
                     unsafe_allow_html=True
                 )
+                st.markdown('<div class="md-auth-signin-actions md-auth-signin-actions-guest">', unsafe_allow_html=True)
                 if st.button("Continue as Guest", use_container_width=True, key="go_guest_btn", icon=":material/person:"):
                     st.session_state.is_guest = True
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown(
             '<div class="md-auth-privacy-foot">'
-            'Guest mode minimizes data collection. Signed profiles store irreversible email hashes and salted PIN hashes only, designed to align with APP and HIPAA-style safeguards.<br><br>'
-            'Privacy policy includes Australian Privacy Principles (APPs), consent handling, and Notifiable Data Breach (NDB) response commitments.<br>'
-            '<a href="' + ui_escape(PRIVACY_POLICY_URL) + '" target="_blank">Open Privacy Policy (APP + NDB)</a>'
+            'We store only irreversible email hashes and salted PIN hashes, designed to align with Australian Privacy Principles (APP), HIPAA-style safeguards, and Notifiable Data Breach commitments. '
+            '<a href="' + ui_escape(PRIVACY_POLICY_URL) + '" target="_blank">Read the full Privacy Policy →</a>'
             '</div>',
             unsafe_allow_html=True
         )
@@ -8699,10 +10689,10 @@ if st.session_state.mode == "chat":
             # Quick action cards
             qa_cols = st.columns(4, gap="small")
             qa_specs = [
-                ("qa_headache", "I have a headache", "I have a headache and would like to understand what might be causing it.", ":material/sick:"),
-                ("qa_tired", "Feeling tired", "I have been feeling unusually tired lately. What could be the reason?", ":material/sentiment_dissatisfied:"),
-                ("qa_symptoms", "Check my symptoms", "_route_assessment", ":material/search:"),
-                ("qa_sleep", "Improve my sleep", "Can you suggest ways to improve my sleep quality?", ":material/bedtime:"),
+                ("qa_headache", "Headache", "I have a headache and would like to understand what might be causing it.", ":material/psychology:"),
+                ("qa_tired", "Low energy", "I have been feeling unusually tired lately. What could be the reason?", ":material/battery_low:"),
+                ("qa_symptoms", "Check symptoms", "_route_assessment", ":material/monitor_heart:"),
+                ("qa_sleep", "Better sleep", "Can you suggest ways to improve my sleep quality?", ":material/bedtime:"),
             ]
             for i, (qa_key, qa_label, qa_query, qa_icon) in enumerate(qa_specs):
                 with qa_cols[i]:
@@ -8825,11 +10815,15 @@ if st.session_state.mode == "chat":
 
             # ── Smart Actions (available for all users) ───────────────
             st.markdown('<div class="md-smart-head"><div class="md-smart-title">Smart Actions</div></div>', unsafe_allow_html=True)
+            # Markdown bold (**...**) on the title makes it bold even when
+            # it wraps to 2 lines (unlike CSS ::first-line which only styles
+            # the first VISUAL line). The two trailing spaces before \n
+            # render a line break in markdown, separating title + subtitle.
             sa_specs = [
-                ("sa_sym", "Vision Ai\nAnalyze images", "vision", ":material/image_search:", "md-smart-purple"),
-                ("sa_rec", "Health Records\nUpload medical reports", "records", ":material/medical_information:", "md-smart-green"),
-                ("sa_ins", "Prescription Reader\nScan prescriptions", "rx_reader", ":material/local_pharmacy:", "md-smart-pink"),
-                ("sa_appt", "Appointments\nManage appointments", "appointments", ":material/calendar_month:", "md-smart-blue"),
+                ("sa_sym", "**Vision Ai**  \nAnalyze images and X-rays", "vision", ":material/image_search:", "md-smart-purple"),
+                ("sa_rec", "**Health Records**  \nUpload medical reports", "records", ":material/medical_information:", "md-smart-green"),
+                ("sa_ins", "**Prescription Reader**  \nScan prescriptions", "rx_reader", ":material/prescriptions:", "md-smart-pink"),
+                ("sa_appt", "**Appointments**  \nManage appointments", "appointments", ":material/calendar_month:", "md-smart-blue"),
             ]
             sa_cols = st.columns(4, gap="small")
             for i, (sk, label, action, icon_name, accent_cls) in enumerate(sa_specs):
@@ -8849,10 +10843,10 @@ if st.session_state.mode == "chat":
             _tip_sleep_raw = _tip_daily.get("sleep_hours")
             _tip_steps_raw = _tip_daily.get("steps")
             _tip_hr_raw = _tip_daily.get("heart_rate_resting")
-            _tip_water_metric = (str(int(_tip_water_raw)) + " / 8 glasses today") if _tip_water_raw is not None else "Not logged today — tap Health Overview to log"
-            _tip_sleep_metric = ("Last night: " + ("%.1f" % float(_tip_sleep_raw)) + "h") if _tip_sleep_raw else "Sleep not logged — log it on Health Overview"
-            _tip_steps_metric = (format(int(_tip_steps_raw), ",") + " / 10,000 steps") if _tip_steps_raw else "Steps not logged — log them on Health Overview"
-            _tip_hr_metric = ("Resting HR " + str(int(_tip_hr_raw)) + " BPM") if _tip_hr_raw else "Heart rate not logged — log it on Health Overview"
+            _tip_water_metric = (str(int(_tip_water_raw)) + " / 8 glasses today") if _tip_water_raw is not None else "Not logged today. Tap Health Overview to log"
+            _tip_sleep_metric = ("Last night: " + ("%.1f" % float(_tip_sleep_raw)) + "h") if _tip_sleep_raw else "Sleep not logged. Log it on Health Overview"
+            _tip_steps_metric = (format(int(_tip_steps_raw), ",") + " / 10,000 steps") if _tip_steps_raw else "Steps not logged. Log them on Health Overview"
+            _tip_hr_metric = ("Resting HR " + str(int(_tip_hr_raw)) + " BPM") if _tip_hr_raw else "Heart rate not logged. Log it on Health Overview"
             _tip_glass_svg = (
                 '<svg viewBox="0 0 86 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
                 '<defs><linearGradient id="mdGlassC" x1="0" y1="0" x2="0" y2="1">'
@@ -8922,7 +10916,7 @@ if st.session_state.mode == "chat":
                 _med_n = len(_mem_now.get("medications") or [])
                 _sym_n = len(_mem_now.get("symptoms") or [])
                 _convs_total = 0
-                _last_visit_str = "—"
+                _last_visit_str = "-"
                 if st.session_state.is_authenticated and st.session_state.user_email_hash:
                     _all_convs = list_conversations(st.session_state.user_email_hash, limit=100)
                     _convs_total = len(_all_convs)
@@ -8937,25 +10931,25 @@ if st.session_state.mode == "chat":
 
                 _snap_title = "Health Overview"
                 _daily = get_daily_metrics()
-                # Real values only — no fake fallbacks. Missing → "—" with no status pill.
+                # Real values only — no fake fallbacks. Missing → "-" with no status pill.
                 _hr = _daily.get("heart_rate_resting")
                 _steps_val = _daily.get("steps")
                 _sleep_hours = _daily.get("sleep_hours")
                 _water_count = _daily.get("water_glasses")
 
-                _heart_rate_display = (str(int(_hr)) + " BPM") if _hr else "—"
+                _heart_rate_display = (str(int(_hr)) + " BPM") if _hr else "-"
                 _hr_status, _hr_cls = heart_rate_status(_hr)
                 _heart_rate_status_text = _hr_status or ""
 
-                _steps_display = (f"{int(_steps_val):,} / 10,000") if _steps_val else "—"
+                _steps_display = (f"{int(_steps_val):,} / 10,000") if _steps_val else "-"
                 _steps_status_text = (str(min(100, int(round((int(_steps_val) / 10000) * 100)))) + "%") if _steps_val else ""
 
-                _sleep_display = (f"{float(_sleep_hours):.1f}h") if _sleep_hours else "—"
+                _sleep_display = (f"{float(_sleep_hours):.1f}h") if _sleep_hours else "-"
                 _sl_status, _sl_cls = sleep_status(_sleep_hours)
                 _sleep_status_text = _sl_status or ""
 
                 _wc_int = int(_water_count) if _water_count is not None else None
-                _water_display = (f"{_wc_int} / 8 glasses") if _wc_int is not None else "—"
+                _water_display = (f"{_wc_int} / 8 glasses") if _wc_int is not None else "-"
                 _water_status_text = (str(min(100, int(round((_wc_int / 8) * 100)))) + "%") if _wc_int else ""
 
                 _tiles = [
@@ -9016,7 +11010,7 @@ if st.session_state.mode == "chat":
                         recent_html += '<div class="md-conv-row"><div class="md-conv-bubble material-symbols-rounded">chat_bubble</div><div class="md-conv-title">' + ui_text(_rt, 40) + '</div><div class="md-conv-time">' + ui_text(_ago, 20) + '</div></div>'
                 else:
                     if st.session_state.is_authenticated:
-                        recent_html += '<div class="md-conv-row md-conv-empty">No recent conversations yet — start a chat to see it here.</div>'
+                        recent_html += '<div class="md-conv-row md-conv-empty">No recent conversations yet. Start a chat to see it here.</div>'
                     else:
                         recent_html += '<div class="md-conv-row md-conv-empty">Sign in to save and revisit your conversations.</div>'
                 recent_html += '</div>'
@@ -9625,7 +11619,7 @@ if st.session_state.mode == "chat":
             if interaction_alerts:
                 alert_block = "\n\n---\n\n**Drug Safety Check:**\n"
                 for a in interaction_alerts:
-                    alert_block += "\n- **" + a["drug"] + "** — given your " + ", ".join(a["conditions"]) + ": " + a["warning"]
+                    alert_block += "\n- **" + a["drug"] + "**, given your " + ", ".join(a["conditions"]) + ": " + a["warning"]
                 final_text = final_text + alert_block
 
             _log_entry = {
@@ -9665,7 +11659,7 @@ if st.session_state.mode == "chat":
 elif st.session_state.mode == "eval":
     st.markdown(
         '<div style="background:linear-gradient(135deg,#1f2937,#111827);color:white;padding:0.7rem 1.2rem;border-radius:12px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;">'
-        '<div style="display:flex;align-items:center;gap:0.5rem;"><span style="font-size:1rem;">🔒</span><span style="font-weight:600;font-size:0.9rem;">Admin Mode — Research & Evaluation Dashboard</span></div>'
+        '<div style="display:flex;align-items:center;gap:0.5rem;"><span style="font-size:1rem;">🔒</span><span style="font-weight:600;font-size:0.9rem;">Admin Mode. Research & Evaluation Dashboard</span></div>'
         '<div style="font-size:0.75rem;opacity:0.8;">Not visible to patients</div>'
         '</div>',
         unsafe_allow_html=True
@@ -9703,7 +11697,7 @@ elif st.session_state.mode == "eval":
             }
             for d in raw_logs
         ]
-        st.info("Live data from Firestore — aggregated from all MediChat patients (anonymised). Total records: " + str(len(logs)))
+        st.info("Live data from Firestore, aggregated from all MediChat patients (anonymised). Total records: " + str(len(logs)))
     else:
         logs = st.session_state.eval_log
         if FIREBASE_ACTIVE:
@@ -9852,11 +11846,11 @@ elif st.session_state.mode == "eval":
             query_len = len(l["query"].split())
             log_html += (
                 '<div style="padding:0.6rem 0.8rem;border-bottom:1px solid #e5e7eb;font-size:0.8rem;">'
-                '<div style="color:#334155;margin-bottom:0.2rem;font-weight:600;">Query #' + str(total_queries - i + 1) + ' — ' + str(query_len) + ' words</div>'
+                '<div style="color:#334155;margin-bottom:0.2rem;font-weight:600;">Query #' + str(total_queries - i + 1) + ', ' + str(query_len) + ' words</div>'
                 '<div style="display:flex;gap:0.8rem;font-size:0.7rem;color:#64748b;flex-wrap:wrap;">'
                 '<span style="color:' + conf_color + ';font-weight:600;">● ' + str(l["confidence_pct"]) + '% conf</span>'
                 '<span>⏱ ' + str(l["response_time"]) + 's</span>'
-                '<span>📚 ' + ", ".join(l.get("sources", []) or ["—"]) + '</span>'
+                '<span>📚 ' + ", ".join(l.get("sources", []) or ["-"]) + '</span>'
                 '<span>🌐 ' + l.get("language", "English") + '</span>'
                 '</div>'
                 '</div>'
@@ -9975,7 +11969,7 @@ elif st.session_state.mode == "eval":
                         l["confidence"].title(),
                         str(l["confidence_pct"]) + "%",
                         l["response_time"],
-                        ", ".join(l.get("sources", [])) or "—",
+                        ", ".join(l.get("sources", [])) or "-",
                         l.get("language", "English"),
                         safety,
                     ]
@@ -10090,9 +12084,16 @@ elif st.session_state.mode == "history":
 
 elif st.session_state.mode == "overview":
     # ── Health Overview ─────────────────────────────────────────────
-    st.markdown('<div class="md-greet-wrap"><div class="md-greet">Health Overview</div>'
-                '<div class="md-subgreet">A live snapshot of what we know about you and what you have logged today.</div></div>',
-                unsafe_allow_html=True)
+    st.markdown(
+        '<div class="md-page-hero md-page-hero-overview">'
+        '<div class="md-page-hero-ic"><span class="material-symbols-rounded">monitoring</span></div>'
+        '<div class="md-page-hero-text">'
+        '<div class="md-page-hero-title">Health Overview</div>'
+        '<div class="md-page-hero-sub">A live snapshot of what we know about you and what you have logged today.</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
     today = get_daily_metrics()
     water_n = int(today.get("water_glasses", 0) or 0)
     sleep_h = today.get("sleep_hours")
@@ -10119,7 +12120,7 @@ elif st.session_state.mode == "overview":
 
     ov_c, ov_d = st.columns(2)
     with ov_c:
-        sleep_disp = (str(sleep_h) + " hrs") if sleep_h else "—"
+        sleep_disp = (str(sleep_h) + " hrs") if sleep_h else "-"
         st.markdown(
             '<div class="md-rcard"><div class="md-metric-row" style="border:none;">'
             '<div class="md-metric-icon md-hp-violet">🌙</div>'
@@ -10154,7 +12155,7 @@ elif st.session_state.mode == "overview":
 
     ov_e, ov_f = st.columns(2)
     with ov_e:
-        steps_disp = (f"{int(steps_n):,} / 10,000") if steps_n else "—"
+        steps_disp = (f"{int(steps_n):,} / 10,000") if steps_n else "-"
         steps_pct = min(100, int(round((int(steps_n) / 10000) * 100))) if steps_n else 0
         st.markdown(
             '<div class="md-rcard"><div class="md-metric-row" style="border:none;">'
@@ -10171,7 +12172,7 @@ elif st.session_state.mode == "overview":
                 update_daily_metric("steps", int(st_in))
                 st.rerun()
     with ov_f:
-        hr_disp = (str(int(hr_n)) + " BPM") if hr_n else "—"
+        hr_disp = (str(int(hr_n)) + " BPM") if hr_n else "-"
         _hr_lbl, _hr_cls_p = heart_rate_status(hr_n)
         hr_status_html = ('<div class="md-metric-status ' + (_hr_cls_p or "md-status-info") + '">' + (_hr_lbl or "") + '</div>') if hr_n else ''
         st.markdown(
@@ -10198,19 +12199,28 @@ elif st.session_state.mode == "overview":
         sl = m.get("sleep_hours")
         rows_html += '<div>' + ui_text(d, 20) + '</div>'
         rows_html += '<div>' + str(int(m.get("water_glasses", 0) or 0)) + ' glasses</div>'
-        rows_html += '<div>' + ui_text((str(sl) + " h" if sl else "—"), 20) + '</div>'
+        rows_html += '<div>' + ui_text((str(sl) + " h" if sl else "-"), 20) + '</div>'
     rows_html += '</div></div>'
     st.markdown(rows_html, unsafe_allow_html=True)
 
 elif st.session_state.mode == "medications":
     # ── Medications ─────────────────────────────────────────────────
-    st.markdown('<div class="md-greet-wrap"><div class="md-greet">Medications</div>'
-                '<div class="md-subgreet">Keep track of what you take and when. Stored to your profile so MediChat can use it during chats.</div></div>',
-                unsafe_allow_html=True)
-    st.markdown('<div class="md-form-intro">Add medication</div>'
-                '<div class="md-form-sub">Capture dose, timing and notes so MediChat can reference them in future chats.</div>',
-                unsafe_allow_html=True)
+    st.markdown(
+        '<div class="md-page-hero md-page-hero-meds">'
+        '<div class="md-page-hero-ic"><span class="material-symbols-rounded">pill</span></div>'
+        '<div class="md-page-hero-text">'
+        '<div class="md-page-hero-title">Medications</div>'
+        '<div class="md-page-hero-sub">Keep track of what you take and when. Stored to your profile so MediChat can reference it during chats.</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
     with st.form("add_med_form", clear_on_submit=True):
+        st.markdown(
+            '<div class="md-form-intro">Add medication</div>'
+            '<div class="md-form-sub">Capture dose, timing and notes so MediChat can reference them in future chats.</div>',
+            unsafe_allow_html=True
+        )
         mc1, mc2 = st.columns(2)
         with mc1:
             m_name = st.text_input("Name", placeholder="e.g. Metformin")
@@ -10219,7 +12229,7 @@ elif st.session_state.mode == "medications":
             m_dose = st.text_input("Dose", placeholder="e.g. 500 mg")
             m_time = st.text_input("Time(s) of day", placeholder="e.g. Morning, 8 pm")
         m_notes = st.text_area("Notes (optional)", placeholder="Take with food, etc.", height=80)
-        if st.form_submit_button("Save medication", use_container_width=True, type="primary"):
+        if st.form_submit_button("Save medication", use_container_width=True, type="primary", icon=":material/save:"):
             if add_medication(m_name, m_dose, m_freq, m_time, m_notes):
                 st.success("Medication added.")
                 st.rerun()
@@ -10246,13 +12256,22 @@ elif st.session_state.mode == "medications":
 
 elif st.session_state.mode == "appointments":
     # ── Appointments ────────────────────────────────────────────────
-    st.markdown('<div class="md-greet-wrap"><div class="md-greet">Appointments</div>'
-                '<div class="md-subgreet">Upcoming visits and reminders. Stored to your profile.</div></div>',
-                unsafe_allow_html=True)
-    st.markdown('<div class="md-form-intro">Add appointment</div>'
-                '<div class="md-form-sub">Save upcoming visits, reminders and notes in one place.</div>',
-                unsafe_allow_html=True)
+    st.markdown(
+        '<div class="md-page-hero md-page-hero-appts">'
+        '<div class="md-page-hero-ic"><span class="material-symbols-rounded">calendar_month</span></div>'
+        '<div class="md-page-hero-text">'
+        '<div class="md-page-hero-title">Appointments</div>'
+        '<div class="md-page-hero-sub">Upcoming visits and reminders. Stored to your profile so MediChat can reference them in chats.</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
     with st.form("add_appt_form", clear_on_submit=True):
+        st.markdown(
+            '<div class="md-form-intro">Add appointment</div>'
+            '<div class="md-form-sub">Save upcoming visits, reminders and notes in one place.</div>',
+            unsafe_allow_html=True
+        )
         ac1, ac2 = st.columns(2)
         with ac1:
             a_title = st.text_input("Title", placeholder="e.g. GP follow-up")
@@ -10262,7 +12281,7 @@ elif st.session_state.mode == "appointments":
             a_doc = st.text_input("Doctor / clinician", placeholder="e.g. Dr Patel")
             a_loc = st.text_input("Location", placeholder="e.g. Melbourne Health Centre")
         a_notes = st.text_area("Notes (optional)", placeholder="Bring previous lab results, etc.", height=80)
-        if st.form_submit_button("Save appointment", use_container_width=True, type="primary"):
+        if st.form_submit_button("Save appointment", use_container_width=True, type="primary", icon=":material/save:"):
             iso = datetime.combine(a_date, a_time).isoformat(timespec="minutes")
             if add_appointment(a_title, iso, a_doc, a_loc, a_notes):
                 st.success("Appointment added.")
@@ -10312,14 +12331,21 @@ elif st.session_state.mode == "appointments":
 
 elif st.session_state.mode == "records":
     # ── Health Records ──────────────────────────────────────────────
-    st.markdown('<div class="md-greet-wrap"><div class="md-greet">Health Records</div>'
-                '<div class="md-subgreet">Upload medical PDFs or images. We extract text and store metadata only, file contents stay on your device unless you choose to keep an Ai summary.</div></div>',
-                unsafe_allow_html=True)
+    st.markdown(
+        '<div class="md-page-hero md-page-hero-records">'
+        '<div class="md-page-hero-ic"><span class="material-symbols-rounded">medical_information</span></div>'
+        '<div class="md-page-hero-text">'
+        '<div class="md-page-hero-title">Health Records</div>'
+        '<div class="md-page-hero-sub">Upload medical PDFs or images. We extract text and store metadata only. File contents stay on your device unless you choose to keep an Ai summary.</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
     with st.form("rec_upload_form", clear_on_submit=True):
-        rec_file = st.file_uploader("Upload a medical record (PDF, JPG, PNG)", type=["pdf", "jpg", "jpeg", "png"], key="hr_upload")
+        rec_file = st.file_uploader("Drop a medical record here", type=["pdf", "jpg", "jpeg", "png"], key="hr_upload")
         rec_label = st.text_input("Label this record", placeholder="e.g. Blood test - April 2026")
         rec_keep_summary = st.checkbox("Generate and save an Ai summary (recommended)", value=True)
-        if st.form_submit_button("Save record", use_container_width=True, type="primary"):
+        if st.form_submit_button("Save record", use_container_width=True, type="primary", icon=":material/save:"):
             if not rec_file:
                 st.error("Please pick a file.")
             elif not rec_label.strip():
@@ -10370,16 +12396,21 @@ elif st.session_state.mode == "rx_reader":
     # ── Prescription Reader ────────────────────────────────────────
     rx_uploader_widget_key = "rx_uploader_" + str(st.session_state.get("rx_uploader_key", 0))
     st.markdown(
-        '<div class="md-greet-wrap"><div class="md-greet">Prescription Reader</div>'
-        '<div class="md-subgreet">Upload a handwritten prescription photo. MediChat will transcribe text only, with confidence grading and an AU drug-name cross-check.</div></div>',
+        '<div class="md-page-hero md-page-hero-rx">'
+        '<div class="md-page-hero-ic md-page-hero-ic-rx"><span class="md-rx-glyph">&#8478;</span></div>'
+        '<div class="md-page-hero-text">'
+        '<div class="md-page-hero-title">Prescription Reader</div>'
+        '<div class="md-page-hero-sub">Upload a handwritten prescription photo. MediChat will transcribe text only, with confidence grading and an AU drug-name cross-check.</div>'
+        '</div>'
+        '</div>',
         unsafe_allow_html=True
     )
     with st.form("rx_reader_form", clear_on_submit=False):
-        rx_img = st.file_uploader("Upload prescription image (JPG, PNG)", type=["jpg", "jpeg", "png"], key=rx_uploader_widget_key)
+        rx_img = st.file_uploader("Drop your prescription image here", type=["jpg", "jpeg", "png"], key=rx_uploader_widget_key)
         rx_note = st.text_input("Optional context", placeholder="e.g. GP script from today, hard to read medication line")
         rx_btn_a, rx_btn_b = st.columns([3, 1])
         with rx_btn_a:
-            rx_submit = st.form_submit_button("Read prescription", use_container_width=True, type="primary")
+            rx_submit = st.form_submit_button("Read prescription", use_container_width=True, type="primary", icon=":material/arrow_forward:")
         with rx_btn_b:
             rx_clear = st.form_submit_button("Clear", use_container_width=True)
 
@@ -10466,9 +12497,16 @@ elif st.session_state.mode == "privacy":
 
 elif st.session_state.mode == "insights":
     # ── Ai Insights ─────────────────────────────────────────────────
-    st.markdown('<div class="md-greet-wrap"><div class="md-greet">Ai Insights</div>'
-                '<div class="md-subgreet">Personalised observations generated from what you have logged. Refreshes each time you visit.</div></div>',
-                unsafe_allow_html=True)
+    st.markdown(
+        '<div class="md-page-hero md-page-hero-insights">'
+        '<div class="md-page-hero-ic"><span class="material-symbols-rounded">auto_awesome</span></div>'
+        '<div class="md-page-hero-text">'
+        '<div class="md-page-hero-title">Ai Insights</div>'
+        '<div class="md-page-hero-sub">Personalised observations generated from what you have logged. Refreshes each time you visit.</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
     insights = []
     mem = st.session_state.patient_memory or {}
     meds = list_medications()
@@ -10490,8 +12528,10 @@ elif st.session_state.mode == "insights":
 
     if not (has_profile_data or has_logged_metrics or has_records or has_chat_history or meds or appts):
         st.markdown(
-            '<div class="md-rcard" style="text-align:center;color:var(--md-text-3);padding:1.6rem;">'
-            'Add more health information to generate insights.'
+            '<div class="md-empty-card">'
+            '<div class="md-empty-icon"><span class="material-symbols-rounded">lightbulb</span></div>'
+            '<div class="md-empty-title">No insights yet</div>'
+            '<div class="md-empty-copy">Log a few health details such as water, sleep, steps, medications, or a record, and MediChat will start generating personalised observations here.</div>'
             '</div>',
             unsafe_allow_html=True
         )
@@ -10513,7 +12553,7 @@ elif st.session_state.mode == "insights":
                 "Your last " + str(len(sleeps)) + " logged nights average " + str(avg_sleep) + " hours. Most adults need 7-9.", "warn"))
         elif avg_sleep > 9:
             insights.append(("😴", "Long sleep pattern",
-                "Average " + str(avg_sleep) + " hours. Long sleep can sometimes signal infection or low mood — worth mentioning to a GP if it persists.", "info"))
+                "Average " + str(avg_sleep) + " hours. Long sleep can sometimes signal infection or low mood, worth mentioning to a GP if it persists.", "info"))
         else:
             insights.append(("😴", "Sleep looks healthy",
                 "Averaging " + str(avg_sleep) + " hours over your last " + str(len(sleeps)) + " logged nights.", "good"))
@@ -10687,7 +12727,20 @@ else:
         total = len(ASSESSMENT_STAGES)
         progress = int((stage / total) * 100)
 
-        st.markdown('<div class="assessment-card"><div class="assessment-title">' + L["symptom_title"] + '</div><div class="assessment-subtitle">' + L["symptom_subtitle"] + '</div><div class="progress-label"><span>Step ' + str(stage + 1) + ' of ' + str(total) + '</span><span>' + str(progress) + '% complete</span></div><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:' + str(progress) + '%;"></div></div></div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="assessment-card">'
+            '<div class="assessment-card-head">'
+            '<div class="md-page-hero-ic"><span class="material-symbols-rounded">stethoscope</span></div>'
+            '<div class="assessment-head-text">'
+            '<div class="assessment-title">' + L["symptom_title"] + '</div>'
+            '<div class="assessment-subtitle">' + L["symptom_subtitle"] + '</div>'
+            '</div>'
+            '</div>'
+            '<div class="progress-label"><span>Step ' + str(stage + 1) + ' of ' + str(total) + '</span><span>' + str(progress) + '% complete</span></div>'
+            '<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:' + str(progress) + '%;"></div></div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
 
         if st.session_state.assessment_data:
             with st.expander(L["answers_so_far"], expanded=False):
@@ -10722,11 +12775,11 @@ else:
 
             with st.form(key="assessment_form_" + str(stage), clear_on_submit=True):
                 typed = st.text_input("", placeholder="Or type your own answer here...", label_visibility="collapsed")
-                ac1, ac2, ac3 = st.columns([2, 2, 1])
+                ac1, ac2 = st.columns([3, 1])
+                with ac1:
+                    next_btn = st.form_submit_button(L["next"], use_container_width=True, type="primary", icon=":material/arrow_forward:")
                 with ac2:
-                    next_btn = st.form_submit_button(L["next"])
-                with ac3:
-                    cancel_btn = st.form_submit_button(L["cancel"])
+                    cancel_btn = st.form_submit_button(L["cancel"], use_container_width=True)
 
             if next_btn and typed.strip():
                 st.session_state.assessment_data[current["key"]] = typed.strip()
