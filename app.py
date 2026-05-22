@@ -626,6 +626,18 @@ def get_user_local_now():
             pass
     return datetime.now()
 
+def _msg_now_ts():
+    """Return the current user-local time as a short '10:21 AM' string,
+    used as a per-message timestamp for new conversations going forward.
+    Old messages stored without a ts will simply skip the timestamp line."""
+    try:
+        return get_user_local_now().strftime("%-I:%M %p")
+    except Exception:
+        try:
+            return get_user_local_now().strftime("%I:%M %p").lstrip("0")
+        except Exception:
+            return ""
+
 def reset_prescription_reader_state():
     st.session_state.rx_reader_result = None
     st.session_state.rx_uploader_key = st.session_state.get("rx_uploader_key", 0) + 1
@@ -1077,18 +1089,97 @@ st.markdown("""
         transform: translateY(-1px);
     }
 
-    /* ── Memory Card ─────────────────────────────────────────────── */
+    /* ── Memory Card (Apple-style) ───────────────────────────────────
+       Soft white card with subtle indigo tint, brain icon, and each
+       remembered item rendered as its own coloured chip per category. */
     .memory-card {
-        background: linear-gradient(135deg, var(--clinical-50), #e3f0f9);
-        border: 1px solid var(--clinical-100);
-        border-radius: 12px;
-        padding: 0.75rem 1rem;
-        margin-bottom: 0.8rem;
-        font-size: 0.78rem;
-        color: var(--clinical-700);
+        background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%);
+        border: 1px solid #e6ecf6;
+        border-radius: 18px;
+        padding: 1rem 1.15rem 1.05rem 1.15rem;
+        margin-bottom: 1.4rem;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.95) inset,
+            0 6px 18px rgba(15, 23, 42, 0.04);
         animation: fadeIn 0.4s ease;
     }
-    .memory-title { font-weight: 600; margin-bottom: 0.3rem; font-size: 0.8rem; color: var(--clinical-900); display: flex; align-items: center; gap: 0.35rem; }
+    .memory-head {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin-bottom: 0.7rem;
+    }
+    .memory-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.14), rgba(139, 92, 246, 0.12));
+        color: #4f46e5;
+        flex-shrink: 0;
+    }
+    .memory-icon .material-symbols-rounded {
+        font-size: 1.05rem !important;
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: #4f46e5 !important;
+    }
+    .memory-title {
+        font-size: 0.92rem;
+        font-weight: 700;
+        color: #0f172a;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+        margin: 0;
+        display: block;
+    }
+    .memory-section {
+        display: grid;
+        grid-template-columns: 88px minmax(0, 1fr);
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.4rem 0;
+    }
+    .memory-section + .memory-section {
+        border-top: 1px solid #eef1f8;
+    }
+    .memory-label {
+        font-size: 0.66rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #94a3b8;
+    }
+    .memory-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+    .memory-chip {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.74rem;
+        font-weight: 600;
+        line-height: 1;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        background: #f7f9ff;
+        border: 1px solid #e6ecf6;
+        color: #475569;
+        white-space: nowrap;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    /* Per-category accent tints (each section gets its own colour family
+       so symptoms ≠ conditions ≠ medications at a glance). */
+    .memory-label-rose   { color: #be123c; }
+    .memory-label-indigo { color: #4f46e5; }
+    .memory-label-violet { color: #7c3aed; }
+    .memory-chip-rose   { background: #fff1f2; border-color: #ffd5dd; color: #9f1239; }
+    .memory-chip-indigo { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; }
+    .memory-chip-violet { background: #f5f0ff; border-color: #ddd2fc; color: #6d28d9; }
 
     @keyframes fadeIn {
         from { opacity: 0; }
@@ -2180,81 +2271,8 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
 }
 
 /* ── Sidebar past chats — clean uniform list ── */
-.md-past-chats {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    margin-top: 0.2rem;
-    margin-bottom: 0.4rem;
-}
-.md-past-chats [data-testid="stHorizontalBlock"] {
-    gap: 4px !important;
-    align-items: center !important;
-}
-.md-past-chats [data-testid="column"] {
-    padding: 0 !important;
-}
-[data-testid="stSidebar"] .md-past-chats .stButton > button {
-    background: transparent !important;
-    border: 1px solid transparent !important;
-    color: var(--md-text-1) !important;
-    text-align: left !important;
-    padding: 0.45rem 0.7rem !important;
-    border-radius: 9px !important;
-    font-weight: 500 !important;
-    font-size: 0.8rem !important;
-    height: 34px !important;
-    min-height: 34px !important;
-    max-height: 34px !important;
-    line-height: 1.2 !important;
-    overflow: hidden !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    width: 100% !important;
-}
-/* Force the inner <p> / <div> text node to single-line ellipsis */
-[data-testid="stSidebar"] .md-past-chats .stButton > button > div,
-[data-testid="stSidebar"] .md-past-chats .stButton > button p,
-[data-testid="stSidebar"] .md-past-chats .stButton > button span {
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    display: block !important;
-    width: 100% !important;
-    text-align: left !important;
-    margin: 0 !important;
-    line-height: 1.2 !important;
-    font-size: 0.8rem !important;
-}
-[data-testid="stSidebar"] .md-past-chats .stButton > button:hover {
-    background: var(--md-bg) !important;
-    border-color: var(--md-border) !important;
-}
-[data-testid="stSidebar"] .md-past-active .stButton > button {
-    background: var(--md-soft-blue) !important;
-    color: var(--md-accent-blue) !important;
-    border-color: var(--md-soft-blue) !important;
-    font-weight: 600 !important;
-}
-/* Delete × button — small, subtle, never overflows */
-[data-testid="stSidebar"] .md-past-chats [data-testid="column"]:last-child .stButton > button {
-    background: transparent !important;
-    color: var(--md-text-3) !important;
-    border: 1px solid transparent !important;
-    padding: 0 !important;
-    height: 34px !important;
-    min-height: 34px !important;
-    width: 100% !important;
-    text-align: center !important;
-    font-size: 1.1rem !important;
-    font-weight: 400 !important;
-    border-radius: 9px !important;
-}
-[data-testid="stSidebar"] .md-past-chats [data-testid="column"]:last-child .stButton > button:hover {
-    background: #fee2e2 !important;
-    color: #dc2626 !important;
-}
+/* Past-chats list styling now lives in the compact-mode @media block —
+   that's the single source of truth. */
 
 /* ── Wearable sync card (replaces simulated HR/Steps) ── */
 .md-wearable-card {
@@ -2934,9 +2952,8 @@ st.markdown("""
 .bot-bubble {
     max-width: min(86%, 760px);
 }
-.user-bubble {
-    max-width: min(78%, 680px);
-}
+/* User bubble width is now controlled per-mode in the compact-mode block
+   (lets short messages stay one line, only long ones wrap). */
 .source-row,
 .confidence-row {
     max-width: calc(100% - 50px);
@@ -3144,35 +3161,36 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     box-shadow: 0 5px 14px rgba(15,23,42,0.035) !important;
 }
 
-/* Smart Actions as real Streamlit buttons, styled like glass cards */
+/* Smart Actions as real Streamlit buttons, styled like compact glass cards.
+   Tightened from 172px tall → 108px (~37% smaller) per user feedback. */
 .md-smart-route .stButton > button {
     position: relative !important;
-    min-height: 172px !important;
-    border-radius: 24px !important;
-    padding: 1.05rem 1.1rem !important;
+    min-height: 108px !important;
+    border-radius: 16px !important;
+    padding: 0.7rem 0.8rem 0.65rem 0.8rem !important;
     align-items: flex-start !important;
     justify-content: flex-start !important;
     text-align: left !important;
     background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.84)) !important;
     border: 1px solid rgba(226,232,240,0.96) !important;
-    box-shadow: 0 18px 48px rgba(15,23,42,0.055) !important;
+    box-shadow: 0 6px 16px rgba(15,23,42,0.04) !important;
     color: #111827 !important;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
     overflow: visible !important;
 }
 .md-smart-route .stButton > button:hover {
-    transform: translateY(-4px) scale(1.01) !important;
+    transform: translateY(-2px) scale(1.005) !important;
     border-color: rgba(147,197,253,0.95) !important;
-    box-shadow: 0 24px 54px rgba(15,23,42,0.09) !important;
+    box-shadow: 0 10px 24px rgba(15,23,42,0.07) !important;
 }
 .md-smart-route .stButton > button::after {
     content: "arrow_forward";
     font-family: "Material Symbols Rounded", "Material Symbols Outlined" !important;
     position: absolute;
-    right: 1rem;
-    bottom: 1rem;
-    width: 34px;
-    height: 34px;
+    right: 0.6rem;
+    bottom: 0.55rem;
+    width: 22px;
+    height: 22px;
     border-radius: 999px;
     display: flex;
     align-items: center;
@@ -3180,19 +3198,19 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     background: rgba(255,255,255,0.94);
     border: 1px solid #e6edf7;
     color: #0f172a;
-    font-size: 1.15rem;
+    font-size: 0.85rem;
     line-height: 1;
 }
 .md-smart-route .stButton > button [data-testid="stIconMaterial"] {
-    width: 48px !important;
-    height: 48px !important;
-    min-width: 48px !important;
-    border-radius: 16px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    border-radius: 10px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    margin: 0 0.75rem 0 0 !important;
-    font-size: 1.45rem !important;
+    margin: 0 0.55rem 0 0 !important;
+    font-size: 1.05rem !important;
     overflow: visible !important;
 }
 .md-smart-purple .stButton > button [data-testid="stIconMaterial"] { background: #f2ebff; color: #7c3aed !important; }
@@ -3203,15 +3221,16 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     white-space: pre-line !important;
     overflow: visible !important;
     text-overflow: clip !important;
-    line-height: 1.45 !important;
-    font-size: 0.83rem !important;
+    line-height: 1.3 !important;
+    font-size: 0.7rem !important;
     color: #64748b !important;
     font-weight: 520 !important;
+    margin: 0 !important;
 }
 .md-smart-route .stButton > button p::first-line {
     color: #111827;
-    font-size: 0.97rem;
-    font-weight: 780;
+    font-size: 0.82rem;
+    font-weight: 700;
 }
 
 /* Guest mode: make the limited dashboard feel intentional */
@@ -3251,42 +3270,7 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     box-shadow: none !important;
 }
 
-/* Past conversations: compact rows and icon-only delete */
-[data-testid="stSidebar"] .md-past-chats [data-testid="stHorizontalBlock"] {
-    gap: 0.25rem !important;
-    padding: 0.08rem 0 !important;
-}
-[data-testid="stSidebar"] .md-past-chats [data-testid="column"]:first-child {
-    flex: 1 1 auto !important;
-}
-[data-testid="stSidebar"] .md-past-chats .stButton > button {
-    height: 36px !important;
-    min-height: 36px !important;
-    max-height: 36px !important;
-    border-radius: 11px !important;
-    background: transparent !important;
-    border: 1px solid transparent !important;
-    box-shadow: none !important;
-    padding: 0 0.55rem !important;
-    font-size: 0.78rem !important;
-}
-[data-testid="stSidebar"] .md-past-chats [data-testid="column"]:last-child .stButton > button {
-    width: 30px !important;
-    min-width: 30px !important;
-    max-width: 30px !important;
-    height: 30px !important;
-    min-height: 30px !important;
-    border-radius: 50% !important;
-    padding: 0 !important;
-    background: transparent !important;
-    border: none !important;
-    color: #94a3b8 !important;
-    box-shadow: none !important;
-}
-[data-testid="stSidebar"] .md-past-chats [data-testid="column"]:last-child .stButton > button:hover {
-    background: #fee2e2 !important;
-    color: #dc2626 !important;
-}
+/* Past conversations: see compact-mode @media block (single source of truth). */
 
 /* Sidebar icons and language control */
 [data-testid="stSidebar"] .stButton > button:has([data-testid="stIconMaterial"]) {
@@ -3320,21 +3304,22 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     flex-shrink: 0;
 }
 
-/* Smart Actions styling bound to widget keys so Streamlit layout wrappers cannot break it */
+/* Smart Actions styling bound to widget keys so Streamlit layout wrappers
+   cannot break it. Compacted to 108px tall + smaller icons/text per user. */
 .st-key-sa_sym .stButton > button,
 .st-key-sa_rec .stButton > button,
 .st-key-sa_ins .stButton > button,
 .st-key-sa_appt .stButton > button {
     position: relative !important;
-    min-height: 172px !important;
-    border-radius: 24px !important;
-    padding: 1.05rem 1.1rem !important;
+    min-height: 108px !important;
+    border-radius: 16px !important;
+    padding: 0.7rem 0.8rem 0.65rem 0.8rem !important;
     align-items: flex-start !important;
     justify-content: flex-start !important;
     text-align: left !important;
     background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.84)) !important;
     border: 1px solid rgba(226,232,240,0.96) !important;
-    box-shadow: 0 18px 48px rgba(15,23,42,0.055) !important;
+    box-shadow: 0 6px 16px rgba(15,23,42,0.04) !important;
     color: #111827 !important;
     overflow: visible !important;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
@@ -3343,9 +3328,9 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
 .st-key-sa_rec .stButton > button:hover,
 .st-key-sa_ins .stButton > button:hover,
 .st-key-sa_appt .stButton > button:hover {
-    transform: translateY(-4px) !important;
+    transform: translateY(-2px) !important;
     border-color: rgba(147,197,253,0.95) !important;
-    box-shadow: 0 24px 54px rgba(15,23,42,0.09) !important;
+    box-shadow: 0 10px 24px rgba(15,23,42,0.07) !important;
 }
 .st-key-sa_sym .stButton > button::after,
 .st-key-sa_rec .stButton > button::after,
@@ -3354,10 +3339,10 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     content: "arrow_forward";
     font-family: "Material Symbols Rounded", "Material Symbols Outlined" !important;
     position: absolute;
-    right: 1rem;
-    bottom: 1rem;
-    width: 34px;
-    height: 34px;
+    right: 0.6rem;
+    bottom: 0.55rem;
+    width: 22px;
+    height: 22px;
     border-radius: 999px;
     display: flex;
     align-items: center;
@@ -3365,22 +3350,22 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     background: rgba(255,255,255,0.94);
     border: 1px solid #e6edf7;
     color: #0f172a;
-    font-size: 1.15rem;
+    font-size: 0.85rem;
     line-height: 1;
 }
 .st-key-sa_sym .stButton > button [data-testid="stIconMaterial"],
 .st-key-sa_rec .stButton > button [data-testid="stIconMaterial"],
 .st-key-sa_ins .stButton > button [data-testid="stIconMaterial"],
 .st-key-sa_appt .stButton > button [data-testid="stIconMaterial"] {
-    width: 48px !important;
-    height: 48px !important;
-    min-width: 48px !important;
-    border-radius: 16px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    border-radius: 10px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    margin: 0 0.75rem 0 0 !important;
-    font-size: 1.45rem !important;
+    margin: 0 0.55rem 0 0 !important;
+    font-size: 1.05rem !important;
     overflow: visible !important;
 }
 .st-key-sa_sym .stButton > button [data-testid="stIconMaterial"] { background: #f2ebff; color: #7c3aed !important; }
@@ -3394,60 +3379,22 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     white-space: pre-line !important;
     overflow: visible !important;
     text-overflow: clip !important;
-    line-height: 1.45 !important;
-    font-size: 0.83rem !important;
+    line-height: 1.3 !important;
+    font-size: 0.7rem !important;
     color: #64748b !important;
     font-weight: 520 !important;
+    margin: 0 !important;
 }
 .st-key-sa_sym .stButton > button p::first-line,
 .st-key-sa_rec .stButton > button p::first-line,
 .st-key-sa_ins .stButton > button p::first-line,
 .st-key-sa_appt .stButton > button p::first-line {
     color: #111827;
-    font-size: 0.97rem;
-    font-weight: 780;
+    font-size: 0.82rem;
+    font-weight: 700;
 }
 
-/* Sidebar past chats styling bound to dynamic widget key prefixes */
-[class*="st-key-conv_open_"] .stButton > button {
-    height: 36px !important;
-    min-height: 36px !important;
-    border-radius: 11px !important;
-    background: #ffffff !important;
-    border: 1px solid #e5edf8 !important;
-    box-shadow: none !important;
-    padding: 0 0.55rem !important;
-    font-size: 0.78rem !important;
-    color: #334155 !important;
-    justify-content: flex-start !important;
-    text-align: left !important;
-}
-[class*="st-key-conv_open_"] .stButton > button:hover {
-    background: #f8fbff !important;
-    border-color: #cfe1fa !important;
-}
-[class*="st-key-conv_open_"] .stButton > button p {
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-}
-[class*="st-key-conv_del_"] .stButton > button {
-    width: 30px !important;
-    min-width: 30px !important;
-    max-width: 30px !important;
-    height: 30px !important;
-    min-height: 30px !important;
-    border-radius: 50% !important;
-    padding: 0 !important;
-    background: transparent !important;
-    border: none !important;
-    color: #94a3b8 !important;
-    box-shadow: none !important;
-}
-[class*="st-key-conv_del_"] .stButton > button:hover {
-    background: #fee2e2 !important;
-    color: #dc2626 !important;
-}
+/* Past-chats list styling consolidated in the compact-mode @media block. */
 
 /* Keep icons visible and aligned in left navigation */
 [data-testid="stSidebar"] .stButton > button > div {
@@ -3557,21 +3504,7 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     border-color: #cfe1fb !important;
     background: #f8fbff !important;
 }
-[data-testid="stSidebar"] div.st-key-new_chat_btn button,
-[data-testid="stSidebar"] div.st-key-new_chat_btn .stButton > button {
-    min-height: 40px !important;
-    height: 40px !important;
-    border-radius: 12px !important;
-    border: 1px solid #dbe8fb !important;
-    background: linear-gradient(135deg, #ffffff, #f8fbff) !important;
-    color: #1d4ed8 !important;
-    font-weight: 700 !important;
-}
-[data-testid="stSidebar"] div.st-key-new_chat_btn button:hover,
-[data-testid="stSidebar"] div.st-key-new_chat_btn .stButton > button:hover {
-    border-color: #bcd6fa !important;
-    background: #f4f8ff !important;
-}
+/* +New chat button styling moved to compact-mode @media (indigo primary CTA). */
 
 /* Keep sidebar cards cleaner */
 .md-side-profile {
@@ -4441,13 +4374,29 @@ section[data-testid="stSidebar"]::before,
 /* Streamlit's cache-class wrappers default to the sidebar's full 270px width
    even when they sit INSIDE the sidebar's content padding, causing children
    to overflow ~12-14px past the right edge. Constrain them so percentages
-   and child widths resolve against the actual padded content area. */
+   and child widths resolve against the actual padded content area.
+
+   Critical additions (May 2026): stSidebarUserContent + its direct emotion-
+   cache wrapper child were missed by the original list. They both default to
+   width=270px (the FULL sidebar width) and sit shifted ~11px right inside
+   the sidebarContent's 13.6px padding, so the whole sidebar bottom (cards,
+   buttons, conv-list rows) renders ~25px past the visible right edge — where
+   overflow-x: hidden on stSidebarContent crops the trailing edge of every
+   row (e.g. the "go" of "1w ago" timestamps). Force them to inherit the
+   actual padded content width. */
 [data-testid="stSidebar"] [data-testid="stSidebarContent"] > div,
 [data-testid="stSidebar"] [data-testid="stSidebarContent"] > div > div,
+[data-testid="stSidebar"] [data-testid="stSidebarUserContent"],
+[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div,
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
     max-width: 100% !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    transform: none !important;
 }
 [data-testid="stMain"],
 .main {
@@ -4469,7 +4418,7 @@ section[data-testid="stSidebar"]::before,
 
 /* Match reference sidebar nav styling. */
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-    row-gap: 0.06rem !important;
+    row-gap: 0.02rem !important;
 }
 [data-testid="stSidebar"] div.st-key-nav_home {
     margin-top: 0.55rem !important;
@@ -4612,7 +4561,17 @@ st.markdown("""
     padding: 1.06rem 1rem 1.2rem 1rem !important;
 }
 [data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {
-    min-height: 100vh !important;
+    /* On TALL screens (≥ ~1000px), min-height ensures the column fills the
+       viewport so `.md-side-profile { margin-top: auto }` pushes the profile
+       chip + everything below it (sign out, recent chats, language, footer)
+       down to the bottom edge.
+
+       On SHORTER laptop screens (~800-900px), the content stack is taller
+       than the viewport — so we deliberately do NOT cap max-height. The
+       column grows to its natural content height and the sidebarContent's
+       `overflow-y: auto` (below) gives the user a thin scrollbar to reach
+       the footer instead of clipping it. */
+    min-height: calc(100vh - 40px) !important;
     display: flex !important;
     flex-direction: column !important;
 }
@@ -4764,9 +4723,9 @@ st.markdown("""
 [data-testid="stSidebar"] div.st-key-nav_appts .stButton > button > [data-testid="stIconMaterial"] { background: #edf4ff !important; border-color: #d8e6ff !important; }
 [data-testid="stSidebar"] div.st-key-nav_appts .stButton > button [data-testid="stIconMaterial"] { color: #2563eb !important; }
 [data-testid="stSidebar"] .md-side-profile-top {
-    border-radius: 18px !important;
-    border: 1px solid #dce6fb !important;
-    box-shadow: 0 10px 20px rgba(15,23,42,0.05) !important;
+    border-radius: 14px !important;
+    border: 1px solid #e6edf9 !important;
+    box-shadow: 0 2px 6px rgba(15,23,42,0.03) !important;
     margin-top: 0.3rem !important;
 }
 [data-testid="stSidebar"] [data-testid="stSelectbox"] {
@@ -4864,12 +4823,61 @@ st.markdown("""
     text-align: center !important;
 }
 
-/* No sidebar scrolling; keep a clean single-page rail. */
+/* Sidebar scroll behavior — locked, no scroll possible:
+   - overflow-x stays HIDDEN to crop any horizontal bleed (the earlier
+     stSidebarUserContent clipping fix relies on this).
+   - overflow-y is HIDDEN so scrolling is completely disabled. Mouse wheel,
+     trackpad, keyboard arrow keys — none produce sidebar scroll. Content
+     sits truly fixed in place. The Approach-A tightening pass made the
+     content fit cleanly inside the viewport at 900px in both auth and
+     unauth states, so nothing visible gets cut off.
+
+   The scrollbar-* / ::-webkit-scrollbar rules are redundant now (no scroll
+   means no scrollbar) but kept as a safety net in case any nested element
+   inside the sidebar tries to spawn its own scroller. */
 [data-testid="stSidebar"],
 [data-testid="stSidebarContent"],
 [data-testid="stSidebarUserContent"] {
-    overflow-y: hidden !important;
-    overflow-x: hidden !important;
+    /* overflow: clip (not hidden) so the element is NOT a scroll container.
+       This blocks both user scroll AND programmatic scroll (scrollTop = 100
+       stays at 0). Chrome 90+, Firefox 81+, Safari 16+ — fully modern. */
+    overflow-x: clip !important;
+    overflow-y: clip !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+[data-testid="stSidebar"]::-webkit-scrollbar,
+[data-testid="stSidebarContent"]::-webkit-scrollbar,
+[data-testid="stSidebarUserContent"]::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+}
+
+/* Kill phantom scrollHeight: each Streamlit element wrapper inside the
+   sidebar can report scrollHeight > clientHeight because of absolutely-
+   positioned pseudo-elements and emotion-cache spacing quirks.
+
+   NOTE (May 2026): originally also applied to stMarkdown + stMarkdownContainer,
+   but that was clipping the wrapped 2nd line of the footer copyright
+   ("All rights reserved." was being cut off vertically). The overflow: clip
+   on stSidebar wrappers already locks scroll, so the per-element-container
+   clipping below is only needed for the phantom — and it doesn't need to
+   extend to inner markdown wrappers that legitimately host wrapped text. */
+[data-testid="stSidebar"] [data-testid="stElementContainer"] {
+    overflow: hidden !important;
+}
+/* Explicitly allow the footer wrappers to expand vertically so the
+   copyright's wrapped 2nd line shows in full. */
+[data-testid="stSidebar"] .md-sidebar-foot,
+[data-testid="stSidebar"] .md-sidebar-foot *,
+[data-testid="stSidebar"] [data-testid="stMarkdown"]:has(.md-sidebar-foot),
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"]:has(.md-sidebar-foot),
+[data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.md-sidebar-foot) {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
 }
 
 /* Remove settings/moon mini row entirely. */
@@ -5117,6 +5125,10 @@ st.markdown("""
    misaligned and overflowing the right edge. translateX counter-shifts to
    align with the rest of the sidebar column. */
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
+    /* Plain wrap — no white card framing, no border, no shadow. The brand
+       PNG sits directly against the sidebar background. The PNG itself
+       contains the rounded white tile around the bot illustration, so no
+       additional framing is needed (or wanted — see user feedback). */
     display: grid !important;
     place-items: center !important;
     justify-items: center !important;
@@ -5124,28 +5136,35 @@ st.markdown("""
     align-items: center !important;
     width: 100% !important;
     max-width: 242px !important;
-    margin: 0 auto 0.6rem auto !important;
+    margin: 0 auto 0.2rem auto !important;
     transform: translateX(-13px) !important;
-    padding: 0.4rem 0 0.85rem 0 !important;
+    padding: 0.5rem 0 0.45rem 0 !important;
     background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
     position: relative !important;
     border-bottom: none !important;
 }
-/* Thin centered separator line under the logo — restored after the brand-image swap. */
-[data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap::after {
-    content: "" !important;
+[data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
+    mix-blend-mode: normal !important;
+    max-width: 140px !important;
+    width: min(140px, 100%) !important;
+    height: auto !important;
     display: block !important;
-    position: absolute !important;
-    left: 15% !important;
-    right: 15% !important;
-    bottom: 0 !important;
-    height: 1px !important;
-    background: #e2e8f0 !important;
-    pointer-events: none !important;
+    margin: 0 auto !important;
+    transform: none !important;
+}
+/* Removed: the dividing line under the logo wrap (it conflicts with the new
+   self-contained app-icon style — the logo tile reads as a single element
+   without needing an underline). */
+[data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap::after {
+    content: none !important;
+    display: none !important;
 }
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
-    max-width: 200px !important;
-    width: min(200px, 100%) !important;
+    max-width: 135px !important;
+    width: min(135px, 100%) !important;
     height: auto !important;
     display: block !important;
     margin: 0 auto !important;
@@ -5381,11 +5400,13 @@ st.markdown("""
     bottom: -0.6rem !important;
 }
 
-/* Profile card — subtle gradient + softer shadow. */
+/* Profile card — soft + understated to blend with sidebar theme. Lighter
+   border + softer shadow + gentle gradient match. The chip should read as
+   a subtle inline element, not a heavy floating card. */
 [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
-    background: linear-gradient(180deg, #ffffff 0%, #fafcff 100%) !important;
-    border: 1px solid #dbe5f7 !important;
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06) !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%) !important;
+    border: 1px solid #e6edf9 !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03) !important;
     padding: 0.78rem 0.86rem !important;
 }
 
@@ -5446,13 +5467,18 @@ st.markdown("""
 }
 
 /* ────────────────────────────────────────────────────────────────────────
-   Compact mode for laptop screens (≤900px viewport height OR ≤1500px wide).
-   Targets the common case of 1366×768 / 1440×900 displays at 100% browser
-   zoom, where the full-size layout overflows. Shrinks paddings, font sizes,
-   button heights, and gaps so above-the-fold elements stay visible without
-   forcing the user to manually zoom out.
+   Canonical component styling — applies at every viewport width and height.
+
+   HISTORICAL NOTE (May 2026): this block used to be wrapped in
+   `@media (max-height: 900px), (max-width: 1500px) { ... }` so it only
+   matched on laptop-sized viewports. Over many design iterations the
+   "compact" rules became the canonical look, and on wide+tall monitors
+   (>1500px AND >900px) the gate stopped matching, falling back to plainer
+   baseline rules from earlier iterations — which made the entire app
+   "collapse to plain fallback" at low zoom levels on big screens.
+   The media wrapper has been removed so the modern look applies always.
+   Legitimate responsive media queries elsewhere in the file are kept.
    ──────────────────────────────────────────────────────────────────────── */
-@media (max-height: 900px), (max-width: 1500px) {
     /* Main column: trim outer padding so cards sit closer to the top. */
     [data-testid="stMainBlockContainer"] {
         padding: 0.5rem 2.2rem 0.6rem !important;
@@ -5629,36 +5655,41 @@ st.markdown("""
         padding: 0.55rem 1rem 0.8rem 1rem !important;
     }
     [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
-        max-width: 140px !important;
-        width: min(140px, 100%) !important;
+        max-width: 130px !important;
+        width: min(130px, 100%) !important;
     }
     [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
-        padding: 0.2rem 0 0.5rem 0 !important;
-        margin-bottom: 0.4rem !important;
+        padding: 0.5rem 0 0.4rem 0 !important;
+        margin-bottom: 0.3rem !important;
+        max-width: 242px !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
     }
     [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button {
-        min-height: 38px !important;
-        height: 38px !important;
-        margin-bottom: 0.18rem !important;
-        font-size: 0.88rem !important;
+        min-height: 32px !important;
+        height: 32px !important;
+        margin-bottom: 0.1rem !important;
+        font-size: 0.84rem !important;
         padding-left: 0.5rem !important;
     }
     [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > div[data-testid="stMarkdownContainer"] p {
-        font-size: 0.88rem !important;
+        font-size: 0.84rem !important;
     }
     [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > span:first-child,
     [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button > [data-testid="stIconMaterial"] {
-        width: 26px !important;
-        min-width: 26px !important;
-        height: 26px !important;
-        border-radius: 8px !important;
-        margin-right: 0.55rem !important;
+        width: 22px !important;
+        min-width: 22px !important;
+        height: 22px !important;
+        border-radius: 7px !important;
+        margin-right: 0.5rem !important;
     }
     [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button [data-testid="stIconMaterial"] {
-        font-size: 0.95rem !important;
+        font-size: 0.9rem !important;
     }
     [data-testid="stSidebar"] div.st-key-nav_home {
-        margin-top: 2.5rem !important;
+        margin-top: 0.5rem !important;
     }
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
         padding: 0.55rem 0.65rem !important;
@@ -5676,7 +5707,7 @@ st.markdown("""
        interactive. Compact 26px, almost invisible until you look for it.
        Label is collapsed in Python. */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] {
-        margin: 0.25rem 0 0.2rem 0 !important;
+        margin: 0.05rem auto 0.05rem auto !important;
     }
     [data-testid="stSidebar"] [data-testid="stSelectbox"] > label,
     [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-testid="stWidgetLabel"] {
@@ -5739,33 +5770,712 @@ st.markdown("""
         cursor: pointer !important;
     }
 
-    /* Replace the displayed full language name with a 3-letter code.
-       Only affects the SELECTED value inside the sidebar trigger — the
-       dropdown options (rendered in a body-level portal) still show the
-       full names. Scoped via [data-testid="stSidebar"]. */
+    /* Show the FULL language name in the sidebar trigger (not a 3-letter
+       code). The selected value div has its native text hidden (font-size 0)
+       and the ::before content displays the full word in the styled font.
+
+       Belt-and-braces: the default ::before content is `attr(value)` — so
+       even if a future language value isn't explicitly listed below, the
+       trigger renders the raw name (e.g. "Spanish") instead of falling
+       back to a hardcoded abbreviation. This makes the auth and guest
+       states consistent forever — no path can produce "ENG" again. */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value] {
         font-size: 0 !important;
         line-height: 1 !important;
     }
     [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value]::before {
-        font-size: 0.7rem !important;
-        font-weight: 700 !important;
+        content: attr(value) !important;
+        font-size: 0.78rem !important;
+        font-weight: 600 !important;
         color: #475569 !important;
-        letter-spacing: 0.06em !important;
+        letter-spacing: -0.005em !important;
         line-height: 1 !important;
     }
-    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="English"]::before   { content: "ENG"; }
-    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="Tamil"]::before     { content: "TAM"; }
-    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="Sinhala"]::before   { content: "SIN"; }
-    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="Hindi"]::before     { content: "HIN"; }
-    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="Malayalam"]::before { content: "MAL"; }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="English"]::before   { content: "English" !important; }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="Tamil"]::before     { content: "Tamil" !important; }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="Sinhala"]::before   { content: "Sinhala" !important; }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="Hindi"]::before     { content: "Hindi" !important; }
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="Malayalam"]::before { content: "Malayalam" !important; }
 
-    /* Hairline divider between the language picker and the Privacy & Consent
-       button at the bottom of the sidebar. */
+    /* Hairline divider between the language picker and the (removed)
+       Privacy & Consent button. Margins zeroed to reclaim vertical space —
+       the language pill and the footer are visually distinct enough without
+       an explicit hairline between them. */
     [data-testid="stSidebar"] .md-sidebar-bottom-divider {
+        height: 0 !important;
+        background: transparent !important;
+        margin: 0 !important;
+    }
+
+    /* ── Profile chip extras (mockup match) ──
+       Adds the "● Synced & up to date" status line + chevron at the right. */
+    [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.6rem !important;
+        padding-right: 1.6rem !important;
+    }
+    [data-testid="stSidebar"] .md-side-profile-text {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+    }
+    [data-testid="stSidebar"] .md-side-status {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.3rem !important;
+        font-size: 0.62rem !important;
+        font-weight: 600 !important;
+        color: #10b981 !important;
+        margin-top: 0.2rem !important;
+        line-height: 1.2 !important;
+    }
+    [data-testid="stSidebar"] .md-status-dot {
+        width: 6px !important;
+        height: 6px !important;
+        border-radius: 999px !important;
+        background: #10b981 !important;
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18) !important;
+        flex-shrink: 0 !important;
+    }
+    [data-testid="stSidebar"] .md-status-dot.md-status-dot-off {
+        background: #94a3b8 !important;
+        box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.18) !important;
+    }
+    [data-testid="stSidebar"] .md-side-chevron {
+        position: absolute !important;
+        right: 0.55rem !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        font-size: 1.05rem !important;
+        color: #94a3b8 !important;
+        -webkit-text-fill-color: #94a3b8 !important;
+    }
+    /* Sign-out anchor — a 28px circle pinned to the top-right of the profile
+       chip. Because it's a TRUE child of the chip (not a Streamlit sibling
+       with negative margins), there are no layout side-effects on the
+       Recent Chats card below. Triggers ?signout=1 URL handler. */
+    [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
+        position: relative !important;
+    }
+    [data-testid="stSidebar"] .md-side-signout {
+        position: absolute !important;
+        top: 6px !important;
+        right: 6px !important;
+        width: 28px !important;
+        height: 28px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 50% !important;
+        background: transparent !important;
+        color: #94a3b8 !important;
+        text-decoration: none !important;
+        transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
+        border: 1px solid transparent !important;
+    }
+    [data-testid="stSidebar"] .md-side-signout:hover {
+        background: #fef2f2 !important;
+        color: #b91c1c !important;
+        border-color: #fecaca !important;
+    }
+    [data-testid="stSidebar"] .md-side-signout .material-symbols-rounded {
+        font-size: 1.05rem !important;
+        color: inherit !important;
+        -webkit-text-fill-color: currentColor !important;
+    }
+
+    /* Sign out: keep matched profile-chip dimensions but add the logout icon. */
+    [data-testid="stSidebar"] div.st-key-profile_logout button [data-testid="stIconMaterial"] {
+        font-size: 1rem !important;
+        color: inherit !important;
+        -webkit-text-fill-color: currentColor !important;
+        margin-right: 0.35rem !important;
+    }
+
+    /* ── Recent Chats card (matches mockup) ──
+       Single white surface containing header + "+ New chat" pill + conv rows.
+       All three are now true DOM children of this card (rendered as one HTML
+       block in Python), so the card's border-radius + padding actually
+       encloses them. */
+    [data-testid="stSidebar"] .md-recent-card {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 14px !important;
+        padding: 0.7rem !important;
+        margin: 0.7rem auto 0.5rem auto !important;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05) !important;
+        box-sizing: border-box !important;
+    }
+    /* "+ New chat" pill — compact anchor inside the card. */
+    [data-testid="stSidebar"] .md-new-chat-pill {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.3rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        margin: 0.25rem 0 !important;
+        padding: 0.38rem 0.6rem !important;
+        background: #eef0ff !important;
+        color: #4f46e5 !important;
+        border: 1px solid transparent !important;
+        border-radius: 10px !important;
+        font-size: 0.74rem !important;
+        font-weight: 600 !important;
+        text-decoration: none !important;
+        letter-spacing: -0.005em !important;
+        transition: background 0.15s ease, border-color 0.15s ease !important;
+    }
+    [data-testid="stSidebar"] .md-new-chat-pill:hover {
+        background: #e0e7ff !important;
+        border-color: #c7d2fe !important;
+        color: #3730a3 !important;
+        text-decoration: none !important;
+    }
+    [data-testid="stSidebar"] .md-new-chat-pill .material-symbols-rounded {
+        font-size: 1rem !important;
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: #4f46e5 !important;
+        font-variation-settings: 'FILL' 0, 'wght' 600 !important;
+    }
+    [data-testid="stSidebar"] .md-new-chat-pill:hover .material-symbols-rounded {
+        color: #3730a3 !important;
+        -webkit-text-fill-color: #3730a3 !important;
+    }
+    [data-testid="stSidebar"] .md-recent-head {
+        display: flex !important;
+        align-items: baseline !important;
+        justify-content: space-between !important;
+        margin-bottom: 0.55rem !important;
+    }
+    [data-testid="stSidebar"] .md-recent-title {
+        font-size: 0.86rem !important;
+        font-weight: 720 !important;
+        color: #0f172a !important;
+        letter-spacing: -0.005em !important;
+    }
+    [data-testid="stSidebar"] .md-recent-seeall {
+        font-size: 0.72rem !important;
+        font-weight: 600 !important;
+        color: #4f46e5 !important;
+        text-decoration: none !important;
+    }
+    [data-testid="stSidebar"] .md-recent-seeall:hover {
+        text-decoration: underline !important;
+    }
+
+    /* + New chat button inside the Recent Chats card — soft indigo fill. */
+    [data-testid="stSidebar"] div.st-key-new_chat_btn button,
+    [data-testid="stSidebar"] div.st-key-new_chat_btn .stButton > button {
+        box-sizing: border-box !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 36px !important;
+        height: 36px !important;
+        padding: 0 0.8rem !important;
+        border-radius: 10px !important;
+        border: 1px dashed rgba(99, 102, 241, 0.35) !important;
+        background: rgba(99, 102, 241, 0.08) !important;
+        color: #4f46e5 !important;
+        font-weight: 660 !important;
+        font-size: 0.82rem !important;
+        box-shadow: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.35rem !important;
+        margin-bottom: 0.5rem !important;
+        transition: background 0.15s ease, border-color 0.15s ease !important;
+    }
+    [data-testid="stSidebar"] div.st-key-new_chat_btn button:hover {
+        background: rgba(99, 102, 241, 0.14) !important;
+        border-color: rgba(99, 102, 241, 0.5) !important;
+    }
+    [data-testid="stSidebar"] div.st-key-new_chat_btn button p {
+        color: #4f46e5 !important;
+        margin: 0 !important;
+        font-size: 0.82rem !important;
+        font-weight: 660 !important;
+        line-height: 1 !important;
+    }
+    [data-testid="stSidebar"] div.st-key-new_chat_btn button [data-testid="stIconMaterial"] {
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: #4f46e5 !important;
+        font-size: 1rem !important;
+    }
+
+    /* Conversation rows — anchor links with flex layout (icon | title | time).
+       Title flex-grows + ellipsis on overflow; time stays pinned right. */
+    [data-testid="stSidebar"] .md-conv-list {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.12rem !important;
+        margin-top: 0.4rem !important;
+    }
+    /* Each row is now wrapped in .md-conv-row-wrap which contains the main
+       click anchor (.md-conv-row) and a tiny sibling × delete anchor
+       (.md-conv-del). The wrapper is the flex container; the row anchor
+       takes the stretch, the × pins right and reveals on hover. */
+    [data-testid="stSidebar"] .md-conv-row-wrap {
+        position: relative !important;
+        display: flex !important;
+        align-items: stretch !important;
+        min-width: 0 !important;
+    }
+    [data-testid="stSidebar"] .md-conv-row-wrap .md-conv-row {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        padding-right: 1.8rem !important; /* reserve room for the × icon */
+    }
+    [data-testid="stSidebar"] .md-conv-del {
+        position: absolute !important;
+        right: 0.25rem !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        width: 20px !important;
+        height: 20px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 50% !important;
+        color: #cbd5e1 !important;
+        text-decoration: none !important;
+        opacity: 0 !important;
+        transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease !important;
+        z-index: 2 !important;
+    }
+    /* Reveal the × only on hover/focus — never permanently visible (the
+       active-row :has() exception was removed because active rows are no
+       longer visually distinguished from non-active ones). Mobile users
+       can long-press / tap-and-hold to reveal in supported browsers. */
+    [data-testid="stSidebar"] .md-conv-row-wrap:hover .md-conv-del,
+    [data-testid="stSidebar"] .md-conv-row-wrap:focus-within .md-conv-del {
+        opacity: 1 !important;
+    }
+    [data-testid="stSidebar"] .md-conv-del:hover {
+        background: #fef2f2 !important;
+        color: #b91c1c !important;
+    }
+    [data-testid="stSidebar"] .md-conv-del .material-symbols-rounded {
+        font-size: 0.85rem !important;
+        color: inherit !important;
+        -webkit-text-fill-color: currentColor !important;
+        font-variation-settings: 'FILL' 0, 'wght' 600 !important;
+    }
+    [data-testid="stSidebar"] .md-conv-row {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.35rem !important;
+        padding: 0.4rem 0.45rem !important;
+        border-radius: 10px !important;
+        text-decoration: none !important;
+        color: #475569 !important;
+        background: transparent !important;
+        border: none !important;
+        border-left: 0 !important;
+        transition: background 0.15s ease, color 0.15s ease !important;
+        min-width: 0 !important;
+    }
+    [data-testid="stSidebar"] .md-conv-row:hover {
+        background: #f1f5fc !important;
+        color: #1f2a3d !important;
+        text-decoration: none !important;
+    }
+    /* Active conversation row — visually identical to normal rows per
+       user request. The .md-conv-row-active class is still applied in the
+       Python render (no data-logic change) but the CSS no longer adds a
+       background tint, indigo icon, bold title, or violet timestamp.
+       Hover state still works the same on all rows. */
+    [data-testid="stSidebar"] .md-conv-row-active {
+        background: transparent !important;
+        border: none !important;
+        border-left: 0 !important;
+        color: #475569 !important;
+    }
+    [data-testid="stSidebar"] .md-conv-icon {
+        font-size: 0.95rem !important;
+        color: #94a3b8 !important;
+        -webkit-text-fill-color: #94a3b8 !important;
+        flex-shrink: 0 !important;
+    }
+    [data-testid="stSidebar"] .md-conv-row-active .md-conv-icon {
+        color: #94a3b8 !important;
+        -webkit-text-fill-color: #94a3b8 !important;
+    }
+    [data-testid="stSidebar"] .md-conv-title {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        font-size: 0.76rem !important;
+        font-weight: 550 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        line-height: 1.2 !important;
+    }
+    [data-testid="stSidebar"] .md-conv-row-active .md-conv-title {
+        font-weight: 550 !important;
+    }
+    [data-testid="stSidebar"] .md-conv-time {
+        flex-shrink: 0 !important;
+        font-size: 0.64rem !important;
+        font-weight: 600 !important;
+        color: #94a3b8 !important;
+        margin-left: 0.25rem !important;
+    }
+    [data-testid="stSidebar"] .md-conv-row-active .md-conv-time {
+        color: #94a3b8 !important;
+    }
+
+    /* ── Force every sidebar-bottom tile to match a single compact width
+       (210px) so nothing ever bleeds past the sidebar's inner edge. The
+       Recent Chats card now contains New chat + conv list as true children,
+       so we only need to constrain the OUTER tiles (profile chip, sign out,
+       card, language selector, footer). */
+    [data-testid="stSidebar"] div.st-key-profile_logout,
+    [data-testid="stSidebar"] div.st-key-profile_logout button,
+    [data-testid="stSidebar"] .md-side-profile.md-side-profile-top,
+    [data-testid="stSidebar"] .md-recent-card,
+    [data-testid="stSidebar"] [data-testid="stSelectbox"]:has(.st-key-lang_selector),
+    [data-testid="stSidebar"] .md-sidebar-foot {
+        box-sizing: border-box !important;
+        max-width: 210px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        width: 100% !important;
+    }
+    /* Profile chip — comfortable padding so 3-line content (name + email +
+       sync status) doesn't pinch. The chevron was removed, so the right
+       padding is also lighter (1.1 instead of 1.2). */
+    [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
+        padding: 0.5rem 1.1rem 0.5rem 0.55rem !important;
+        gap: 0.45rem !important;
+    }
+    [data-testid="stSidebar"] .md-side-avatar {
+        width: 28px !important;
+        min-width: 28px !important;
+        height: 28px !important;
+        font-size: 0.74rem !important;
+    }
+    [data-testid="stSidebar"] .md-side-pname {
+        font-size: 0.76rem !important;
+        font-weight: 700 !important;
+        line-height: 1.15 !important;
+    }
+    [data-testid="stSidebar"] .md-side-psub {
+        font-size: 0.64rem !important;
+        line-height: 1.2 !important;
+    }
+    [data-testid="stSidebar"] .md-side-status {
+        font-size: 0.58rem !important;
+        margin-top: 0.15rem !important;
+    }
+    [data-testid="stSidebar"] .md-side-chevron {
+        font-size: 0.9rem !important;
+        right: 0.4rem !important;
+    }
+    /* Sign out — icon-only 28px circle overlaid on the profile chip's
+       top-right corner. The negative margins pull the button visually up
+       onto the chip AND shrink the column contribution from +29px to -20px
+       (49px reclaimed) so the column can comfortably fit Recent Chats + 3
+       rows + language + footer at 900px viewport without scrolling. */
+    /* st-key-profile_logout is no longer rendered (the Streamlit button was
+       replaced by an anchor `?signout=1` inside the chip's HTML, removing
+       all the negative-margin layout gymnastics that caused the Recent
+       Chats card to collide with the chip's bottom). The selectors are
+       retained inert so future legacy CSS that references them is harmless. */
+    [data-testid="stSidebar"] div.st-key-profile_logout {
+        display: none !important;
+    }
+    [data-testid="stSidebar"] div.st-key-profile_logout button,
+    [data-testid="stSidebar"] div.st-key-profile_logout .stButton > button {
+        width: 28px !important;
+        min-width: 28px !important;
+        max-width: 28px !important;
+        height: 28px !important;
+        min-height: 28px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        background: transparent !important;
+        border: 1px solid transparent !important;
+        color: #94a3b8 !important;
+        -webkit-text-fill-color: #94a3b8 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        font-size: 0 !important;
+    }
+    [data-testid="stSidebar"] div.st-key-profile_logout button:hover,
+    [data-testid="stSidebar"] div.st-key-profile_logout .stButton > button:hover {
+        background: #fef2f2 !important;
+        border-color: #fecaca !important;
+        color: #b91c1c !important;
+        -webkit-text-fill-color: #b91c1c !important;
+        transform: none !important;
+    }
+    [data-testid="stSidebar"] div.st-key-profile_logout button [data-testid="stIconMaterial"] {
+        font-size: 1.05rem !important;
+        margin: 0 !important;
+        color: inherit !important;
+        -webkit-text-fill-color: currentColor !important;
+    }
+    /* Hide the space-character label so the icon is dead-centered in the
+       circle. Also hide any wrapped Streamlit tooltip-trigger inner spans. */
+    [data-testid="stSidebar"] div.st-key-profile_logout button [data-testid="stMarkdownContainer"],
+    [data-testid="stSidebar"] div.st-key-profile_logout button p {
+        display: none !important;
+    }
+    /* Recent Chats card — ultra-tight to fit at 900px viewport.
+       margin-top: 0.7rem (~11px) gives a clean visual gap below the
+       profile chip area so the two cards don't collide. */
+    [data-testid="stSidebar"] .md-recent-card {
+        padding: 0.45rem 0.5rem 0.4rem 0.5rem !important;
+        border-radius: 11px !important;
+        margin: 0.7rem auto 0.25rem auto !important;
+    }
+    [data-testid="stSidebar"] .md-recent-head {
+        margin-bottom: 0.25rem !important;
+    }
+    [data-testid="stSidebar"] .md-recent-title {
+        font-size: 0.76rem !important;
+    }
+    [data-testid="stSidebar"] .md-recent-seeall {
+        font-size: 0.64rem !important;
+    }
+    /* New chat — compact 30px, smaller text. */
+    [data-testid="stSidebar"] div.st-key-new_chat_btn button {
+        min-height: 30px !important;
+        height: 30px !important;
+        padding: 0 0.6rem !important;
+        margin-bottom: 0.35rem !important;
+        font-size: 0.72rem !important;
+        border-radius: 8px !important;
+    }
+    [data-testid="stSidebar"] div.st-key-new_chat_btn button p {
+        font-size: 0.72rem !important;
+    }
+    [data-testid="stSidebar"] div.st-key-new_chat_btn button [data-testid="stIconMaterial"] {
+        font-size: 0.88rem !important;
+    }
+    /* Conversation rows — slightly tighter to fit footer at 900px. */
+    [data-testid="stSidebar"] .md-conv-list {
+        gap: 0.15rem !important;
+        margin-top: 0.2rem !important;
+    }
+    [data-testid="stSidebar"] .md-conv-row {
+        padding: 0.4rem 0.45rem !important;
+        gap: 0.35rem !important;
+        border-radius: 10px !important;
+        border: none !important;
+        border-left: 0 !important;
+    }
+    [data-testid="stSidebar"] .md-conv-icon {
+        font-size: 0.82rem !important;
+    }
+    [data-testid="stSidebar"] .md-conv-title {
+        font-size: 0.68rem !important;
+        line-height: 1.15 !important;
+    }
+    [data-testid="stSidebar"] .md-conv-time {
+        font-size: 0.56rem !important;
+        margin-left: 0.2rem !important;
+    }
+
+    /* Two-line sidebar footer — compact. */
+    [data-testid="stSidebar"] .md-sidebar-foot {
+        margin-top: 0.25rem !important;
+        text-align: center !important;
+    }
+    [data-testid="stSidebar"] .md-sidebar-foot-links {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.3rem !important;
+        font-size: 0.62rem !important;
+        font-weight: 600 !important;
+        margin-bottom: 0.18rem !important;
+    }
+    [data-testid="stSidebar"] .md-sidebar-foot-links a {
+        color: #4f46e5 !important;
+        text-decoration: none !important;
+    }
+    [data-testid="stSidebar"] .md-sidebar-foot-links a:hover { text-decoration: underline !important; }
+    [data-testid="stSidebar"] .md-sidebar-foot-dot {
+        color: #cbd5e1 !important;
+        font-weight: 700 !important;
+    }
+    [data-testid="stSidebar"] .md-sidebar-foot-copy {
+        font-size: 0.72rem !important;
+        color: #475569 !important;
+        font-weight: 500 !important;
+        line-height: 1.3 !important;
+        margin-top: 0.15rem !important;
+    }
+
+    /* (Legacy: text-pill sign-out styling SUPERSEDED. Sign out is now an
+       icon-only 28px circle overlaid on the profile chip — see the earlier
+       div.st-key-profile_logout rules ~line 6052. This block intentionally
+       left empty to avoid a duplicate text-pill cascade win.) */
+
+    /* ── Sidebar chat-history section (Your Chats) ──
+       Clean divider above the section, refined "YOUR CHATS" label, primary
+       indigo "+ New chat" CTA, and each past chat row as a subtle list item
+       with title left + tiny × delete on the right. */
+    [data-testid="stSidebar"] hr {
+        border: none !important;
         height: 1px !important;
         background: #d6e0f0 !important;
-        margin: 0.45rem -0.4rem 0.55rem -0.4rem !important;
+        margin: 0.85rem -0.2rem 0.6rem -0.2rem !important;
+    }
+    [data-testid="stSidebar"] .sb-title {
+        font-size: 0.6rem !important;
+        font-weight: 700 !important;
+        color: #94a3b8 !important;
+        letter-spacing: 0.14em !important;
+        text-transform: uppercase !important;
+        margin: 0.4rem 0 0.5rem 0.1rem !important;
+    }
+
+    /* + New chat CTA — compact dashed indigo pill inside the Recent card. */
+    [data-testid="stSidebar"] div.st-key-new_chat_btn button,
+    [data-testid="stSidebar"] div.st-key-new_chat_btn .stButton > button {
+        min-height: 30px !important;
+        height: 30px !important;
+        border-radius: 8px !important;
+        border: 1px dashed rgba(99, 102, 241, 0.4) !important;
+        background: rgba(99, 102, 241, 0.08) !important;
+        color: #4f46e5 !important;
+        font-weight: 660 !important;
+        font-size: 0.72rem !important;
+        box-shadow: none !important;
+        margin-bottom: 0.35rem !important;
+        transition: background 0.15s ease, border-color 0.15s ease !important;
+    }
+    [data-testid="stSidebar"] div.st-key-new_chat_btn button:hover {
+        background: rgba(99, 102, 241, 0.15) !important;
+        border-color: rgba(99, 102, 241, 0.55) !important;
+    }
+    [data-testid="stSidebar"] div.st-key-new_chat_btn button p {
+        color: #4f46e5 !important;
+        margin: 0 !important;
+        font-size: 0.72rem !important;
+        font-weight: 660 !important;
+        line-height: 1 !important;
+    }
+    [data-testid="stSidebar"] div.st-key-new_chat_btn button [data-testid="stIconMaterial"] {
+        font-size: 0.88rem !important;
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: #4f46e5 !important;
+    }
+
+    /* Past-chats list (chat history). Selectors use DESCENDANT (.stButton
+       button) not direct child (.stButton > button) because the title
+       buttons have help= tooltips → Streamlit wraps them in three extra
+       divs (stTooltipHoverTarget, stTooltipIcon, etc.). */
+    [data-testid="stSidebar"] .md-past-chats {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.18rem !important;
+        margin-bottom: 0.4rem !important;
+    }
+    [data-testid="stSidebar"] .md-past-chats [data-testid="stHorizontalBlock"] {
+        gap: 0.2rem !important;
+        align-items: center !important;
+        flex-wrap: nowrap !important;
+    }
+    [data-testid="stSidebar"] .md-past-chats [data-testid="stColumn"] {
+        min-width: 0 !important;
+        padding: 0 !important;
+    }
+    /* Pin the delete column to a fixed 32px so it always stays visible. */
+    [data-testid="stSidebar"] .md-past-chats [data-testid="stColumn"]:last-child {
+        flex: 0 0 32px !important;
+        width: 32px !important;
+        max-width: 32px !important;
+    }
+    /* Chat title button — full row width minus the × button. */
+    [data-testid="stSidebar"] .md-past-chats [class*="st-key-conv_open_"] button {
+        min-height: 34px !important;
+        height: 34px !important;
+        max-height: 34px !important;
+        padding: 0 0.65rem !important;
+        border-radius: 9px !important;
+        border: 1px solid transparent !important;
+        background: transparent !important;
+        color: #475569 !important;
+        font-weight: 550 !important;
+        font-size: 0.76rem !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        box-shadow: none !important;
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        transition: background 0.15s ease, color 0.15s ease !important;
+    }
+    [data-testid="stSidebar"] .md-past-chats [class*="st-key-conv_open_"] button:hover {
+        background: #f1f5fc !important;
+        color: #1f2a3d !important;
+        border-color: transparent !important;
+    }
+    [data-testid="stSidebar"] .md-past-chats [class*="st-key-conv_open_"] button p,
+    [data-testid="stSidebar"] .md-past-chats [class*="st-key-conv_open_"] button [data-testid="stMarkdownContainer"] {
+        margin: 0 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        text-align: left !important;
+        font-size: 0.76rem !important;
+        line-height: 1.2 !important;
+        max-width: 100% !important;
+        -webkit-line-clamp: 1 !important;
+        display: block !important;
+        width: 100% !important;
+    }
+    /* Active chat row — indigo wash + indigo text. */
+    [data-testid="stSidebar"] .md-past-active [class*="st-key-conv_open_"] button {
+        background: linear-gradient(180deg, #eef0ff 0%, #e0e7ff 100%) !important;
+        color: #3730a3 !important;
+        font-weight: 660 !important;
+    }
+    [data-testid="stSidebar"] .md-past-active [class*="st-key-conv_open_"] button p {
+        color: #3730a3 !important;
+        font-weight: 660 !important;
+    }
+    /* Delete × button: tiny ghost square pinned to the right column. */
+    [data-testid="stSidebar"] .md-past-chats [class*="st-key-conv_del_"] button {
+        min-width: 28px !important;
+        width: 28px !important;
+        max-width: 28px !important;
+        min-height: 28px !important;
+        height: 28px !important;
+        padding: 0 !important;
+        border-radius: 7px !important;
+        border: none !important;
+        background: transparent !important;
+        color: #cbd5e1 !important;
+        font-size: 0.92rem !important;
+        font-weight: 600 !important;
+        line-height: 1 !important;
+        box-shadow: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: background 0.15s ease, color 0.15s ease !important;
+    }
+    [data-testid="stSidebar"] .md-past-chats [class*="st-key-conv_del_"] button:hover {
+        background: #fef2f2 !important;
+        color: #b91c1c !important;
+    }
+    [data-testid="stSidebar"] .md-past-chats [class*="st-key-conv_del_"] button p {
+        margin: 0 !important;
+        line-height: 1 !important;
+        font-size: 1rem !important;
     }
     /* Globe glyph at the start — sits tight against the text. */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] {
@@ -6074,6 +6784,741 @@ st.markdown("""
         margin-top: 0.6rem !important;
         margin-bottom: 0.4rem !important;
         color: #94a3b8 !important;
+    }
+
+    /* ── Chat composer (active-chat page) ──
+       Mirror every Apple-style rule from the home composer but scoped to
+       the chat_* keys. Identical visual: clean white shell, Upload + Voice
+       text pills, round indigo Send ball with a perfectly centered arrow. */
+    [data-testid="stForm"]:has(.st-key-chat_upload_btn) {
+        background: #ffffff !important;
+        border: 1px solid #e6ecf6 !important;
+        border-radius: 22px !important;
+        padding: 0.95rem 1rem 0.85rem 1rem !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.9) inset,
+            0 8px 24px rgba(15, 23, 42, 0.05) !important;
+    }
+    [data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stTextAreaRootElement"],
+    [data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stTextAreaRootElement"] [data-baseweb="base-input"] {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+    [data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stTextArea"] textarea {
+        min-height: 72px !important;
+        height: 72px !important;
+        font-size: 0.92rem !important;
+        padding: 0.2rem 0.2rem !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: #1f2a3d !important;
+    }
+    [data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stTextArea"] textarea::placeholder {
+        color: #94a3b8 !important;
+        font-size: 0.92rem !important;
+    }
+    [data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stTextArea"] textarea:focus {
+        outline: none !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    /* Upload + Voice + Clear — same pill style as home. */
+    .st-key-chat_upload_btn [data-testid="stFormSubmitButton"] > button,
+    .st-key-chat_voice_btn [data-testid="stFormSubmitButton"] > button,
+    .st-key-chat_clear_btn [data-testid="stFormSubmitButton"] > button,
+    .st-key-chat_upload_btn [data-testid="stFormSubmitButton"] > button[kind="secondary"],
+    .st-key-chat_voice_btn [data-testid="stFormSubmitButton"] > button[kind="secondary"],
+    .st-key-chat_clear_btn [data-testid="stFormSubmitButton"] > button[kind="secondary"],
+    .st-key-chat_upload_btn [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"],
+    .st-key-chat_voice_btn [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"],
+    .st-key-chat_clear_btn [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"] {
+        min-width: 0 !important;
+        width: 100% !important;
+        min-height: 36px !important;
+        height: 36px !important;
+        padding: 0 0.85rem !important;
+        border-radius: 999px !important;
+        border: 1px solid #e6ecf6 !important;
+        background: #ffffff !important;
+        box-shadow: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.45rem !important;
+        transition:
+            background 0.18s ease,
+            border-color 0.18s ease,
+            color 0.18s ease,
+            transform 0.15s ease !important;
+    }
+    .st-key-chat_upload_btn [data-testid="stFormSubmitButton"] > button > span:first-child,
+    .st-key-chat_voice_btn [data-testid="stFormSubmitButton"] > button > span:first-child,
+    .st-key-chat_clear_btn [data-testid="stFormSubmitButton"] > button > span:first-child {
+        margin: 0 !important;
+    }
+    /* Upload + Voice hover: indigo tint. */
+    .st-key-chat_upload_btn [data-testid="stFormSubmitButton"] > button:hover,
+    .st-key-chat_voice_btn [data-testid="stFormSubmitButton"] > button:hover {
+        background: #f7f9ff !important;
+        border-color: rgba(99, 102, 241, 0.32) !important;
+        transform: translateY(-1px) !important;
+    }
+    /* Clear hover: soft red danger tint to signal destructive action. */
+    .st-key-chat_clear_btn [data-testid="stFormSubmitButton"] > button:hover {
+        background: #fef2f2 !important;
+        border-color: #fecaca !important;
+        color: #b91c1c !important;
+        transform: translateY(-1px) !important;
+    }
+    .st-key-chat_clear_btn [data-testid="stFormSubmitButton"] > button:hover [data-testid="stIconMaterial"],
+    .st-key-chat_clear_btn [data-testid="stFormSubmitButton"] > button:hover p {
+        color: #b91c1c !important;
+        -webkit-text-fill-color: #b91c1c !important;
+    }
+    .st-key-chat_upload_btn button p,
+    .st-key-chat_voice_btn button p,
+    .st-key-chat_clear_btn button p {
+        display: block !important;
+        margin: 0 !important;
+        font-size: 0.83rem !important;
+        font-weight: 600 !important;
+        line-height: 1 !important;
+        color: #1f2a3d !important;
+    }
+    .st-key-chat_upload_btn button [data-testid="stIconMaterial"],
+    .st-key-chat_voice_btn button [data-testid="stIconMaterial"],
+    .st-key-chat_clear_btn button [data-testid="stIconMaterial"] {
+        margin: 0 !important;
+        color: #1f2a3d !important;
+        -webkit-text-fill-color: #1f2a3d !important;
+        font-size: 1rem !important;
+    }
+    /* Chat Send — same round indigo ball as home Send. Selector chain
+       matches the older :has() override at line ~7087 so this wins. */
+    [data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button,
+    [data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
+    [data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button[kind="primary"],
+    .st-key-chat_send_btn [data-testid="stFormSubmitButton"] > button,
+    .st-key-chat_send_btn [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
+    .st-key-chat_send_btn [data-testid="stFormSubmitButton"] > button[kind="primary"] {
+        min-width: 42px !important;
+        width: 42px !important;
+        min-height: 42px !important;
+        height: 42px !important;
+        border-radius: 50% !important;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 55%),
+            linear-gradient(135deg, #4f46e5 0%, #6366f1 55%, #8b5cf6 100%) !important;
+        border: none !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.22) inset,
+            0 8px 18px rgba(79, 70, 229, 0.34) !important;
+        padding: 0 !important;
+        transition: transform 0.15s ease, box-shadow 0.2s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0 !important;
+    }
+    /* Optical centering: the send paper-plane glyph tilts up-right so its
+       geometric center isn't its visual center. Nudge it 1px left + 1px
+       down so it reads centered in the round button. */
+    .st-key-chat_send_btn [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"] {
+        transform: translate(-1px, 1px) !important;
+    }
+    .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"] {
+        transform: translate(-1px, 1px) !important;
+    }
+    .st-key-chat_send_btn [data-testid="stFormSubmitButton"] > button:hover {
+        transform: translateY(-1px) scale(1.04) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.26) inset,
+            0 12px 24px rgba(79, 70, 229, 0.42) !important;
+    }
+    .st-key-chat_send_btn [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"] {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        font-size: 1.15rem !important;
+        margin: 0 !important;
+    }
+    /* Strip the empty-label container + baseweb icon margin so the arrow
+       sits dead-center in the round button. */
+    .st-key-chat_send_btn [data-testid="stFormSubmitButton"] > button [data-testid="stMarkdownContainer"] {
+        display: none !important;
+    }
+    .st-key-chat_send_btn [data-testid="stFormSubmitButton"] > button > span:first-child {
+        margin: 0 !important;
+    }
+    /* Push the round send button flush to the right edge of the composer.
+       The send lives in column 5 of the chat form's action row; force that
+       column + its inner wrappers to right-align so the 42px ball sits in
+       the corner instead of pinned to the left of its column. */
+    [data-testid="stForm"]:has(.st-key-chat_send_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_send_btn) [data-testid="stColumn"]:last-child,
+    [data-testid="stForm"]:has(.st-key-chat_send_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_send_btn) [data-testid="stColumn"]:last-child > div,
+    [data-testid="stForm"]:has(.st-key-chat_send_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_send_btn) [data-testid="stColumn"]:last-child .st-key-chat_send_btn {
+        display: flex !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+        margin-left: auto !important;
+        padding-right: 0 !important;
+    }
+    .st-key-chat_send_btn [data-testid="stFormSubmitButton"] {
+        margin-left: auto !important;
+        display: flex !important;
+        justify-content: flex-end !important;
+        width: 100% !important;
+    }
+
+    /* ── Chat conversation polish (Apple-style) ───────────────────────
+       Fixes badge overlap, refines the bubbles, makes Yes/No + Download
+       + Clear all share the brand indigo language. */
+
+    /* MEDICHAT label above each bot bubble: clear top margin + overflow
+       visible so the label cap doesn't get clipped by parent. */
+    .bot-label {
+        font-size: 0.62rem !important;
+        margin-top: 1.6rem !important;
+        margin-bottom: 0.35rem !important;
+        margin-left: 44px !important;
+        color: #94a3b8 !important;
+        letter-spacing: 0.12em !important;
+        line-height: 1.4 !important;
+        overflow: visible !important;
+        padding-top: 4px !important;
+    }
+    /* Make sure parent containers don't clip the label. */
+    [data-testid="stMain"] .stMarkdown:has(.bot-label),
+    [data-testid="stMain"] .stMarkdown:has(.bot-bubble) {
+        overflow: visible !important;
+    }
+
+    /* Bot bubble: chat-bubble feel matching the user side — clean white
+       surface, soft border, mirrored corner truncation (top-left is the
+       "tail" closest to the avatar). No left accent stripe (the avatar +
+       header inside the bubble already signal the speaker). */
+    .bot-bubble {
+        background: #ffffff !important;
+        border-radius: 4px 18px 18px 18px !important;
+        border: 1px solid #e6ecf6 !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.95) inset,
+            0 4px 14px rgba(15, 23, 42, 0.04) !important;
+        padding: 0.95rem 1.15rem !important;
+        font-size: 0.92rem !important;
+        line-height: 1.6 !important;
+        max-width: 100% !important;
+    }
+    /* Kill the legacy purple accent stripe — it wasn't aligning cleanly
+       with the new in-bubble header + caused a visual seam at the top. */
+    .bot-bubble::before {
+        display: none !important;
+        content: none !important;
+    }
+
+    /* User bubble: soft lavender wash (matches mockup), dark indigo text.
+       Bubble width hugs its content so short messages stay on one line and
+       only long ones wrap. */
+    .user-bubble {
+        background: linear-gradient(135deg, #eef0ff 0%, #e0e7ff 100%) !important;
+        color: #3730a3 !important;
+        border-radius: 18px 18px 4px 18px !important;
+        padding: 0.75rem 1.1rem !important;
+        font-size: 0.92rem !important;
+        font-weight: 600 !important;
+        line-height: 1.45 !important;
+        max-width: 100% !important;
+        width: fit-content !important;
+        margin-left: auto !important;
+        border: 1px solid rgba(99, 102, 241, 0.18) !important;
+        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.08) !important;
+    }
+    /* User stack should NOT cap width — let the bubble grow naturally up
+       to its container so short messages stay on one line. */
+    .user-stack {
+        max-width: 70% !important;
+        width: auto !important;
+        display: inline-flex !important;
+        flex-direction: column !important;
+        align-items: flex-end !important;
+        margin-left: auto !important;
+    }
+    .user-wrap {
+        margin-bottom: 1.6rem !important;
+        gap: 0.75rem !important;
+    }
+
+    /* Avatars: smaller + indigo for bot, soft grey for user. */
+    .av {
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 10px !important;
+        font-size: 0.78rem !important;
+        box-shadow: 0 2px 6px rgba(79, 70, 229, 0.18) !important;
+    }
+    .av-bot {
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 55%, #8b5cf6 100%) !important;
+        color: #ffffff !important;
+    }
+    .av-user {
+        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%) !important;
+        color: #4338ca !important;
+    }
+
+    /* ── Chat page hero (matches mockup) ──
+       Big bold title at the top-left, privacy indicator floats top-right. */
+    .md-chat-hero {
+        display: flex !important;
+        align-items: flex-start !important;
+        justify-content: space-between !important;
+        gap: 1rem !important;
+        margin: 0.2rem 0 1.4rem 0 !important;
+        flex-wrap: wrap !important;
+    }
+    .md-chat-hero-text { min-width: 0 !important; }
+    .md-chat-hero-title {
+        font-size: 1.9rem !important;
+        font-weight: 740 !important;
+        color: #0f172a !important;
+        letter-spacing: -0.022em !important;
+        line-height: 1.15 !important;
+        margin-bottom: 0.25rem !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+    }
+    /* Shield is now an inline SVG (not a Material Symbols glyph) — renders
+       as a proper filled shield silhouette with a soft check inside,
+       identical across all browsers regardless of icon font loading. */
+    .md-chat-hero-shield {
+        display: inline-block !important;
+        width: 1.6rem !important;
+        height: 1.6rem !important;
+        color: #4f46e5 !important;
+        fill: currentColor !important;
+        flex-shrink: 0 !important;
+        vertical-align: -0.25em !important;
+        overflow: visible !important;
+    }
+    .md-chat-hero-sub {
+        font-size: 0.88rem !important;
+        color: #64748b !important;
+        line-height: 1.4 !important;
+    }
+    .md-chat-hero-privacy {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.4rem !important;
+        font-size: 0.78rem !important;
+        font-weight: 600 !important;
+        color: #475569 !important;
+        background: transparent !important;
+        flex-shrink: 0 !important;
+        margin-top: 0.45rem !important;
+    }
+    .md-chat-hero-privacy .material-symbols-rounded {
+        font-size: 0.95rem !important;
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: #4f46e5 !important;
+    }
+
+    /* ── Bot bubble redesigned to match mockup ──
+       Logo as avatar (circular), "MediChat AI" + sparkle header INSIDE the
+       bubble, timestamp right-aligned below the bubble. */
+    .av-bot.av-bot-image {
+        background: transparent !important;
+        border: 1px solid #e6ecf6 !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06) !important;
+        padding: 2px !important;
+        overflow: hidden !important;
+    }
+    .av-bot.av-bot-image img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain !important;
+        display: block !important;
+        border-radius: 8px !important;
+    }
+    .bot-stack {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 88%;
+    }
+    .user-stack {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        max-width: 78%;
+    }
+    /* Header line inside the bot bubble: "MediChat AI" name + sparkle. */
+    .bot-bubble-head {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-bottom: 0.4rem;
+    }
+    .bot-bubble-name {
+        font-size: 0.84rem !important;
+        font-weight: 700 !important;
+        color: #4f46e5 !important;
+        letter-spacing: -0.005em !important;
+    }
+    .bot-bubble-spark {
+        font-size: 0.85rem !important;
+        color: #6366f1 !important;
+        -webkit-text-fill-color: #6366f1 !important;
+    }
+    /* Hide the OLD external bot-label since we now have the header inside. */
+    .bot-label {
+        display: none !important;
+    }
+    /* Timestamps below user + bot messages. */
+    .bubble-ts {
+        font-size: 0.66rem !important;
+        color: #94a3b8 !important;
+        font-weight: 500 !important;
+        margin-top: 0.3rem !important;
+        text-align: right !important;
+    }
+    .bot-ts {
+        font-size: 0.66rem !important;
+        color: #94a3b8 !important;
+        font-weight: 500 !important;
+        margin: 0.3rem 0 1.2rem 44px !important;
+        text-align: right !important;
+        max-width: calc(88% - 0px) !important;
+    }
+
+    /* Memory card sparkle next to title (matches mockup). */
+    .memory-title { display: inline-flex !important; align-items: center !important; gap: 0.35rem !important; }
+    .memory-sparkle {
+        font-size: 0.9rem !important;
+        color: #6366f1 !important;
+        -webkit-text-fill-color: #6366f1 !important;
+    }
+    /* Memory body: bullet lines of comma-joined values. */
+    .memory-body {
+        margin-top: 0.15rem !important;
+        padding-left: 0.4rem !important;
+    }
+    .memory-line {
+        font-size: 0.85rem !important;
+        line-height: 1.5 !important;
+        color: #475569 !important;
+        margin: 0.25rem 0 !important;
+    }
+    .memory-bullet {
+        color: #94a3b8 !important;
+        font-weight: 700 !important;
+        margin-right: 0.45rem !important;
+    }
+    .memory-line-label {
+        font-weight: 700 !important;
+        color: #0f172a !important;
+    }
+    .memory-line-text {
+        color: #475569 !important;
+    }
+
+    /* Meta label pills (Sources / Confidence) — highlighted indigo chips
+       so the section headers pop visually instead of fading into the row. */
+    .meta-label {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.32rem !important;
+        font-size: 0.7rem !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.08em !important;
+        color: #4338ca !important;
+        -webkit-text-fill-color: #4338ca !important;
+        padding: 0.28rem 0.65rem 0.28rem 0.6rem !important;
+        background: linear-gradient(135deg, #eef0ff 0%, #f5f3ff 100%) !important;
+        border: 1px solid #c7d2fe !important;
+        border-radius: 999px !important;
+        white-space: nowrap !important;
+        height: 24px !important;
+        box-shadow: 0 1px 2px rgba(79, 70, 229, 0.08) !important;
+    }
+    .meta-label-sources .material-symbols-rounded {
+        font-size: 0.88rem !important;
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: #4f46e5 !important;
+        font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 20 !important;
+    }
+    .meta-label-conf {
+        margin-left: 0.6rem !important;
+        background: linear-gradient(135deg, #ecfdf5 0%, #eef2ff 100%) !important;
+        border-color: #bbf7d0 !important;
+        color: #047857 !important;
+        -webkit-text-fill-color: #047857 !important;
+    }
+
+    /* Unified meta row — source tags + confidence pill + bar + RAG text
+       all on ONE line, aligned to the bot bubble's left edge. Scrolls
+       horizontally if the screen is too narrow so nothing wraps awkwardly. */
+    .meta-row {
+        margin-left: 44px !important;
+        margin-top: 0.7rem !important;
+        margin-bottom: 1.1rem !important;
+        display: flex !important;
+        align-items: center !important;
+        flex-wrap: nowrap !important;
+        gap: 0.4rem !important;
+        line-height: 1.4 !important;
+        overflow-x: auto !important;
+        scrollbar-width: none !important;
+    }
+    .meta-row::-webkit-scrollbar { display: none !important; }
+    .meta-row .rag-text {
+        font-size: 0.68rem !important;
+        color: #64748b !important;
+        white-space: nowrap !important;
+        margin-left: 0.15rem !important;
+    }
+    /* Legacy single-row classes still work if anything else uses them. */
+    .source-row,
+    .confidence-row {
+        margin-left: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        flex-wrap: nowrap !important;
+        gap: 0.4rem !important;
+        line-height: 1.4 !important;
+        overflow-x: auto !important;
+        scrollbar-width: none !important;
+    }
+    .source-row::-webkit-scrollbar,
+    .confidence-row::-webkit-scrollbar { display: none !important; }
+    .source-row { margin-top: 0.6rem !important; margin-bottom: 0 !important; }
+    .confidence-row { margin-top: 0.7rem !important; margin-bottom: 1rem !important; }
+
+    /* Engine + source + confidence pills: consistent height, no overflow. */
+    .engine-badge,
+    .source-tag,
+    .confidence-pill {
+        font-size: 0.66rem !important;
+        padding: 0.22rem 0.6rem !important;
+        border-radius: 999px !important;
+        white-space: nowrap !important;
+        line-height: 1 !important;
+        margin: 0 !important;
+        height: 22px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+    }
+    .source-tag { background: #eef2ff !important; border-color: #c7d2fe !important; color: #4338ca !important; }
+    .engine-claude { background: #fef3e8 !important; border-color: #fed7aa !important; color: #9a3412 !important; }
+    .engine-groq { background: #ecfdf5 !important; border-color: #a7f3d0 !important; color: #047857 !important; }
+    .engine-vision { background: #f3e8ff !important; border-color: #d8b4fe !important; color: #6b21a8 !important; }
+    .conf-high   { background: #ecfdf5 !important; border-color: #a7f3d0 !important; color: #047857 !important; }
+    .conf-medium { background: #fef3c7 !important; border-color: #fde68a !important; color: #92400e !important; }
+    .conf-low    { background: #fee2e2 !important; border-color: #fecaca !important; color: #991b1b !important; }
+
+    .confidence-bar {
+        width: 90px !important;
+        height: 5px !important;
+        background: #e2e8f0 !important;
+        border-radius: 999px !important;
+        margin-left: 0.1rem !important;
+    }
+    .confidence-row > span:last-child {
+        font-size: 0.66rem !important;
+        color: #64748b !important;
+        margin-left: 0.1rem !important;
+    }
+
+    /* Feedback row: compact "Was this helpful?" + tiny Yes/No chips. */
+    .md-feedback-wrap {
+        margin: 1.2rem 0 1rem 0 !important;
+    }
+    .md-feedback-q {
+        text-align: center !important;
+        font-size: 0.78rem !important;
+        color: #94a3b8 !important;
+        margin-bottom: 0.45rem !important;
+        font-weight: 600 !important;
+        letter-spacing: -0.005em !important;
+    }
+    .st-key-chat_helpful .stButton > button,
+    .st-key-chat_not_helpful .stButton > button {
+        min-height: 30px !important;
+        height: 30px !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        padding: 0 0.75rem !important;
+        border-radius: 999px !important;
+        border: 1px solid #e6ecf6 !important;
+        background: #ffffff !important;
+        font-size: 0.78rem !important;
+        font-weight: 600 !important;
+        color: #475569 !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.3rem !important;
+    }
+    /* Kill the baseweb 8px stray margin on the icon wrap. */
+    .st-key-chat_helpful .stButton > button > span:first-child,
+    .st-key-chat_not_helpful .stButton > button > span:first-child {
+        margin: 0 !important;
+    }
+    .st-key-chat_helpful .stButton > button [data-testid="stIconMaterial"],
+    .st-key-chat_not_helpful .stButton > button [data-testid="stIconMaterial"] {
+        font-size: 0.9rem !important;
+    }
+    .st-key-chat_helpful .stButton > button:hover {
+        background: #ecfdf5 !important;
+        border-color: #a7f3d0 !important;
+        color: #047857 !important;
+        transform: translateY(-1px) !important;
+    }
+    .st-key-chat_helpful .stButton > button:hover [data-testid="stIconMaterial"] {
+        color: #047857 !important;
+        -webkit-text-fill-color: #047857 !important;
+    }
+    .st-key-chat_not_helpful .stButton > button:hover {
+        background: #fef2f2 !important;
+        border-color: #fecaca !important;
+        color: #b91c1c !important;
+        transform: translateY(-1px) !important;
+    }
+    .st-key-chat_not_helpful .stButton > button:hover [data-testid="stIconMaterial"] {
+        color: #b91c1c !important;
+        -webkit-text-fill-color: #b91c1c !important;
+    }
+
+    /* Download Chat (primary indigo gradient) + Doctor Visit (ghost). */
+    .st-key-dl_chat_btn .stButton > button {
+        min-height: 44px !important;
+        height: 44px !important;
+        border-radius: 12px !important;
+        border: none !important;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 50%),
+            linear-gradient(108deg, #4f46e5 0%, #6366f1 55%, #8b5cf6 100%) !important;
+        color: #ffffff !important;
+        font-weight: 660 !important;
+        font-size: 0.9rem !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.22) inset,
+            0 8px 18px rgba(79, 70, 229, 0.28) !important;
+        transition: transform 0.15s ease, box-shadow 0.2s ease !important;
+    }
+    .st-key-dl_chat_btn .stButton > button:hover {
+        transform: translateY(-1px) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.26) inset,
+            0 12px 24px rgba(79, 70, 229, 0.36) !important;
+    }
+    .st-key-dl_summary_btn .stButton > button {
+        min-height: 44px !important;
+        height: 44px !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(99, 102, 241, 0.22) !important;
+        background: linear-gradient(180deg, #ffffff 0%, #f7f9ff 100%) !important;
+        color: #4338ca !important;
+        font-weight: 650 !important;
+        font-size: 0.9rem !important;
+        box-shadow: none !important;
+    }
+    .st-key-dl_summary_btn .stButton > button:hover {
+        border-color: rgba(99, 102, 241, 0.42) !important;
+        background: #eef0ff !important;
+    }
+
+    /* Clear chat: subtle ghost with muted danger tint on hover. */
+    .st-key-main_clear_btn .stButton > button,
+    .st-key-main_clear_btn_voice .stButton > button,
+    .st-key-main_clear_btn_plain .stButton > button {
+        min-height: 38px !important;
+        height: 38px !important;
+        border-radius: 10px !important;
+        border: 1px solid #e6ecf6 !important;
+        background: #ffffff !important;
+        color: #64748b !important;
+        font-weight: 600 !important;
+        font-size: 0.84rem !important;
+        box-shadow: none !important;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+    }
+    .st-key-main_clear_btn .stButton > button:hover,
+    .st-key-main_clear_btn_voice .stButton > button:hover,
+    .st-key-main_clear_btn_plain .stButton > button:hover {
+        background: #fef2f2 !important;
+        border-color: #fecaca !important;
+        color: #b91c1c !important;
+    }
+    .st-key-main_clear_btn .stButton > button [data-testid="stIconMaterial"],
+    .st-key-main_clear_btn_voice .stButton > button [data-testid="stIconMaterial"],
+    .st-key-main_clear_btn_plain .stButton > button [data-testid="stIconMaterial"] {
+        font-size: 1rem !important;
+    }
+
+    /* "Download your conversation:" header + helper line: cleaner type. */
+    [data-testid="stMain"] .stMarkdown p strong:only-child {
+        font-size: 0.9rem !important;
+    }
+
+    /* ── Chat conversation vertical rhythm ──
+       Generous, consistent gaps between every element so the page reads
+       like a real conversation, not a wall of stacked text. */
+
+    /* Memory card → space below it before the first user message. */
+    .memory-card {
+        margin-bottom: 1.6rem !important;
+        padding: 1rem 1.2rem !important;
+        border-radius: 14px !important;
+    }
+    /* Each message row (bot or user): clear vertical breathing room. */
+    .bot-wrap,
+    .user-wrap {
+        margin-bottom: 1.4rem !important;
+        margin-top: 0.4rem !important;
+    }
+    /* Confidence row sits between two messages → push the next user row
+       down so it never crashes into the bar. */
+    .confidence-row + div,
+    .confidence-row ~ .stElementContainer .user-wrap {
+        margin-top: 1.2rem !important;
+    }
+    /* Feedback row spacing (Yes/No chips columns container). */
+    [data-testid="stMain"] [data-testid="stHorizontalBlock"]:has(.st-key-chat_helpful) {
+        gap: 0.5rem !important;
+        margin-bottom: 0.6rem !important;
+    }
+    /* Divider above "Download your conversation:" gets margin top/bottom. */
+    [data-testid="stMain"] hr {
+        margin-top: 1.4rem !important;
+        margin-bottom: 1rem !important;
+        border-color: #e2e8f0 !important;
+    }
+    /* "Download your conversation:" heading → space below before the
+       Download Chat / Doctor Visit Summary buttons. */
+    [data-testid="stMain"] .stMarkdown:has(p > strong:only-child) {
+        margin-bottom: 0.6rem !important;
+    }
+    /* Download / Doctor Visit columns → clear gap from the helper line. */
+    [data-testid="stMain"] [data-testid="stHorizontalBlock"]:has(.st-key-dl_chat_btn) {
+        margin-bottom: 0.4rem !important;
+    }
+    /* Composer form (chat) sits below the download section → clear top
+       gap so it reads as its own zone. */
+    [data-testid="stForm"]:has(.st-key-chat_upload_btn) {
+        margin-top: 1.2rem !important;
+        margin-bottom: 0.9rem !important;
+    }
+    /* Clear chat button: space above so it doesn't hug the composer. */
+    div[class*="st-key-main_clear_btn"] {
+        margin-top: 0.8rem !important;
+    }
+    /* Final disclaimer text: space above. */
+    .md-home-composer-note {
+        margin-top: 1rem !important;
     }
 
     /* ── Smart Actions header ── */
@@ -6997,7 +8442,7 @@ st.markdown("""
        rejects non-emoji Unicode (so we can't pass ℞ directly there). The
        page hero — which we render via raw HTML — still uses the real ℞
        serif glyph for the authentic pharmacy-pad look. */
-}
+/* (End of canonical-styling block — was previously the @media closing brace.) */
 </style>
 """, unsafe_allow_html=True)
 
@@ -7397,12 +8842,17 @@ st.markdown("""
         font-size: 0.9rem !important;
     }
     [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
-        max-width: 160px !important;
-        width: min(160px, 100%) !important;
+        max-width: 140px !important;
+        width: min(140px, 100%) !important;
     }
     [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
-        padding: 0.15rem 0 0.45rem 0 !important;
-        margin-bottom: 0.3rem !important;
+        padding: 0.55rem 0 0.45rem 0 !important;
+        margin-bottom: 0.2rem !important;
+        max-width: 242px !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
     }
     [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
         padding: 0.5rem 0.85rem 0.55rem 0.85rem !important;
@@ -7419,7 +8869,7 @@ st.markdown("""
         margin-bottom: 0.22rem !important;
     }
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
-        padding: 0.42rem 0.55rem !important;
+        padding: 0.5rem 1.1rem 0.5rem 0.55rem !important;
     }
     [data-testid="stSidebar"] .md-side-avatar {
         width: 28px !important;
@@ -7522,16 +8972,44 @@ st.markdown("""
     .st-key-sa_rec .stButton > button,
     .st-key-sa_ins .stButton > button,
     .st-key-sa_appt .stButton > button {
-        min-height: 176px !important;
+        min-height: 108px !important;
         border-radius: 16px !important;
-        padding: 0.84rem 0.82rem !important;
+        padding: 0.7rem 0.8rem 0.65rem 0.8rem !important;
     }
     .st-key-sa_sym .stButton > button p,
     .st-key-sa_rec .stButton > button p,
     .st-key-sa_ins .stButton > button p,
     .st-key-sa_appt .stButton > button p {
-        font-size: 0.86rem !important;
-        line-height: 1.32 !important;
+        font-size: 0.7rem !important;
+        line-height: 1.3 !important;
+    }
+    .st-key-sa_sym .stButton > button p::first-line,
+    .st-key-sa_rec .stButton > button p::first-line,
+    .st-key-sa_ins .stButton > button p::first-line,
+    .st-key-sa_appt .stButton > button p::first-line {
+        font-size: 0.82rem !important;
+        font-weight: 700 !important;
+    }
+    .st-key-sa_sym .stButton > button [data-testid="stIconMaterial"],
+    .st-key-sa_rec .stButton > button [data-testid="stIconMaterial"],
+    .st-key-sa_ins .stButton > button [data-testid="stIconMaterial"],
+    .st-key-sa_appt .stButton > button [data-testid="stIconMaterial"] {
+        width: 32px !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        font-size: 1.05rem !important;
+        border-radius: 10px !important;
+        margin: 0 0.55rem 0 0 !important;
+    }
+    .st-key-sa_sym .stButton > button::after,
+    .st-key-sa_rec .stButton > button::after,
+    .st-key-sa_ins .stButton > button::after,
+    .st-key-sa_appt .stButton > button::after {
+        right: 0.6rem !important;
+        bottom: 0.55rem !important;
+        width: 22px !important;
+        height: 22px !important;
+        font-size: 0.85rem !important;
     }
     .md-tip-carousel {
         margin: 0.58rem 0 0.38rem 0 !important;
@@ -7697,6 +9175,157 @@ st.markdown("""
 .md-snap-status {
     white-space: nowrap !important;
     flex-shrink: 0 !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   FINAL NUKE — Past-chats sidebar list (chat history).
+   Always-applied (no media query), maximum specificity. Streamlit renders
+   each chat title button TWICE (one wrapped in stTooltipHoverTarget, one
+   inline) — we target ALL of them by widget-key wildcard, so it doesn't
+   matter how Streamlit nests the actual <button>.
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* ── Container + row layout ──────────────────────────────────────────── */
+[data-testid="stSidebar"] .md-past-chats {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.18rem !important;
+    margin-bottom: 0.45rem !important;
+    max-height: 320px !important;
+    overflow-y: auto !important;
+    padding-right: 0.15rem !important;
+}
+[data-testid="stSidebar"] .md-past-chats [data-testid="stHorizontalBlock"] {
+    gap: 0.18rem !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+}
+[data-testid="stSidebar"] .md-past-chats [data-testid="stColumn"] {
+    min-width: 0 !important;
+    padding: 0 !important;
+}
+/* Pin the × delete column to a hard 32px so it can never get pushed off. */
+[data-testid="stSidebar"] .md-past-chats [data-testid="stColumn"]:last-child {
+    flex: 0 0 32px !important;
+    width: 32px !important;
+    max-width: 32px !important;
+    min-width: 32px !important;
+}
+
+/* ── Chat title button (any button inside st-key-conv_open_*) ─────── */
+[data-testid="stSidebar"] [class*="st-key-conv_open_"] button,
+[data-testid="stSidebar"] [class*="st-key-conv_open_"] button[kind="secondary"],
+[data-testid="stSidebar"] [class*="st-key-conv_open_"] [data-testid="stBaseButton-secondary"] {
+    min-height: 34px !important;
+    height: 34px !important;
+    max-height: 34px !important;
+    padding: 0 0.6rem !important;
+    border-radius: 9px !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    color: #475569 !important;
+    font-weight: 550 !important;
+    font-size: 0.76rem !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    box-shadow: none !important;
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    transition: background 0.15s ease, color 0.15s ease !important;
+}
+[data-testid="stSidebar"] [class*="st-key-conv_open_"] button:hover {
+    background: #f1f5fc !important;
+    color: #1f2a3d !important;
+    border-color: transparent !important;
+}
+[data-testid="stSidebar"] [class*="st-key-conv_open_"] button p,
+[data-testid="stSidebar"] [class*="st-key-conv_open_"] button [data-testid="stMarkdownContainer"],
+[data-testid="stSidebar"] [class*="st-key-conv_open_"] button [data-testid="stMarkdownContainer"] p {
+    margin: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    text-align: left !important;
+    font-size: 0.76rem !important;
+    font-weight: 550 !important;
+    line-height: 1.2 !important;
+    max-width: 100% !important;
+    -webkit-line-clamp: 1 !important;
+    display: block !important;
+    width: 100% !important;
+    color: inherit !important;
+}
+/* Streamlit renders title button TWICE. The first child of .stButton is
+   the visible tooltip-wrapped button; the second child is an inline
+   duplicate (class e8vg11g19) that doubles row height. Hide it via
+   nth-child (broader browser support than :has). */
+[data-testid="stSidebar"] [class*="st-key-conv_open_"] .stButton > div + div {
+    display: none !important;
+}
+[data-testid="stSidebar"] [class*="st-key-conv_open_"] .stButton > div:nth-child(n + 2) {
+    display: none !important;
+}
+/* Keep the sidebar row strictly inside the sidebar's right edge. */
+[data-testid="stSidebar"] .md-past-chats {
+    padding-right: 0.4rem !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+[data-testid="stSidebar"] .md-past-chats [data-testid="stHorizontalBlock"] {
+    max-width: 100% !important;
+    overflow: hidden !important;
+}
+
+/* Active chat row — indigo wash + bolder indigo text. */
+[data-testid="stSidebar"] .md-past-active [class*="st-key-conv_open_"] button {
+    background: linear-gradient(180deg, #eef0ff 0%, #e0e7ff 100%) !important;
+    color: #3730a3 !important;
+    font-weight: 660 !important;
+}
+[data-testid="stSidebar"] .md-past-active [class*="st-key-conv_open_"] button p,
+[data-testid="stSidebar"] .md-past-active [class*="st-key-conv_open_"] button [data-testid="stMarkdownContainer"] p {
+    color: #3730a3 !important;
+    font-weight: 660 !important;
+}
+
+/* ── Delete × button (any button inside st-key-conv_del_*) ────────── */
+[data-testid="stSidebar"] [class*="st-key-conv_del_"] button,
+[data-testid="stSidebar"] [class*="st-key-conv_del_"] button[kind="secondary"],
+[data-testid="stSidebar"] [class*="st-key-conv_del_"] [data-testid="stBaseButton-secondary"] {
+    min-width: 28px !important;
+    width: 28px !important;
+    max-width: 28px !important;
+    min-height: 28px !important;
+    height: 28px !important;
+    max-height: 28px !important;
+    padding: 0 !important;
+    border-radius: 7px !important;
+    border: none !important;
+    background: transparent !important;
+    color: #cbd5e1 !important;
+    font-size: 0.92rem !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    box-shadow: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: background 0.15s ease, color 0.15s ease !important;
+}
+[data-testid="stSidebar"] [class*="st-key-conv_del_"] button:hover {
+    background: #fef2f2 !important;
+    color: #b91c1c !important;
+}
+[data-testid="stSidebar"] [class*="st-key-conv_del_"] button p,
+[data-testid="stSidebar"] [class*="st-key-conv_del_"] button [data-testid="stMarkdownContainer"] p {
+    margin: 0 !important;
+    line-height: 1 !important;
+    font-size: 1rem !important;
+    color: inherit !important;
 }
 
 </style>
@@ -9451,13 +11080,30 @@ with st.sidebar:
         _profile_nm = "Guest"
         _profile_in = "G"
         _profile_sub = "Sign in to save your data"
+    # Profile chip: avatar + name/email + "Synced & up to date" status.
+    # The chevron has been replaced by a compact sign-out icon button that
+    # is rendered immediately below and CSS-positioned into the top-right
+    # corner of this chip. See the .st-key-profile_logout CSS rules.
+    _sync_dot = '<span class="md-status-dot"></span>Synced &amp; up to date' if st.session_state.is_authenticated else '<span class="md-status-dot md-status-dot-off"></span>Guest mode'
     st.markdown(
         '<div class="md-side-profile md-side-profile-top">'
         '<div class="md-side-avatar">' + ui_escape(_profile_in) + '</div>'
-        '<div style="flex:1;min-width:0;">'
+        '<div class="md-side-profile-text">'
         '<div class="md-side-pname">' + ui_text(_profile_nm, 30) + '</div>'
         '<div class="md-side-psub">' + ui_text(_profile_sub, 40) + '</div>'
+        '<div class="md-side-status">' + _sync_dot + '</div>'
         '</div>'
+        + (
+            # Sign-out icon — true child of the chip (anchor link), so it
+            # naturally lives in the chip's top-right corner without any
+            # negative-margin layout tricks that previously caused the
+            # Recent Chats card to overlap. The ?signout=1 URL param is
+            # handled in Python below — same logout behavior as before.
+            '<a class="md-side-signout" href="?signout=1" target="_self" title="Sign out">'
+            '<span class="material-symbols-rounded">logout</span>'
+            '</a>'
+            if st.session_state.is_authenticated else ''
+        ) +
         '</div>',
         unsafe_allow_html=True
     )
@@ -9466,81 +11112,68 @@ with st.sidebar:
     # just above the Privacy & Consent button.
 
     if st.session_state.is_authenticated:
-        if st.button("Sign out", use_container_width=True, key="profile_logout"):
-            for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context", "rx_reader_result", "rx_uploader_key"]:
-                if k in st.session_state:
-                    if k in ("is_authenticated", "is_guest"):
-                        st.session_state[k] = False
-                    elif k == "patient_memory":
-                        st.session_state[k] = {"symptoms": [], "conditions": [], "medications": []}
-                    elif k == "messages":
-                        st.session_state[k] = []
-                    elif k == "rx_reader_result":
-                        st.session_state[k] = None
-                    elif k == "rx_uploader_key":
-                        st.session_state[k] = 0
-                    elif k == "qcount":
-                        st.session_state[k] = 0
-                    elif k == "feedback":
-                        st.session_state[k] = {}
-                    else:
-                        st.session_state[k] = "" if isinstance(st.session_state[k], str) else st.session_state[k]
-            st.session_state.current_conversation_id = ""
-            st.rerun()
-        st.markdown("---")
 
-        # ── Past chats history ─────────────────────────────────────
-        st.markdown('<div class="sb-title">Your Chats</div>', unsafe_allow_html=True)
-        if st.button("➕  New chat", use_container_width=True, key="new_chat_btn"):
-            start_new_chat_session()
-            st.rerun()
-
-        _convs = list_conversations(st.session_state.user_email_hash, limit=20)
-        if not _convs:
-            st.markdown(
-                '<div style="font-size:0.72rem;color:#64748b;padding:0.5rem 0;font-style:italic;">'
-                'No past chats yet. Start one below.'
-                '</div>',
-                unsafe_allow_html=True
-            )
-        else:
-            _active_id = st.session_state.current_conversation_id
-            st.markdown('<div class="md-past-chats">', unsafe_allow_html=True)
+        # ── Recent Chats card (matches mockup) ──
+        # Render the entire card as ONE HTML block: header + "See all" link
+        # + "+ New chat" anchor pill + conversation rows. Using anchors for
+        # both buttons (driven by ?new_chat=1 and ?conv=<id> URL handlers)
+        # means the whole card is one DOM subtree — Streamlit's per-widget
+        # wrappers can't break the nesting like st.button() did.
+        _convs = list_conversations(st.session_state.user_email_hash, limit=3)
+        _active_id = st.session_state.current_conversation_id
+        _card_html = (
+            '<div class="md-recent-card">'
+            '<div class="md-recent-head">'
+            '<div class="md-recent-title">Recent Chats</div>'
+            '<a class="md-recent-seeall" href="?mode=history" target="_self">See all</a>'
+            '</div>'
+            '<a class="md-new-chat-pill" href="?new_chat=1" target="_self">'
+            '<span class="material-symbols-rounded">add</span>'
+            '<span class="md-new-chat-pill-text">New chat</span>'
+            '</a>'
+        )
+        if _convs:
+            _card_html += '<div class="md-conv-list">'
             for _c in _convs:
                 _is_active = _c["id"] == _active_id
-                _title = (_c.get("title") or "Chat")[:38]
-                _count = _c.get("message_count", 0)
-                _row_cls = "md-past-row md-past-active" if _is_active else "md-past-row"
-                st.markdown('<div class="' + _row_cls + '">', unsafe_allow_html=True)
-                col_a, col_b = st.columns([7, 1])
-                with col_a:
-                    if st.button(
-                        _title,
-                        key="conv_open_" + _c["id"],
-                        use_container_width=True,
-                        help=str(_count) + " messages",
-                    ):
-                        conv = load_conversation(st.session_state.user_email_hash, _c["id"])
-                        if conv is not None:
-                            st.session_state.current_conversation_id = _c["id"]
-                            st.session_state.messages = conv.get("messages", []) or []
-                            st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
-                            st.session_state.feedback = {}
-                            st.session_state.last_sources = []
-                            st.session_state.emergency_detected = False
-                            st.session_state.mode = "chat"
-                            st.rerun()
-                with col_b:
-                    if st.button("×", key="conv_del_" + _c["id"], help="Delete this chat"):
-                        delete_conversation(st.session_state.user_email_hash, _c["id"])
-                        if _c["id"] == _active_id:
-                            st.session_state.current_conversation_id = ""
-                            st.session_state.messages = []
-                            st.session_state.qcount = 0
-                        st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("---")
+                _title = (_c.get("title") or "Chat")[:40]
+                _lu = _c.get("last_updated")
+                _ago = ""
+                try:
+                    if _lu and hasattr(_lu, "strftime"):
+                        _delta = datetime.utcnow() - (_lu.replace(tzinfo=None) if _lu.tzinfo else _lu)
+                        _h = int(_delta.total_seconds() // 3600)
+                        if _h < 1:
+                            _ago = str(max(1, int(_delta.total_seconds() // 60))) + "m ago"
+                        elif _h < 24:
+                            _ago = str(_h) + "h ago"
+                        elif _h < 168:
+                            _ago = str(_h // 24) + "d ago"
+                        else:
+                            _ago = str(_h // 168) + "w ago"
+                except Exception:
+                    _ago = ""
+                _row_cls = "md-conv-row md-conv-row-active" if _is_active else "md-conv-row"
+                # Wrap each row in a flex container so we can sit the × delete
+                # icon as a SIBLING of the main click anchor (HTML disallows
+                # nesting <a> inside <a>). The row anchor still occupies the
+                # full flex stretch for the click target; the × is a tiny
+                # anchor pinned right that triggers ?del_conv=<id>.
+                _card_html += (
+                    '<div class="md-conv-row-wrap">'
+                    '<a class="' + _row_cls + '" href="?conv=' + ui_escape(_c["id"]) + '" target="_self">'
+                    '<span class="md-conv-icon material-symbols-rounded">description</span>'
+                    '<span class="md-conv-title">' + ui_escape(_title) + '</span>'
+                    '<span class="md-conv-time">' + ui_escape(_ago) + '</span>'
+                    '</a>'
+                    '<a class="md-conv-del" href="?del_conv=' + ui_escape(_c["id"]) + '" target="_self" title="Delete conversation" aria-label="Delete">'
+                    '<span class="material-symbols-rounded">close</span>'
+                    '</a>'
+                    '</div>'
+                )
+            _card_html += '</div>'
+        _card_html += '</div>'
+        st.markdown(_card_html, unsafe_allow_html=True)
     elif st.session_state.is_guest:
         pass
 
@@ -9592,13 +11225,20 @@ with st.sidebar:
         st.session_state.selected_language = st.session_state.lang_selector
         st.rerun()
 
-    # Hairline divider between the language picker and Privacy & Consent.
-    st.markdown('<div class="md-sidebar-bottom-divider"></div>', unsafe_allow_html=True)
-
-    if st.button("Privacy & Consent", key="nav_privacy_bottom", use_container_width=True):
-        st.session_state.mode = "privacy"
-        st.rerun()
-    st.markdown('<div class="sb-footer">© 2026 ' + APP_TITLE + '. All rights reserved.</div>', unsafe_allow_html=True)
+    # Two-line footer (matches mockup): "Privacy & Terms · Help Center" + copyright.
+    # The button was replaced with link-style text; Privacy page still opens
+    # via the URL param handler at the top of the file.
+    st.markdown(
+        '<div class="md-sidebar-foot">'
+        '<div class="md-sidebar-foot-links">'
+        '<a href="?mode=privacy" target="_self">Privacy &amp; Terms</a>'
+        '<span class="md-sidebar-foot-dot">·</span>'
+        '<a href="?mode=privacy" target="_self">Help Center</a>'
+        '</div>'
+        '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
     st.markdown('</div>', unsafe_allow_html=True)
 
 L = LANGUAGES[st.session_state.selected_language]
@@ -9630,6 +11270,86 @@ if _mode_from_url in _url_modes:
         del st.query_params["mode"]
     except Exception:
         pass
+
+# ?conv=<id> → load that conversation into the chat view. Lets the Recent
+# Chats sidebar render as anchor links (giving us proper title-left +
+# time-right flex layout that st.button can't).
+_conv_id_from_url = str(_query_params.get("conv", "") or "").strip()
+if _conv_id_from_url and st.session_state.is_authenticated and st.session_state.user_email_hash:
+    _conv_obj = load_conversation(st.session_state.user_email_hash, _conv_id_from_url)
+    if _conv_obj is not None:
+        st.session_state.current_conversation_id = _conv_id_from_url
+        st.session_state.messages = _conv_obj.get("messages", []) or []
+        st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
+        st.session_state.feedback = {}
+        st.session_state.last_sources = []
+        st.session_state.emergency_detected = False
+        st.session_state.mode = "chat"
+    try:
+        del st.query_params["conv"]
+    except Exception:
+        pass
+
+# ?new_chat=1 → start a fresh chat session. Mirrors the ?conv handler so the
+# "+ New chat" pill inside the Recent Chats card can be a true anchor link
+# (nested inside the card's HTML) instead of a Streamlit-wrapped st.button
+# rendered as a sibling.
+_new_chat_from_url = str(_query_params.get("new_chat", "") or "").strip()
+if _new_chat_from_url:
+    start_new_chat_session()
+    try:
+        del st.query_params["new_chat"]
+    except Exception:
+        pass
+
+# ?signout=1 → sign the user out. Lets the small logout icon inside the
+# profile chip (a true HTML child of the chip, not a Streamlit button) clear
+# session state without the negative-margin layout tricks that caused the
+# Recent Chats card to collide with the chip's bottom.
+_signout_from_url = str(_query_params.get("signout", "") or "").strip()
+if _signout_from_url:
+    for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context", "rx_reader_result", "rx_uploader_key"]:
+        if k in st.session_state:
+            if k in ("is_authenticated", "is_guest"):
+                st.session_state[k] = False
+            elif k == "patient_memory":
+                st.session_state[k] = {"symptoms": [], "conditions": [], "medications": []}
+            elif k == "messages":
+                st.session_state[k] = []
+            elif k == "rx_reader_result":
+                st.session_state[k] = None
+            elif k == "rx_uploader_key":
+                st.session_state[k] = 0
+            elif k == "qcount":
+                st.session_state[k] = 0
+            elif k == "feedback":
+                st.session_state[k] = {}
+            else:
+                st.session_state[k] = "" if isinstance(st.session_state[k], str) else st.session_state[k]
+    st.session_state.current_conversation_id = ""
+    try:
+        del st.query_params["signout"]
+    except Exception:
+        pass
+    st.rerun()
+
+# ?del_conv=<id> → delete a saved conversation. Powers the small × icon on
+# each Recent Chats row (a true HTML child of the row's anchor structure,
+# not a separate Streamlit widget). Uses the existing delete_conversation()
+# function — no data-logic change, just a new UI invocation path.
+_del_conv_from_url = str(_query_params.get("del_conv", "") or "").strip()
+if _del_conv_from_url and st.session_state.is_authenticated and st.session_state.user_email_hash:
+    delete_conversation(st.session_state.user_email_hash, _del_conv_from_url)
+    # If the deleted conversation was the active one, clear it so a stale
+    # active highlight doesn't persist in the sidebar.
+    if st.session_state.get("current_conversation_id") == _del_conv_from_url:
+        st.session_state.current_conversation_id = ""
+        st.session_state.messages = []
+    try:
+        del st.query_params["del_conv"]
+    except Exception:
+        pass
+    st.rerun()
 
 if st.session_state.is_guest and not st.session_state.is_authenticated:
     _guest_allowed_modes = {
@@ -11082,14 +12802,35 @@ if st.session_state.mode == "chat":
     mem = st.session_state.patient_memory
 
     if any([mem.get("symptoms"), mem.get("conditions"), mem.get("medications")]) and st.session_state.messages:
-        mem_parts = []
-        if mem.get("symptoms"):
-            mem_parts.append("Symptoms: " + ", ".join(mem["symptoms"]))
-        if mem.get("conditions"):
-            mem_parts.append("Conditions: " + ", ".join(mem["conditions"]))
-        if mem.get("medications"):
-            mem_parts.append("Medications: " + ", ".join(mem["medications"]))
-        st.markdown('<div class="memory-card"><div class="memory-title">MediChat remembers from this session:</div>' + "".join(["<div>- " + ui_text(p, 220) + "</div>" for p in mem_parts]) + "</div>", unsafe_allow_html=True)
+        def _mem_line(items, label):
+            if not items:
+                return ""
+            # Comma-joined summary, capped so the line stays one tidy row.
+            joined = ui_text(", ".join(items), 180)
+            return (
+                '<div class="memory-line">'
+                '<span class="memory-bullet">•</span>'
+                '<span class="memory-line-label">' + label + ':</span> '
+                '<span class="memory-line-text">' + ui_escape(joined) + '</span>'
+                '</div>'
+            )
+
+        st.markdown(
+            '<div class="memory-card">'
+            '<div class="memory-head">'
+            '<div class="memory-icon"><span class="material-symbols-rounded">psychology</span></div>'
+            '<div class="memory-title">MediChat remembers '
+            '<span class="memory-sparkle material-symbols-rounded">auto_awesome</span>'
+            '</div>'
+            '</div>'
+            '<div class="memory-body">'
+            + _mem_line(mem.get("symptoms"), "Symptoms")
+            + _mem_line(mem.get("conditions"), "Conditions")
+            + _mem_line(mem.get("medications"), "Medications")
+            + '</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
 
     show_hero = False
 
@@ -11127,36 +12868,89 @@ if st.session_state.mode == "chat":
             user_initial = st.session_state.patient_name[0].upper()
         user_name_label = st.session_state.patient_name if st.session_state.patient_name and st.session_state.patient_name != "Guest" else "You"
 
+        # Page hero at top of every chat conversation (matches the design
+        # mockup: title + subtitle + privacy indicator).
+        st.markdown(
+            '<div class="md-chat-hero">'
+            '<div class="md-chat-hero-text">'
+            '<div class="md-chat-hero-title">AI Health Conversation '
+            # Inline SVG shield — zero font dependency, renders identically
+            # across all browsers as a proper filled shield silhouette with
+            # a soft check mark inside. Replaces the Material Symbols
+            # `shield` glyph which was rendering ambiguously at small sizes.
+            '<svg class="md-chat-hero-shield" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+            '<path d="M12 2 3.5 5.5v6c0 5.2 3.6 9.9 8.5 11 4.9-1.1 8.5-5.8 8.5-11v-6L12 2z"/>'
+            '<path d="M10.6 14.4 8 11.8l-1.1 1.1 3.7 3.7 7-7-1.1-1.1-5.9 5.9z" fill="#ffffff"/>'
+            '</svg></div>'
+            '<div class="md-chat-hero-sub">Private, supportive guidance for your symptoms</div>'
+            '</div>'
+            '<div class="md-chat-hero-privacy">'
+            '<span class="material-symbols-rounded">lock</span>'
+            'Your conversation is private'
+            '</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+        # MediChat brand logo loaded once for bot avatars across the conversation.
+        _bot_avatar_uri = get_brand_logo_data_uri()
+        _bot_avatar_html = (
+            '<div class="av av-bot av-bot-image"><img src="' + _bot_avatar_uri + '" alt="MediChat AI"></div>'
+            if _bot_avatar_uri
+            else '<div class="av av-bot">M</div>'
+        )
+
         for msg in st.session_state.messages:
             role = msg.get("role", "")
             content = msg.get("content", "")
             msg_type = msg.get("type", "text")
+            msg_ts = msg.get("ts", "")
+            ts_html = ('<div class="bubble-ts">' + ui_escape(msg_ts) + '</div>') if msg_ts else ""
             if role == "user":
                 safe_content = ui_lines(content)
                 safe_initial = ui_text(user_initial, 2)
                 if msg_type == "image":
                     st.markdown('<span class="image-tag">Medical image uploaded for analysis</span>', unsafe_allow_html=True)
-                    if content:
-                        st.markdown('<div class="user-wrap"><div class="user-bubble">' + safe_content + '</div><div class="av av-user">' + safe_initial + '</div></div>', unsafe_allow_html=True)
-                else:
-                    st.markdown('<div class="user-wrap"><div class="user-bubble">' + safe_content + '</div><div class="av av-user">' + safe_initial + '</div></div>', unsafe_allow_html=True)
+                if content or msg_type != "image":
+                    st.markdown(
+                        '<div class="user-wrap">'
+                        '<div class="user-stack">'
+                        '<div class="user-bubble">' + safe_content + '</div>'
+                        + ts_html +
+                        '</div>'
+                        '<div class="av av-user">' + safe_initial + '</div>'
+                        '</div>',
+                        unsafe_allow_html=True
+                    )
             else:
-                st.markdown('<div class="bot-label">MediChat</div>', unsafe_allow_html=True)
-                st.markdown('<div class="bot-wrap"><div class="av av-bot">M</div><div class="bot-bubble">' + markdown_to_html(content) + '</div></div>', unsafe_allow_html=True)
+                # Bot message — logo avatar + bubble with inline "MediChat AI"
+                # header (with sparkle), the response text, and a right-aligned
+                # timestamp under the bubble.
+                st.markdown(
+                    '<div class="bot-wrap">'
+                    + _bot_avatar_html +
+                    '<div class="bot-stack">'
+                    '<div class="bot-bubble">'
+                    '<div class="bot-bubble-head">'
+                    '<span class="bot-bubble-name">MediChat AI</span>'
+                    '<span class="bot-bubble-spark material-symbols-rounded">auto_awesome</span>'
+                    '</div>'
+                    + markdown_to_html(content) +
+                    '</div>'
+                    '</div>'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
                 engine_used = msg.get("engine", "")
                 msg_sources = msg.get("sources", [])
                 is_image_response = "Image Analysis" in msg_sources or engine_used == "groq-vision"
                 is_rx_response = "Prescription Reader" in msg_sources or str(engine_used).startswith("rx-reader")
                 is_pdf_response = "PDF Report Analysis" in msg_sources
 
+                # Internal LLM engines (claude/groq) are hidden from the user
+                # — only feature-distinct engines (Prescription Reader) show.
                 engine_html = ""
-                if engine_used == "claude":
-                    engine_html = '<span class="engine-badge engine-claude">Claude Haiku</span>'
-                elif engine_used == "groq":
-                    engine_html = '<span class="engine-badge engine-groq">Llama (fallback)</span>'
-                elif engine_used == "groq-vision":
-                    engine_html = '<span class="engine-badge engine-vision">Llama Vision (fallback)</span>'
-                elif str(engine_used).startswith("rx-reader"):
+                if str(engine_used).startswith("rx-reader"):
                     engine_html = '<span class="engine-badge engine-vision">Prescription Reader</span>'
 
                 if is_rx_response:
@@ -11168,41 +12962,48 @@ if st.session_state.mode == "chat":
                 else:
                     source_tags = "".join(['<span class="source-tag">📚 ' + ui_text(s, 50) + '</span>' for s in msg_sources])
 
-                if engine_html or source_tags:
-                    st.markdown('<div class="source-row">' + engine_html + source_tags + '</div>', unsafe_allow_html=True)
-
+                # Build confidence pill + bar + RAG-quality text inline so the
+                # whole meta strip (sources + confidence) sits on one row.
+                conf_html = ""
                 conf_level = msg.get("confidence")
                 conf_pct = msg.get("confidence_pct")
                 if conf_level and conf_pct and not is_image_response and not is_rx_response and engine_used != "system":
                     conf_level = conf_level if conf_level in ("high", "medium", "low") else "low"
                     conf_label = {"high": "High Confidence", "medium": "Medium Confidence", "low": "Low Confidence"}.get(conf_level, "")
                     conf_color = {"high": "#22c55e", "medium": "#f59e0b", "low": "#ef4444"}.get(conf_level, "#64748b")
-                    st.markdown(
-                        '<div class="confidence-row">'
+                    conf_html = (
                         '<span class="confidence-pill conf-' + conf_level + '">' + conf_label + '</span>'
                         '<span class="confidence-bar"><span class="confidence-fill" style="width:' + str(conf_pct) + '%;background:' + conf_color + ';"></span></span>'
-                        '<span style="color:#64748b;">' + str(conf_pct) + '% RAG match quality</span>'
-                        '</div>',
+                        '<span class="rag-text">' + str(conf_pct) + '% match</span>'
+                    )
+
+                # Wrap sources + confidence in their own labelled groups so
+                # the meta strip reads as "🛡 Sources [...]   Confidence [...]"
+                # (matches the design mockup).
+                if engine_html or source_tags or conf_html:
+                    parts = []
+                    if engine_html or source_tags:
+                        parts.append(
+                            '<span class="meta-label meta-label-sources">'
+                            '<span class="material-symbols-rounded">verified_user</span>Sources</span>'
+                            + engine_html + source_tags
+                        )
+                    if conf_html:
+                        parts.append('<span class="meta-label meta-label-conf">Confidence</span>' + conf_html)
+                    st.markdown(
+                        '<div class="meta-row">' + "".join(parts) + '</div>',
+                        unsafe_allow_html=True
+                    )
+
+                # Bot timestamp — only if this message has one (new convos only).
+                if msg_ts:
+                    st.markdown(
+                        '<div class="bot-ts">' + ui_escape(msg_ts) + '</div>',
                         unsafe_allow_html=True
                     )
 
     if st.session_state.messages:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown('<div style="text-align:center;font-size:0.78rem;color:#64748b;margin-bottom:0.4rem;">' + L["helpful"] + '</div>', unsafe_allow_html=True)
-        cf1, cf2, cf3, cf4, cf5 = st.columns([2, 1, 0.5, 1, 2])
-        with cf2:
-            if st.button(L["yes"], key="chat_helpful"):
-                st.session_state.feedback["overall"] = "helpful"
-                st.rerun()
-        with cf4:
-            if st.button(L["no"], key="chat_not_helpful"):
-                st.session_state.feedback["overall"] = "not_helpful"
-                st.rerun()
-        overall = st.session_state.feedback.get("overall")
-        if overall == "helpful":
-            st.markdown('<div style="text-align:center;font-size:0.76rem;color:#0f766e;margin-top:0.3rem;">' + L["thanks_helpful"] + '</div>', unsafe_allow_html=True)
-        elif overall == "not_helpful":
-            st.markdown('<div style="text-align:center;font-size:0.76rem;color:#dc2626;margin-top:0.3rem;">' + L["thanks_not"] + '</div>', unsafe_allow_html=True)
+        # Feedback row removed per user request.
         st.markdown("---")
         st.markdown("**" + L["download_chat"] + "**")
 
@@ -11247,21 +13048,31 @@ if st.session_state.mode == "chat":
         uploaded_image = None
         chat_upload_clicked = False
         chat_voice_clicked = False
+        chat_clear_clicked = False
         with st.form("chat_form", clear_on_submit=True):
             user_input = st.text_area(
                 "Your message",
                 placeholder="Ask anything about your health...",
                 label_visibility="collapsed",
-                height=120,
+                height=100,
                 key="chat_input_" + str(st.session_state.chat_input_key),
             )
-            fc1, fc2, fc_spacer, fc3 = st.columns([0.72, 0.72, 3.1, 0.48], vertical_alignment="center")
+            # Action row: Upload + Voice + Clear pills on the left, big spacer,
+            # round Send ball on the right. Clear lives inside the form so
+            # it's visually grouped with the chat box (no orphan button below).
+            fc1, fc2, fc3, fc_spacer, fc4 = st.columns([0.56, 0.56, 0.56, 5.2, 0.56], vertical_alignment="center")
             with fc1:
-                chat_upload_clicked = st.form_submit_button(" ", key="chat_upload_btn", icon=":material/attach_file:", use_container_width=True)
+                chat_upload_clicked = st.form_submit_button("Upload", key="chat_upload_btn", icon=":material/attach_file:", use_container_width=True)
             with fc2:
-                chat_voice_clicked = st.form_submit_button(" ", key="chat_voice_btn", icon=":material/mic:", use_container_width=True)
+                chat_voice_clicked = st.form_submit_button("Voice", key="chat_voice_btn", icon=":material/mic:", use_container_width=True)
             with fc3:
-                submit = st.form_submit_button("➤", key="chat_send_btn", use_container_width=True, type="primary")
+                chat_clear_clicked = st.form_submit_button("Clear", key="chat_clear_btn", icon=":material/delete:", use_container_width=True)
+            with fc4:
+                submit = st.form_submit_button(" ", key="chat_send_btn", icon=":material/send:", use_container_width=True, type="primary")
+        # If user hit Clear inside the chat form, wire it to the same clear
+        # action as the standalone button used by vision/voice panels.
+        if chat_clear_clicked:
+            clear = True
 
         if chat_upload_clicked:
             st.session_state.home_show_vision_upload = True
@@ -11356,8 +13167,9 @@ if st.session_state.mode == "chat":
             with vc3:
                 clear = st.button("Clear chat", use_container_width=True, key="main_clear_btn_voice", icon=":material/delete:")
 
-        if not st.session_state.get("home_show_vision_upload", False) and not st.session_state.get("home_show_voice", False):
-            clear = st.button("Clear chat", use_container_width=True, key="main_clear_btn_plain", icon=":material/delete:")
+        # Plain-state Clear button removed — it's now an inline chip inside
+        # the chat composer form (chat_clear_btn). Vision/voice panels still
+        # have their own Clear next to Cancel above.
 
     # ── File preview (shown below button row once attached) ─────────────
     if uploaded_image and not home_empty_chat and not st.session_state.get("home_show_vision_upload", False):
@@ -11379,7 +13191,13 @@ if st.session_state.mode == "chat":
                 st.image(uploaded_image, caption="Ready for analysis", use_column_width=True)
 
     if not home_empty_chat:
-        st.markdown('<div class="md-home-composer-note">MediChat Ai can make mistakes. Please consult a healthcare professional for medical advice.</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="md-home-composer-note">'
+            '<span class="material-symbols-rounded md-disclaimer-shield">lock</span>'
+            'This is not emergency care. If you feel seriously unwell, seek immediate medical attention.'
+            '</div>',
+            unsafe_allow_html=True
+        )
     st.markdown('<div id="page-bottom-anchor" style="height:1px;"></div>', unsafe_allow_html=True)
 
     # Enter-to-send (Shift+Enter keeps newline) for both home and in-chat composers.
@@ -11491,7 +13309,7 @@ if st.session_state.mode == "chat":
         if uploaded_image:
             is_pdf = uploaded_image.name.lower().endswith(".pdf")
             if is_pdf:
-                st.session_state.messages.append({"role": "user", "type": "pdf", "content": (effective_user_input.strip() + " " if effective_user_input.strip() else "") + "[PDF: " + uploaded_image.name + "]"})
+                st.session_state.messages.append({"role": "user", "type": "pdf", "content": (effective_user_input.strip() + " " if effective_user_input.strip() else "") + "[PDF: " + uploaded_image.name + "]", "ts": _msg_now_ts()})
                 with st.spinner("Reading your medical report..."):
                     pdf_text = extract_pdf_text(uploaded_image)
                     if not pdf_text:
@@ -11503,11 +13321,11 @@ if st.session_state.mode == "chat":
                         reply, engine_used = medichat_pdf_analysis(effective_user_input, pdf_text, st.session_state.messages, lang_instruction)
                         reply = strip_excessive_disclaimers(reply)
                 st.session_state.last_sources = ["PDF Report Analysis"]
-                st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75, "engine": engine_used})
+                st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75, "engine": engine_used, "ts": _msg_now_ts()})
                 st.session_state.uploader_key += 1
                 st.session_state.home_show_vision_upload = False
             else:
-                st.session_state.messages.append({"role": "user", "type": "image", "content": effective_user_input.strip()})
+                st.session_state.messages.append({"role": "user", "type": "image", "content": effective_user_input.strip(), "ts": _msg_now_ts()})
                 if looks_like_prescription_request(effective_user_input):
                     with st.spinner("Reading prescription handwriting..."):
                         uploaded_image.seek(0)
@@ -11527,7 +13345,7 @@ if st.session_state.mode == "chat":
                         "Prescription transcription: " + reply
                     )
                     st.session_state.last_sources = ["Prescription Reader"]
-                    st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": conf_level, "confidence_pct": conf_pct, "engine": vision_engine})
+                    st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": conf_level, "confidence_pct": conf_pct, "engine": vision_engine, "ts": _msg_now_ts()})
                 else:
                     with st.spinner("Analysing your image..."):
                         uploaded_image.seek(0)
@@ -11539,7 +13357,7 @@ if st.session_state.mode == "chat":
                         "Your visual analysis: " + reply
                     )
                     st.session_state.last_sources = ["Image Analysis"]
-                    st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75, "engine": vision_engine})
+                    st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75, "engine": vision_engine, "ts": _msg_now_ts()})
                 st.session_state.uploader_key += 1
                 st.session_state.home_show_vision_upload = False
         else:
@@ -11637,7 +13455,7 @@ if st.session_state.mode == "chat":
             st.session_state.eval_log.append(_log_entry)
             log_query_to_firestore(_log_entry)
 
-            st.session_state.messages.append({"role": "assistant", "type": "text", "content": final_text, "sources": sources, "confidence": conf_level, "confidence_pct": conf_pct, "engine": engine_used})
+            st.session_state.messages.append({"role": "assistant", "type": "text", "content": final_text, "sources": sources, "confidence": conf_level, "confidence_pct": conf_pct, "engine": engine_used, "ts": _msg_now_ts()})
 
         if st.session_state.is_authenticated and st.session_state.user_email_hash:
             persist_profile_state(
