@@ -1,8 +1,17 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-*.pyo
-.streamlit/secrets.toml
-.venv/
-medichat-local-check.png
-.claude/
+*$py.class
+
+# Large temporary folders / scratch spaces
+scratch/
+cache/
+
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

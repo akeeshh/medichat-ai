@@ -1,0 +1,720 @@
+/* =========================================================================
+   AUTH SCREEN SPECIFIC STYLES
+   ========================================================================= */
+
+/* Premium auth page polish, scoped to auth-only render path. */
+    [data-testid="stForm"] {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+    /* Sidebar/nav styles are intentionally NOT overridden here so auth, guest,
+       and signed-in profiles share the same global sidebar design system. */
+
+    .md-auth-welcome-card {
+        position: relative;
+        display: grid;
+        grid-template-columns: 124px minmax(0, 1fr);
+        align-items: center;
+        gap: 1.25rem;
+        padding: 1.9rem 2.2rem 1.85rem 1.6rem;
+        border-radius: 28px;
+        background:
+            radial-gradient(circle at 10% 12%, rgba(191, 219, 254, 0.42), transparent 46%),
+            radial-gradient(circle at 93% 90%, rgba(167, 139, 250, 0.2), transparent 48%),
+            linear-gradient(132deg, rgba(255,255,255,0.995) 0%, rgba(249,252,255,0.995) 50%, rgba(240,246,255,0.99) 100%);
+        border: 1px solid #d4e3ff;
+        box-shadow: 0 22px 48px rgba(59, 130, 246, 0.11), 0 5px 16px rgba(15, 23, 42, 0.06);
+        overflow: hidden;
+        isolation: isolate;
+    }
+    .md-auth-welcome-card::before {
+        content: "";
+        position: absolute;
+        left: -15%;
+        bottom: -58%;
+        width: 82%;
+        height: 94%;
+        border-radius: 999px;
+        background: radial-gradient(ellipse at center, rgba(129, 140, 248, 0.24) 0%, rgba(147, 197, 253, 0.1) 42%, transparent 78%);
+        transform: rotate(-8deg);
+        pointer-events: none;
+        z-index: -1;
+    }
+    .md-auth-welcome-card::after {
+        content: "";
+        position: absolute;
+        left: -16%;
+        right: -16%;
+        bottom: -64px;
+        height: 128px;
+        border-radius: 999px;
+        background: radial-gradient(120% 100% at 50% 0%, rgba(167, 139, 250, 0.18), rgba(147, 197, 253, 0.14) 42%, rgba(255, 255, 255, 0) 78%);
+        pointer-events: none;
+        opacity: 0.56;
+    }
+    .md-auth-deco-dots {
+        position: absolute;
+        right: 2.2rem;
+        top: 1.25rem;
+        width: 90px;
+        height: 48px;
+        background-image: radial-gradient(rgba(99, 102, 241, 0.28) 1.4px, transparent 1.4px);
+        background-size: 10px 10px;
+        opacity: 0.55;
+        pointer-events: none;
+    }
+    .md-auth-shield {
+        width: 112px;
+        height: 112px;
+        border-radius: 33px;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        flex-shrink: 0;
+        font-size: 3rem !important;
+        background:
+            radial-gradient(circle at 26% 20%, rgba(255,255,255,0.56), transparent 44%),
+            linear-gradient(145deg, #3b82f6 0%, #6366f1 58%, #8b5cf6 100%);
+        box-shadow: 0 20px 38px rgba(99, 102, 241, 0.34);
+        position: relative;
+        left: auto;
+        top: auto;
+        transform: none;
+        margin-left: 0.2rem;
+    }
+    .md-auth-shield.md-auth-shield-image {
+        width: 118px;
+        height: 118px;
+        border-radius: 0;
+        background: transparent !important;
+        box-shadow: none !important;
+        margin-left: 0;
+    }
+    .md-auth-shield.md-auth-shield-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+        transform: none;
+        transform-origin: center center;
+        filter: drop-shadow(0 14px 24px rgba(59, 130, 246, 0.26));
+    }
+    .md-auth-welcome-content {
+        flex: 1 1 auto;
+        min-width: 0;
+        text-align: center;
+        padding: 0 0.3rem 0 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .md-auth-welcome-title {
+        font-size: clamp(1.9rem, 2.7vw, 2.65rem);
+        font-weight: 820;
+        letter-spacing: -0.02em;
+        color: #0f172a;
+        line-height: 1.1;
+        margin: 0 0 0.45rem 0;
+        text-align: center;
+        width: 100%;
+    }
+    .md-auth-welcome-copy {
+        font-size: clamp(1.02rem, 1.38vw, 1.22rem);
+        color: #334155;
+        line-height: 1.5;
+        max-width: 62ch;
+        white-space: normal;
+        text-align: center;
+    }
+    .md-auth-chip-row {
+        display: flex;
+        gap: 0.86rem;
+        flex-wrap: wrap;
+        row-gap: 0.72rem;
+        margin-top: 1.28rem;
+        position: relative;
+        z-index: 1;
+        justify-content: center;
+        width: 100%;
+    }
+    .md-auth-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.62rem 1.12rem;
+        border-radius: 15px;
+        background: rgba(255,255,255,0.92);
+        border: 1px solid #dbe6fd;
+        box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
+        color: #334155;
+        font-size: 0.98rem;
+        font-weight: 630;
+    }
+    .md-auth-chip .material-symbols-rounded {
+        color: #2563eb;
+        font-size: 1rem !important;
+    }
+
+    /* Tabs — centered glass pill bar (Apple-style frosted rail). The rail
+       is a translucent white wash with a subtle backdrop blur so it picks
+       up the page tone behind it; a hairline border + soft inner highlight
+       sell the "glass" depth. The active tab fills with the brand indigo
+       gradient and a colored drop shadow that matches the Sign in button. */
+    [data-baseweb="tab-list"] {
+        gap: 2rem !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        margin-top: 1.5rem !important;
+        margin-bottom: 1.5rem !important;
+        justify-content: flex-start !important;
+        background: transparent !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        box-shadow: none !important;
+    }
+    button[role="tab"] {
+        padding: 0.8rem 0 !important;
+        font-size: 1.05rem !important;
+        font-weight: 600 !important;
+        color: #64748b !important;
+        border: none !important;
+        border-bottom: 2px solid transparent !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        margin-bottom: -1px !important;
+        transition: color 0.15s ease, border-color 0.15s ease !important;
+    }
+    button[role="tab"]:hover {
+        color: #1e293b !important;
+        background: transparent !important;
+    }
+    button[role="tab"][aria-selected="true"] {
+        color: #2563eb !important;
+        font-weight: 700 !important;
+        background: transparent !important;
+        border-bottom: 2px solid #2563eb !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+    button[role="tab"][aria-selected="true"]:hover {
+        color: #1d4ed8 !important;
+        background: transparent !important;
+        border-bottom: 2px solid #1d4ed8 !important;
+    }
+    /* Streamlit's underline indicator — superseded by the border-bottom. */
+    [data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+    [data-baseweb="tab-panel"] {
+        padding-top: 0.85rem !important;
+        border-top: none !important;
+    }
+    [data-baseweb="tab-list"] + div,
+    [data-baseweb="tab-list"] + div > div {
+        border-top: none !important;
+        box-shadow: none !important;
+    }
+
+    [data-testid="stForm"]:has(.st-key-si_email),
+    [data-testid="stForm"]:has(.st-key-su_email) {
+        background: rgba(255,255,255,0.98) !important;
+        border: 1px solid #dbe6fb !important;
+        border-radius: 28px !important;
+        padding: 1.82rem 1.72rem 1.38rem 1.72rem !important;
+        box-shadow: 0 22px 44px rgba(15, 23, 42, 0.08), 0 3px 10px rgba(15, 23, 42, 0.04) !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"] label,
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] label {
+        font-size: 0.98rem !important;
+        color: #1e293b !important;
+        font-weight: 630 !important;
+        margin-bottom: 0.35rem !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"],
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] {
+        margin-bottom: 0.42rem !important;
+    }
+    /* The white surface + blue border live on the ROOT wrapper, not the
+       <input>, so the icon sits inside the same field instead of next to a
+       separate grey baseweb container. The inner input is transparent. */
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"] input,
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] input {
+        min-height: 54px !important;
+        border-radius: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        font-size: 1.03rem !important;
+        line-height: 1.3 !important;
+        padding: 0.78rem 0.95rem !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"],
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 56px !important;
+        height: 56px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        overflow: hidden !important;
+        background: #ffffff !important;
+        border: 1px solid #d8e4fa !important;
+        border-radius: 15px !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+        transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"]:focus-within,
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"]:focus-within {
+        border-color: #93c5fd !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14) !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] [data-baseweb="base-input"],
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] [data-baseweb="base-input"] {
+        min-height: 56px !important;
+        height: 56px !important;
+        display: flex !important;
+        align-items: center !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        width: auto !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    /* Icon column — transparent, no vertical divider line */
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] > div:has([data-testid="stTextInputIcon"]),
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] > div:has([data-testid="stTextInputIcon"]) {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding-right: 0 !important;
+        margin-right: 0 !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputIcon"],
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputIcon"] {
+        width: 40px !important;
+        min-width: 40px !important;
+        height: 40px !important;
+        margin-left: 0.56rem !important;
+        margin-right: 0 !important;
+        border-radius: 11px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: transparent !important;
+        border: none !important;
+    }
+    /* Focus state is now handled on the root wrapper via :focus-within above. */
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"] [data-testid="stIconMaterial"],
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] [data-testid="stIconMaterial"] {
+        color: #94a3b8 !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        font-size: 1.25rem !important;
+    }
+    /* Show/hide password "eye" button on PIN field — strip baseweb's grey. */
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] button,
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] button {
+        background: transparent !important;
+        border: none !important;
+        color: #94a3b8 !important;
+        margin-right: 0.4rem !important;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] button:hover,
+    [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] button:hover {
+        background: rgba(148, 163, 184, 0.08) !important;
+    }
+    /* Primary submit button — premium blue-to-purple gradient */
+    .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button,
+    .st-key-auth_signup_submit [data-testid="stFormSubmitButton"] > button {
+        height: 60px !important;
+        min-height: 60px !important;
+        border-radius: 16px !important;
+        border: none !important;
+        background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%) !important;
+        box-shadow: 0 10px 25px rgba(99, 102, 241, 0.25) !important;
+        color: #ffffff !important;
+        font-size: 1.05rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.005em !important;
+        text-shadow: 0 1px 2px rgba(15, 23, 42, 0.1) !important;
+        transition: transform 0.18s ease, box-shadow 0.22s ease, background 0.25s ease !important;
+    }
+    .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button:hover,
+    .st-key-auth_signup_submit [data-testid="stFormSubmitButton"] > button:hover {
+        transform: translateY(-1px) !important;
+        background: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #7c3aed 100%) !important;
+        box-shadow: 0 12px 28px rgba(99, 102, 241, 0.35) !important;
+    }
+    .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button:active,
+    .st-key-auth_signup_submit [data-testid="stFormSubmitButton"] > button:active {
+        transform: translateY(0) !important;
+        box-shadow: 0 8px 18px rgba(99, 102, 241, 0.2) !important;
+    }
+    .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button {
+        position: relative !important;
+        padding-right: 3.25rem !important;
+    }
+    .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"] {
+        display: none !important;
+    }
+    .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button::after {
+        content: "→";
+        position: absolute;
+        right: 1.25rem;
+        top: 50%;
+        transform: translateY(-54%);
+        font-size: 1.55rem;
+        font-weight: 400;
+        opacity: 0.96;
+        line-height: 1;
+        transition: transform 0.22s ease, opacity 0.18s ease;
+    }
+    .st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button:hover::after {
+        transform: translateY(-54%) translateX(4px);
+        opacity: 1;
+    }
+
+    .md-auth-signin-actions {
+        margin-top: 0.95rem;
+        padding: 0;
+    }
+    .md-auth-or-divider {
+        position: relative;
+        text-align: center;
+        margin: 0.55rem 0 0.9rem 0;
+    }
+    .md-auth-or-divider::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        border-top: 1px solid #e2e8f5;
+        transform: translateY(-50%);
+    }
+    .md-auth-or-divider span {
+        position: relative;
+        background: #ffffff !important;
+        color: #94a3b8 !important;
+        padding: 0 1rem !important;
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        text-transform: lowercase !important;
+    }
+    /* "Continue as Guest" — white background, grey border, blue icon */
+    .md-auth-signin-actions .stButton > button {
+        height: 54px !important;
+        min-height: 54px !important;
+        border-radius: 16px !important;
+        border: 1px solid #e2e8f0 !important;
+        background: #ffffff !important;
+        color: #1e293b !important;
+        font-size: 1.02rem !important;
+        font-weight: 650 !important;
+        letter-spacing: 0.005em !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+        transition: transform 0.18s ease, box-shadow 0.2s ease, border-color 0.18s ease, background 0.22s ease !important;
+    }
+    .md-auth-signin-actions .stButton > button [data-testid="stIconMaterial"] {
+        color: #2563eb !important;
+        font-size: 1.18rem !important;
+        margin-right: 0.18rem !important;
+    }
+    .md-auth-signin-actions .stButton > button:hover {
+        border-color: #cbd5e1 !important;
+        background: #f8fafc !important;
+        color: #0f172a !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04) !important;
+    }
+    .md-auth-signin-actions .stButton > button:hover [data-testid="stIconMaterial"] {
+        color: #1d4ed8 !important;
+    }
+    .md-auth-signin-actions .stButton > button:active {
+        transform: translateY(0) !important;
+        background: #f1f5f9 !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+    }
+    .md-auth-meta {
+        margin-top: 0.95rem;
+        padding-top: 0.95rem;
+        border-top: 1px solid #e4ebf9;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .md-auth-security-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.55rem;
+        color: #475569;
+        font-size: 0.92rem;
+        line-height: 1.5;
+    }
+    .md-auth-security-note .material-symbols-rounded {
+        color: #2563eb;
+        font-size: 1.18rem !important;
+        margin-top: 0.08rem;
+    }
+    a.md-auth-forgot-link,
+    .md-auth-forgot-row a.md-auth-forgot-link {
+        color: #4f46e5 !important;
+        text-decoration: none !important;
+        font-size: 0.88rem;
+        font-weight: 600;
+        white-space: nowrap;
+        transition: color 0.15s ease;
+    }
+    a.md-auth-forgot-link:hover,
+    .md-auth-forgot-row a.md-auth-forgot-link:hover {
+        color: #4338ca !important;
+        text-decoration: none !important;
+    }
+    /* Inline row directly below the PIN field — right-aligned link, the
+       conventional place auth-aware users look for "Forgot PIN?". */
+    .md-auth-forgot-row {
+        display: flex;
+        justify-content: flex-end;
+        margin: -0.18rem 0 0.62rem 0;
+    }
+    /* When the meta row is the only thing under the form (the Forgot link
+       has been moved inline), center the security note across the full width
+       so it doesn't look orphaned on the left. */
+    .md-auth-meta.md-auth-meta-solo {
+        justify-content: center;
+        text-align: center;
+    }
+    .md-auth-meta.md-auth-meta-solo .md-auth-security-note {
+        justify-content: center;
+    }
+
+    /* Guest tab — soft card explaining the no-account experience, with the
+       Continue as Guest button spaced clearly below. The card uses a
+       subtle indigo wash (matching the welcome chips) so the tab content
+       feels framed without competing with the white form area on the
+       neighbouring tabs. */
+    .md-auth-guest-intro {
+        margin: 0.8rem 0 1.25rem 0;
+        padding: 1.1rem 1.25rem;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #f6f7ff 0%, #eef1ff 100%);
+        border: 1px solid #e3e8fb;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.8) inset,
+            0 6px 18px rgba(15, 23, 42, 0.04);
+    }
+    .md-auth-guest-title {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-size: 1.05rem;
+        font-weight: 730;
+        color: #1f2a3d;
+        letter-spacing: -0.005em;
+        margin-bottom: 0.45rem;
+    }
+    .md-auth-guest-title .material-symbols-rounded {
+        color: #4f46e5;
+        font-size: 1.18rem !important;
+    }
+    .md-auth-guest-copy {
+        color: #475569;
+        font-size: 0.92rem;
+        line-height: 1.55;
+    }
+    /* When the actions wrapper sits inside the Guest tab there is no
+       preceding "or" divider, so reset the margin-top to align cleanly
+       with the intro card above. */
+    .md-auth-signin-actions.md-auth-signin-actions-guest {
+        margin-top: 0 !important;
+    }
+
+    .md-auth-privacy-foot-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+        padding-top: 1.2rem;
+        border-top: 1px solid #e4ebf9;
+        flex-wrap: wrap;
+    }
+    .md-auth-privacy-foot-left {
+        flex: 1;
+        min-width: 250px;
+        color: #64748b;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+    .md-auth-privacy-foot-left a {
+        color: #1d4ed8 !important;
+        font-weight: 620;
+        text-decoration: none !important;
+    }
+    .md-auth-privacy-foot-left a:hover {
+        text-decoration: underline !important;
+    }
+    .md-auth-privacy-foot-right {
+        flex-shrink: 0;
+    }
+    .md-auth-privacy-foot-right a {
+        color: #4f46e5 !important;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none !important;
+    }
+    .md-auth-privacy-foot-right a:hover {
+        text-decoration: underline !important;
+    }
+
+    .md-auth-side-card {
+        border-radius: 24px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(249,251,255,0.99));
+        border: 1px solid #dbe6fb;
+        box-shadow: 0 18px 38px rgba(15, 23, 42, 0.07);
+        padding: 1.55rem 1.45rem 1.3rem 1.45rem;
+        margin-top: 1.42rem;
+        max-width: 372px;
+        margin-left: auto;
+    }
+    .md-auth-side-title {
+        font-size: 2rem;
+        font-weight: 820;
+        color: #0f172a;
+        margin: 0 0 1.2rem 0;
+        line-height: 1.12;
+    }
+    .md-auth-benefit {
+        display: grid;
+        grid-template-columns: 56px 1fr;
+        gap: 0.9rem;
+        align-items: start;
+        margin-bottom: 1.35rem;
+    }
+    .md-auth-benefit-ic {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1.35rem !important;
+        flex-shrink: 0 !important;
+        border: 1px solid transparent !important;
+    }
+    .md-auth-benefit-ic.ic-purple {
+        color: #8b5cf6 !important;
+        background: #f5f3ff !important;
+        border-color: #ddd6fe !important;
+    }
+    .md-auth-benefit-ic.ic-blue {
+        color: #3b82f6 !important;
+        background: #eff6ff !important;
+        border-color: #dbeafe !important;
+    }
+    .md-auth-benefit-ic.ic-green {
+        color: #10b981 !important;
+        background: #ecfdf5 !important;
+        border-color: #d1fae5 !important;
+    }
+    .md-auth-benefit-title {
+        margin: 0;
+        font-size: 1.01rem;
+        font-weight: 730;
+        color: #0f172a;
+        line-height: 1.35;
+    }
+    .md-auth-benefit-copy {
+        margin-top: 0.18rem;
+        color: #475569;
+        font-size: 0.91rem;
+        line-height: 1.5;
+    }
+    .md-auth-side-bottom {
+        margin-top: 1.28rem;
+        padding-top: 1rem;
+        border-top: 1px dotted #cbd5e1;
+        display: flex;
+        gap: 0.6rem;
+        color: #334155;
+        font-size: 0.93rem;
+        line-height: 1.5;
+    }
+    .md-auth-side-bottom .material-symbols-rounded {
+        color: #10b981 !important;
+        font-size: 1.1rem !important;
+        margin-top: 0.05rem;
+    }
+
+    @media (max-width: 1280px) {
+        .md-auth-welcome-title {
+            font-size: 2rem;
+        }
+    }
+    @media (max-width: 980px) {
+        .md-auth-side-card {
+            max-width: 100%;
+        }
+        .md-auth-welcome-card {
+            padding: 1.35rem 1.15rem;
+            border-radius: 22px;
+            gap: 1rem;
+        }
+        .md-auth-shield {
+            width: 80px;
+            height: 80px;
+            border-radius: 24px;
+            font-size: 2.2rem !important;
+            position: static;
+            transform: none;
+        }
+        .md-auth-chip-row {
+            gap: 0.5rem;
+        }
+        .md-auth-chip {
+            font-size: 0.8rem;
+            padding: 0.42rem 0.68rem;
+        }
+        .md-auth-welcome-copy {
+            white-space: normal;
+        }
+        .md-auth-welcome-content {
+            padding-left: 0;
+            padding-right: 0;
+        }
+        [data-testid="stForm"]:has(.st-key-si_email),
+        [data-testid="stForm"]:has(.st-key-su_email) {
+            padding: 1.15rem 1rem 1.05rem 1rem !important;
+            border-radius: 22px !important;
+        }
+        .md-auth-signin-actions {
+            padding: 0;
+        }
+    }
+    @media (max-width: 720px) {
+        [data-baseweb="tab-list"] {
+            gap: 1.05rem !important;
+        }
+        button[role="tab"] {
+            font-size: 0.93rem !important;
+            padding-bottom: 0.7rem !important;
+        }
+        .md-auth-meta {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
