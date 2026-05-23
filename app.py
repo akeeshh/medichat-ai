@@ -2085,7 +2085,7 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
     font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
 }
 .md-side-pname { font-size: 0.82rem; font-weight: 600; color: var(--md-text-1); line-height: 1.1; }
-.md-side-psub { font-size: 0.66rem; color: var(--md-text-3); }
+.md-side-psub { font-size: 0.67rem; color: #4f6280; font-weight: 500; }
 
 /* Hide old header card and trust strip while we use new ones */
 .header-card, .trust-strip { display: none !important; }
@@ -5139,10 +5139,10 @@ st.markdown("""
    misaligned and overflowing the right edge. translateX counter-shifts to
    align with the rest of the sidebar column. */
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
-    /* Plain wrap; no white card framing, no border, no shadow. The brand
-       PNG sits directly against the sidebar background. The PNG itself
-       contains the rounded white tile around the bot illustration, so no
-       additional framing is needed (or wanted; see user feedback). */
+    /* White card framing: the sidebar background is near-white, so we give the
+       logo container an explicit white fill, a crisp border, and a layered
+       shadow. Without these the PNG's built-in white tile merges into the
+       sidebar background and the card bottom disappears visually. */
     display: grid !important;
     place-items: center !important;
     justify-items: center !important;
@@ -5150,17 +5150,18 @@ st.markdown("""
     align-items: center !important;
     width: 100% !important;
     max-width: 242px !important;
-    margin: 0 auto 0.2rem auto !important;
+    margin: 0 auto 1rem auto !important;
     transform: translateX(-13px) !important;
-    padding: 0.5rem 0 0.45rem 0 !important;
-    background: transparent !important;
-    border: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
+    padding: 0.75rem 0.8rem !important;
+    background: #ffffff !important;
+    border: 1px solid #dce8f8 !important;
+    border-radius: 18px !important;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.09), 0 1px 4px rgba(15, 23, 42, 0.05) !important;
     position: relative !important;
     z-index: 10 !important;
-    min-height: 48px !important;
-    border-bottom: none !important;
+    min-height: 90px !important;
+    overflow: visible !important;
+    border-bottom: 1px solid #dce8f8 !important;
 }
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
     mix-blend-mode: normal !important;
@@ -5416,15 +5417,15 @@ st.markdown("""
     bottom: -0.6rem !important;
 }
 
-/* Profile card: soft + understated to blend with sidebar theme. Lighter
-   border + softer shadow + gentle gradient match. The chip should read as
-   a subtle inline element, not a heavy floating card. */
+/* Profile card: distinct white card that clearly floats above the sidebar
+   background. The old border (#e6edf9) and shadow (3% opacity) were too
+   subtle on the near-white sidebar, making the chip invisible. */
 [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
     position: relative !important;
     z-index: 5 !important;
-    background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%) !important;
-    border: 1px solid #e6edf9 !important;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03) !important;
+    background: #ffffff !important;
+    border: 1px solid #c3d3eb !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.09), 0 1px 4px rgba(15, 23, 42, 0.05) !important;
     padding: 0.78rem 0.86rem !important;
 }
 
@@ -8873,16 +8874,16 @@ st.markdown("""
         width: min(140px, 100%) !important;
     }
     [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
-        padding: 0.55rem 0 0.45rem 0 !important;
-        margin-bottom: 0.2rem !important;
+        padding: 0.6rem 0.7rem !important;
+        margin-bottom: 0.75rem !important;
         max-width: 242px !important;
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        border-radius: 0 !important;
+        background: #ffffff !important;
+        border: 1px solid #dce8f8 !important;
+        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.09), 0 1px 4px rgba(15, 23, 42, 0.05) !important;
+        border-radius: 16px !important;
         position: relative !important;
         z-index: 10 !important;
-        min-height: 48px !important;
+        min-height: 80px !important;
     }
     [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
         padding: 0.5rem 0.85rem 0.55rem 0.85rem !important;
