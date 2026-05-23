@@ -4851,14 +4851,21 @@ st.markdown("""
    The scrollbar-* / ::-webkit-scrollbar rules are redundant now (no scroll
    means no scrollbar) but kept as a safety net in case any nested element
    inside the sidebar tries to spawn its own scroller. */
-[data-testid="stSidebar"],
-[data-testid="stSidebarContent"],
-[data-testid="stSidebarUserContent"] {
-    /* overflow: clip (not hidden) so the element is NOT a scroll container.
-       This blocks both user scroll AND programmatic scroll (scrollTop = 100
-       stays at 0). Chrome 90+, Firefox 81+, Safari 16+ — fully modern. */
+[data-testid="stSidebar"] {
     overflow-x: clip !important;
     overflow-y: clip !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+[data-testid="stSidebarContent"] {
+    overflow-x: clip !important;
+    overflow-y: auto !important; /* Allow vertical scrolling! */
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+[data-testid="stSidebarUserContent"] {
+    overflow-x: clip !important;
+    overflow-y: visible !important; /* Prevent vertical clipping of child elements! */
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
 }
@@ -4883,6 +4890,10 @@ st.markdown("""
    extend to inner markdown wrappers that legitimately host wrapped text. */
 [data-testid="stSidebar"] [data-testid="stElementContainer"] {
     overflow: hidden !important;
+}
+[data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.md-side-profile),
+[data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.md-recent-card) {
+    overflow: visible !important;
 }
 /* Explicitly allow the footer wrappers to expand vertically so the
    copyright's wrapped 2nd line shows in full. */
