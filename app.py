@@ -13399,6 +13399,17 @@ if st.session_state.mode == "chat":
                         _lines.append(_entry)
                     past_chats_summary = "\n".join(_lines)
 
+            # Ensure _bot_avatar_html is always defined regardless of which
+            # history-rendering branch executed above (the elif/pass branch
+            # skips the definition when messages were empty at render time).
+            if "_bot_avatar_html" not in dir():
+                _bot_avatar_uri_fallback = get_brand_logo_data_uri()
+                _bot_avatar_html = (
+                    '<div class="av av-bot av-bot-image"><img src="' + _bot_avatar_uri_fallback + '" alt="MediChat AI"></div>'
+                    if _bot_avatar_uri_fallback
+                    else '<div class="av av-bot">M</div>'
+                )
+
             with st.spinner("MediChat is analysing"):
                 stream_placeholder = st.empty()
                 final_text = ""
