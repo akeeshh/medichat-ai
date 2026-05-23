@@ -1308,14 +1308,15 @@ st.markdown("""
     }
 
     .user-bubble {
-        background: linear-gradient(135deg, var(--clinical-600), var(--clinical-800));
-        color: white;
+        background: linear-gradient(135deg, #e0e7ff, #e0f2fe) !important;
+        color: #1f2937 !important;
         padding: 0.8rem 1.1rem;
         border-radius: 16px 4px 16px 16px;
         max-width: 80%;
         font-size: 0.9rem;
         line-height: 1.5;
-        box-shadow: 0 4px 12px rgba(33, 118, 174, 0.2);
+        border: 1px solid #c7d2fe !important;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.05) !important;
     }
 
     /* ── Thinking Indicator ──────────────────────────────────────── */
@@ -2949,7 +2950,9 @@ st.markdown("""
 .user-bubble,
 .source-row,
 .confidence-row {
-    overflow-wrap: anywhere;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: pre-wrap !important;
 }
 .emergency-banner {
     animation: mdEmergencyPulse 2s ease-in-out infinite !important;
@@ -4591,6 +4594,8 @@ st.markdown("""
     margin-bottom: 1.2rem !important;
     padding-bottom: 1.08rem !important;
     position: relative !important;
+    z-index: 10 !important;
+    min-height: 48px !important;
     border-bottom: none !important;
 }
 [data-testid="stSidebar"] .md-logo-wrap::after {
@@ -5134,10 +5139,10 @@ st.markdown("""
    misaligned and overflowing the right edge. translateX counter-shifts to
    align with the rest of the sidebar column. */
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
-    /* Plain wrap — no white card framing, no border, no shadow. The brand
+    /* Plain wrap; no white card framing, no border, no shadow. The brand
        PNG sits directly against the sidebar background. The PNG itself
        contains the rounded white tile around the bot illustration, so no
-       additional framing is needed (or wanted — see user feedback). */
+       additional framing is needed (or wanted; see user feedback). */
     display: grid !important;
     place-items: center !important;
     justify-items: center !important;
@@ -5153,6 +5158,8 @@ st.markdown("""
     border-radius: 0 !important;
     box-shadow: none !important;
     position: relative !important;
+    z-index: 10 !important;
+    min-height: 48px !important;
     border-bottom: none !important;
 }
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
@@ -5409,10 +5416,12 @@ st.markdown("""
     bottom: -0.6rem !important;
 }
 
-/* Profile card — soft + understated to blend with sidebar theme. Lighter
+/* Profile card: soft + understated to blend with sidebar theme. Lighter
    border + softer shadow + gentle gradient match. The chip should read as
    a subtle inline element, not a heavy floating card. */
 [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
+    position: relative !important;
+    z-index: 5 !important;
     background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%) !important;
     border: 1px solid #e6edf9 !important;
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03) !important;
@@ -5675,6 +5684,9 @@ st.markdown("""
         border: none !important;
         box-shadow: none !important;
         border-radius: 0 !important;
+        position: relative !important;
+        z-index: 10 !important;
+        min-height: 48px !important;
     }
     [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button {
         min-height: 32px !important;
@@ -5702,6 +5714,8 @@ st.markdown("""
     }
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
         padding: 0.55rem 0.65rem !important;
+        position: relative !important;
+        z-index: 5 !important;
     }
     [data-testid="stSidebar"] .md-side-avatar {
         width: 32px !important;
@@ -5820,6 +5834,7 @@ st.markdown("""
        Adds the "● Synced & up to date" status line + chevron at the right. */
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
         position: relative !important;
+        z-index: 5 !important;
         display: flex !important;
         align-items: center !important;
         gap: 0.6rem !important;
@@ -7031,8 +7046,8 @@ st.markdown("""
        Bubble width hugs its content so short messages stay on one line and
        only long ones wrap. */
     .user-bubble {
-        background: linear-gradient(135deg, #eef0ff 0%, #e0e7ff 100%) !important;
-        color: #3730a3 !important;
+        background: linear-gradient(135deg, #e0e7ff 0%, #e0f2fe 100%) !important;
+        color: #1e293b !important;
         border-radius: 18px 18px 4px 18px !important;
         padding: 0.75rem 1.1rem !important;
         font-size: 0.92rem !important;
@@ -7041,8 +7056,8 @@ st.markdown("""
         max-width: 100% !important;
         width: fit-content !important;
         margin-left: auto !important;
-        border: 1px solid rgba(99, 102, 241, 0.18) !important;
-        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.08) !important;
+        border: 1px solid #c7d2fe !important;
+        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.05) !important;
     }
     /* User stack should NOT cap width — let the bubble grow naturally up
        to its container so short messages stay on one line. */
@@ -8831,6 +8846,9 @@ st.markdown("""
     [data-testid="stSidebar"] .md-logo-wrap {
         margin-bottom: 0.62rem !important;
         padding-bottom: 0.62rem !important;
+        position: relative !important;
+        z-index: 10 !important;
+        min-height: 48px !important;
     }
     [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button {
         min-height: 34px !important;
@@ -8862,6 +8880,9 @@ st.markdown("""
         border: none !important;
         box-shadow: none !important;
         border-radius: 0 !important;
+        position: relative !important;
+        z-index: 10 !important;
+        min-height: 48px !important;
     }
     [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
         padding: 0.5rem 0.85rem 0.55rem 0.85rem !important;
@@ -8879,6 +8900,8 @@ st.markdown("""
     }
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
         padding: 0.5rem 1.1rem 0.5rem 0.55rem !important;
+        position: relative !important;
+        z-index: 5 !important;
     }
     [data-testid="stSidebar"] .md-side-avatar {
         width: 28px !important;
@@ -12377,27 +12400,7 @@ if st.session_state.emergency_detected:
             st.session_state.emergency_detected = False
             st.rerun()
 
-# ── Triage tier banner (skip Tier 1 — emergency banner already covers it) ──
-_triage = st.session_state.get("triage_assessment")
-if (_triage and _triage.get("tier", 5) > 1 and _triage.get("tier", 5) < 5
-        and st.session_state.mode == "chat" and not st.session_state.emergency_detected):
-    _reasons_html = ""
-    if _triage.get("reasons"):
-        _reasons_html = '<div class="triage-reasons">' + "".join(
-            ['<span class="triage-reason-pill">' + ui_text(r, 80) + '</span>' for r in _triage["reasons"][:4]]
-        ) + '</div>'
-    st.markdown(
-        '<div class="triage-card" style="background:' + _triage["bg"] + ';">'
-        '<div class="triage-head">'
-        '<span class="triage-icon">' + ui_escape(_triage["icon"]) + '</span>'
-        '<span class="triage-tier-num">TIER ' + str(_triage["tier"]) + '</span>'
-        '<span class="triage-label">' + ui_text(_triage["label"], 60) + '</span>'
-        '</div>'
-        '<div class="triage-step">' + ui_text(_triage["next_step"], 180) + '</div>'
-        + _reasons_html +
-        '</div>',
-        unsafe_allow_html=True
-    )
+# Triage tier banner removed per UI/UX refinement pass to clear screen real estate.
 
 home_user_input = ""
 home_submit = False
@@ -12945,7 +12948,7 @@ if st.session_state.mode == "chat":
                         '<div class="user-bubble">' + safe_content + '</div>'
                         + ts_html +
                         '</div>'
-                        '<div class="av av-user">' + safe_initial + '</div>'
+                        '<div class="av av-user"><span class="material-symbols-rounded" style="font-size: 1.25rem;">person</span></div>'
                         '</div>',
                         unsafe_allow_html=True
                     )
