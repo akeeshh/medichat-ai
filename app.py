@@ -4570,7 +4570,9 @@ st.markdown("""
     box-shadow: inset -1px 0 0 rgba(255,255,255,0.92) !important;
 }
 [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
-    padding: 1.06rem 1rem 1.2rem 1rem !important;
+    padding: 1.06rem 1rem 2rem 1rem !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
 }
 [data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {
     /* On TALL screens (≥ ~1000px), min-height ensures the column fills the
@@ -4811,7 +4813,7 @@ st.markdown("""
 }
 [data-testid="stSidebar"] div.st-key-nav_privacy_bottom {
     margin-top: 0 !important;
-    margin-bottom: 2rem !important;
+    margin-bottom: 0.75rem !important;
 }
 [data-testid="stSidebar"] div.st-key-nav_privacy_bottom .stButton > button {
     justify-content: center !important;
@@ -5139,10 +5141,10 @@ st.markdown("""
    misaligned and overflowing the right edge. translateX counter-shifts to
    align with the rest of the sidebar column. */
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
-    /* White card framing: the sidebar background is near-white, so we give the
-       logo container an explicit white fill, a crisp border, and a layered
-       shadow. Without these the PNG's built-in white tile merges into the
-       sidebar background and the card bottom disappears visually. */
+    /* Transparent container: the PNG already contains the white rounded card.
+       Adding a second white background creates a double-card effect.
+       Instead we use filter:drop-shadow on the image itself (see below)
+       so the shadow wraps the PNG's actual shape, not a rectangular box. */
     display: grid !important;
     place-items: center !important;
     justify-items: center !important;
@@ -5152,25 +5154,28 @@ st.markdown("""
     max-width: 242px !important;
     margin: 0 auto 1rem auto !important;
     transform: translateX(-13px) !important;
-    padding: 0.75rem 0.8rem !important;
-    background: #ffffff !important;
-    border: 1px solid #dce8f8 !important;
-    border-radius: 18px !important;
-    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.09), 0 1px 4px rgba(15, 23, 42, 0.05) !important;
+    padding: 0.5rem 0 0.5rem 0 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
     position: relative !important;
     z-index: 10 !important;
-    min-height: 90px !important;
+    min-height: 80px !important;
     overflow: visible !important;
-    border-bottom: 1px solid #dce8f8 !important;
+    border-bottom: none !important;
 }
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
     mix-blend-mode: normal !important;
-    max-width: 140px !important;
-    width: min(140px, 100%) !important;
+    max-width: 160px !important;
+    width: min(160px, 100%) !important;
     height: auto !important;
     display: block !important;
     margin: 0 auto !important;
     transform: none !important;
+    /* Drop shadow hugs the PNG's actual content shape (the internal white card),
+       not the rectangular bounding box. This gives definition without a double-card. */
+    filter: drop-shadow(0 4px 16px rgba(15, 23, 42, 0.13)) drop-shadow(0 1px 4px rgba(15, 23, 42, 0.07)) !important;
 }
 /* Removed: the dividing line under the logo wrap (it conflicts with the new
    self-contained app-icon style — the logo tile reads as a single element
@@ -5180,12 +5185,13 @@ st.markdown("""
     display: none !important;
 }
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
-    max-width: 135px !important;
-    width: min(135px, 100%) !important;
+    max-width: 160px !important;
+    width: min(160px, 100%) !important;
     height: auto !important;
     display: block !important;
     margin: 0 auto !important;
     transform: none !important;
+    filter: drop-shadow(0 4px 16px rgba(15, 23, 42, 0.13)) drop-shadow(0 1px 4px rgba(15, 23, 42, 0.07)) !important;
 }
 
 /* Sidebar selectbox styling — kept subtle, matches surrounding nav. */
@@ -8874,16 +8880,21 @@ st.markdown("""
         width: min(140px, 100%) !important;
     }
     [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
-        padding: 0.6rem 0.7rem !important;
+        padding: 0.4rem 0 0.4rem 0 !important;
         margin-bottom: 0.75rem !important;
         max-width: 242px !important;
-        background: #ffffff !important;
-        border: 1px solid #dce8f8 !important;
-        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.09), 0 1px 4px rgba(15, 23, 42, 0.05) !important;
-        border-radius: 16px !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
         position: relative !important;
         z-index: 10 !important;
-        min-height: 80px !important;
+        min-height: 70px !important;
+    }
+    [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
+        max-width: 155px !important;
+        width: min(155px, 100%) !important;
+        filter: drop-shadow(0 4px 16px rgba(15, 23, 42, 0.13)) drop-shadow(0 1px 4px rgba(15, 23, 42, 0.07)) !important;
     }
     [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
         padding: 0.5rem 0.85rem 0.55rem 0.85rem !important;
