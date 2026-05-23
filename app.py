@@ -9368,7 +9368,7 @@ GROQ_ACTIVE = bool(GROQ_API_KEY)
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_ACTIVE else None
 
 ANTHROPIC_API_KEY = _safe_secret("ANTHROPIC_API_KEY", os.environ.get("ANTHROPIC_API_KEY", ""))
-CLAUDE_MODEL = "claude-haiku-4-5"
+CLAUDE_MODEL = _safe_secret("CLAUDE_MODEL", "claude-haiku-4-5")
 anthropic_client = None
 if ANTHROPIC_AVAILABLE and ANTHROPIC_API_KEY:
     try:
@@ -10562,6 +10562,12 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
             print("Claude stream failed, falling back to Groq:", e)
             full_response = ""
 
+    if groq_client is None:
+        raise RuntimeError(
+            "No AI backend is available. Check that GROQ_API_KEY (and optionally ANTHROPIC_API_KEY) "
+            "are set in your Streamlit Cloud secrets."
+        )
+
     msgs = [{"role": "system", "content": system}] + history + [{"role": "user", "content": question}]
     try:
         stream = groq_client.chat.completions.create(
@@ -10570,16 +10576,13 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
             temperature=0.55,
             max_tokens=1024,
             stream=True,
-            timeout=12.0  # Enforces a strict response window to keep the UI from locking up permanently
+            timeout=30.0,
         )
     except Exception as stream_exception:
-        print(f"Groq runtime streaming drop encountered: {str(stream_exception)}")
-        st.markdown(
-            '<div class="md-mini-error">The underlying clinical pipeline is currently processing a high volume '
-            'of requests. Please re-verify your current query parameters or resubmit after a brief interval.</div>',
-            unsafe_allow_html=True
-        )
-        st.stop()
+        import traceback as _tb
+        print(f"Groq streaming error: {str(stream_exception)}")
+        _tb.print_exc()
+        raise RuntimeError(f"Groq API error: {str(stream_exception)}") from stream_exception
     for chunk in stream:
         delta = chunk.choices[0].delta.content or ""
         if delta:
@@ -13423,9 +13426,16 @@ if st.session_state.mode == "chat":
                     stream_placeholder.empty()
                     
                 except Exception as streaming_fault:
+                    import traceback as _tb
+                    _tb.print_exc()
+                    print(f"Streaming crash detail: {type(streaming_fault).__name__}: {str(streaming_fault)}")
                     stream_placeholder.empty()
-                    st.markdown('<div class="md-mini-error">MediChat had trouble generating a response. Please try again.</div>', unsafe_allow_html=True)
-                    print(f"Streaming Render Crash: {str(streaming_fault)}")
+                    _err_msg = str(streaming_fault) or "Unknown internal error"
+                    st.markdown(
+                        f'<div class="md-mini-error">MediChat had trouble generating a response. '
+                        f'Error: {_err_msg[:300]}. Please try again or check your API keys in Streamlit secrets.</div>',
+                        unsafe_allow_html=True,
+                    )
                     st.stop()
 
             final_text = strip_excessive_disclaimers(final_text)
