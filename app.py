@@ -11310,6 +11310,225 @@ with st.sidebar:
         _profile_nm = "Guest"
         _profile_in = "G"
         _profile_sub = "Sign in to save your data"
+    # Inject the custom CSS overrides specifically for styling the native Streamlit buttons in the sidebar
+    st.markdown("""
+<style>
+/* Custom sidebar native button overrides */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) {
+    background: #ffffff !important;
+    border: 1px solid #e6edf9 !important;
+    border-radius: 11px !important;
+    padding: 0.45rem 0.5rem 0.4rem 0.5rem !important;
+    margin-top: 0.7rem !important;
+    margin-bottom: 0.25rem !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02) !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+}
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [data-testid="stVerticalBlock"] {
+    gap: 0.2rem !important;
+}
+
+/* Sign out button */
+.element-container:has(.md-side-signout-anchor) + .element-container button {
+    position: absolute !important;
+    top: -55px !important; /* Pull up to align with the top profile card */
+    right: 12px !important;
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    color: #94a3b8 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 10 !important;
+    box-shadow: none !important;
+}
+.element-container:has(.md-side-signout-anchor) + .element-container button:hover {
+    background: #fef2f2 !important;
+    border-color: #fecaca !important;
+    color: #b91c1c !important;
+}
+
+/* See all button in card header */
+.element-container:has(.md-recent-seeall-anchor) + .element-container button {
+    position: absolute !important;
+    top: -24px !important; /* Pull up inline with Recent Chats header */
+    right: 8px !important;
+    background: transparent !important;
+    border: none !important;
+    color: #4f46e5 !important;
+    font-size: 0.74rem !important;
+    font-weight: 600 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    min-height: unset !important;
+    height: auto !important;
+    width: auto !important;
+    z-index: 5 !important;
+    display: inline-block !important;
+}
+.element-container:has(.md-recent-seeall-anchor) + .element-container button:hover {
+    color: #3730a3 !important;
+    text-decoration: underline !important;
+    background: transparent !important;
+}
+
+/* + New chat button inside the card */
+.element-container:has(.md-new-chat-anchor) + .element-container button {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-height: 30px !important;
+    height: 30px !important;
+    padding: 0 0.6rem !important;
+    margin-bottom: 0.35rem !important;
+    font-size: 0.72rem !important;
+    border-radius: 8px !important;
+    border: 1px solid #dbe4ff !important;
+    background: linear-gradient(135deg, #f5f8ff 0%, #eef2ff 100%) !important;
+    color: #4f46e5 !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 5px rgba(99, 102, 241, 0.05) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.35rem !important;
+    transition: all 0.2s ease !important;
+}
+.element-container:has(.md-new-chat-anchor) + .element-container button:hover {
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%) !important;
+    border-color: #c7d2fe !important;
+    color: #3730a3 !important;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12) !important;
+}
+.element-container:has(.md-new-chat-anchor) + .element-container button p {
+    font-size: 0.72rem !important;
+    color: #4f46e5 !important;
+    margin: 0 !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+}
+.element-container:has(.md-new-chat-anchor) + .element-container button [data-testid="stIconMaterial"] {
+    font-size: 0.88rem !important;
+    color: #4f46e5 !important;
+    -webkit-text-fill-color: #4f46e5 !important;
+}
+
+/* Conversation row buttons */
+.element-container:has(.md-conv-select-anchor) + .element-container button {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 8px !important;
+    color: #475569 !important;
+    text-align: left !important;
+    font-size: 0.76rem !important;
+    font-weight: 550 !important;
+    padding: 0.4rem 2rem 0.4rem 0.45rem !important; /* Leave space for delete cross */
+    min-height: unset !important;
+    height: auto !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.35rem !important;
+    transition: all 0.15s ease !important;
+}
+.element-container:has(.md-conv-select-anchor) + .element-container button:hover {
+    background: #f8fafc !important;
+    color: #0f172a !important;
+}
+.element-container:has(.md-conv-select-anchor.md-active) + .element-container button {
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    font-weight: 600 !important;
+}
+.element-container:has(.md-conv-select-anchor) + .element-container button p {
+    margin: 0 !important;
+    font-size: 0.76rem !important;
+    line-height: 1.15 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+.element-container:has(.md-conv-select-anchor) + .element-container button [data-testid="stIconMaterial"] {
+    font-size: 0.95rem !important;
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
+}
+
+/* Absolute position for Delete (✕) button inside the row wrapper */
+.element-container:has(.md-conv-del-anchor) + .element-container {
+    position: absolute !important;
+    margin-top: -26px !important; /* Pull up to align vertically on top of row */
+    right: 8px !important;
+    width: 20px !important;
+    height: 20px !important;
+    z-index: 5 !important;
+}
+.element-container:has(.md-conv-del-anchor) + .element-container button {
+    background: transparent !important;
+    border: none !important;
+    color: #94a3b8 !important;
+    font-size: 0.74rem !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    box-shadow: none !important;
+    border-radius: 50% !important;
+    transition: background 0.15s ease, color 0.15s ease !important;
+}
+.element-container:has(.md-conv-del-anchor) + .element-container button:hover {
+    background: #fef2f2 !important;
+    color: #b91c1c !important;
+}
+
+/* Privacy & Terms and Help Center footer buttons */
+.element-container:has(.md-privacy-btn-anchor) + .element-container button,
+.element-container:has(.md-help-btn-anchor) + .element-container button {
+    background: transparent !important;
+    border: none !important;
+    color: #64748b !important;
+    font-size: 0.65rem !important;
+    font-weight: 600 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: unset !important;
+    height: auto !important;
+    box-shadow: none !important;
+}
+.element-container:has(.md-privacy-btn-anchor) + .element-container button:hover,
+.element-container:has(.md-help-btn-anchor) + .element-container button:hover {
+    color: #4f46e5 !important;
+    text-decoration: underline !important;
+    background: transparent !important;
+}
+.element-container:has(.md-privacy-btn-anchor) + .element-container button p,
+.element-container:has(.md-help-btn-anchor) + .element-container button p {
+    font-size: 0.65rem !important;
+    margin: 0 !important;
+}
+.element-container:has(.md-privacy-btn-anchor) + .element-container button {
+    float: right !important;
+}
+.element-container:has(.md-help-btn-anchor) + .element-container button {
+    float: left !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
     # Profile chip: avatar + name/email + "Synced & up to date" status.
     _sync_dot = '<span class="md-status-dot"></span>Synced &amp; up to date' if st.session_state.is_authenticated else '<span class="md-status-dot md-status-dot-off"></span>Guest mode'
     st.markdown(
@@ -11320,84 +11539,108 @@ with st.sidebar:
         '<div class="md-side-psub">' + ui_text(_profile_sub, 40) + '</div>'
         '<div class="md-side-status">' + _sync_dot + '</div>'
         '</div>'
-        + (
-            # Sign-out icon, true child of the chip (anchor link), so it
-            # naturally lives in the chip's top-right corner without any
-            # negative-margin layout tricks that previously caused the
-            # Recent Chats card to overlap. The signout parameter is
-            # handled in Python below: same logout behavior as before.
-            '<a class="md-side-signout" href="?signout=1" target="_self" title="Sign out">'
-            '<span class="material-symbols-rounded">logout</span>'
-            '</a>'
-            if st.session_state.is_authenticated else ''
-        ) +
         '</div>',
         unsafe_allow_html=True
     )
 
+    # Sign-out icon button (overlaid absolutely on top of profile card top-right)
+    if st.session_state.is_authenticated:
+        st.markdown('<div class="md-side-signout-anchor"></div>', unsafe_allow_html=True)
+        if st.button(" ", key="profile_logout", icon=":material/logout:"):
+            for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context", "rx_reader_result", "rx_uploader_key"]:
+                if k in st.session_state:
+                    if k in ("is_authenticated", "is_guest"):
+                        st.session_state[k] = False
+                    elif k == "patient_memory":
+                        st.session_state[k] = {"symptoms": [], "conditions": [], "medications": []}
+                    elif k == "messages":
+                        st.session_state[k] = []
+                    elif k == "rx_reader_result":
+                        st.session_state[k] = None
+                    elif k == "rx_uploader_key":
+                        st.session_state[k] = 0
+                    elif k == "qcount":
+                        st.session_state[k] = 0
+                    elif k == "feedback":
+                        st.session_state[k] = {}
+                    else:
+                        st.session_state[k] = "" if isinstance(st.session_state[k], str) else st.session_state[k]
+            st.session_state.current_conversation_id = ""
+            st.rerun()
+
     if st.session_state.is_authenticated:
 
-        # == Recent Chats card (matches mockup) ==
-        # Render the entire card as ONE HTML block: header + "See all" link
-        # plus "+ New chat" anchor pill and conversation rows. Using anchors for
-        # both buttons (driven by new_chat=1 and conv=<id> JS handlers)
-        # means the whole card is one DOM subtree: Streamlit's per-widget
-        # wrappers can't break the nesting like st.button() did.
+        # == Recent Chats card (wrapped in container so grandparent :has targets it) ==
         _convs = list_conversations(st.session_state.user_email_hash, limit=3)
         _active_id = st.session_state.current_conversation_id
-        _card_html = (
-            '<div class="md-recent-card">'
-            '<div class="md-recent-head">'
-            '<div class="md-recent-title">Recent Chats</div>'
-            '<a class="md-recent-seeall" href="?mode=history" target="_self">See all</a>'
-            '</div>'
-            '<a class="md-new-chat-pill" href="?new_chat=1" target="_self">'
-            '<span class="material-symbols-rounded">add</span>'
-            '<span class="md-new-chat-pill-text">New chat</span>'
-            '</a>'
-        )
-        if _convs:
-            _card_html += '<div class="md-conv-list">'
-            for _c in _convs:
-                _is_active = _c["id"] == _active_id
-                _title = (_c.get("title") or "Chat")[:40]
-                _lu = _c.get("last_updated")
-                _ago = ""
-                try:
-                    if _lu and hasattr(_lu, "strftime"):
-                        _delta = datetime.utcnow() - (_lu.replace(tzinfo=None) if _lu.tzinfo else _lu)
-                        _h = int(_delta.total_seconds() // 3600)
-                        if _h < 1:
-                            _ago = str(max(1, int(_delta.total_seconds() // 60))) + "m ago"
-                        elif _h < 24:
-                            _ago = str(_h) + "h ago"
-                        elif _h < 168:
-                            _ago = str(_h // 24) + "d ago"
-                        else:
-                            _ago = str(_h // 168) + "w ago"
-                except Exception:
+
+        with st.container():
+            # Class markup to identify this st.container wrapper block
+            st.markdown('<div class="md-recent-card-inside"></div>', unsafe_allow_html=True)
+
+            # Card header title
+            st.markdown('<div class="md-recent-head"><div class="md-recent-title">Recent Chats</div></div>', unsafe_allow_html=True)
+            
+            # Card header "See all" button
+            st.markdown('<div class="md-recent-seeall-anchor"></div>', unsafe_allow_html=True)
+            if st.button("See all", key="recent_see_all_btn"):
+                st.session_state.mode = "history"
+                st.rerun()
+
+            # "+ New chat" button inside card
+            st.markdown('<div class="md-new-chat-anchor"></div>', unsafe_allow_html=True)
+            if st.button("＋ New chat", key="new_chat_btn", use_container_width=True):
+                start_new_chat_session()
+                st.rerun()
+
+            # Conversation rows
+            if _convs:
+                for _c in _convs:
+                    _is_active = _c["id"] == _active_id
+                    _title = (_c.get("title") or "Chat")[:40]
+                    _lu = _c.get("last_updated")
                     _ago = ""
-                _row_cls = "md-conv-row md-conv-row-active" if _is_active else "md-conv-row"
-                # Wrap each row in a flex container so we can sit the close delete
-                # icon as a SIBLING of the main click anchor (HTML disallows
-                # nesting <a> inside <a>). The row anchor still occupies the
-                # full flex stretch for the click target; the close button is a tiny
-                # anchor pinned right that triggers the update function.
-                _card_html += (
-                    '<div class="md-conv-row-wrap">'
-                    '<a class="' + _row_cls + '" href="?conv=' + ui_escape(_c["id"]) + '" target="_self">'
-                    '<span class="md-conv-icon material-symbols-rounded">description</span>'
-                    '<span class="md-conv-title">' + ui_escape(_title) + '</span>'
-                    '<span class="md-conv-time">' + ui_escape(_ago) + '</span>'
-                    '</a>'
-                    '<a class="md-conv-del" href="?del_conv=' + ui_escape(_c["id"]) + '" target="_self" title="Delete conversation" aria-label="Delete">'
-                    '<span class="material-symbols-rounded">close</span>'
-                    '</a>'
-                    '</div>'
-                )
-            _card_html += '</div>'
-        _card_html += '</div>'
-        st.markdown(_card_html, unsafe_allow_html=True)
+                    try:
+                        if _lu and hasattr(_lu, "strftime"):
+                            _delta = datetime.utcnow() - (_lu.replace(tzinfo=None) if _lu.tzinfo else _lu)
+                            _h = int(_delta.total_seconds() // 3600)
+                            if _h < 1:
+                                _ago = str(max(1, int(_delta.total_seconds() // 60))) + "m ago"
+                            elif _h < 24:
+                                _ago = str(_h) + "h ago"
+                            elif _h < 168:
+                                _ago = str(_h // 24) + "d ago"
+                            else:
+                                _ago = str(_h // 168) + "w ago"
+                    except Exception:
+                        _ago = ""
+                    
+                    _btn_label = _title + ("  " + _ago if _ago else "")
+                    _conv_key_prefix = "conv_active_" if _is_active else "conv_select_"
+                    
+                    # Conversation row select button
+                    st.markdown(f'<div class="md-conv-select-anchor{" md-active" if _is_active else ""}"></div>', unsafe_allow_html=True)
+                    if st.button(_btn_label, icon=":material/description:", key=_conv_key_prefix + _c["id"], use_container_width=True):
+                        _conv_obj = load_conversation(st.session_state.user_email_hash, _c["id"])
+                        if _conv_obj is not None:
+                            st.session_state.current_conversation_id = _c["id"]
+                            st.session_state.messages = _conv_obj.get("messages", []) or []
+                            st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
+                            st.session_state.feedback = {}
+                            st.session_state.last_sources = []
+                            st.session_state.emergency_detected = False
+                            st.session_state.mode = "chat"
+                        st.rerun()
+                    
+                    # Delete row button (✕) positioned absolutely on top of row
+                    st.markdown('<div class="md-conv-del-anchor"></div>', unsafe_allow_html=True)
+                    if st.button("✕", key="conv_del_" + _c["id"]):
+                        delete_conversation(st.session_state.user_email_hash, _c["id"])
+                        if st.session_state.get("current_conversation_id") == _c["id"]:
+                            st.session_state.current_conversation_id = ""
+                            st.session_state.messages = []
+                        st.rerun()
+
     elif st.session_state.is_guest:
         pass
 
@@ -11448,19 +11691,24 @@ with st.sidebar:
         st.session_state.selected_language = st.session_state.lang_selector
         st.rerun()
 
-    # Two-line footer (matches mockup): "Privacy & Terms · Help Center" + copyright.
+    # Footer: Privacy & Terms · Help Center + copyright
+    _foot_col1, _foot_col2, _foot_col3 = st.columns([0.45, 0.1, 0.45])
+    with _foot_col1:
+        st.markdown('<div class="md-privacy-btn-anchor"></div>', unsafe_allow_html=True)
+        if st.button("Privacy & Terms", key="privacy_btn"):
+            st.session_state.mode = "privacy"
+            st.rerun()
+    with _foot_col2:
+        st.markdown('<div class="md-sidebar-foot-dot">·</div>', unsafe_allow_html=True)
+    with _foot_col3:
+        st.markdown('<div class="md-help-btn-anchor"></div>', unsafe_allow_html=True)
+        if st.button("Help Center", key="help_btn"):
+            st.session_state.mode = "privacy"
+            st.rerun()
     st.markdown(
-        '<div class="md-sidebar-foot">'
-        '<div class="md-sidebar-foot-links">'
-        '<a href="?mode=privacy" target="_self">Privacy &amp; Terms</a>'
-        '<span class="md-sidebar-foot-dot">·</span>'
-        '<a href="?mode=privacy" target="_self">Help Center</a>'
-        '</div>'
-        '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>'
-        '</div>',
+        '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>',
         unsafe_allow_html=True
     )
-    st.markdown('</div>', unsafe_allow_html=True)
 
 L = LANGUAGES[st.session_state.selected_language]
 
@@ -12881,7 +13129,7 @@ if st.session_state.mode == "chat":
                 ]
                 snap_html = (
                     '<div class="md-rcard md-snap-card">'
-                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><a class="md-rcard-link md-rcard-link-btn" href="?mode=overview" target="_self">See all</a></div>'
+                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><span class="md-rcard-link md-rcard-link-btn" style="cursor: default;">See all</span></div>'
                     '<div class="md-snap-grid">'
                 )
                 for _cls, _icon, _lbl, _val, _status, _line_cls in _tiles:
@@ -12905,7 +13153,7 @@ if st.session_state.mode == "chat":
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 # Recent Conversations (real, from Firestore)
-                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="?mode=history" target="_self" rel="noopener">See all</a></div>'
+                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><span class="md-rcard-link md-rcard-link-btn" style="cursor: default;">See all</span></div>'
                 if st.session_state.is_authenticated and st.session_state.user_email_hash:
                     _recent = list_conversations(st.session_state.user_email_hash, limit=4)
                 else:
