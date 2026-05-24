@@ -13654,6 +13654,7 @@ if st.session_state.mode == "chat":
     )
 
     if st.session_state.messages:
+        import streamlit.components.v1 as _components
         _components.html(
             """
             <script>
