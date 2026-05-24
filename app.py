@@ -11095,18 +11095,6 @@ if "session_started" not in st.session_state:
     st.session_state.home_show_voice = False
     st.session_state.voice_audio_key = 0
 
-def get_onclick_js(params_to_set, params_to_delete):
-    # Generates JavaScript code to update URL parameters dynamically
-    # without reloading the browser window.
-    set_js = "".join([f"url.searchParams.set('{k}', '{v}');" for k, v in params_to_set.items()])
-    del_js = "".join([f"url.searchParams.delete('{p}');" for p in params_to_delete])
-    return (
-        "const win = (window.parent && window.parent.history) ? window.parent : window; "
-        "const url = new URL(win.location.href); "
-        f"{del_js}{set_js}"
-        "win.history.pushState({}, '', url.toString()); "
-        "win.dispatchEvent(new PopStateEvent('popstate'));"
-    )
 
 with st.sidebar:
     _brand_logo_uri = get_brand_logo_data_uri()
@@ -11209,7 +11197,7 @@ with st.sidebar:
             # negative-margin layout tricks that previously caused the
             # Recent Chats card to overlap. The signout parameter is
             # handled in Python below: same logout behavior as before.
-            '<a class="md-side-signout" href="javascript:void(0)" target="_self" onclick="' + get_onclick_js({'signout': '1'}, ['conv', 'del_conv', 'new_chat', 'mode']) + '" title="Sign out">'
+            '<a class="md-side-signout" href="javascript:void(0)" target="_self" title="Sign out">'
             '<span class="material-symbols-rounded">logout</span>'
             '</a>'
             if st.session_state.is_authenticated else ''
@@ -11235,9 +11223,9 @@ with st.sidebar:
             '<div class="md-recent-card">'
             '<div class="md-recent-head">'
             '<div class="md-recent-title">Recent Chats</div>'
-            '<a class="md-recent-seeall" href="javascript:void(0)" target="_self" onclick="' + get_onclick_js({'mode': 'history'}, ['conv', 'del_conv', 'new_chat']) + '">See all</a>'
+            '<a class="md-recent-seeall" href="javascript:void(0)" target="_self">See all</a>'
             '</div>'
-            '<a class="md-new-chat-pill" href="javascript:void(0)" target="_self" onclick="' + get_onclick_js({'new_chat': '1'}, ['conv', 'del_conv']) + '">'
+            '<a class="md-new-chat-pill" href="javascript:void(0)" target="_self">'
             '<span class="material-symbols-rounded">add</span>'
             '<span class="md-new-chat-pill-text">New chat</span>'
             '</a>'
@@ -11271,12 +11259,12 @@ with st.sidebar:
                 # anchor pinned right that triggers the update function.
                 _card_html += (
                     '<div class="md-conv-row-wrap">'
-                    '<a class="' + _row_cls + '" href="javascript:void(0)" target="_self" onclick="' + get_onclick_js({'conv': _c["id"]}, ['new_chat', 'del_conv']) + '">'
+                    '<a class="' + _row_cls + '" href="javascript:void(0)" target="_self" data-conv-id="' + ui_escape(_c["id"]) + '">'
                     '<span class="md-conv-icon material-symbols-rounded">description</span>'
                     '<span class="md-conv-title">' + ui_escape(_title) + '</span>'
                     '<span class="md-conv-time">' + ui_escape(_ago) + '</span>'
                     '</a>'
-                    '<a class="md-conv-del" href="javascript:void(0)" target="_self" onclick="' + get_onclick_js({'del_conv': _c["id"]}, ['conv', 'new_chat']) + '" title="Delete conversation" aria-label="Delete">'
+                    '<a class="md-conv-del" href="javascript:void(0)" target="_self" data-conv-id="' + ui_escape(_c["id"]) + '" title="Delete conversation" aria-label="Delete">'
                     '<span class="material-symbols-rounded">close</span>'
                     '</a>'
                     '</div>'
@@ -11322,10 +11310,120 @@ with st.sidebar:
                     });
                 } catch (e) {}
             }
+
+            function setupListeners() {
+                try {
+                    var doc = window.parent.document;
+                    if (!doc) return;
+                    
+                    var signout = doc.querySelector('.md-side-signout');
+                    if (signout && !signout.dataset.hasListener) {
+                        signout.dataset.hasListener = 'true';
+                        signout.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            updateParams({'signout': '1'}, ['conv', 'del_conv', 'new_chat', 'mode']);
+                        });
+                    }
+                    
+                    var newChat = doc.querySelector('.md-new-chat-pill');
+                    if (newChat && !newChat.dataset.hasListener) {
+                        newChat.dataset.hasListener = 'true';
+                        newChat.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            updateParams({'new_chat': '1'}, ['conv', 'del_conv']);
+                        });
+                    }
+                    
+                    var seeAllRecent = doc.querySelector('.md-recent-seeall');
+                    if (seeAllRecent && !seeAllRecent.dataset.hasListener) {
+                        seeAllRecent.dataset.hasListener = 'true';
+                        seeAllRecent.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            updateParams({'mode': 'history'}, ['conv', 'del_conv', 'new_chat']);
+                        });
+                    }
+                    
+                    var wraps = doc.querySelectorAll('.md-conv-row-wrap');
+                    wraps.forEach(function(wrap) {
+                        var row = wrap.querySelector('.md-conv-row');
+                        var del = wrap.querySelector('.md-conv-del');
+                        if (row && !row.dataset.hasListener) {
+                            row.dataset.hasListener = 'true';
+                            var convId = row.getAttribute('data-conv-id');
+                            row.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                updateParams({'conv': convId}, ['new_chat', 'del_conv']);
+                            });
+                        }
+                        if (del && !del.dataset.hasListener) {
+                            del.dataset.hasListener = 'true';
+                            var convId = del.getAttribute('data-conv-id');
+                            del.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                updateParams({'del_conv': convId}, ['conv', 'new_chat']);
+                            });
+                        }
+                    });
+                    
+                    var footerLinks = doc.querySelectorAll('.md-sidebar-foot-links a');
+                    footerLinks.forEach(function(link) {
+                        if (link && !link.dataset.hasListener) {
+                            link.dataset.hasListener = 'true';
+                            link.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                updateParams({'mode': 'privacy'}, ['conv', 'del_conv', 'new_chat']);
+                            });
+                        }
+                    });
+
+                    var overviewSeeAll = doc.querySelector('.md-snap-card .md-rcard-link');
+                    if (overviewSeeAll && !overviewSeeAll.dataset.hasListener) {
+                        overviewSeeAll.dataset.hasListener = 'true';
+                        overviewSeeAll.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            updateParams({'mode': 'overview'}, ['conv', 'del_conv', 'new_chat']);
+                        });
+                    }
+
+                    var recentSeeAll = doc.querySelector('.md-rcard-recent .md-rcard-link');
+                    if (recentSeeAll && !recentSeeAll.dataset.hasListener) {
+                        recentSeeAll.dataset.hasListener = 'true';
+                        recentSeeAll.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            updateParams({'mode': 'history'}, ['conv', 'del_conv', 'new_chat']);
+                        });
+                    }
+                } catch(err) {}
+            }
+
+            function updateParams(toSet, toDel) {
+                try {
+                    var win = window.parent;
+                    var url = new URL(win.location.href);
+                    if (toDel) {
+                        toDel.forEach(function(p) { url.searchParams.delete(p); });
+                    }
+                    if (toSet) {
+                        for (var k in toSet) {
+                            url.searchParams.set(k, toSet[k]);
+                        }
+                    }
+                    win.history.pushState({}, '', url.toString());
+                    win.dispatchEvent(new PopStateEvent('popstate'));
+                } catch(err) {}
+            }
+
             lock();
+            setupListeners();
             setTimeout(lock, 200);
+            setTimeout(setupListeners, 200);
             setTimeout(lock, 800);
-            setInterval(lock, 1500);
+            setTimeout(setupListeners, 800);
+            setInterval(function() {
+                lock();
+                setupListeners();
+            }, 250);
         })();
         </script>
         """,
@@ -11341,9 +11439,9 @@ with st.sidebar:
     st.markdown(
         '<div class="md-sidebar-foot">'
         '<div class="md-sidebar-foot-links">'
-        '<a href="javascript:void(0)" target="_self" onclick="' + get_onclick_js({'mode': 'privacy'}, ['conv', 'del_conv', 'new_chat']) + '">Privacy &amp; Terms</a>'
+        '<a href="javascript:void(0)" target="_self">Privacy &amp; Terms</a>'
         '<span class="md-sidebar-foot-dot">·</span>'
-        '<a href="javascript:void(0)" target="_self" onclick="' + get_onclick_js({'mode': 'privacy'}, ['conv', 'del_conv', 'new_chat']) + '">Help Center</a>'
+        '<a href="javascript:void(0)" target="_self">Help Center</a>'
         '</div>'
         '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>'
         '</div>',
@@ -12770,7 +12868,7 @@ if st.session_state.mode == "chat":
                 ]
                 snap_html = (
                     '<div class="md-rcard md-snap-card">'
-                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><a class="md-rcard-link md-rcard-link-btn" href="javascript:void(0)" target="_self" onclick="' + get_onclick_js({'mode': 'overview'}, ['conv', 'del_conv', 'new_chat']) + '">See all</a></div>'
+                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><a class="md-rcard-link md-rcard-link-btn" href="javascript:void(0)" target="_self">See all</a></div>'
                     '<div class="md-snap-grid">'
                 )
                 for _cls, _icon, _lbl, _val, _status, _line_cls in _tiles:
@@ -12794,7 +12892,7 @@ if st.session_state.mode == "chat":
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 # Recent Conversations (real, from Firestore)
-                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="javascript:void(0)" target="_self" onclick="' + get_onclick_js({'mode': 'history'}, ['conv', 'del_conv', 'new_chat']) + '" rel="noopener">See all</a></div>'
+                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="javascript:void(0)" target="_self" rel="noopener">See all</a></div>'
                 if st.session_state.is_authenticated and st.session_state.user_email_hash:
                     _recent = list_conversations(st.session_state.user_email_hash, limit=4)
                 else:
