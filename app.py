@@ -11282,7 +11282,7 @@ with st.sidebar:
             except Exception:
                 pass
             st.session_state.nav_clicked = True
-            if nav_key == "new":
+            if nav_key == "home" or nav_key == "new":
                 start_new_chat_session()
             else:
                 st.session_state.mode = target_mode
