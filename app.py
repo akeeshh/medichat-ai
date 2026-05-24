@@ -11096,6 +11096,42 @@ if "session_started" not in st.session_state:
     st.session_state.voice_audio_key = 0
 
 with st.sidebar:
+    # Inject JavaScript to dynamically modify query parameters without a page reload.
+    st.markdown(
+        """
+        <script>
+        (function() {
+            let win = window;
+            try {
+                if (window.parent && window.parent.history) {
+                    win = window.parent;
+                }
+            } catch (e) {}
+            win.updateMediChatQueryParam = function(paramsToSet, paramsToDelete) {
+                let targetWin = window;
+                try {
+                    if (window.parent && window.parent.history) {
+                        targetWin = window.parent;
+                    }
+                } catch (e) {}
+                const url = new URL(targetWin.location.href);
+                if (paramsToDelete) {
+                    paramsToDelete.forEach(p => url.searchParams.delete(p));
+                }
+                if (paramsToSet) {
+                    for (const [k, v] of Object.entries(paramsToSet)) {
+                        url.searchParams.set(k, v);
+                    }
+                }
+                targetWin.history.pushState({}, '', url.toString());
+                targetWin.dispatchEvent(new PopStateEvent('popstate'));
+            };
+            window.updateMediChatQueryParam = win.updateMediChatQueryParam;
+        })();
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
     _brand_logo_uri = get_brand_logo_data_uri()
     if _brand_logo_uri:
         st.markdown(
@@ -11191,12 +11227,12 @@ with st.sidebar:
         '<div class="md-side-status">' + _sync_dot + '</div>'
         '</div>'
         + (
-            # Sign-out icon — true child of the chip (anchor link), so it
+            # Sign-out icon, true child of the chip (anchor link), so it
             # naturally lives in the chip's top-right corner without any
             # negative-margin layout tricks that previously caused the
-            # Recent Chats card to overlap. The ?signout=1 URL param is
-            # handled in Python below — same logout behavior as before.
-            '<a class="md-side-signout" href="?signout=1" target="_self" title="Sign out">'
+            # Recent Chats card to overlap. The signout parameter is
+            # handled in Python below: same logout behavior as before.
+            '<a class="md-side-signout" href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'signout\': \'1\'}, [\'conv\', \'del_conv\', \'new_chat\', \'mode\']);" title="Sign out">'
             '<span class="material-symbols-rounded">logout</span>'
             '</a>'
             if st.session_state.is_authenticated else ''
@@ -11210,11 +11246,11 @@ with st.sidebar:
 
     if st.session_state.is_authenticated:
 
-        # ── Recent Chats card (matches mockup) ──
+        # == Recent Chats card (matches mockup) ==
         # Render the entire card as ONE HTML block: header + "See all" link
-        # + "+ New chat" anchor pill + conversation rows. Using anchors for
-        # both buttons (driven by ?new_chat=1 and ?conv=<id> URL handlers)
-        # means the whole card is one DOM subtree — Streamlit's per-widget
+        # plus "+ New chat" anchor pill and conversation rows. Using anchors for
+        # both buttons (driven by new_chat=1 and conv=<id> JS handlers)
+        # means the whole card is one DOM subtree: Streamlit's per-widget
         # wrappers can't break the nesting like st.button() did.
         _convs = list_conversations(st.session_state.user_email_hash, limit=3)
         _active_id = st.session_state.current_conversation_id
@@ -11222,9 +11258,9 @@ with st.sidebar:
             '<div class="md-recent-card">'
             '<div class="md-recent-head">'
             '<div class="md-recent-title">Recent Chats</div>'
-            '<a class="md-recent-seeall" href="?mode=history" target="_self">See all</a>'
+            '<a class="md-recent-seeall" href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'mode\': \'history\'}, [\'conv\', \'del_conv\', \'new_chat\']);">See all</a>'
             '</div>'
-            '<a class="md-new-chat-pill" href="?new_chat=1" target="_self">'
+            '<a class="md-new-chat-pill" href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'new_chat\': \'1\'}, [\'conv\', \'del_conv\']);">'
             '<span class="material-symbols-rounded">add</span>'
             '<span class="md-new-chat-pill-text">New chat</span>'
             '</a>'
@@ -11251,19 +11287,19 @@ with st.sidebar:
                 except Exception:
                     _ago = ""
                 _row_cls = "md-conv-row md-conv-row-active" if _is_active else "md-conv-row"
-                # Wrap each row in a flex container so we can sit the × delete
+                # Wrap each row in a flex container so we can sit the close delete
                 # icon as a SIBLING of the main click anchor (HTML disallows
                 # nesting <a> inside <a>). The row anchor still occupies the
-                # full flex stretch for the click target; the × is a tiny
-                # anchor pinned right that triggers ?del_conv=<id>.
+                # full flex stretch for the click target; the close button is a tiny
+                # anchor pinned right that triggers the update function.
                 _card_html += (
                     '<div class="md-conv-row-wrap">'
-                    '<a class="' + _row_cls + '" href="?conv=' + ui_escape(_c["id"]) + '" target="_self">'
+                    '<a class="' + _row_cls + '" href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'conv\': \'' + ui_escape(_c["id"]) + '\'}, [\'new_chat\', \'del_conv\']);">'
                     '<span class="md-conv-icon material-symbols-rounded">description</span>'
                     '<span class="md-conv-title">' + ui_escape(_title) + '</span>'
                     '<span class="md-conv-time">' + ui_escape(_ago) + '</span>'
                     '</a>'
-                    '<a class="md-conv-del" href="?del_conv=' + ui_escape(_c["id"]) + '" target="_self" title="Delete conversation" aria-label="Delete">'
+                    '<a class="md-conv-del" href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'del_conv\': \'' + ui_escape(_c["id"]) + '\'}, [\'conv\', \'new_chat\']);" title="Delete conversation" aria-label="Delete">'
                     '<span class="material-symbols-rounded">close</span>'
                     '</a>'
                     '</div>'
@@ -11328,9 +11364,9 @@ with st.sidebar:
     st.markdown(
         '<div class="md-sidebar-foot">'
         '<div class="md-sidebar-foot-links">'
-        '<a href="?mode=privacy" target="_self">Privacy &amp; Terms</a>'
+        '<a href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'mode\': \'privacy\'}, [\'conv\', \'del_conv\', \'new_chat\']);">Privacy &amp; Terms</a>'
         '<span class="md-sidebar-foot-dot">·</span>'
-        '<a href="?mode=privacy" target="_self">Help Center</a>'
+        '<a href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'mode\': \'privacy\'}, [\'conv\', \'del_conv\', \'new_chat\']);">Help Center</a>'
         '</div>'
         '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>'
         '</div>',
@@ -12757,7 +12793,7 @@ if st.session_state.mode == "chat":
                 ]
                 snap_html = (
                     '<div class="md-rcard md-snap-card">'
-                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><a class="md-rcard-link md-rcard-link-btn" href="?mode=overview">See all</a></div>'
+                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><a class="md-rcard-link md-rcard-link-btn" href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'mode\': \'overview\'}, [\'conv\', \'del_conv\', \'new_chat\']);">See all</a></div>'
                     '<div class="md-snap-grid">'
                 )
                 for _cls, _icon, _lbl, _val, _status, _line_cls in _tiles:
@@ -12781,11 +12817,11 @@ if st.session_state.mode == "chat":
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 # Recent Conversations (real, from Firestore)
-                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="/?mode=history" target="_self" rel="noopener">See all</a></div>'
+                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'mode\': \'history\'}, [\'conv\', \'del_conv\', \'new_chat\']);" rel="noopener">See all</a></div>'
                 if st.session_state.is_authenticated and st.session_state.user_email_hash:
                     _recent = list_conversations(st.session_state.user_email_hash, limit=4)
                 else:
-                    _recent = []  # Real conversations only — no mock entries.
+                    _recent = []  # Real conversations only: no mock entries.
                 if _recent:
                     for _r in _recent:
                         _rt = (_r.get("title") or "Chat")[:32]
