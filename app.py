@@ -7270,7 +7270,7 @@ st.markdown("""
         align-items: flex-start !important;
         justify-content: space-between !important;
         gap: 1rem !important;
-        margin: 0.2rem 0 1.4rem 0 !important;
+        margin: 0.2rem 0 2.8rem 0 !important;
         flex-wrap: wrap !important;
     }
     .md-chat-hero-text { min-width: 0 !important; }
