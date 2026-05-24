@@ -13629,22 +13629,42 @@ if st.session_state.mode == "chat":
             (function () {
                 const host = window.parent;
                 if (!host || !host.document) return;
-                if (host.__medichatEnterSendBound) return;
-                host.__medichatEnterSendBound = true;
+                if (host.__medichatEnterSendBoundV2) return;
+                host.__medichatEnterSendBoundV2 = true;
 
                 function isComposerTextarea(el) {
                     if (!el || el.tagName !== "TEXTAREA") return false;
-                    const label = (el.getAttribute("aria-label") || "").trim();
-                    return label === "Start a chat" || label === "Your message";
+                    
+                    const label = (el.getAttribute("aria-label") || "").trim().toLowerCase();
+                    if (label.includes("start a chat") || label.includes("your message")) {
+                        return true;
+                    }
+                    
+                    const placeholder = (el.getAttribute("placeholder") || "").trim().toLowerCase();
+                    if (placeholder.includes("ask anything about your health")) {
+                        return true;
+                    }
+                    
+                    if (el.closest('[class*="st-key-home_chat_input"], [class*="st-key-chat_input"]')) {
+                        return true;
+                    }
+                    
+                    return false;
                 }
 
                 function findSendButton(textarea) {
                     const form = textarea.closest('[data-testid="stForm"]');
                     if (!form) return null;
+                    
+                    const specificBtn = form.querySelector(
+                        '[class*="st-key-home_send_btn"] button, [class*="st-key-chat_send_btn"] button'
+                    );
+                    if (specificBtn) return specificBtn;
+                    
                     return form.querySelector(
-                        '.st-key-home_send_btn button, .st-key-chat_send_btn button, ' +
-                        '[data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"], ' +
-                        '[data-testid="stFormSubmitButton"] > button[kind="primary"]'
+                        'button[kind="primaryFormSubmit"], ' +
+                        'button[kind="primary"], ' +
+                        '[data-testid="stFormSubmitButton"] button'
                     );
                 }
 
