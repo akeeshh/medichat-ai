@@ -4571,7 +4571,7 @@ st.markdown("""
 }
 [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
     padding: 1.06rem 1rem 2rem 1rem !important;
-    overflow-y: auto !important;
+    overflow-y: clip !important;
     overflow-x: hidden !important;
 }
 [data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {
@@ -4859,7 +4859,7 @@ st.markdown("""
 }
 [data-testid="stSidebarContent"] {
     overflow-x: clip !important;
-    overflow-y: auto !important; /* Allow vertical scrolling! */
+    overflow-y: clip !important; /* Disable vertical scrolling */
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
 }
@@ -6118,14 +6118,12 @@ st.markdown("""
         color: #0f172a !important;
         text-decoration: none !important;
     }
-    /* Active conversation row — styled beautifully to distinguish from normal ones */
+    /* Active conversation row — styled plain just like other rows per user request */
     [data-testid="stSidebar"] .md-conv-row-active {
-        background: #f0f4ff !important;
-        border-left: 3px solid #4f46e5 !important;
-        border-top-left-radius: 0 !important;
-        border-bottom-left-radius: 0 !important;
-        color: #312e81 !important;
-        font-weight: 600 !important;
+        background: transparent !important;
+        border-left: 3px solid transparent !important;
+        color: #475569 !important;
+        font-weight: 550 !important;
     }
     [data-testid="stSidebar"] .md-conv-icon {
         font-size: 0.95rem !important;
@@ -6134,8 +6132,8 @@ st.markdown("""
         flex-shrink: 0 !important;
     }
     [data-testid="stSidebar"] .md-conv-row-active .md-conv-icon {
-        color: #4f46e5 !important;
-        -webkit-text-fill-color: #4f46e5 !important;
+        color: #94a3b8 !important;
+        -webkit-text-fill-color: #94a3b8 !important;
     }
     [data-testid="stSidebar"] .md-conv-title {
         flex: 1 1 auto !important;
@@ -6148,7 +6146,7 @@ st.markdown("""
         line-height: 1.2 !important;
     }
     [data-testid="stSidebar"] .md-conv-row-active .md-conv-title {
-        font-weight: 600 !important;
+        font-weight: 550 !important;
     }
     [data-testid="stSidebar"] .md-conv-time {
         flex-shrink: 0 !important;
@@ -6158,7 +6156,7 @@ st.markdown("""
         margin-left: 0.25rem !important;
     }
     [data-testid="stSidebar"] .md-conv-row-active .md-conv-time {
-        color: #6366f1 !important;
+        color: #94a3b8 !important;
     }
 
     /* ── Force every sidebar-bottom tile to match a single compact width
@@ -6173,7 +6171,7 @@ st.markdown("""
     [data-testid="stSidebar"] [data-testid="stSelectbox"]:has(.st-key-lang_selector),
     [data-testid="stSidebar"] .md-sidebar-foot {
         box-sizing: border-box !important;
-        max-width: 210px !important;
+        max-width: 242px !important; /* Expanded from 210px to align perfectly with nav buttons */
         margin-left: auto !important;
         margin-right: auto !important;
         width: 100% !important;
