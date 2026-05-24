@@ -13648,67 +13648,72 @@ if st.session_state.mode == "chat":
     st.markdown('<div id="page-bottom-anchor" style="height:1px;"></div>', unsafe_allow_html=True)
 
     # Enter-to-send (Shift+Enter keeps newline) for both home and in-chat composers.
-    import streamlit.components.v1 as _components
-    _components.html(
+    st.markdown(
         """
-        <script>
+        <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="
             (function () {
-                const host = window.parent;
-                if (!host || !host.document) return;
-                if (host.__medichatEnterSendBoundV2) return;
-                host.__medichatEnterSendBoundV2 = true;
+                try {
+                    if (window.__medichatEnterSendBoundV3) return;
+                    window.__medichatEnterSendBoundV3 = true;
+                    console.log('Enter-to-send V3 listener initialized');
 
-                function isComposerTextarea(el) {
-                    if (!el || el.tagName !== "TEXTAREA") return false;
-                    
-                    const label = (el.getAttribute("aria-label") || "").trim().toLowerCase();
-                    if (label.includes("start a chat") || label.includes("your message")) {
-                        return true;
+                    function isComposerTextarea(el) {
+                        if (!el || el.tagName !== 'TEXTAREA') return false;
+                        
+                        const label = (el.getAttribute('aria-label') || '').trim().toLowerCase();
+                        if (label.includes('start a chat') || label.includes('your message')) {
+                            return true;
+                        }
+                        
+                        const placeholder = (el.getAttribute('placeholder') || '').trim().toLowerCase();
+                        if (placeholder.includes('ask anything about your health')) {
+                            return true;
+                        }
+                        
+                        if (el.closest('[class*=st-key-home_chat_input], [class*=st-key-chat_input]')) {
+                            return true;
+                        }
+                        
+                        return false;
                     }
-                    
-                    const placeholder = (el.getAttribute("placeholder") || "").trim().toLowerCase();
-                    if (placeholder.includes("ask anything about your health")) {
-                        return true;
+
+                    function findSendButton(textarea) {
+                        const form = textarea.closest('[data-testid=stForm]');
+                        if (!form) return null;
+                        
+                        const specificBtn = form.querySelector(
+                            '[class*=st-key-home_send_btn] button, [class*=st-key-chat_send_btn] button'
+                        );
+                        if (specificBtn) return specificBtn;
+                        
+                        return form.querySelector(
+                            'button[kind=primaryFormSubmit], ' +
+                            'button[kind=primary], ' +
+                            '[data-testid=stFormSubmitButton] button'
+                        );
                     }
-                    
-                    if (el.closest('[class*="st-key-home_chat_input"], [class*="st-key-chat_input"]')) {
-                        return true;
-                    }
-                    
-                    return false;
+
+                    document.addEventListener('keydown', function (ev) {
+                        if (ev.defaultPrevented) return;
+                        if (ev.key !== 'Enter') return;
+                        if (ev.shiftKey || ev.ctrlKey || ev.metaKey || ev.altKey || ev.isComposing) return;
+                        const target = ev.target;
+                        if (!isComposerTextarea(target)) return;
+
+                        ev.preventDefault();
+                        const btn = findSendButton(target);
+                        console.log('Enter key intercepted. Submit button found:', btn);
+                        if (btn && !btn.disabled) {
+                            btn.click();
+                        }
+                    }, true);
+                } catch (e) {
+                    console.error('Enter-to-send registration error:', e);
                 }
-
-                function findSendButton(textarea) {
-                    const form = textarea.closest('[data-testid="stForm"]');
-                    if (!form) return null;
-                    
-                    const specificBtn = form.querySelector(
-                        '[class*="st-key-home_send_btn"] button, [class*="st-key-chat_send_btn"] button'
-                    );
-                    if (specificBtn) return specificBtn;
-                    
-                    return form.querySelector(
-                        'button[kind="primaryFormSubmit"], ' +
-                        'button[kind="primary"], ' +
-                        '[data-testid="stFormSubmitButton"] button'
-                    );
-                }
-
-                host.document.addEventListener("keydown", function (ev) {
-                    if (ev.defaultPrevented) return;
-                    if (ev.key !== "Enter") return;
-                    if (ev.shiftKey || ev.ctrlKey || ev.metaKey || ev.altKey || ev.isComposing) return;
-                    const target = ev.target;
-                    if (!isComposerTextarea(target)) return;
-
-                    ev.preventDefault();
-                    const btn = findSendButton(target);
-                    if (btn && !btn.disabled) btn.click();
-                }, true);
             })();
-        </script>
+        " style="display:none;position:absolute;width:0;height:0;">
         """,
-        height=0,
+        unsafe_allow_html=True,
     )
 
     if st.session_state.messages:
