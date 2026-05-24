@@ -6365,8 +6365,12 @@ st.markdown("""
     [data-testid="stSidebar"] hr {
         border: none !important;
         height: 1px !important;
-        background: #d6e0f0 !important;
-        margin: 0.85rem -0.2rem 0.6rem -0.2rem !important;
+        background: #cbd5e1 !important;
+        margin-top: 0.85rem !important;
+        margin-bottom: 0.85rem !important;
+        margin-left: 0 !important;
+        margin-right: 1.6rem !important;
+        width: calc(100% - 1.6rem) !important;
     }
     [data-testid="stSidebar"] .sb-title {
         font-size: 0.6rem !important;
