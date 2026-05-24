@@ -5894,18 +5894,18 @@ st.markdown("""
         position: relative !important;
         top: auto !important;
         right: auto !important;
-        margin: 0.4rem auto 0 auto !important;
+        margin: 0 0 0 auto !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        width: 32px !important;
-        height: 32px !important;
+        width: 28px !important;
+        height: 28px !important;
         border-radius: 50% !important;
-        background: #f1f5f9 !important;
-        color: #64748b !important;
+        background: transparent !important;
+        color: #94a3b8 !important;
         text-decoration: none !important;
         transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
-        border: 1px solid #e2e8f0 !important;
+        border: 1px solid transparent !important;
     }
     [data-testid="stSidebar"] .md-side-signout:hover {
         background: #fef2f2 !important;
@@ -6177,45 +6177,48 @@ st.markdown("""
        padding is also lighter (1.1 instead of 1.2). */
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
         display: flex !important;
-        flex-direction: column !important;
+        flex-direction: row !important;
         align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
-        padding: 1.1rem 1rem !important;
-        gap: 0.65rem !important;
+        justify-content: flex-start !important;
+        padding: 0.55rem 0.65rem !important;
+        gap: 0.55rem !important;
+        position: relative !important;
     }
     [data-testid="stSidebar"] .md-side-profile-text {
-        text-align: center !important;
+        text-align: left !important;
         display: flex !important;
         flex-direction: column !important;
-        align-items: center !important;
+        align-items: flex-start !important;
+        justify-content: center !important;
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
     }
     [data-testid="stSidebar"] .md-side-avatar {
-        width: 38px !important;
-        min-width: 38px !important;
-        height: 38px !important;
-        font-size: 0.9rem !important;
-        border-radius: 50% !important;
+        width: 32px !important;
+        min-width: 32px !important;
+        height: 32px !important;
+        font-size: 0.8rem !important;
+        border-radius: 10px !important;
     }
     [data-testid="stSidebar"] .md-side-pname {
-        font-size: 0.8rem !important;
+        font-size: 0.76rem !important;
         font-weight: 700 !important;
-        line-height: 1.2 !important;
-        text-align: center !important;
+        line-height: 1.15 !important;
+        text-align: left !important;
     }
     [data-testid="stSidebar"] .md-side-psub {
-        font-size: 0.66rem !important;
-        line-height: 1.25 !important;
-        text-align: center !important;
-        color: #64748b !important;
+        font-size: 0.64rem !important;
+        line-height: 1.2 !important;
+        text-align: left !important;
+        color: #94a3b8 !important;
     }
     [data-testid="stSidebar"] .md-side-status {
-        font-size: 0.6rem !important;
-        margin-top: 0.25rem !important;
+        font-size: 0.58rem !important;
+        margin-top: 0.15rem !important;
         display: flex !important;
         align-items: center !important;
-        justify-content: center !important;
-        gap: 0.35rem !important;
+        justify-content: flex-start !important;
+        gap: 0.3rem !important;
     }
     [data-testid="stSidebar"] .md-side-chevron {
         display: none !important;
