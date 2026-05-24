@@ -6185,10 +6185,10 @@ st.markdown("""
         position: relative !important;
     }
     [data-testid="stSidebar"] .md-side-profile-text {
-        text-align: left !important;
+        text-align: center !important;
         display: flex !important;
         flex-direction: column !important;
-        align-items: flex-start !important;
+        align-items: center !important;
         justify-content: center !important;
         flex: 1 1 0 !important;
         min-width: 0 !important;
@@ -6204,12 +6204,12 @@ st.markdown("""
         font-size: 0.76rem !important;
         font-weight: 700 !important;
         line-height: 1.15 !important;
-        text-align: left !important;
+        text-align: center !important;
     }
     [data-testid="stSidebar"] .md-side-psub {
         font-size: 0.64rem !important;
         line-height: 1.2 !important;
-        text-align: left !important;
+        text-align: center !important;
         color: #94a3b8 !important;
     }
     [data-testid="stSidebar"] .md-side-status {
@@ -6217,7 +6217,7 @@ st.markdown("""
         margin-top: 0.15rem !important;
         display: flex !important;
         align-items: center !important;
-        justify-content: flex-start !important;
+        justify-content: center !important;
         gap: 0.3rem !important;
     }
     [data-testid="stSidebar"] .md-side-chevron {
