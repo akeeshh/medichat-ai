@@ -1,10 +1,26 @@
 import os
 import hashlib
+import hmac
+import logging
+import secrets as _py_secrets
 import uuid as _uuid
 import json
 from datetime import datetime, timedelta, date as _date
 import streamlit as st
 from clients import CLAUDE_ACTIVE, anthropic_client, CLAUDE_MODEL
+
+try:
+    import bcrypt
+    BCRYPT_AVAILABLE = True
+except ImportError:
+    BCRYPT_AVAILABLE = False
+
+logger = logging.getLogger("medichat.database")
+if not logger.handlers:
+    _log_handler = logging.StreamHandler()
+    _log_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
+    logger.addHandler(_log_handler)
+logger.setLevel(os.environ.get("MEDICHAT_LOG_LEVEL", "INFO"))
 
 # ── Local Fallback DB Configuration ───────────────────────────────────
 LOCAL_DB_DIR = os.path.join(os.path.dirname(__file__), "cache")
@@ -18,7 +34,7 @@ def _read_local_db():
         with open(LOCAL_DB_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
-        print("Failed to read local DB:", e)
+        logger.warning("Failed to read local DB: %s", e)
         return {"profiles": {}, "conversations": {}, "queries": []}
 
 def _write_local_db(db):
@@ -28,7 +44,7 @@ def _write_local_db(db):
             json.dump(db, f, indent=2, default=str)
         return True
     except Exception as e:
-        print("Failed to write local DB:", e)
+        logger.warning("Failed to write local DB: %s", e)
         return False
 
 
@@ -78,20 +94,48 @@ def init_firebase():
             firebase_admin.initialize_app(cred)
         return firestore.client()
     except Exception as e:
-        print("Firebase init failed:", e)
+        logger.warning("Firebase init failed: %s", e)
         return None
 
 firestore_db = init_firebase()
 FIREBASE_ACTIVE = firestore_db is not None
 
 # ── Persistent Patient Profiles (email + PIN, Firestore-backed) ──────
-PROFILE_SALT = _safe_secret("PROFILE_SALT", os.environ.get("PROFILE_SALT", "medichat-default-change-me"))
+_DEFAULT_PROFILE_SALT = "medichat-default-change-me"
+PROFILE_SALT = _safe_secret("PROFILE_SALT", os.environ.get("PROFILE_SALT", _DEFAULT_PROFILE_SALT))
+if PROFILE_SALT == _DEFAULT_PROFILE_SALT:
+    st.error(
+        "Configuration error: PROFILE_SALT is using its public default value. "
+        "Set PROFILE_SALT via st.secrets or an environment variable before running."
+    )
+    st.stop()
 
 def hash_email(email):
     return hashlib.sha256((email.lower().strip() + PROFILE_SALT).encode()).hexdigest()
 
-def hash_pin(pin, email_hash):
+def _legacy_pin_hash(pin, email_hash):
+    """Pre-bcrypt SHA-256 hash. Kept only to verify legacy stored values during migration."""
     return hashlib.sha256((str(pin) + email_hash + PROFILE_SALT).encode()).hexdigest()
+
+def hash_pin(pin, email_hash):
+    """Hash a PIN with bcrypt (work factor 12). Falls back to legacy SHA-256 if bcrypt missing."""
+    if BCRYPT_AVAILABLE:
+        salted = (str(pin) + email_hash).encode()
+        return bcrypt.hashpw(salted, bcrypt.gensalt(rounds=12)).decode("ascii")
+    return _legacy_pin_hash(pin, email_hash)
+
+def verify_pin(pin, email_hash, stored_hash):
+    """Verify a PIN against a stored hash, accepting both bcrypt and legacy SHA-256."""
+    if not stored_hash:
+        return False
+    if stored_hash.startswith("$2"):
+        if not BCRYPT_AVAILABLE:
+            return False
+        try:
+            return bcrypt.checkpw((str(pin) + email_hash).encode(), stored_hash.encode("ascii"))
+        except Exception:
+            return False
+    return hmac.compare_digest(stored_hash, _legacy_pin_hash(pin, email_hash))
 
 def get_profile(email_hash):
     if not FIREBASE_ACTIVE:
@@ -101,7 +145,7 @@ def get_profile(email_hash):
         doc = firestore_db.collection("medichat_profiles").document(email_hash).get()
         return doc.to_dict() if doc.exists else None
     except Exception as e:
-        print("Profile fetch failed:", e)
+        logger.warning("Profile fetch failed: %s", e)
         return None
 
 def create_profile(email, pin, name=""):
@@ -129,16 +173,35 @@ def create_profile(email, pin, name=""):
         profile["email_hash"] = eh
         return profile
     except Exception as e:
-        print("Profile create failed:", e)
+        logger.warning("Profile create failed: %s", e)
         return None
+
+def _migrate_legacy_pin_hash(eh, new_hash):
+    """Persist an upgraded bcrypt hash. Works for both Firebase and local DB."""
+    if FIREBASE_ACTIVE:
+        try:
+            firestore_db.collection("medichat_profiles").document(eh).update({"pin_hash": new_hash})
+        except Exception as e:
+            logger.warning("PIN hash migration (Firestore) failed: %s", e)
+        return
+    try:
+        db = _read_local_db()
+        if eh in db.get("profiles", {}):
+            db["profiles"][eh]["pin_hash"] = new_hash
+            _write_local_db(db)
+    except Exception as e:
+        logger.warning("PIN hash migration (local DB) failed: %s", e)
 
 def authenticate_profile(email, pin):
     eh = hash_email(email)
     profile = get_profile(eh)
     if profile is None:
         return None, "not_found"
-    if profile.get("pin_hash") != hash_pin(pin, eh):
+    stored = profile.get("pin_hash", "")
+    if not verify_pin(pin, eh, stored):
         return None, "wrong_pin"
+    if BCRYPT_AVAILABLE and not stored.startswith("$2"):
+        _migrate_legacy_pin_hash(eh, hash_pin(pin, eh))
     if not FIREBASE_ACTIVE:
         db = _read_local_db()
         prof = db.get("profiles", {}).get(eh)
@@ -156,7 +219,7 @@ def authenticate_profile(email, pin):
             "visit_count": firestore.Increment(1),
         })
     except Exception as e:
-        print("Profile visit-count update failed:", e)
+        logger.warning("Profile visit-count update failed: %s", e)
     profile["email_hash"] = eh
     return profile, "ok"
 
@@ -219,7 +282,7 @@ def persist_profile_state(email_hash, patient_memory=None, name=None, language=N
     try:
         firestore_db.collection("medichat_profiles").document(email_hash).update(update)
     except Exception as e:
-        print("Profile state persist failed:", e)
+        logger.warning("Profile state persist failed: %s", e)
 
 # ── Per-Chat History (each conversation is its own Firestore doc) ────
 def _trim_messages_for_storage(messages):
@@ -274,7 +337,7 @@ def generate_ai_chat_title(messages):
         title = (resp.content[0].text or "").strip().strip('"\'').rstrip(".")[:60]
         return title or derive_chat_title(messages)
     except Exception as e:
-        print("AI title generation failed:", e)
+        logger.warning("AI title generation failed: %s", e)
         return derive_chat_title(messages)
 
 def list_conversations(email_hash, limit=30):
@@ -318,7 +381,7 @@ def list_conversations(email_hash, limit=30):
             })
         return out
     except Exception as e:
-        print("list_conversations failed:", e)
+        logger.warning("list_conversations failed: %s", e)
         return []
 
 def load_conversation(email_hash, conv_id):
@@ -336,7 +399,7 @@ def load_conversation(email_hash, conv_id):
             return None
         return doc.to_dict()
     except Exception as e:
-        print("load_conversation failed:", e)
+        logger.warning("load_conversation failed: %s", e)
         return None
 
 def save_conversation(email_hash, conv_id, messages):
@@ -391,7 +454,7 @@ def save_conversation(email_hash, conv_id, messages):
         ref = coll.add(payload)
         return ref[1].id if isinstance(ref, tuple) else ref.id
     except Exception as e:
-        print("save_conversation failed:", e)
+        logger.warning("save_conversation failed: %s", e)
         return None
 
 def delete_conversation(email_hash, conv_id):
@@ -412,7 +475,7 @@ def delete_conversation(email_hash, conv_id):
          .document(conv_id).delete())
         return True
     except Exception as e:
-        print("delete_conversation failed:", e)
+        logger.warning("delete_conversation failed: %s", e)
         return False
 
 
@@ -443,7 +506,7 @@ def get_user_doc():
         snap = firestore_db.collection("medichat_profiles").document(st.session_state.user_email_hash).get()
         return snap.to_dict() or {} if snap.exists else {}
     except Exception as e:
-        print("get_user_doc failed:", e)
+        logger.warning("get_user_doc failed: %s", e)
         return {}
 
 def update_user_doc(updates):
@@ -468,7 +531,7 @@ def update_user_doc(updates):
         firestore_db.collection("medichat_profiles").document(st.session_state.user_email_hash).set(updates, merge=True)
         return True
     except Exception as e:
-        print("update_user_doc failed:", e)
+        logger.warning("update_user_doc failed: %s", e)
         return False
 
 
@@ -681,7 +744,7 @@ def log_query_to_firestore(query_data):
         }
         firestore_db.collection("medichat_queries").add(safe_data)
     except Exception as e:
-        print("Firestore write failed:", e)
+        logger.warning("Firestore write failed: %s", e)
 
 def fetch_all_queries_from_firestore(limit=500):
     if not FIREBASE_ACTIVE:
@@ -697,6 +760,6 @@ def fetch_all_queries_from_firestore(limit=500):
         docs = firestore_db.collection("medichat_queries").order_by("timestamp", direction=firestore.Query.DESCENDING).limit(limit).stream()
         return [doc.to_dict() for doc in docs]
     except Exception as e:
-        print("Firestore read failed:", e)
+        logger.warning("Firestore read failed: %s", e)
         return []
 

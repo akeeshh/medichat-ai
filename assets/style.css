@@ -1,8 +1,10 @@
+/* MediChat AI — consolidated stylesheet
+ * Extracted from inline st.markdown blocks in app.py.
+ * Order matters: later sections intentionally override earlier ones (cascade layers).
+ */
 
 
-/* =========================================================================
-   COMBINED GLOBAL STYLES
-   ========================================================================= */
+/* ── Section 1 (was app.py top-level block 1) ─────── */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Serif+Display:ital@0;1&display=swap');
 
@@ -635,14 +637,15 @@
     }
 
     .user-bubble {
-        background: linear-gradient(135deg, var(--clinical-600), var(--clinical-800));
-        color: white;
+        background: linear-gradient(135deg, #e0e7ff, #e0f2fe) !important;
+        color: #1f2937 !important;
         padding: 0.8rem 1.1rem;
         border-radius: 16px 4px 16px 16px;
         max-width: 80%;
         font-size: 0.9rem;
         line-height: 1.5;
-        box-shadow: 0 4px 12px rgba(33, 118, 174, 0.2);
+        border: 1px solid #c7d2fe !important;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.05) !important;
     }
 
     /* ── Thinking Indicator ──────────────────────────────────────── */
@@ -1099,7 +1102,7 @@
         display: block !important;
     }
 
-/* ------------------------------------------------------------------------- */
+/* ── Section 2 (was app.py top-level block 2) ─────── */
 
 :root {
     --md-bg: #f7f8fb;
@@ -1406,7 +1409,7 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
     font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
 }
 .md-side-pname { font-size: 0.82rem; font-weight: 600; color: var(--md-text-1); line-height: 1.1; }
-.md-side-psub { font-size: 0.66rem; color: var(--md-text-3); }
+.md-side-psub { font-size: 0.67rem; color: #4f6280; font-weight: 500; }
 
 /* Hide old header card and trust strip while we use new ones */
 .header-card, .trust-strip { display: none !important; }
@@ -1757,7 +1760,7 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
     padding-top: 2rem !important;
 }
 
-/* ------------------------------------------------------------------------- */
+/* ── Section 3 (was app.py top-level block 3) ─────── */
 
 .stApp {
     background: #f7f8fc !important;
@@ -2000,7 +2003,7 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
     }
 }
 
-/* ------------------------------------------------------------------------- */
+/* ── Section 4 (was app.py top-level block 4) ─────── */
 
 :root {
     --md-radius-sm: 10px;
@@ -2265,7 +2268,9 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
 .user-bubble,
 .source-row,
 .confidence-row {
-    overflow-wrap: anywhere;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: pre-wrap !important;
 }
 .emergency-banner {
     animation: mdEmergencyPulse 2s ease-in-out infinite !important;
@@ -2412,7 +2417,7 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
     }
 }
 
-/* ------------------------------------------------------------------------- */
+/* ── Section 5 (was app.py top-level block 5) ─────── */
 
 /* Quick option pills */
 .md-chip-row-compact .stButton > button {
@@ -2975,7 +2980,7 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     }
 }
 
-/* ------------------------------------------------------------------------- */
+/* ── Section 6 (was app.py top-level block 6) ─────── */
 
 /* 5, 13: remove Streamlit chrome/collapse text entirely */
 header[data-testid="stHeader"],
@@ -3224,7 +3229,7 @@ form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primaryFor
     }
 }
 
-/* ------------------------------------------------------------------------- */
+/* ── Section 7 (was app.py top-level block 7) ─────── */
 
 /* Keep the navigation visible even if Streamlit previously stored a collapsed state. */
 section[data-testid="stSidebar"],
@@ -3297,7 +3302,7 @@ button[title*="expand" i],
     }
 }
 
-/* ------------------------------------------------------------------------- */
+/* ── Section 8 (was app.py top-level block 8) ─────── */
 
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 
@@ -3643,7 +3648,7 @@ form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primaryFor
     }
 }
 
-/* ------------------------------------------------------------------------- */
+/* ── Section 9 (was app.py top-level block 9) ─────── */
 
 /* Force one continuous canvas. Sidebar uses the same base tone as the app
    (no white panel, no hairline shadow), so there is no visible edge between
@@ -3856,7 +3861,7 @@ section[data-testid="stSidebar"]::before,
     margin-bottom: 0.2rem !important;
 }
 
-/* ------------------------------------------------------------------------- */
+/* ── Section 10 (was app.py top-level block 10) ─────── */
 
 /* Single source of truth for sidebar layout. */
 [data-testid="stSidebar"] {
@@ -3865,7 +3870,9 @@ section[data-testid="stSidebar"]::before,
     box-shadow: inset -1px 0 0 rgba(255,255,255,0.92) !important;
 }
 [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
-    padding: 1.06rem 1rem 1.2rem 1rem !important;
+    padding: 1.06rem 1rem 2rem 1rem !important;
+    overflow-y: clip !important;
+    overflow-x: hidden !important;
 }
 [data-testid="stSidebar"] [data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {
     /* On TALL screens (≥ ~1000px), min-height ensures the column fills the
@@ -3889,6 +3896,8 @@ section[data-testid="stSidebar"]::before,
     margin-bottom: 1.2rem !important;
     padding-bottom: 1.08rem !important;
     position: relative !important;
+    z-index: 10 !important;
+    min-height: 48px !important;
     border-bottom: none !important;
 }
 [data-testid="stSidebar"] .md-logo-wrap::after {
@@ -4104,7 +4113,7 @@ section[data-testid="stSidebar"]::before,
 }
 [data-testid="stSidebar"] div.st-key-nav_privacy_bottom {
     margin-top: 0 !important;
-    margin-bottom: 2rem !important;
+    margin-bottom: 0.75rem !important;
 }
 [data-testid="stSidebar"] div.st-key-nav_privacy_bottom .stButton > button {
     justify-content: center !important;
@@ -4142,14 +4151,21 @@ section[data-testid="stSidebar"]::before,
    The scrollbar-* / ::-webkit-scrollbar rules are redundant now (no scroll
    means no scrollbar) but kept as a safety net in case any nested element
    inside the sidebar tries to spawn its own scroller. */
-[data-testid="stSidebar"],
-[data-testid="stSidebarContent"],
-[data-testid="stSidebarUserContent"] {
-    /* overflow: clip (not hidden) so the element is NOT a scroll container.
-       This blocks both user scroll AND programmatic scroll (scrollTop = 100
-       stays at 0). Chrome 90+, Firefox 81+, Safari 16+ — fully modern. */
+[data-testid="stSidebar"] {
     overflow-x: clip !important;
     overflow-y: clip !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+[data-testid="stSidebarContent"] {
+    overflow-x: clip !important;
+    overflow-y: clip !important; /* Disable vertical scrolling */
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+[data-testid="stSidebarUserContent"] {
+    overflow-x: clip !important;
+    overflow-y: visible !important; /* Prevent vertical clipping of child elements! */
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
 }
@@ -4174,6 +4190,10 @@ section[data-testid="stSidebar"]::before,
    extend to inner markdown wrappers that legitimately host wrapped text. */
 [data-testid="stSidebar"] [data-testid="stElementContainer"] {
     overflow: hidden !important;
+}
+[data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.md-side-profile),
+[data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.md-recent-card) {
+    overflow: visible !important;
 }
 /* Explicitly allow the footer wrappers to expand vertically so the
    copyright's wrapped 2nd line shows in full. */
@@ -4432,30 +4452,57 @@ section[data-testid="stSidebar"]::before,
    misaligned and overflowing the right edge. translateX counter-shifts to
    align with the rest of the sidebar column. */
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
-    display: block !important;
-    background: #ffffff !important;
-    border: 1px solid #e8effd !important;
-    border-radius: 24px !important;
-    box-shadow: 0 10px 25px rgba(99, 102, 241, 0.04), 0 2px 8px rgba(15, 23, 42, 0.02) !important;
-    width: 242px !important;
+    /* Transparent container: the PNG already contains the white rounded card.
+       Adding a second white background creates a double-card effect.
+       Instead we use filter:drop-shadow on the image itself (see below)
+       so the shadow wraps the PNG's actual shape, not a rectangular box. */
+    display: grid !important;
+    place-items: center !important;
+    justify-items: center !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
     max-width: 242px !important;
-    margin: 1rem auto 0.8rem auto !important;
-    padding: 1.4rem 1.1rem !important;
-    transform: translateX(-8px) !important;
+    margin: 0 auto 1rem auto !important;
+    transform: translateX(-13px) !important;
+    padding: 0.5rem 0 0.5rem 0 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
     position: relative !important;
+    z-index: 10 !important;
+    min-height: 80px !important;
+    overflow: visible !important;
+    border-bottom: none !important;
 }
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
     mix-blend-mode: normal !important;
-    max-width: 170px !important;
-    width: 100% !important;
+    max-width: 160px !important;
+    width: min(160px, 100%) !important;
     height: auto !important;
     display: block !important;
     margin: 0 auto !important;
     transform: none !important;
+    /* Drop shadow hugs the PNG's actual content shape (the internal white card),
+       not the rectangular bounding box. This gives definition without a double-card. */
+    filter: drop-shadow(0 4px 16px rgba(15, 23, 42, 0.13)) drop-shadow(0 1px 4px rgba(15, 23, 42, 0.07)) !important;
 }
+/* Removed: the dividing line under the logo wrap (it conflicts with the new
+   self-contained app-icon style — the logo tile reads as a single element
+   without needing an underline). */
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap::after {
     content: none !important;
     display: none !important;
+}
+[data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
+    max-width: 160px !important;
+    width: min(160px, 100%) !important;
+    height: auto !important;
+    display: block !important;
+    margin: 0 auto !important;
+    transform: none !important;
+    filter: drop-shadow(0 4px 16px rgba(15, 23, 42, 0.13)) drop-shadow(0 1px 4px rgba(15, 23, 42, 0.07)) !important;
 }
 
 /* Sidebar selectbox styling — kept subtle, matches surrounding nav. */
@@ -4687,13 +4734,15 @@ section[data-testid="stSidebar"]::before,
     bottom: -0.6rem !important;
 }
 
-/* Profile card — soft + understated to blend with sidebar theme. Lighter
-   border + softer shadow + gentle gradient match. The chip should read as
-   a subtle inline element, not a heavy floating card. */
+/* Profile card: distinct white card that clearly floats above the sidebar
+   background. The old border (#e6edf9) and shadow (3% opacity) were too
+   subtle on the near-white sidebar, making the chip invisible. */
 [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
-    background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%) !important;
-    border: 1px solid #e6edf9 !important;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03) !important;
+    position: relative !important;
+    z-index: 5 !important;
+    background: #ffffff !important;
+    border: 1px solid #c3d3eb !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.09), 0 1px 4px rgba(15, 23, 42, 0.05) !important;
     padding: 0.78rem 0.86rem !important;
 }
 
@@ -4818,27 +4867,27 @@ section[data-testid="stSidebar"]::before,
         border-radius: 26px !important;
     }
     .md-auth-welcome-content {
-        align-items: flex-start !important;
-        text-align: left !important;
+        align-items: center !important;
+        text-align: center !important;
         padding: 0 !important;
     }
     .md-auth-welcome-title {
         font-size: clamp(1.45rem, 1.95vw, 1.85rem) !important;
         margin-bottom: 0.28rem !important;
-        text-align: left !important;
-        width: auto !important;
+        text-align: center !important;
+        width: 100% !important;
     }
     .md-auth-welcome-copy {
         font-size: clamp(0.85rem, 1vw, 0.96rem) !important;
         line-height: 1.4 !important;
-        text-align: left !important;
+        text-align: center !important;
         max-width: none !important;
     }
     .md-auth-chip-row {
         gap: 0.55rem !important;
         margin-top: 0.65rem !important;
         flex-wrap: wrap !important;
-        justify-content: flex-start !important;
+        justify-content: center !important;
     }
     .md-auth-chip {
         font-size: 0.78rem !important;
@@ -4856,6 +4905,7 @@ section[data-testid="stSidebar"]::before,
         border-radius: 18px !important;
     }
     .md-auth-side-title { font-size: 1.3rem !important; line-height: 1.1 !important; }
+    .md-auth-side-subline { margin: 0.4rem 0 0.7rem 0 !important; }
     .md-auth-benefit {
         grid-template-columns: 34px 1fr !important;
         gap: 0.55rem !important;
@@ -4864,7 +4914,7 @@ section[data-testid="stSidebar"]::before,
     .md-auth-benefit-ic {
         width: 34px !important;
         height: 34px !important;
-        border-radius: 50% !important;
+        border-radius: 11px !important;
         font-size: 1rem !important;
     }
     .md-auth-benefit-title { font-size: 0.82rem !important; line-height: 1.2 !important; }
@@ -4952,6 +5002,9 @@ section[data-testid="stSidebar"]::before,
         border: none !important;
         box-shadow: none !important;
         border-radius: 0 !important;
+        position: relative !important;
+        z-index: 10 !important;
+        min-height: 48px !important;
     }
     [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button {
         min-height: 32px !important;
@@ -4979,6 +5032,8 @@ section[data-testid="stSidebar"]::before,
     }
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
         padding: 0.55rem 0.65rem !important;
+        position: relative !important;
+        z-index: 5 !important;
     }
     [data-testid="stSidebar"] .md-side-avatar {
         width: 32px !important;
@@ -4993,7 +5048,8 @@ section[data-testid="stSidebar"]::before,
        interactive. Compact 26px, almost invisible until you look for it.
        Label is collapsed in Python. */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] {
-        margin: 0.05rem auto 0.05rem auto !important;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
     }
     [data-testid="stSidebar"] [data-testid="stSelectbox"] > label,
     [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-testid="stWidgetLabel"] {
@@ -5001,42 +5057,41 @@ section[data-testid="stSidebar"]::before,
         height: 0 !important;
         margin: 0 !important;
     }
-    /* Outer shell — borderless + transparent by default. Hover lifts the
-       OUTER container only (not its inner wrapper) so we get one clean
-       white card, not two stacked. Same look as sidebar nav buttons. */
+    /* Outer container - styled as a beautiful white card */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] {
-        min-height: 26px !important;
-        height: 26px !important;
-        background: transparent !important;
-        border: 1px solid transparent !important;
-        box-shadow: none !important;
-        border-radius: 8px !important;
-        transition:
-            background 0.18s ease,
-            border-color 0.18s ease,
-            box-shadow 0.2s ease,
-            transform 0.18s ease !important;
+        min-height: 38px !important;
+        height: 38px !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03) !important;
+        border-radius: 12px !important;
+        cursor: pointer !important;
+        position: relative !important;
+        padding-left: 2.2rem !important; /* Make room for the globe icon */
+        padding-right: 1.8rem !important; /* Make room for the chevron */
+        box-sizing: border-box !important;
+        transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease !important;
     }
-    /* Inner wrapper — never paint its own background/border, always inherit
-       from the outer so there's only one visible "tile". */
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"]:hover {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06) !important;
+        transform: translateY(-1px) !important;
+    }
+    /* Inner wrapper — transparent, resets default padding */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-        min-height: 26px !important;
-        height: 26px !important;
+        min-height: 38px !important;
+        height: 38px !important;
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
         border-radius: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
     }
-    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"]:hover {
-        background: #ffffff !important;
-        border-color: #d6e2f6 !important;
-        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06) !important;
-        transform: translateY(-1px) !important;
-    }
-    /* Completely remove the combobox input from the visible/interactive
-       layer. Clicks on the parent still open the dropdown, but the user
-       can no longer focus or type into the input — it reads as a true
-       button-style picker. */
+    /* Completely remove the combobox input from the visible/interactive layer */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] input[role="combobox"] {
         width: 0 !important;
         min-width: 0 !important;
@@ -5051,29 +5106,19 @@ section[data-testid="stSidebar"]::before,
         pointer-events: none !important;
         caret-color: transparent !important;
     }
-    /* Make the entire trigger clickable as a button to open the dropdown. */
-    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] {
-        cursor: pointer !important;
-    }
-
-    /* Show the FULL language name in the sidebar trigger (not a 3-letter
-       code). The selected value div has its native text hidden (font-size 0)
-       and the ::before content displays the full word in the styled font.
-
-       Belt-and-braces: the default ::before content is `attr(value)` — so
-       even if a future language value isn't explicitly listed below, the
-       trigger renders the raw name (e.g. "Spanish") instead of falling
-       back to a hardcoded abbreviation. This makes the auth and guest
-       states consistent forever — no path can produce "ENG" again. */
+    /* Selected value container styling */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value] {
         font-size: 0 !important;
         line-height: 1 !important;
+        display: flex !important;
+        align-items: center !important;
+        height: 100% !important;
     }
     [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value]::before {
         content: attr(value) !important;
-        font-size: 0.78rem !important;
+        font-size: 0.8rem !important;
         font-weight: 600 !important;
-        color: #475569 !important;
+        color: #334155 !important;
         letter-spacing: -0.005em !important;
         line-height: 1 !important;
     }
@@ -5097,6 +5142,7 @@ section[data-testid="stSidebar"]::before,
        Adds the "● Synced & up to date" status line + chevron at the right. */
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
         position: relative !important;
+        z-index: 5 !important;
         display: flex !important;
         align-items: center !important;
         gap: 0.6rem !important;
@@ -5145,14 +5191,15 @@ section[data-testid="stSidebar"]::before,
         position: relative !important;
     }
     [data-testid="stSidebar"] .md-side-signout {
-        position: absolute !important;
-        top: 6px !important;
-        right: 6px !important;
-        width: 28px !important;
-        height: 28px !important;
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        margin: 0 0 0 auto !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
+        width: 28px !important;
+        height: 28px !important;
         border-radius: 50% !important;
         background: transparent !important;
         color: #94a3b8 !important;
@@ -5186,68 +5233,75 @@ section[data-testid="stSidebar"]::before,
        encloses them. */
     [data-testid="stSidebar"] .md-recent-card {
         background: #ffffff !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 14px !important;
-        padding: 0.7rem !important;
-        margin: 0.7rem auto 0.5rem auto !important;
-        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05) !important;
+        border: 1px solid #e6edf9 !important;
+        border-radius: 16px !important;
+        padding: 0.9rem !important;
+        margin-top: 0.6rem !important;
+        margin-bottom: 0.5rem !important;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02) !important;
         box-sizing: border-box !important;
     }
-    /* "+ New chat" pill — compact anchor inside the card. */
+    /* "+ New chat" pill — premium card-style button inside the card. */
     [data-testid="stSidebar"] .md-new-chat-pill {
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 0.3rem !important;
+        gap: 0.35rem !important;
         width: 100% !important;
         box-sizing: border-box !important;
-        margin: 0.25rem 0 !important;
-        padding: 0.38rem 0.6rem !important;
-        background: #eef0ff !important;
+        margin: 0.25rem 0 0.55rem 0 !important;
+        padding: 0.45rem 0.6rem !important;
+        background: linear-gradient(135deg, #f5f8ff 0%, #eef2ff 100%) !important;
         color: #4f46e5 !important;
-        border: 1px solid transparent !important;
-        border-radius: 10px !important;
-        font-size: 0.74rem !important;
+        border: 1px solid #dbe4ff !important;
+        border-radius: 12px !important;
+        font-size: 0.76rem !important;
         font-weight: 600 !important;
         text-decoration: none !important;
         letter-spacing: -0.005em !important;
-        transition: background 0.15s ease, border-color 0.15s ease !important;
+        box-shadow: 0 2px 5px rgba(99, 102, 241, 0.05) !important;
+        transition: all 0.2s ease !important;
     }
     [data-testid="stSidebar"] .md-new-chat-pill:hover {
-        background: #e0e7ff !important;
+        background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%) !important;
         border-color: #c7d2fe !important;
         color: #3730a3 !important;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12) !important;
+        transform: translateY(-1px) !important;
         text-decoration: none !important;
     }
     [data-testid="stSidebar"] .md-new-chat-pill .material-symbols-rounded {
-        font-size: 1rem !important;
-        color: #4f46e5 !important;
-        -webkit-text-fill-color: #4f46e5 !important;
+        font-size: 0.95rem !important;
+        color: inherit !important;
+        -webkit-text-fill-color: currentColor !important;
         font-variation-settings: 'FILL' 0, 'wght' 600 !important;
     }
     [data-testid="stSidebar"] .md-new-chat-pill:hover .material-symbols-rounded {
-        color: #3730a3 !important;
-        -webkit-text-fill-color: #3730a3 !important;
+        color: inherit !important;
+        -webkit-text-fill-color: currentColor !important;
     }
     [data-testid="stSidebar"] .md-recent-head {
         display: flex !important;
-        align-items: baseline !important;
+        align-items: center !important;
         justify-content: space-between !important;
         margin-bottom: 0.55rem !important;
+        padding: 0 0.1rem !important;
     }
     [data-testid="stSidebar"] .md-recent-title {
-        font-size: 0.86rem !important;
-        font-weight: 720 !important;
-        color: #0f172a !important;
+        font-size: 0.85rem !important;
+        font-weight: 700 !important;
+        color: #334155 !important;
         letter-spacing: -0.005em !important;
     }
     [data-testid="stSidebar"] .md-recent-seeall {
-        font-size: 0.72rem !important;
+        font-size: 0.74rem !important;
         font-weight: 600 !important;
         color: #4f46e5 !important;
         text-decoration: none !important;
+        transition: color 0.15s ease !important;
     }
     [data-testid="stSidebar"] .md-recent-seeall:hover {
+        color: #3730a3 !important;
         text-decoration: underline !important;
     }
 
@@ -5316,7 +5370,7 @@ section[data-testid="stSidebar"]::before,
     }
     [data-testid="stSidebar"] .md-conv-del {
         position: absolute !important;
-        right: 0.25rem !important;
+        right: 0.4rem !important;
         top: 50% !important;
         transform: translateY(-50%) !important;
         width: 20px !important;
@@ -5325,19 +5379,11 @@ section[data-testid="stSidebar"]::before,
         align-items: center !important;
         justify-content: center !important;
         border-radius: 50% !important;
-        color: #cbd5e1 !important;
+        color: #94a3b8 !important;
         text-decoration: none !important;
-        opacity: 0 !important;
-        transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease !important;
-        z-index: 2 !important;
-    }
-    /* Reveal the × only on hover/focus — never permanently visible (the
-       active-row :has() exception was removed because active rows are no
-       longer visually distinguished from non-active ones). Mobile users
-       can long-press / tap-and-hold to reveal in supported browsers. */
-    [data-testid="stSidebar"] .md-conv-row-wrap:hover .md-conv-del,
-    [data-testid="stSidebar"] .md-conv-row-wrap:focus-within .md-conv-del {
         opacity: 1 !important;
+        transition: background 0.15s ease, color 0.15s ease !important;
+        z-index: 2 !important;
     }
     [data-testid="stSidebar"] .md-conv-del:hover {
         background: #fef2f2 !important;
@@ -5352,32 +5398,27 @@ section[data-testid="stSidebar"]::before,
     [data-testid="stSidebar"] .md-conv-row {
         display: flex !important;
         align-items: center !important;
-        gap: 0.35rem !important;
-        padding: 0.4rem 0.45rem !important;
-        border-radius: 10px !important;
+        gap: 0.4rem !important;
+        padding: 0.45rem 0.6rem !important;
+        border-radius: 8px !important;
+        border-left: 3px solid transparent !important;
         text-decoration: none !important;
         color: #475569 !important;
         background: transparent !important;
-        border: none !important;
-        border-left: 0 !important;
-        transition: background 0.15s ease, color 0.15s ease !important;
+        transition: all 0.15s ease !important;
         min-width: 0 !important;
     }
     [data-testid="stSidebar"] .md-conv-row:hover {
-        background: #f1f5fc !important;
-        color: #1f2a3d !important;
+        background: #f8fafc !important;
+        color: #0f172a !important;
         text-decoration: none !important;
     }
-    /* Active conversation row — visually identical to normal rows per
-       user request. The .md-conv-row-active class is still applied in the
-       Python render (no data-logic change) but the CSS no longer adds a
-       background tint, indigo icon, bold title, or violet timestamp.
-       Hover state still works the same on all rows. */
+    /* Active conversation row — styled plain just like other rows per user request */
     [data-testid="stSidebar"] .md-conv-row-active {
         background: transparent !important;
-        border: none !important;
-        border-left: 0 !important;
+        border-left: 3px solid transparent !important;
         color: #475569 !important;
+        font-weight: 550 !important;
     }
     [data-testid="stSidebar"] .md-conv-icon {
         font-size: 0.95rem !important;
@@ -5397,7 +5438,8 @@ section[data-testid="stSidebar"]::before,
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
-        line-height: 1.2 !important;
+        line-height: 1.45 !important;
+        padding-bottom: 2px !important;
     }
     [data-testid="stSidebar"] .md-conv-row-active .md-conv-title {
         font-weight: 550 !important;
@@ -5408,16 +5450,16 @@ section[data-testid="stSidebar"]::before,
         font-weight: 600 !important;
         color: #94a3b8 !important;
         margin-left: 0.25rem !important;
+        line-height: 1.45 !important;
+        padding-bottom: 2px !important;
     }
     [data-testid="stSidebar"] .md-conv-row-active .md-conv-time {
         color: #94a3b8 !important;
     }
 
-    /* ── Force every sidebar-bottom tile to match a single compact width
-       (210px) so nothing ever bleeds past the sidebar's inner edge. The
-       Recent Chats card now contains New chat + conv list as true children,
-       so we only need to constrain the OUTER tiles (profile chip, sign out,
-       card, language selector, footer). */
+    /* Force every sidebar-bottom tile to match the exact same layout offset
+       as the navigation buttons (margin-left 0, margin-right 1.6rem, width
+       calc(100% - 1.6rem)) so they align perfectly on both edges. */
     [data-testid="stSidebar"] div.st-key-profile_logout,
     [data-testid="stSidebar"] div.st-key-profile_logout button,
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top,
@@ -5425,40 +5467,61 @@ section[data-testid="stSidebar"]::before,
     [data-testid="stSidebar"] [data-testid="stSelectbox"]:has(.st-key-lang_selector),
     [data-testid="stSidebar"] .md-sidebar-foot {
         box-sizing: border-box !important;
-        max-width: 210px !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
-        width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 1.6rem !important;
+        width: calc(100% - 1.6rem) !important;
+        max-width: none !important;
     }
     /* Profile chip — comfortable padding so 3-line content (name + email +
        sync status) doesn't pinch. The chevron was removed, so the right
        padding is also lighter (1.1 instead of 1.2). */
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
-        padding: 0.5rem 1.1rem 0.5rem 0.55rem !important;
-        gap: 0.45rem !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        padding: 0.55rem 0.65rem !important;
+        gap: 0.55rem !important;
+        position: relative !important;
+    }
+    [data-testid="stSidebar"] .md-side-profile-text {
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
     }
     [data-testid="stSidebar"] .md-side-avatar {
-        width: 28px !important;
-        min-width: 28px !important;
-        height: 28px !important;
-        font-size: 0.74rem !important;
+        width: 32px !important;
+        min-width: 32px !important;
+        height: 32px !important;
+        font-size: 0.8rem !important;
+        border-radius: 10px !important;
     }
     [data-testid="stSidebar"] .md-side-pname {
         font-size: 0.76rem !important;
         font-weight: 700 !important;
         line-height: 1.15 !important;
+        text-align: center !important;
     }
     [data-testid="stSidebar"] .md-side-psub {
         font-size: 0.64rem !important;
         line-height: 1.2 !important;
+        text-align: center !important;
+        color: #94a3b8 !important;
     }
     [data-testid="stSidebar"] .md-side-status {
         font-size: 0.58rem !important;
         margin-top: 0.15rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.3rem !important;
     }
     [data-testid="stSidebar"] .md-side-chevron {
-        font-size: 0.9rem !important;
-        right: 0.4rem !important;
+        display: none !important;
     }
     /* Sign out — icon-only 28px circle overlaid on the profile chip's
        top-right corner. The negative margins pull the button visually up
@@ -5513,91 +5576,230 @@ section[data-testid="stSidebar"]::before,
     [data-testid="stSidebar"] div.st-key-profile_logout button p {
         display: none !important;
     }
-    /* Recent Chats card — ultra-tight to fit at 900px viewport.
+    /* Recent Chats card: ultra-tight to fit at 900px viewport.
        margin-top: 0.7rem (~11px) gives a clean visual gap below the
        profile chip area so the two cards don't collide. */
-    [data-testid="stSidebar"] .md-recent-card {
-        padding: 0.45rem 0.5rem 0.4rem 0.5rem !important;
+    /* Recent Chats card: ultra-tight to fit at 900px viewport.
+       margin-top: 0.7rem (~11px) gives a clean visual gap below the
+       profile chip area so the two cards don't collide. */
+    [data-testid="stSidebar"] div.st-key-recent_chats_card {
+        background: #ffffff !important;
+        border: 1px solid #e6edf9 !important;
         border-radius: 11px !important;
-        margin: 0.7rem auto 0.25rem auto !important;
+        padding: 0.45rem 0.5rem 0.4rem 0.5rem !important;
+        margin-top: 0.7rem !important;
+        margin-bottom: 0.25rem !important;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02) !important;
+        box-sizing: border-box !important;
+        margin-left: 0 !important;
+        margin-right: 1.6rem !important;
+        width: calc(100% - 1.6rem) !important;
+        max-width: none !important;
+    }
+    [data-testid="stSidebar"] div.st-key-recent_chats_card [data-testid="stVerticalBlockBorderWrapper"] > div > [data-testid="stVerticalBlock"] {
+        gap: 0.2rem !important;
+    }
+    [data-testid="stSidebar"] div.st-key-recent_chats_card [data-testid="column"] {
+        padding: 0 !important;
     }
     [data-testid="stSidebar"] .md-recent-head {
         margin-bottom: 0.25rem !important;
     }
     [data-testid="stSidebar"] .md-recent-title {
         font-size: 0.76rem !important;
+        font-weight: 700 !important;
+        color: #334155 !important;
+        letter-spacing: -0.005em !important;
+        line-height: 1.45 !important;
     }
-    [data-testid="stSidebar"] .md-recent-seeall {
+    
+    /* See all small link button in header */
+    [data-testid="stSidebar"] div.st-key-recent_see_all_btn button,
+    [data-testid="stSidebar"] div.st-key-recent_see_all_btn button:active,
+    [data-testid="stSidebar"] div.st-key-recent_see_all_btn button:focus {
+        background: transparent !important;
+        border: none !important;
+        color: #4f46e5 !important;
         font-size: 0.64rem !important;
+        font-weight: 600 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        outline: none !important;
+        min-height: unset !important;
+        height: auto !important;
+        float: right !important;
     }
+    [data-testid="stSidebar"] div.st-key-recent_see_all_btn button:hover {
+        color: #3730a3 !important;
+        text-decoration: underline !important;
+        background: transparent !important;
+    }
+
     /* New chat — compact 30px, smaller text. */
     [data-testid="stSidebar"] div.st-key-new_chat_btn button {
+        box-sizing: border-box !important;
+        width: 100% !important;
         min-height: 30px !important;
         height: 30px !important;
         padding: 0 0.6rem !important;
         margin-bottom: 0.35rem !important;
         font-size: 0.72rem !important;
         border-radius: 8px !important;
+        border: 1px solid #dbe4ff !important;
+        background: linear-gradient(135deg, #f5f8ff 0%, #eef2ff 100%) !important;
+        color: #4f46e5 !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 5px rgba(99, 102, 241, 0.05) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.35rem !important;
+        transition: all 0.2s ease !important;
+    }
+    [data-testid="stSidebar"] div.st-key-new_chat_btn button:hover {
+        background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%) !important;
+        border-color: #c7d2fe !important;
+        color: #3730a3 !important;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12) !important;
     }
     [data-testid="stSidebar"] div.st-key-new_chat_btn button p {
         font-size: 0.72rem !important;
+        color: #4f46e5 !important;
+        margin: 0 !important;
+        font-weight: 600 !important;
+        line-height: 1 !important;
     }
     [data-testid="stSidebar"] div.st-key-new_chat_btn button [data-testid="stIconMaterial"] {
         font-size: 0.88rem !important;
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: #4f46e5 !important;
     }
+
     /* Conversation rows — slightly tighter to fit footer at 900px. */
-    [data-testid="stSidebar"] .md-conv-list {
-        gap: 0.15rem !important;
-        margin-top: 0.2rem !important;
-    }
-    [data-testid="stSidebar"] .md-conv-row {
-        padding: 0.4rem 0.45rem !important;
-        gap: 0.35rem !important;
-        border-radius: 10px !important;
+    [data-testid="stSidebar"] div[class*="st-key-conv_select_"] button,
+    [data-testid="stSidebar"] div[class*="st-key-conv_active_"] button {
+        background: transparent !important;
         border: none !important;
-        border-left: 0 !important;
+        border-radius: 8px !important;
+        color: #475569 !important;
+        text-align: left !important;
+        font-size: 0.76rem !important;
+        font-weight: 550 !important;
+        padding: 0.4rem 0.45rem !important;
+        min-height: unset !important;
+        height: auto !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.35rem !important;
+        transition: all 0.15s ease !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
-    [data-testid="stSidebar"] .md-conv-icon {
-        font-size: 0.82rem !important;
+    [data-testid="stSidebar"] div[class*="st-key-conv_select_"] button:hover {
+        background: #f8fafc !important;
+        color: #0f172a !important;
     }
-    [data-testid="stSidebar"] .md-conv-title {
-        font-size: 0.68rem !important;
+    [data-testid="stSidebar"] div[class*="st-key-conv_active_"] button {
+        background: #f1f5f9 !important;
+        color: #0f172a !important;
+        font-weight: 600 !important;
+    }
+    [data-testid="stSidebar"] div[class*="st-key-conv_select_"] button p,
+    [data-testid="stSidebar"] div[class*="st-key-conv_active_"] button p {
+        margin: 0 !important;
+        font-size: 0.76rem !important;
         line-height: 1.15 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
-    [data-testid="stSidebar"] .md-conv-time {
-        font-size: 0.56rem !important;
-        margin-left: 0.2rem !important;
+
+    /* Delete buttons */
+    [data-testid="stSidebar"] div[class*="st-key-conv_del_"] button {
+        background: transparent !important;
+        border: none !important;
+        color: #94a3b8 !important;
+        font-size: 0.74rem !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 20px !important;
+        min-height: 20px !important;
+        box-shadow: none !important;
+        border-radius: 50% !important;
+        transition: background 0.15s ease, color 0.15s ease !important;
+    }
+    [data-testid="stSidebar"] div[class*="st-key-conv_del_"] button:hover {
+        background: #fef2f2 !important;
+        color: #b91c1c !important;
     }
 
     /* Two-line sidebar footer — compact. */
     [data-testid="stSidebar"] .md-sidebar-foot {
-        margin-top: 0.25rem !important;
+        margin-top: 0.6rem !important;
         text-align: center !important;
+        opacity: 0.95 !important;
     }
     [data-testid="stSidebar"] .md-sidebar-foot-links {
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 0.3rem !important;
-        font-size: 0.62rem !important;
+        gap: 0.5rem !important;
+        font-size: 0.65rem !important;
         font-weight: 600 !important;
-        margin-bottom: 0.18rem !important;
+        margin-bottom: 0.22rem !important;
     }
-    [data-testid="stSidebar"] .md-sidebar-foot-links a {
+    
+    /* Footer buttons */
+    [data-testid="stSidebar"] div.st-key-privacy_btn button,
+    [data-testid="stSidebar"] div.st-key-help_btn button {
+        background: transparent !important;
+        border: none !important;
+        color: #64748b !important;
+        font-size: 0.65rem !important;
+        font-weight: 600 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        min-height: unset !important;
+        height: auto !important;
+        box-shadow: none !important;
+    }
+    [data-testid="stSidebar"] div.st-key-privacy_btn button:hover,
+    [data-testid="stSidebar"] div.st-key-help_btn button:hover {
         color: #4f46e5 !important;
-        text-decoration: none !important;
+        text-decoration: underline !important;
+        background: transparent !important;
     }
-    [data-testid="stSidebar"] .md-sidebar-foot-links a:hover { text-decoration: underline !important; }
+    [data-testid="stSidebar"] div.st-key-privacy_btn button p,
+    [data-testid="stSidebar"] div.st-key-help_btn button p {
+        font-size: 0.65rem !important;
+        margin: 0 !important;
+    }
+    [data-testid="stSidebar"] div.st-key-privacy_btn button {
+        float: right !important;
+    }
+    [data-testid="stSidebar"] div.st-key-help_btn button {
+        float: left !important;
+    }
     [data-testid="stSidebar"] .md-sidebar-foot-dot {
         color: #cbd5e1 !important;
         font-weight: 700 !important;
     }
     [data-testid="stSidebar"] .md-sidebar-foot-copy {
-        font-size: 0.72rem !important;
-        color: #475569 !important;
+        font-size: 0.62rem !important;
+        color: #94a3b8 !important; /* Muted copyright text */
         font-weight: 500 !important;
         line-height: 1.3 !important;
         margin-top: 0.15rem !important;
+        letter-spacing: 0.01em !important;
     }
 
     /* (Legacy: text-pill sign-out styling SUPERSEDED. Sign out is now an
@@ -5609,11 +5811,22 @@ section[data-testid="stSidebar"]::before,
        Clean divider above the section, refined "YOUR CHATS" label, primary
        indigo "+ New chat" CTA, and each past chat row as a subtle list item
        with title left + tiny × delete on the right. */
+    [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(hr) {
+        overflow: visible !important;
+        height: auto !important;
+    }
     [data-testid="stSidebar"] hr {
         border: none !important;
         height: 1px !important;
-        background: #d6e0f0 !important;
-        margin: 0.85rem -0.2rem 0.6rem -0.2rem !important;
+        background: #cbd5e1 !important;
+        margin-top: 0.85rem !important;
+        margin-bottom: 0.85rem !important;
+        margin-left: 0 !important;
+        margin-right: 1.6rem !important;
+        width: calc(100% - 1.6rem) !important;
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
     }
     [data-testid="stSidebar"] .sb-title {
         font-size: 0.6rem !important;
@@ -5764,30 +5977,27 @@ section[data-testid="stSidebar"]::before,
         font-size: 1rem !important;
     }
     /* Globe glyph at the start — sits tight against the text. */
-    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] {
-        position: relative !important;
-        padding-left: 0.8rem !important;
-        padding-right: 0.2rem !important;
-    }
+    /* Globe glyph and chevron styling now fully integrated into the global selectbox card declaration */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"]::before {
         content: "🌐";
-        position: absolute;
-        left: 0.18rem;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 0.7rem;
-        line-height: 1;
-        pointer-events: none;
-        opacity: 0.85;
+        position: absolute !important;
+        left: 0.8rem !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        font-size: 0.9rem !important;
+        line-height: 1 !important;
+        pointer-events: none !important;
+        opacity: 0.9 !important;
     }
-    /* Displayed value styling is now handled by the [value]::before rules
-       further below (3-letter language codes). */
-    /* Tiny chevron, gentle muted color. */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] svg {
-        width: 11px !important;
-        height: 11px !important;
-        fill: #94a3b8 !important;
-        opacity: 0.85 !important;
+        position: absolute !important;
+        right: 0.8rem !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        width: 12px !important;
+        height: 12px !important;
+        fill: #64748b !important;
+        opacity: 0.9 !important;
     }
     [data-testid="stSidebar"] .md-sidebar-bottom {
         padding-top: 0.55rem !important;
@@ -6308,8 +6518,8 @@ section[data-testid="stSidebar"]::before,
        Bubble width hugs its content so short messages stay on one line and
        only long ones wrap. */
     .user-bubble {
-        background: linear-gradient(135deg, #eef0ff 0%, #e0e7ff 100%) !important;
-        color: #3730a3 !important;
+        background: linear-gradient(135deg, #e0e7ff 0%, #e0f2fe 100%) !important;
+        color: #1e293b !important;
         border-radius: 18px 18px 4px 18px !important;
         padding: 0.75rem 1.1rem !important;
         font-size: 0.92rem !important;
@@ -6318,8 +6528,8 @@ section[data-testid="stSidebar"]::before,
         max-width: 100% !important;
         width: fit-content !important;
         margin-left: auto !important;
-        border: 1px solid rgba(99, 102, 241, 0.18) !important;
-        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.08) !important;
+        border: 1px solid #c7d2fe !important;
+        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.05) !important;
     }
     /* User stack should NOT cap width — let the bubble grow naturally up
        to its container so short messages stay on one line. */
@@ -6360,7 +6570,7 @@ section[data-testid="stSidebar"]::before,
         align-items: flex-start !important;
         justify-content: space-between !important;
         gap: 1rem !important;
-        margin: 0.2rem 0 1.4rem 0 !important;
+        margin: 0.2rem 0 4.5rem 0 !important;
         flex-wrap: wrap !important;
     }
     .md-chat-hero-text { min-width: 0 !important; }
@@ -7730,7 +7940,7 @@ section[data-testid="stSidebar"]::before,
        serif glyph for the authentic pharmacy-pad look. */
 /* (End of canonical-styling block — was previously the @media closing brace.) */
 
-/* ------------------------------------------------------------------------- */
+/* ── Section 11 (was app.py top-level block 11) ─────── */
 
 /* Keep composer/card styling consistent for every profile state. */
 [data-testid="stForm"]:has(.st-key-home_send_btn),
@@ -8105,6 +8315,9 @@ section[data-testid="stSidebar"]::before,
     [data-testid="stSidebar"] .md-logo-wrap {
         margin-bottom: 0.62rem !important;
         padding-bottom: 0.62rem !important;
+        position: relative !important;
+        z-index: 10 !important;
+        min-height: 48px !important;
     }
     [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button {
         min-height: 34px !important;
@@ -8129,13 +8342,21 @@ section[data-testid="stSidebar"]::before,
         width: min(140px, 100%) !important;
     }
     [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
-        padding: 0.55rem 0 0.45rem 0 !important;
-        margin-bottom: 0.2rem !important;
+        padding: 0.4rem 0 0.4rem 0 !important;
+        margin-bottom: 0.75rem !important;
         max-width: 242px !important;
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
         border-radius: 0 !important;
+        position: relative !important;
+        z-index: 10 !important;
+        min-height: 70px !important;
+    }
+    [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
+        max-width: 155px !important;
+        width: min(155px, 100%) !important;
+        filter: drop-shadow(0 4px 16px rgba(15, 23, 42, 0.13)) drop-shadow(0 1px 4px rgba(15, 23, 42, 0.07)) !important;
     }
     [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
         padding: 0.5rem 0.85rem 0.55rem 0.85rem !important;
@@ -8153,6 +8374,8 @@ section[data-testid="stSidebar"]::before,
     }
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
         padding: 0.5rem 1.1rem 0.5rem 0.55rem !important;
+        position: relative !important;
+        z-index: 5 !important;
     }
     [data-testid="stSidebar"] .md-side-avatar {
         width: 28px !important;
@@ -8186,9 +8409,9 @@ section[data-testid="stSidebar"]::before,
     }
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"],
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-        min-height: 46px !important;
-        height: 46px !important;
-        border-radius: 14px !important;
+        min-height: 38px !important;
+        height: 38px !important;
+        border-radius: 12px !important;
     }
     [data-testid="stSidebar"] .md-side-profile-top {
         margin-top: 0.1rem !important;
@@ -8611,65 +8834,1314 @@ section[data-testid="stSidebar"]::before,
     color: inherit !important;
 }
 
-/* Guest Profile Chip & Language Selector updates */
-[data-testid="stSidebar"] .md-side-profile.md-side-profile-guest {
-    display: flex !important;
-    align-items: center !important;
-    text-decoration: none !important;
-    color: inherit !important;
-    cursor: pointer !important;
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 18px !important;
-    padding: 0.85rem 1rem !important;
-    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.02) !important;
-    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease !important;
-}
-[data-testid="stSidebar"] .md-side-profile.md-side-profile-guest:hover {
-    transform: translateY(-1px) !important;
-    border-color: #cbd5e1 !important;
-    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.04) !important;
-}
-[data-testid="stSidebar"] .md-side-avatar-guest {
-    background: #2563eb !important;
-    color: #ffffff !important;
-    font-weight: 700 !important;
-    border-radius: 8px !important;
-}
-[data-testid="stSidebar"] .md-side-chevron {
-    margin-left: auto !important;
-    color: #64748b !important;
-    display: flex !important;
-    align-items: center !important;
-}
-[data-testid="stSidebar"] .md-side-chevron span {
-    font-size: 20px !important;
+/* ── Section 12 (was app.py auth-page conditional block) ─── */
+
+/* Hide empty anchor containers to reclaim space */
+div.element-container:has(.md-recent-card-inside),
+div.element-container:has(.md-recent-seeall-anchor),
+div.element-container:has(.md-new-chat-anchor),
+div.element-container:has(.md-conv-select-anchor),
+div.element-container:has(.md-conv-del-anchor),
+div.element-container:has(.md-side-signout-anchor),
+div.element-container:has(.md-privacy-btn-anchor),
+div.element-container:has(.md-help-btn-anchor) {
+display: none !important;
 }
 
-/* Sidebar Language Picker container with Globe Icon */
-[data-testid="stSidebar"] .md-sidebar-lang-container {
-    position: relative !important;
+/* Custom sidebar native button overrides */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) {
+background: #ffffff !important;
+border: 1px solid #e6edf9 !important;
+border-radius: 11px !important;
+padding: 0.45rem 0.5rem 0.4rem 0.5rem !important;
+margin-top: 0.7rem !important;
+margin-bottom: 0.25rem !important;
+box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02) !important;
+box-sizing: border-box !important;
+position: relative !important;
+overflow: visible !important;
+}
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [data-testid="stVerticalBlock"] {
+gap: 0.2rem !important;
+}
+
+/* Sign out button */
+.element-container:has(.md-side-signout-anchor) + .element-container button {
+position: absolute !important;
+top: -55px !important; /* Pull up to align with the top profile card */
+right: 12px !important;
+width: 28px !important;
+height: 28px !important;
+min-width: 28px !important;
+min-height: 28px !important;
+padding: 0 !important;
+border-radius: 50% !important;
+background: transparent !important;
+border: 1px solid transparent !important;
+color: #94a3b8 !important;
+display: flex !important;
+align-items: center !important;
+justify-content: center !important;
+z-index: 10 !important;
+box-shadow: none !important;
+}
+.element-container:has(.md-side-signout-anchor) + .element-container button:hover {
+background: #fef2f2 !important;
+border-color: #fecaca !important;
+color: #b91c1c !important;
+}
+
+/* See all button in card header */
+.element-container:has(.md-recent-seeall-anchor) + .element-container button {
+position: absolute !important;
+top: 8px !important; /* Align with Recent Chats header title */
+right: 8px !important;
+background: transparent !important;
+border: none !important;
+color: #4f46e5 !important;
+font-size: 0.74rem !important;
+font-weight: 600 !important;
+padding: 0 !important;
+margin: 0 !important;
+box-shadow: none !important;
+min-height: unset !important;
+height: auto !important;
+width: auto !important;
+z-index: 5 !important;
+display: inline-block !important;
+}
+.element-container:has(.md-recent-seeall-anchor) + .element-container button:hover {
+color: #3730a3 !important;
+text-decoration: underline !important;
+background: transparent !important;
+}
+
+/* + New chat button inside the card */
+.element-container:has(.md-new-chat-anchor) + .element-container button {
+box-sizing: border-box !important;
+width: 100% !important;
+min-height: 30px !important;
+height: 30px !important;
+padding: 0 0.6rem !important;
+margin-bottom: 0.35rem !important;
+font-size: 0.72rem !important;
+border-radius: 8px !important;
+border: 1px solid #dbe4ff !important;
+background: linear-gradient(135deg, #f5f8ff 0%, #eef2ff 100%) !important;
+color: #4f46e5 !important;
+font-weight: 600 !important;
+box-shadow: 0 2px 5px rgba(99, 102, 241, 0.05) !important;
+display: flex !important;
+align-items: center !important;
+justify-content: center !important;
+gap: 0.35rem !important;
+transition: all 0.2s ease !important;
+}
+.element-container:has(.md-new-chat-anchor) + .element-container button:hover {
+background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%) !important;
+border-color: #c7d2fe !important;
+color: #3730a3 !important;
+box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12) !important;
+}
+.element-container:has(.md-new-chat-anchor) + .element-container button p {
+font-size: 0.72rem !important;
+color: #4f46e5 !important;
+margin: 0 !important;
+font-weight: 600 !important;
+line-height: 1 !important;
+}
+.element-container:has(.md-new-chat-anchor) + .element-container button [data-testid="stIconMaterial"] {
+font-size: 0.88rem !important;
+color: #4f46e5 !important;
+-webkit-text-fill-color: #4f46e5 !important;
+}
+
+/* Conversation row buttons */
+.element-container:has(.md-conv-select-anchor) + .element-container button {
+background: transparent !important;
+border: none !important;
+border-radius: 8px !important;
+color: #475569 !important;
+text-align: left !important;
+font-size: 0.76rem !important;
+font-weight: 550 !important;
+padding: 0.4rem 0.45rem !important;
+min-height: unset !important;
+height: auto !important;
+width: 100% !important;
+box-shadow: none !important;
+display: flex !important;
+align-items: center !important;
+justify-content: flex-start !important;
+gap: 0.35rem !important;
+transition: all 0.15s ease !important;
+}
+.element-container:has(.md-conv-select-anchor) + .element-container button:hover {
+background: #f8fafc !important;
+color: #0f172a !important;
+}
+.element-container:has(.md-conv-select-anchor.md-active) + .element-container button {
+background: #f1f5f9 !important;
+color: #0f172a !important;
+font-weight: 600 !important;
+}
+.element-container:has(.md-conv-select-anchor) + .element-container button p {
+margin: 0 !important;
+font-size: 0.76rem !important;
+line-height: 1.15 !important;
+white-space: nowrap !important;
+overflow: hidden !important;
+text-overflow: ellipsis !important;
+}
+.element-container:has(.md-conv-select-anchor) + .element-container button [data-testid="stIconMaterial"] {
+font-size: 0.95rem !important;
+color: #94a3b8 !important;
+-webkit-text-fill-color: #94a3b8 !important;
+}
+
+/* Flex layout columns for conversation rows */
+div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) {
+display: flex !important;
+flex-direction: row !important;
+align-items: center !important;
+justify-content: space-between !important;
+width: 100% !important;
+gap: 0.1rem !important;
+margin-bottom: 0.1rem !important;
+}
+div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) div[data-testid="column"] {
+padding: 0 !important;
+margin: 0 !important;
+min-width: unset !important;
+}
+
+/* Style delete button */
+.element-container:has(.md-conv-del-anchor) + .element-container button {
+background: transparent !important;
+border: none !important;
+color: #94a3b8 !important;
+font-size: 0.74rem !important;
+padding: 0 !important;
+margin: 0 !important;
+display: flex !important;
+align-items: center !important;
+justify-content: center !important;
+width: 20px !important;
+height: 20px !important;
+min-width: 20px !important;
+min-height: 20px !important;
+box-shadow: none !important;
+border-radius: 50% !important;
+transition: background 0.15s ease, color 0.15s ease !important;
+}
+.element-container:has(.md-conv-del-anchor) + .element-container button:hover {
+background: #fef2f2 !important;
+color: #b91c1c !important;
+}
+
+/* Privacy & Terms and Help Center footer buttons */
+.element-container:has(.md-privacy-btn-anchor) + .element-container button,
+.element-container:has(.md-help-btn-anchor) + .element-container button {
+background: transparent !important;
+border: none !important;
+color: #64748b !important;
+font-size: 0.65rem !important;
+font-weight: 600 !important;
+padding: 0 !important;
+margin: 0 !important;
+min-height: unset !important;
+height: auto !important;
+box-shadow: none !important;
+}
+.element-container:has(.md-privacy-btn-anchor) + .element-container button:hover,
+.element-container:has(.md-help-btn-anchor) + .element-container button:hover {
+color: #4f46e5 !important;
+text-decoration: underline !important;
+background: transparent !important;
+}
+.element-container:has(.md-privacy-btn-anchor) + .element-container button p,
+.element-container:has(.md-help-btn-anchor) + .element-container button p {
+font-size: 0.65rem !important;
+margin: 0 !important;
+}
+.element-container:has(.md-privacy-btn-anchor) + .element-container button {
+float: right !important;
+}
+.element-container:has(.md-help-btn-anchor) + .element-container button {
+float: left !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Profile chip: avatar + name/email + "Synced & up to date" status.
+_sync_dot = '<span class="md-status-dot"></span>Synced &amp; up to date' if st.session_state.is_authenticated else '<span class="md-status-dot md-status-dot-off"></span>Guest mode'
+st.markdown(
+    '<div class="md-side-profile md-side-profile-top">'
+    '<div class="md-side-avatar">' + ui_escape(_profile_in) + '</div>'
+    '<div class="md-side-profile-text">'
+    '<div class="md-side-pname">' + ui_text(_profile_nm, 30) + '</div>'
+    '<div class="md-side-psub">' + ui_text(_profile_sub, 40) + '</div>'
+    '<div class="md-side-status">' + _sync_dot + '</div>'
+    '</div>'
+    '</div>',
+    unsafe_allow_html=True
+)
+
+# Sign-out icon button (overlaid absolutely on top of profile card top-right)
+if st.session_state.is_authenticated:
+    st.markdown('<div class="md-side-signout-anchor"></div>', unsafe_allow_html=True)
+    if st.button(" ", key="profile_logout", icon=":material/logout:"):
+        for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context", "rx_reader_result", "rx_uploader_key"]:
+            if k in st.session_state:
+                if k in ("is_authenticated", "is_guest"):
+                    st.session_state[k] = False
+                elif k == "patient_memory":
+                    st.session_state[k] = {"symptoms": [], "conditions": [], "medications": []}
+                elif k == "messages":
+                    st.session_state[k] = []
+                elif k == "rx_reader_result":
+                    st.session_state[k] = None
+                elif k == "rx_uploader_key":
+                    st.session_state[k] = 0
+                elif k == "qcount":
+                    st.session_state[k] = 0
+                elif k == "feedback":
+                    st.session_state[k] = {}
+                else:
+                    st.session_state[k] = "" if isinstance(st.session_state[k], str) else st.session_state[k]
+        st.session_state.current_conversation_id = ""
+        st.rerun()
+
+# Spacing div to prevent clipping/overlapping of Recent Chats card header under profile chip
+st.markdown('<div style="height: 14px;"></div>', unsafe_allow_html=True)
+
+if st.session_state.is_authenticated:
+    # == Recent Chats card (wrapped in container so grandparent :has targets it) ==
+    _convs = list_conversations(st.session_state.user_email_hash, limit=3)
+    _active_id = st.session_state.current_conversation_id
+
+    with st.container(border=True):
+        # Class markup to identify this st.container wrapper block
+        st.markdown('<div class="md-recent-card-inside"></div>', unsafe_allow_html=True)
+
+        # Card header title
+        st.markdown('<div class="md-recent-head"><div class="md-recent-title">Recent Chats</div></div>', unsafe_allow_html=True)
+        
+        # Card header "See all" button
+        st.markdown('<div class="md-recent-seeall-anchor"></div>', unsafe_allow_html=True)
+        if st.button("See all", key="recent_see_all_btn"):
+            st.session_state.mode = "history"
+            st.rerun()
+
+        # "+ New chat" button inside card
+        st.markdown('<div class="md-new-chat-anchor"></div>', unsafe_allow_html=True)
+        if st.button("＋ New chat", key="new_chat_btn", use_container_width=True):
+            start_new_chat_session()
+            st.rerun()
+
+        # Conversation rows
+        if _convs:
+            for _c in _convs:
+                _is_active = _c["id"] == _active_id
+                _title = (_c.get("title") or "Chat")[:40]
+                _lu = _c.get("last_updated")
+                _ago = ""
+                try:
+                    if _lu and hasattr(_lu, "strftime"):
+                        _delta = datetime.now(timezone.utc) - (_lu if _lu.tzinfo else _lu.replace(tzinfo=timezone.utc))
+                        _h = int(_delta.total_seconds() // 3600)
+                        if _h < 1:
+                            _ago = str(max(1, int(_delta.total_seconds() // 60))) + "m ago"
+                        elif _h < 24:
+                            _ago = str(_h) + "h ago"
+                        elif _h < 168:
+                            _ago = str(_h // 24) + "d ago"
+                        else:
+                            _ago = str(_h // 168) + "w ago"
+                except Exception:
+                    _ago = ""
+                
+                _btn_label = _title + ("  " + _ago if _ago else "")
+                _conv_key_prefix = "conv_active_" if _is_active else "conv_select_"
+                
+                # Conversation row select/delete column layout
+                _row_col1, _row_col2 = st.columns([0.85, 0.15])
+                with _row_col1:
+                    st.markdown(f'<div class="md-conv-select-anchor{" md-active" if _is_active else ""}"></div>', unsafe_allow_html=True)
+                    if st.button(_btn_label, icon=":material/description:", key=_conv_key_prefix + _c["id"], use_container_width=True):
+                        _conv_obj = load_conversation(st.session_state.user_email_hash, _c["id"])
+                        if _conv_obj is not None:
+                            st.session_state.current_conversation_id = _c["id"]
+                            st.session_state.messages = _conv_obj.get("messages", []) or []
+                            st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
+                            st.session_state.feedback = {}
+                            st.session_state.last_sources = []
+                            st.session_state.emergency_detected = False
+                            st.session_state.mode = "chat"
+                        st.rerun()
+                with _row_col2:
+                    st.markdown('<div class="md-conv-del-anchor"></div>', unsafe_allow_html=True)
+                    if st.button("✕", key="conv_del_" + _c["id"], use_container_width=True):
+                        delete_conversation(st.session_state.user_email_hash, _c["id"])
+                        if st.session_state.get("current_conversation_id") == _c["id"]:
+                            st.session_state.current_conversation_id = ""
+                            st.session_state.messages = []
+                        st.rerun()
+
+elif st.session_state.is_guest:
+    pass
+
+L = LANGUAGES[st.session_state.selected_language]
+
+# ── Sidebar bottom: language picker → Privacy & Consent → footer ──
+st.markdown('<div class="md-sidebar-bottom">', unsafe_allow_html=True)
+
+# Language selector sits immediately above the Privacy & Consent button.
+_lang_keys_top = list(LANGUAGES.keys())
+_current_lang_top = st.session_state.get("selected_language", "English")
+_lang_idx_top = _lang_keys_top.index(_current_lang_top) if _current_lang_top in _lang_keys_top else 0
+st.selectbox(
+    "Language",
+    options=_lang_keys_top,
+    index=_lang_idx_top,
+    key="lang_selector",
+    label_visibility="collapsed",
+)
+# Lock the combobox input to read-only so the picker behaves as a
+# tap-to-open button.
+import streamlit.components.v1 as _components_lang
+_components_lang.html(
+    """
+    <script>
+    (function(){
+        function lock(){
+            try {
+                var doc = window.parent.document;
+                var inputs = doc.querySelectorAll('[data-testid="stSidebar"] [data-testid="stSelectbox"] input[role="combobox"]');
+                inputs.forEach(function(input){
+                    input.setAttribute('readonly', '');
+                    input.setAttribute('tabindex', '-1');
+                    input.setAttribute('inputmode', 'none');
+                });
+            } catch (e) {}
+        }
+        lock();
+        setTimeout(lock, 200);
+        setTimeout(lock, 800);
+        setInterval(lock, 1500);
+    })();
+    </script>
+    """,
+    height=0,
+)
+if st.session_state.lang_selector != st.session_state.selected_language:
+    st.session_state.selected_language = st.session_state.lang_selector
+    st.rerun()
+
+# Footer: Privacy & Terms · Help Center + copyright
+_foot_col1, _foot_col2, _foot_col3 = st.columns([0.45, 0.1, 0.45])
+with _foot_col1:
+    st.markdown('<div class="md-privacy-btn-anchor"></div>', unsafe_allow_html=True)
+    if st.button("Privacy & Terms", key="privacy_btn"):
+        st.session_state.mode = "privacy"
+        st.rerun()
+with _foot_col2:
+    st.markdown('<div class="md-sidebar-foot-dot">·</div>', unsafe_allow_html=True)
+with _foot_col3:
+    st.markdown('<div class="md-help-btn-anchor"></div>', unsafe_allow_html=True)
+    if st.button("Help Center", key="help_btn"):
+        st.session_state.mode = "privacy"
+        st.rerun()
+st.markdown(
+    '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>',
+    unsafe_allow_html=True
+)
+
+L = LANGUAGES[st.session_state.selected_language]
+
+_DEFAULT_ADMIN_PASSWORD = "MediChatAdmin@2026"
+ADMIN_PASSWORD = _safe_secret("ADMIN_PASSWORD", os.environ.get("ADMIN_PASSWORD", _DEFAULT_ADMIN_PASSWORD))
+if ADMIN_PASSWORD == _DEFAULT_ADMIN_PASSWORD:
+logger.warning("ADMIN_PASSWORD not configured; admin mode disabled. Set ADMIN_PASSWORD to enable.")
+ADMIN_PASSWORD = _py_secrets.token_urlsafe(48)
+_query_params = st.query_params
+_admin_requested = _query_params.get("admin", "") != ""
+_force_auth_requested = str(_query_params.get("force_auth", "") or "").strip().lower() in {"1", "true", "yes", "on"}
+_mode_from_url = str(_query_params.get("mode", "") or "").strip()
+_url_modes = {"chat", "overview", "assessment", "records", "rx_reader", "medications", "appointments", "insights", "history", "privacy"}
+
+if _force_auth_requested:
+st.session_state.is_authenticated = False
+st.session_state.is_guest = False
+st.session_state.user_email_hash = ""
+st.session_state.user_email_display = ""
+st.session_state.current_conversation_id = ""
+st.session_state.messages = []
+st.session_state.mode = "chat"
+try:
+    del st.query_params["force_auth"]
+except Exception:
+    pass
+
+if _mode_from_url in _url_modes:
+if st.session_state.mode != _mode_from_url:
+    st.session_state.mode = _mode_from_url
+try:
+    del st.query_params["mode"]
+except Exception:
+    pass
+
+# ?conv=<id> → load that conversation into the chat view. Lets the Recent
+# Chats sidebar render as anchor links (giving us proper title-left +
+# time-right flex layout that st.button can't).
+_conv_id_from_url = str(_query_params.get("conv", "") or "").strip()
+if _conv_id_from_url and st.session_state.is_authenticated and st.session_state.user_email_hash:
+_conv_obj = load_conversation(st.session_state.user_email_hash, _conv_id_from_url)
+if _conv_obj is not None:
+    st.session_state.current_conversation_id = _conv_id_from_url
+    st.session_state.messages = _conv_obj.get("messages", []) or []
+    st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
+    st.session_state.feedback = {}
+    st.session_state.last_sources = []
+    st.session_state.emergency_detected = False
+    st.session_state.mode = "chat"
+try:
+    del st.query_params["conv"]
+except Exception:
+    pass
+
+# ?new_chat=1 → start a fresh chat session. Mirrors the ?conv handler so the
+# "+ New chat" pill inside the Recent Chats card can be a true anchor link
+# (nested inside the card's HTML) instead of a Streamlit-wrapped st.button
+# rendered as a sibling.
+_new_chat_from_url = str(_query_params.get("new_chat", "") or "").strip()
+if _new_chat_from_url:
+start_new_chat_session()
+try:
+    del st.query_params["new_chat"]
+except Exception:
+    pass
+
+# ?signout=1 → sign the user out. Lets the small logout icon inside the
+# profile chip (a true HTML child of the chip, not a Streamlit button) clear
+# session state without the negative-margin layout tricks that caused the
+# Recent Chats card to collide with the chip's bottom.
+_signout_from_url = str(_query_params.get("signout", "") or "").strip()
+if _signout_from_url:
+for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context", "rx_reader_result", "rx_uploader_key"]:
+    if k in st.session_state:
+        if k in ("is_authenticated", "is_guest"):
+            st.session_state[k] = False
+        elif k == "patient_memory":
+            st.session_state[k] = {"symptoms": [], "conditions": [], "medications": []}
+        elif k == "messages":
+            st.session_state[k] = []
+        elif k == "rx_reader_result":
+            st.session_state[k] = None
+        elif k == "rx_uploader_key":
+            st.session_state[k] = 0
+        elif k == "qcount":
+            st.session_state[k] = 0
+        elif k == "feedback":
+            st.session_state[k] = {}
+        else:
+            st.session_state[k] = "" if isinstance(st.session_state[k], str) else st.session_state[k]
+st.session_state.current_conversation_id = ""
+try:
+    del st.query_params["signout"]
+except Exception:
+    pass
+st.rerun()
+
+# ?del_conv=<id> → delete a saved conversation. Powers the small × icon on
+# each Recent Chats row (a true HTML child of the row's anchor structure,
+# not a separate Streamlit widget). Uses the existing delete_conversation()
+# function — no data-logic change, just a new UI invocation path.
+_del_conv_from_url = str(_query_params.get("del_conv", "") or "").strip()
+if _del_conv_from_url and st.session_state.is_authenticated and st.session_state.user_email_hash:
+delete_conversation(st.session_state.user_email_hash, _del_conv_from_url)
+# If the deleted conversation was the active one, clear it so a stale
+# active highlight doesn't persist in the sidebar.
+if st.session_state.get("current_conversation_id") == _del_conv_from_url:
+    st.session_state.current_conversation_id = ""
+    st.session_state.messages = []
+try:
+    del st.query_params["del_conv"]
+except Exception:
+    pass
+st.rerun()
+
+if st.session_state.is_guest and not st.session_state.is_authenticated:
+_guest_allowed_modes = {
+    "chat", "overview", "assessment", "records", "rx_reader",
+    "medications", "appointments", "insights", "history", "privacy"
+}
+if st.session_state.mode not in _guest_allowed_modes:
+    st.session_state.mode = "chat"
+
+if _admin_requested and not st.session_state.admin_authenticated:
+st.markdown(
+    '<div style="background:linear-gradient(135deg,#1f2937,#111827);color:white;padding:1.5rem 2rem;border-radius:16px;margin:2rem auto;max-width:500px;box-shadow:0 8px 30px rgba(0,0,0,0.2);">'
+    '<div style="text-align:center;margin-bottom:1.2rem;">'
+    '<div style="font-size:2.5rem;margin-bottom:0.5rem;">🔒</div>'
+    '<div style="font-size:1.3rem;font-weight:700;margin-bottom:0.3rem;">Admin Access Required</div>'
+    '<div style="font-size:0.85rem;opacity:0.8;">Research &amp; Evaluation Dashboard</div>'
+    '</div>'
+    '</div>',
+    unsafe_allow_html=True
+)
+pg_c1, pg_c2, pg_c3 = st.columns([1, 2, 1])
+with pg_c2:
+    with st.form(key="admin_login_form", clear_on_submit=True):
+        admin_pw_input = st.text_input("Password", type="password", placeholder="Enter admin password", label_visibility="collapsed")
+        login_btn = st.form_submit_button("Unlock Analytics", use_container_width=True)
+    if login_btn:
+        if hmac.compare_digest(str(admin_pw_input or ""), str(ADMIN_PASSWORD)):
+            st.session_state.admin_authenticated = True
+            st.session_state.admin_attempt_failed = False
+            st.rerun()
+        else:
+            st.session_state.admin_attempt_failed = True
+            st.rerun()
+    if st.session_state.admin_attempt_failed:
+        st.error("Incorrect password. Access denied.")
+    st.caption("Authorised team members only. This dashboard contains anonymised research data.")
+st.stop()
+
+_is_admin = st.session_state.admin_authenticated
+
+# ── Patient Profile Auth Gate ────────────────────────────────────────
+# Only enforced when Firebase is connected and user is not admin.
+# Users can also continue as Guest (no persistence).
+if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.session_state.is_guest) and st.session_state.mode != "privacy":
+st.markdown("""
+<style>
+/* Premium auth page polish, scoped to auth-only render path. */
+[data-testid="stForm"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+/* Sidebar/nav styles are intentionally NOT overridden here so auth, guest,
+   and signed-in profiles share the same global sidebar design system. */
+
+.md-auth-welcome-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: 124px minmax(0, 1fr);
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.9rem 2.2rem 1.85rem 1.6rem;
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 10% 12%, rgba(191, 219, 254, 0.42), transparent 46%),
+        radial-gradient(circle at 93% 90%, rgba(167, 139, 250, 0.2), transparent 48%),
+        linear-gradient(132deg, rgba(255,255,255,0.995) 0%, rgba(249,252,255,0.995) 50%, rgba(240,246,255,0.99) 100%);
+    border: 1px solid #d4e3ff;
+    box-shadow: 0 22px 48px rgba(59, 130, 246, 0.11), 0 5px 16px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+    isolation: isolate;
+}
+.md-auth-welcome-card::before {
+    content: "";
+    position: absolute;
+    left: -15%;
+    bottom: -58%;
+    width: 82%;
+    height: 94%;
+    border-radius: 999px;
+    background: radial-gradient(ellipse at center, rgba(129, 140, 248, 0.24) 0%, rgba(147, 197, 253, 0.1) 42%, transparent 78%);
+    transform: rotate(-8deg);
+    pointer-events: none;
+    z-index: -1;
+}
+.md-auth-welcome-card::after {
+    content: "";
+    position: absolute;
+    left: -16%;
+    right: -16%;
+    bottom: -64px;
+    height: 128px;
+    border-radius: 999px;
+    background: radial-gradient(120% 100% at 50% 0%, rgba(167, 139, 250, 0.18), rgba(147, 197, 253, 0.14) 42%, rgba(255, 255, 255, 0) 78%);
+    pointer-events: none;
+    opacity: 0.56;
+}
+.md-auth-deco-dots {
+    position: absolute;
+    right: 2.2rem;
+    top: 1.25rem;
+    width: 90px;
+    height: 48px;
+    background-image: radial-gradient(rgba(99, 102, 241, 0.28) 1.4px, transparent 1.4px);
+    background-size: 10px 10px;
+    opacity: 0.55;
+    pointer-events: none;
+}
+.md-auth-shield {
+    width: 112px;
+    height: 112px;
+    border-radius: 33px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    flex-shrink: 0;
+    font-size: 3rem !important;
+    background:
+        radial-gradient(circle at 26% 20%, rgba(255,255,255,0.56), transparent 44%),
+        linear-gradient(145deg, #3b82f6 0%, #6366f1 58%, #8b5cf6 100%);
+    box-shadow: 0 20px 38px rgba(99, 102, 241, 0.34);
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+    margin-left: 0.2rem;
+}
+.md-auth-shield.md-auth-shield-image {
+    width: 118px;
+    height: 118px;
+    border-radius: 0;
+    background: transparent !important;
+    box-shadow: none !important;
+    margin-left: 0;
+}
+.md-auth-shield.md-auth-shield-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    transform: none;
+    transform-origin: center center;
+    filter: drop-shadow(0 14px 24px rgba(59, 130, 246, 0.26));
+}
+.md-auth-welcome-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: center;
+    padding: 0 0.3rem 0 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.md-auth-welcome-title {
+    font-size: clamp(1.9rem, 2.7vw, 2.65rem);
+    font-weight: 820;
+    letter-spacing: -0.02em;
+    color: #0f172a;
+    line-height: 1.1;
+    margin: 0 0 0.45rem 0;
+    text-align: center;
+    width: 100%;
+}
+.md-auth-welcome-copy {
+    font-size: clamp(1.02rem, 1.38vw, 1.22rem);
+    color: #334155;
+    line-height: 1.5;
+    max-width: 62ch;
+    white-space: normal;
+    text-align: center;
+}
+.md-auth-chip-row {
+    display: flex;
+    gap: 0.86rem;
+    flex-wrap: wrap;
+    row-gap: 0.72rem;
+    margin-top: 1.28rem;
+    position: relative;
+    z-index: 1;
+    justify-content: center;
+    width: 100%;
+}
+.md-auth-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.62rem 1.12rem;
+    border-radius: 15px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid #dbe6fd;
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
+    color: #334155;
+    font-size: 0.98rem;
+    font-weight: 630;
+}
+.md-auth-chip .material-symbols-rounded {
+    color: #2563eb;
+    font-size: 1rem !important;
+}
+
+/* Tabs — centered glass pill bar (Apple-style frosted rail). The rail
+   is a translucent white wash with a subtle backdrop blur so it picks
+   up the page tone behind it; a hairline border + soft inner highlight
+   sell the "glass" depth. The active tab fills with the brand indigo
+   gradient and a colored drop shadow that matches the Sign in button. */
+[data-baseweb="tab-list"] {
+    gap: 0.4rem !important;
+    border-bottom: none !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 1rem !important;
+    justify-content: center !important;
+    background: rgba(255, 255, 255, 0.42) !important;
+    backdrop-filter: blur(18px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+    border-radius: 14px !important;
+    padding: 0.32rem !important;
+    max-width: 440px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.6) inset,
+        0 0 0 1px rgba(15, 23, 42, 0.04),
+        0 8px 24px rgba(15, 23, 42, 0.05) !important;
+}
+button[role="tab"] {
+    padding: 0.55rem 1.25rem !important;
+    font-size: 0.96rem !important;
+    font-weight: 600 !important;
+    color: #5a6b86 !important;
+    border: none !important;
+    border-bottom: none !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    transition:
+        color 0.18s ease,
+        background 0.2s ease,
+        box-shadow 0.22s ease,
+        transform 0.18s ease !important;
+}
+button[role="tab"]:hover {
+    color: #1f2a3d !important;
+    background: rgba(99, 102, 241, 0.06) !important;
+}
+button[role="tab"][aria-selected="true"] {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 55%),
+        linear-gradient(108deg, #4f46e5 0%, #6366f1 55%, #7c6ff2 100%) !important;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.22) inset,
+        0 6px 14px rgba(79, 70, 229, 0.28),
+        0 2px 5px rgba(79, 70, 229, 0.15) !important;
+    text-shadow: 0 1px 0 rgba(15, 23, 42, 0.14) !important;
+}
+button[role="tab"][aria-selected="true"]:hover {
+    color: #ffffff !important;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 55%),
+        linear-gradient(108deg, #4338ca 0%, #5b54e8 55%, #7466f3 100%) !important;
+}
+/* Streamlit's underline indicator — superseded by the pill fill. */
+[data-baseweb="tab-highlight"] {
+    display: none !important;
+}
+[data-baseweb="tab-panel"] {
+    padding-top: 0.85rem !important;
+    border-top: none !important;
+}
+[data-baseweb="tab-list"] + div,
+[data-baseweb="tab-list"] + div > div {
+    border-top: none !important;
+    box-shadow: none !important;
+}
+
+[data-testid="stForm"]:has(.st-key-si_email),
+[data-testid="stForm"]:has(.st-key-su_email) {
+    background: rgba(255,255,255,0.98) !important;
+    border: 1px solid #dbe6fb !important;
+    border-radius: 28px !important;
+    padding: 1.82rem 1.72rem 1.38rem 1.72rem !important;
+    box-shadow: 0 22px 44px rgba(15, 23, 42, 0.08), 0 3px 10px rgba(15, 23, 42, 0.04) !important;
+}
+[data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"] label,
+[data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] label {
+    font-size: 0.98rem !important;
+    color: #1e293b !important;
+    font-weight: 630 !important;
+    margin-bottom: 0.35rem !important;
+}
+[data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"],
+[data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] {
+    margin-bottom: 0.42rem !important;
+}
+/* The white surface + blue border live on the ROOT wrapper, not the
+   <input>, so the icon sits inside the same field instead of next to a
+   separate grey baseweb container. The inner input is transparent. */
+[data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"] input,
+[data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] input {
+    min-height: 54px !important;
+    border-radius: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 1.03rem !important;
+    line-height: 1.3 !important;
+    padding: 0.78rem 0.95rem !important;
+}
+[data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"],
+[data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 56px !important;
+    height: 56px !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
     display: flex !important;
     align-items: center !important;
-    width: 242px !important;
-    max-width: 242px !important;
-    margin: 0.95rem auto 0.6rem auto !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    border: 1px solid #d8e4fa !important;
+    border-radius: 15px !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
 }
-[data-testid="stSidebar"] .md-sidebar-lang-container [data-testid="stSelectbox"] {
-    margin: 0 !important;
-    width: 100% !important;
+[data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"]:focus-within,
+[data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"]:focus-within {
+    border-color: #93c5fd !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14) !important;
 }
-[data-testid="stSidebar"] .md-sidebar-lang-container .md-lang-icon {
-    position: absolute !important;
-    left: 14px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    color: #475569 !important;
-    font-size: 20px !important;
-    z-index: 10 !important;
-    pointer-events: none !important;
+[data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] [data-baseweb="base-input"],
+[data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] [data-baseweb="base-input"] {
+    min-height: 56px !important;
+    height: 56px !important;
+    display: flex !important;
+    align-items: center !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
-/* Shift selectbox text to the right for the globe icon */
-[data-testid="stSidebar"] .md-sidebar-lang-container [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"] {
-    padding-left: 28px !important;
+/* Icon column — transparent, but with a subtle hairline divider on its
+   right edge so the user can read at a glance where the click target
+   (typing area) begins. */
+[data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] > div:has([data-testid="stTextInputIcon"]),
+[data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] > div:has([data-testid="stTextInputIcon"]) {
+    background: transparent !important;
+    border: none !important;
+    border-right: 1px solid #e6ecf6 !important;
+    box-shadow: none !important;
+    padding-right: 0.55rem !important;
+    margin-right: 0.55rem !important;
+}
+[data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputIcon"],
+[data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputIcon"] {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    margin-left: 0.56rem !important;
+    margin-right: 0.44rem !important;
+    border-radius: 11px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: transparent !important;
+    border: none !important;
+}
+/* Focus state is now handled on the root wrapper via :focus-within above. */
+[data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"] [data-testid="stIconMaterial"],
+[data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] [data-testid="stIconMaterial"] {
+    color: #6366f1 !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    font-size: 1.16rem !important;
+}
+/* Show/hide password "eye" button on PIN field — strip baseweb's grey. */
+[data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] button,
+[data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] button {
+    background: transparent !important;
+    border: none !important;
+    color: #6366f1 !important;
+    margin-right: 0.4rem !important;
+}
+[data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] button:hover,
+[data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] button:hover {
+    background: rgba(99, 102, 241, 0.08) !important;
+}
+/* Primary submit button — premium glossy indigo gradient with a top
+   highlight (inner 1px), a colored drop shadow, and an arrow that
+   glides to the right on hover. The hover state lifts the button
+   slightly and deepens the shadow for an alive, tactile feel. */
+.st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button,
+.st-key-auth_signup_submit [data-testid="stFormSubmitButton"] > button {
+    height: 60px !important;
+    min-height: 60px !important;
+    border-radius: 16px !important;
+    border: none !important;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 50%),
+        linear-gradient(108deg, #4f46e5 0%, #6366f1 42%, #7c6ff2 72%, #8b5cf6 100%) !important;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.22) inset,
+        0 -1px 0 rgba(15, 23, 42, 0.08) inset,
+        0 14px 30px rgba(79, 70, 229, 0.32),
+        0 4px 10px rgba(79, 70, 229, 0.18) !important;
+    color: #ffffff !important;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.005em !important;
+    text-shadow: 0 1px 0 rgba(15, 23, 42, 0.18) !important;
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.22s ease,
+        background 0.25s ease !important;
+}
+.st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button:hover,
+.st-key-auth_signup_submit [data-testid="stFormSubmitButton"] > button:hover {
+    transform: translateY(-1px) !important;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 50%),
+        linear-gradient(108deg, #4338ca 0%, #5b54e8 42%, #7466f3 72%, #8b5cf6 100%) !important;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.26) inset,
+        0 -1px 0 rgba(15, 23, 42, 0.1) inset,
+        0 18px 38px rgba(79, 70, 229, 0.38),
+        0 6px 14px rgba(79, 70, 229, 0.22) !important;
+}
+.st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button:active,
+.st-key-auth_signup_submit [data-testid="stFormSubmitButton"] > button:active {
+    transform: translateY(0) !important;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.18) inset,
+        0 8px 18px rgba(79, 70, 229, 0.28) !important;
+}
+.st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button {
+    position: relative !important;
+    padding-right: 3.25rem !important;
+}
+.st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button [data-testid="stIconMaterial"] {
+    display: none !important;
+}
+.st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button::after {
+    content: "→";
+    position: absolute;
+    right: 1.25rem;
+    top: 50%;
+    transform: translateY(-54%);
+    font-size: 1.55rem;
+    font-weight: 400;
+    opacity: 0.96;
+    line-height: 1;
+    transition: transform 0.22s ease, opacity 0.18s ease;
+}
+.st-key-auth_signin_submit [data-testid="stFormSubmitButton"] > button:hover::after {
+    transform: translateY(-54%) translateX(4px);
+    opacity: 1;
+}
+
+.md-auth-signin-actions {
+    margin-top: 0.95rem;
+    padding: 0;
+}
+.md-auth-or-divider {
+    position: relative;
+    text-align: center;
+    margin: 0.55rem 0 0.9rem 0;
+}
+.md-auth-or-divider::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 1px solid #e2e8f5;
+    transform: translateY(-50%);
+}
+.md-auth-or-divider span {
+    position: relative;
+    background: transparent;
+    color: #64748b;
+    padding: 0 0.72rem;
+    font-size: 0.95rem;
+    font-weight: 560;
+}
+/* "Continue as Guest" — ghost button companion to the primary Sign in.
+   Indigo-tinted surface and border so it visually belongs to the same
+   family without competing for the eye. Hover fills with a slightly
+   deeper indigo wash and lifts subtly to match the primary's motion. */
+.md-auth-signin-actions .stButton > button {
+    height: 54px !important;
+    min-height: 54px !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(99, 102, 241, 0.22) !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f6f8ff 100%) !important;
+    color: #4338ca !important;
+    font-size: 1.02rem !important;
+    font-weight: 650 !important;
+    letter-spacing: 0.005em !important;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.9) inset,
+        0 2px 6px rgba(79, 70, 229, 0.06) !important;
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.2s ease,
+        border-color 0.18s ease,
+        background 0.22s ease !important;
+}
+.md-auth-signin-actions .stButton > button [data-testid="stIconMaterial"] {
+    color: #6366f1 !important;
+    font-size: 1.18rem !important;
+    margin-right: 0.18rem !important;
+}
+.md-auth-signin-actions .stButton > button:hover {
+    border-color: rgba(99, 102, 241, 0.42) !important;
+    background: linear-gradient(180deg, #f5f6ff 0%, #edefff 100%) !important;
+    color: #3730a3 !important;
+    transform: translateY(-1px) !important;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.95) inset,
+        0 8px 18px rgba(79, 70, 229, 0.12) !important;
+}
+.md-auth-signin-actions .stButton > button:hover [data-testid="stIconMaterial"] {
+    color: #4f46e5 !important;
+}
+.md-auth-signin-actions .stButton > button:active {
+    transform: translateY(0) !important;
+    background: #ebedff !important;
+    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.1) !important;
+}
+.md-auth-meta {
+    margin-top: 0.95rem;
+    padding-top: 0.95rem;
+    border-top: 1px solid #e4ebf9;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.md-auth-security-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    color: #475569;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+.md-auth-security-note .material-symbols-rounded {
+    color: #2563eb;
+    font-size: 1.18rem !important;
+    margin-top: 0.08rem;
+}
+a.md-auth-forgot-link,
+.md-auth-forgot-row a.md-auth-forgot-link {
+    color: #4f46e5 !important;
+    text-decoration: none !important;
+    font-size: 0.88rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: color 0.15s ease;
+}
+a.md-auth-forgot-link:hover,
+.md-auth-forgot-row a.md-auth-forgot-link:hover {
+    color: #4338ca !important;
+    text-decoration: none !important;
+}
+/* Inline row directly below the PIN field — right-aligned link, the
+   conventional place auth-aware users look for "Forgot PIN?". */
+.md-auth-forgot-row {
+    display: flex;
+    justify-content: flex-end;
+    margin: -0.18rem 0 0.62rem 0;
+}
+/* When the meta row is the only thing under the form (the Forgot link
+   has been moved inline), center the security note across the full width
+   so it doesn't look orphaned on the left. */
+.md-auth-meta.md-auth-meta-solo {
+    justify-content: center;
+    text-align: center;
+}
+.md-auth-meta.md-auth-meta-solo .md-auth-security-note {
+    justify-content: center;
+}
+
+/* Guest tab — soft card explaining the no-account experience, with the
+   Continue as Guest button spaced clearly below. The card uses a
+   subtle indigo wash (matching the welcome chips) so the tab content
+   feels framed without competing with the white form area on the
+   neighbouring tabs. */
+.md-auth-guest-intro {
+    margin: 0.8rem 0 1.25rem 0;
+    padding: 1.1rem 1.25rem;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #f6f7ff 0%, #eef1ff 100%);
+    border: 1px solid #e3e8fb;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.8) inset,
+        0 6px 18px rgba(15, 23, 42, 0.04);
+}
+.md-auth-guest-title {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 1.05rem;
+    font-weight: 730;
+    color: #1f2a3d;
+    letter-spacing: -0.005em;
+    margin-bottom: 0.45rem;
+}
+.md-auth-guest-title .material-symbols-rounded {
+    color: #4f46e5;
+    font-size: 1.18rem !important;
+}
+.md-auth-guest-copy {
+    color: #475569;
+    font-size: 0.92rem;
+    line-height: 1.55;
+}
+/* When the actions wrapper sits inside the Guest tab there is no
+   preceding "or" divider, so reset the margin-top to align cleanly
+   with the intro card above. */
+.md-auth-signin-actions.md-auth-signin-actions-guest {
+    margin-top: 0 !important;
+}
+
+.md-auth-privacy-foot {
+    margin-top: 1.2rem;
+    color: #64748b;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+.md-auth-privacy-foot a {
+    color: #1d4ed8 !important;
+    font-weight: 620;
+}
+
+.md-auth-side-card {
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.99), rgba(249,251,255,0.99));
+    border: 1px solid #dbe6fb;
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.07);
+    padding: 1.55rem 1.45rem 1.3rem 1.45rem;
+    margin-top: 1.42rem;
+    max-width: 372px;
+    margin-left: auto;
+}
+.md-auth-side-title {
+    font-size: 2rem;
+    font-weight: 820;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.12;
+}
+.md-auth-side-subline {
+    width: 46px;
+    height: 2.5px;
+    border-radius: 999px;
+    background: #5b6cf9;
+    margin: 0.68rem 0 1.2rem 0;
+}
+.md-auth-benefit {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 0.9rem;
+    align-items: start;
+    margin-bottom: 1.35rem;
+}
+.md-auth-benefit-ic {
+    width: 56px;
+    height: 56px;
+    border-radius: 20px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    color: #2563eb;
+    font-size: 1.5rem !important;
+    background: linear-gradient(145deg, #eef4ff, #e8f0ff);
+}
+/* Tonal variation within a single blue→indigo family — keeps the card
+   cohesive while still giving each row a subtle distinct accent. */
+.md-auth-benefit:nth-of-type(2) .md-auth-benefit-ic { color: #4f46e5; background: linear-gradient(145deg, #eef2ff, #e7ecff); }
+.md-auth-benefit:nth-of-type(3) .md-auth-benefit-ic { color: #6366f1; background: linear-gradient(145deg, #f0f1ff, #e8eaff); }
+.md-auth-benefit-title {
+    margin: 0;
+    font-size: 1.01rem;
+    font-weight: 730;
+    color: #0f172a;
+    line-height: 1.35;
+}
+.md-auth-benefit-copy {
+    margin-top: 0.18rem;
+    color: #475569;
+    font-size: 0.91rem;
+    line-height: 1.5;
+}
+.md-auth-side-bottom {
+    margin-top: 1.28rem;
+    padding-top: 1rem;
+    border-top: 1px dashed #dbe5f1;
+    display: flex;
+    gap: 0.6rem;
+    color: #334155;
+    font-size: 0.93rem;
+    line-height: 1.5;
+}
+.md-auth-side-bottom .material-symbols-rounded {
+    color: #4f46e5;
+    font-size: 1.1rem !important;
+    margin-top: 0.05rem;
+}
+
+@media (max-width: 1280px) {
+    .md-auth-welcome-title {
+        font-size: 2rem;
+    }
+}
+@media (max-width: 980px) {
+    .md-auth-side-card {
+        max-width: 100%;
+    }
+    .md-auth-welcome-card {
+        padding: 1.35rem 1.15rem;
+        border-radius: 22px;
+        gap: 1rem;
+    }
+    .md-auth-shield {
+        width: 80px;
+        height: 80px;
+        border-radius: 24px;
+        font-size: 2.2rem !important;
+        position: static;
+        transform: none;
+    }
+    .md-auth-chip-row {
+        gap: 0.5rem;
+    }
+    .md-auth-chip {
+        font-size: 0.8rem;
+        padding: 0.42rem 0.68rem;
+    }
+    .md-auth-welcome-copy {
+        white-space: normal;
+    }
+    .md-auth-welcome-content {
+        padding-left: 0;
+        padding-right: 0;
+    }
+    [data-testid="stForm"]:has(.st-key-si_email),
+    [data-testid="stForm"]:has(.st-key-su_email) {
+        padding: 1.15rem 1rem 1.05rem 1rem !important;
+        border-radius: 22px !important;
+    }
+    .md-auth-signin-actions {
+        padding: 0;
+    }
+}
+@media (max-width: 720px) {
+    [data-baseweb="tab-list"] {
+        gap: 1.05rem !important;
+    }
+    button[role="tab"] {
+        font-size: 0.93rem !important;
+        padding-bottom: 0.7rem !important;
+    }
+    .md-auth-meta {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
