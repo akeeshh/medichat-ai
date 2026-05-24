@@ -13649,70 +13649,7 @@ if st.session_state.mode == "chat":
 
     # Enter-to-send (Shift+Enter keeps newline) for both home and in-chat composers.
     st.markdown(
-        """
-        <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="
-            (function () {
-                try {
-                    if (window.__medichatEnterSendBoundV3) return;
-                    window.__medichatEnterSendBoundV3 = true;
-                    console.log('Enter-to-send V3 listener initialized');
-
-                    function isComposerTextarea(el) {
-                        if (!el || el.tagName !== 'TEXTAREA') return false;
-                        
-                        const label = (el.getAttribute('aria-label') || '').trim().toLowerCase();
-                        if (label.includes('start a chat') || label.includes('your message')) {
-                            return true;
-                        }
-                        
-                        const placeholder = (el.getAttribute('placeholder') || '').trim().toLowerCase();
-                        if (placeholder.includes('ask anything about your health')) {
-                            return true;
-                        }
-                        
-                        if (el.closest('[class*=st-key-home_chat_input], [class*=st-key-chat_input]')) {
-                            return true;
-                        }
-                        
-                        return false;
-                    }
-
-                    function findSendButton(textarea) {
-                        const form = textarea.closest('[data-testid=stForm]');
-                        if (!form) return null;
-                        
-                        const specificBtn = form.querySelector(
-                            '[class*=st-key-home_send_btn] button, [class*=st-key-chat_send_btn] button'
-                        );
-                        if (specificBtn) return specificBtn;
-                        
-                        return form.querySelector(
-                            'button[kind=primaryFormSubmit], ' +
-                            'button[kind=primary], ' +
-                            '[data-testid=stFormSubmitButton] button'
-                        );
-                    }
-
-                    document.addEventListener('keydown', function (ev) {
-                        if (ev.defaultPrevented) return;
-                        if (ev.key !== 'Enter') return;
-                        if (ev.shiftKey || ev.ctrlKey || ev.metaKey || ev.altKey || ev.isComposing) return;
-                        const target = ev.target;
-                        if (!isComposerTextarea(target)) return;
-
-                        ev.preventDefault();
-                        const btn = findSendButton(target);
-                        console.log('Enter key intercepted. Submit button found:', btn);
-                        if (btn && !btn.disabled) {
-                            btn.click();
-                        }
-                    }, true);
-                } catch (e) {
-                    console.error('Enter-to-send registration error:', e);
-                }
-            })();
-        " style="display:none;position:absolute;width:0;height:0;">
-        """,
+        '''<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="(function(){try{if(!window.__medichatEnterSendBoundV4){window.__medichatEnterSendBoundV4=true;console.log('Enter-to-send V4 listener initialized');document.addEventListener('keydown',function(ev){if(!ev.defaultPrevented&&ev.key==='Enter'&&!ev.shiftKey&&!ev.ctrlKey&&!ev.metaKey&&!ev.altKey&&!ev.isComposing){const target=ev.target;if(target&&target.tagName==='TEXTAREA'){const label=(target.getAttribute('aria-label')||'').trim().toLowerCase();const placeholder=(target.getAttribute('placeholder')||'').trim().toLowerCase();if(label.includes('start a chat')||label.includes('your message')||placeholder.includes('ask anything about your health')||target.closest('[class*=st-key-home_chat_input], [class*=st-key-chat_input]')){ev.preventDefault();const form=target.closest('[data-testid=stForm]');if(form){const btn=form.querySelector('[class*=st-key-home_send_btn] button, [class*=st-key-chat_send_btn] button, button[kind=primaryFormSubmit], button[kind=primary], [data-testid=stFormSubmitButton] button');if(btn&&!btn.disabled)btn.click();}}}}},true);}}catch(e){console.error('Enter-to-send V4 error:',e);}})()" style="display:none;position:absolute;width:0;height:0;">''',
         unsafe_allow_html=True,
     )
 
