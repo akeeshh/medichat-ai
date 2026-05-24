@@ -11463,15 +11463,23 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
     -webkit-text-fill-color: #94a3b8 !important;
 }
 
-/* Absolute position for Delete (✕) button inside the row wrapper */
-.element-container:has(.md-conv-del-anchor) + .element-container {
-    position: absolute !important;
-    margin-top: -26px !important; /* Pull up to align vertically on top of row */
-    right: 8px !important;
-    width: 20px !important;
-    height: 20px !important;
-    z-index: 5 !important;
+/* Flex layout columns for conversation rows */
+div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    gap: 0.1rem !important;
+    margin-bottom: 0.1rem !important;
 }
+div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) div[data-testid="column"] {
+    padding: 0 !important;
+    margin: 0 !important;
+    min-width: unset !important;
+}
+
+/* Style delete button */
 .element-container:has(.md-conv-del-anchor) + .element-container button {
     background: transparent !important;
     border: none !important;
@@ -11574,7 +11582,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
         _convs = list_conversations(st.session_state.user_email_hash, limit=3)
         _active_id = st.session_state.current_conversation_id
 
-        with st.container():
+        with st.container(border=True):
             # Class markup to identify this st.container wrapper block
             st.markdown('<div class="md-recent-card-inside"></div>', unsafe_allow_html=True)
 
@@ -11618,28 +11626,29 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
                     _btn_label = _title + ("  " + _ago if _ago else "")
                     _conv_key_prefix = "conv_active_" if _is_active else "conv_select_"
                     
-                    # Conversation row select button
-                    st.markdown(f'<div class="md-conv-select-anchor{" md-active" if _is_active else ""}"></div>', unsafe_allow_html=True)
-                    if st.button(_btn_label, icon=":material/description:", key=_conv_key_prefix + _c["id"], use_container_width=True):
-                        _conv_obj = load_conversation(st.session_state.user_email_hash, _c["id"])
-                        if _conv_obj is not None:
-                            st.session_state.current_conversation_id = _c["id"]
-                            st.session_state.messages = _conv_obj.get("messages", []) or []
-                            st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
-                            st.session_state.feedback = {}
-                            st.session_state.last_sources = []
-                            st.session_state.emergency_detected = False
-                            st.session_state.mode = "chat"
-                        st.rerun()
-                    
-                    # Delete row button (✕) positioned absolutely on top of row
-                    st.markdown('<div class="md-conv-del-anchor"></div>', unsafe_allow_html=True)
-                    if st.button("✕", key="conv_del_" + _c["id"]):
-                        delete_conversation(st.session_state.user_email_hash, _c["id"])
-                        if st.session_state.get("current_conversation_id") == _c["id"]:
-                            st.session_state.current_conversation_id = ""
-                            st.session_state.messages = []
-                        st.rerun()
+                    # Conversation row select/delete column layout
+                    _row_col1, _row_col2 = st.columns([0.85, 0.15])
+                    with _row_col1:
+                        st.markdown(f'<div class="md-conv-select-anchor{" md-active" if _is_active else ""}"></div>', unsafe_allow_html=True)
+                        if st.button(_btn_label, icon=":material/description:", key=_conv_key_prefix + _c["id"], use_container_width=True):
+                            _conv_obj = load_conversation(st.session_state.user_email_hash, _c["id"])
+                            if _conv_obj is not None:
+                                st.session_state.current_conversation_id = _c["id"]
+                                st.session_state.messages = _conv_obj.get("messages", []) or []
+                                st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
+                                st.session_state.feedback = {}
+                                st.session_state.last_sources = []
+                                st.session_state.emergency_detected = False
+                                st.session_state.mode = "chat"
+                            st.rerun()
+                    with _row_col2:
+                        st.markdown('<div class="md-conv-del-anchor"></div>', unsafe_allow_html=True)
+                        if st.button("✕", key="conv_del_" + _c["id"], use_container_width=True):
+                            delete_conversation(st.session_state.user_email_hash, _c["id"])
+                            if st.session_state.get("current_conversation_id") == _c["id"]:
+                                st.session_state.current_conversation_id = ""
+                                st.session_state.messages = []
+                            st.rerun()
 
     elif st.session_state.is_guest:
         pass
