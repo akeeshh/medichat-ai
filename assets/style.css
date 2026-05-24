@@ -4,7 +4,7 @@
  */
 
 
-/* ── Section 1 (was app.py top-level block 1) ─────── */
+/* ── Section 1 (was app.py block 1, indent=0) ────── */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Serif+Display:ital@0;1&display=swap');
 
@@ -1102,7 +1102,7 @@
         display: block !important;
     }
 
-/* ── Section 2 (was app.py top-level block 2) ─────── */
+/* ── Section 2 (was app.py block 2, indent=0) ────── */
 
 :root {
     --md-bg: #f7f8fb;
@@ -1760,7 +1760,7 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
     padding-top: 2rem !important;
 }
 
-/* ── Section 3 (was app.py top-level block 3) ─────── */
+/* ── Section 3 (was app.py block 3, indent=0) ────── */
 
 .stApp {
     background: #f7f8fc !important;
@@ -2003,7 +2003,7 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
     }
 }
 
-/* ── Section 4 (was app.py top-level block 4) ─────── */
+/* ── Section 4 (was app.py block 4, indent=0) ────── */
 
 :root {
     --md-radius-sm: 10px;
@@ -2417,7 +2417,7 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
     }
 }
 
-/* ── Section 5 (was app.py top-level block 5) ─────── */
+/* ── Section 5 (was app.py block 5, indent=0) ────── */
 
 /* Quick option pills */
 .md-chip-row-compact .stButton > button {
@@ -2980,7 +2980,7 @@ form#chat_form [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSu
     }
 }
 
-/* ── Section 6 (was app.py top-level block 6) ─────── */
+/* ── Section 6 (was app.py block 6, indent=0) ────── */
 
 /* 5, 13: remove Streamlit chrome/collapse text entirely */
 header[data-testid="stHeader"],
@@ -3229,7 +3229,7 @@ form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primaryFor
     }
 }
 
-/* ── Section 7 (was app.py top-level block 7) ─────── */
+/* ── Section 7 (was app.py block 7, indent=0) ────── */
 
 /* Keep the navigation visible even if Streamlit previously stored a collapsed state. */
 section[data-testid="stSidebar"],
@@ -3302,7 +3302,7 @@ button[title*="expand" i],
     }
 }
 
-/* ── Section 8 (was app.py top-level block 8) ─────── */
+/* ── Section 8 (was app.py block 8, indent=0) ────── */
 
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 
@@ -3648,7 +3648,7 @@ form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primaryFor
     }
 }
 
-/* ── Section 9 (was app.py top-level block 9) ─────── */
+/* ── Section 9 (was app.py block 9, indent=0) ────── */
 
 /* Force one continuous canvas. Sidebar uses the same base tone as the app
    (no white panel, no hairline shadow), so there is no visible edge between
@@ -3861,7 +3861,7 @@ section[data-testid="stSidebar"]::before,
     margin-bottom: 0.2rem !important;
 }
 
-/* ── Section 10 (was app.py top-level block 10) ─────── */
+/* ── Section 10 (was app.py block 10, indent=0) ────── */
 
 /* Single source of truth for sidebar layout. */
 [data-testid="stSidebar"] {
@@ -7940,7 +7940,7 @@ section[data-testid="stSidebar"]::before,
        serif glyph for the authentic pharmacy-pad look. */
 /* (End of canonical-styling block — was previously the @media closing brace.) */
 
-/* ── Section 11 (was app.py top-level block 11) ─────── */
+/* ── Section 11 (was app.py block 11, indent=0) ────── */
 
 /* Keep composer/card styling consistent for every profile state. */
 [data-testid="stForm"]:has(.st-key-home_send_btn),
@@ -8834,7 +8834,7 @@ section[data-testid="stSidebar"]::before,
     color: inherit !important;
 }
 
-/* ── Section 12 (was app.py auth-page conditional block) ─── */
+/* ── Section 12 (was app.py block 12, indent=4) ────── */
 
 /* Hide empty anchor containers to reclaim space */
 div.element-container:has(.md-recent-card-inside),
@@ -9070,352 +9070,9 @@ float: right !important;
 .element-container:has(.md-help-btn-anchor) + .element-container button {
 float: left !important;
 }
-</style>
-""", unsafe_allow_html=True)
 
-# Profile chip: avatar + name/email + "Synced & up to date" status.
-_sync_dot = '<span class="md-status-dot"></span>Synced &amp; up to date' if st.session_state.is_authenticated else '<span class="md-status-dot md-status-dot-off"></span>Guest mode'
-st.markdown(
-    '<div class="md-side-profile md-side-profile-top">'
-    '<div class="md-side-avatar">' + ui_escape(_profile_in) + '</div>'
-    '<div class="md-side-profile-text">'
-    '<div class="md-side-pname">' + ui_text(_profile_nm, 30) + '</div>'
-    '<div class="md-side-psub">' + ui_text(_profile_sub, 40) + '</div>'
-    '<div class="md-side-status">' + _sync_dot + '</div>'
-    '</div>'
-    '</div>',
-    unsafe_allow_html=True
-)
+/* ── Section 13 (was app.py block 13, indent=4) ────── */
 
-# Sign-out icon button (overlaid absolutely on top of profile card top-right)
-if st.session_state.is_authenticated:
-    st.markdown('<div class="md-side-signout-anchor"></div>', unsafe_allow_html=True)
-    if st.button(" ", key="profile_logout", icon=":material/logout:"):
-        for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context", "rx_reader_result", "rx_uploader_key"]:
-            if k in st.session_state:
-                if k in ("is_authenticated", "is_guest"):
-                    st.session_state[k] = False
-                elif k == "patient_memory":
-                    st.session_state[k] = {"symptoms": [], "conditions": [], "medications": []}
-                elif k == "messages":
-                    st.session_state[k] = []
-                elif k == "rx_reader_result":
-                    st.session_state[k] = None
-                elif k == "rx_uploader_key":
-                    st.session_state[k] = 0
-                elif k == "qcount":
-                    st.session_state[k] = 0
-                elif k == "feedback":
-                    st.session_state[k] = {}
-                else:
-                    st.session_state[k] = "" if isinstance(st.session_state[k], str) else st.session_state[k]
-        st.session_state.current_conversation_id = ""
-        st.rerun()
-
-# Spacing div to prevent clipping/overlapping of Recent Chats card header under profile chip
-st.markdown('<div style="height: 14px;"></div>', unsafe_allow_html=True)
-
-if st.session_state.is_authenticated:
-    # == Recent Chats card (wrapped in container so grandparent :has targets it) ==
-    _convs = list_conversations(st.session_state.user_email_hash, limit=3)
-    _active_id = st.session_state.current_conversation_id
-
-    with st.container(border=True):
-        # Class markup to identify this st.container wrapper block
-        st.markdown('<div class="md-recent-card-inside"></div>', unsafe_allow_html=True)
-
-        # Card header title
-        st.markdown('<div class="md-recent-head"><div class="md-recent-title">Recent Chats</div></div>', unsafe_allow_html=True)
-        
-        # Card header "See all" button
-        st.markdown('<div class="md-recent-seeall-anchor"></div>', unsafe_allow_html=True)
-        if st.button("See all", key="recent_see_all_btn"):
-            st.session_state.mode = "history"
-            st.rerun()
-
-        # "+ New chat" button inside card
-        st.markdown('<div class="md-new-chat-anchor"></div>', unsafe_allow_html=True)
-        if st.button("＋ New chat", key="new_chat_btn", use_container_width=True):
-            start_new_chat_session()
-            st.rerun()
-
-        # Conversation rows
-        if _convs:
-            for _c in _convs:
-                _is_active = _c["id"] == _active_id
-                _title = (_c.get("title") or "Chat")[:40]
-                _lu = _c.get("last_updated")
-                _ago = ""
-                try:
-                    if _lu and hasattr(_lu, "strftime"):
-                        _delta = datetime.now(timezone.utc) - (_lu if _lu.tzinfo else _lu.replace(tzinfo=timezone.utc))
-                        _h = int(_delta.total_seconds() // 3600)
-                        if _h < 1:
-                            _ago = str(max(1, int(_delta.total_seconds() // 60))) + "m ago"
-                        elif _h < 24:
-                            _ago = str(_h) + "h ago"
-                        elif _h < 168:
-                            _ago = str(_h // 24) + "d ago"
-                        else:
-                            _ago = str(_h // 168) + "w ago"
-                except Exception:
-                    _ago = ""
-                
-                _btn_label = _title + ("  " + _ago if _ago else "")
-                _conv_key_prefix = "conv_active_" if _is_active else "conv_select_"
-                
-                # Conversation row select/delete column layout
-                _row_col1, _row_col2 = st.columns([0.85, 0.15])
-                with _row_col1:
-                    st.markdown(f'<div class="md-conv-select-anchor{" md-active" if _is_active else ""}"></div>', unsafe_allow_html=True)
-                    if st.button(_btn_label, icon=":material/description:", key=_conv_key_prefix + _c["id"], use_container_width=True):
-                        _conv_obj = load_conversation(st.session_state.user_email_hash, _c["id"])
-                        if _conv_obj is not None:
-                            st.session_state.current_conversation_id = _c["id"]
-                            st.session_state.messages = _conv_obj.get("messages", []) or []
-                            st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
-                            st.session_state.feedback = {}
-                            st.session_state.last_sources = []
-                            st.session_state.emergency_detected = False
-                            st.session_state.mode = "chat"
-                        st.rerun()
-                with _row_col2:
-                    st.markdown('<div class="md-conv-del-anchor"></div>', unsafe_allow_html=True)
-                    if st.button("✕", key="conv_del_" + _c["id"], use_container_width=True):
-                        delete_conversation(st.session_state.user_email_hash, _c["id"])
-                        if st.session_state.get("current_conversation_id") == _c["id"]:
-                            st.session_state.current_conversation_id = ""
-                            st.session_state.messages = []
-                        st.rerun()
-
-elif st.session_state.is_guest:
-    pass
-
-L = LANGUAGES[st.session_state.selected_language]
-
-# ── Sidebar bottom: language picker → Privacy & Consent → footer ──
-st.markdown('<div class="md-sidebar-bottom">', unsafe_allow_html=True)
-
-# Language selector sits immediately above the Privacy & Consent button.
-_lang_keys_top = list(LANGUAGES.keys())
-_current_lang_top = st.session_state.get("selected_language", "English")
-_lang_idx_top = _lang_keys_top.index(_current_lang_top) if _current_lang_top in _lang_keys_top else 0
-st.selectbox(
-    "Language",
-    options=_lang_keys_top,
-    index=_lang_idx_top,
-    key="lang_selector",
-    label_visibility="collapsed",
-)
-# Lock the combobox input to read-only so the picker behaves as a
-# tap-to-open button.
-import streamlit.components.v1 as _components_lang
-_components_lang.html(
-    """
-    <script>
-    (function(){
-        function lock(){
-            try {
-                var doc = window.parent.document;
-                var inputs = doc.querySelectorAll('[data-testid="stSidebar"] [data-testid="stSelectbox"] input[role="combobox"]');
-                inputs.forEach(function(input){
-                    input.setAttribute('readonly', '');
-                    input.setAttribute('tabindex', '-1');
-                    input.setAttribute('inputmode', 'none');
-                });
-            } catch (e) {}
-        }
-        lock();
-        setTimeout(lock, 200);
-        setTimeout(lock, 800);
-        setInterval(lock, 1500);
-    })();
-    </script>
-    """,
-    height=0,
-)
-if st.session_state.lang_selector != st.session_state.selected_language:
-    st.session_state.selected_language = st.session_state.lang_selector
-    st.rerun()
-
-# Footer: Privacy & Terms · Help Center + copyright
-_foot_col1, _foot_col2, _foot_col3 = st.columns([0.45, 0.1, 0.45])
-with _foot_col1:
-    st.markdown('<div class="md-privacy-btn-anchor"></div>', unsafe_allow_html=True)
-    if st.button("Privacy & Terms", key="privacy_btn"):
-        st.session_state.mode = "privacy"
-        st.rerun()
-with _foot_col2:
-    st.markdown('<div class="md-sidebar-foot-dot">·</div>', unsafe_allow_html=True)
-with _foot_col3:
-    st.markdown('<div class="md-help-btn-anchor"></div>', unsafe_allow_html=True)
-    if st.button("Help Center", key="help_btn"):
-        st.session_state.mode = "privacy"
-        st.rerun()
-st.markdown(
-    '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>',
-    unsafe_allow_html=True
-)
-
-L = LANGUAGES[st.session_state.selected_language]
-
-_DEFAULT_ADMIN_PASSWORD = "MediChatAdmin@2026"
-ADMIN_PASSWORD = _safe_secret("ADMIN_PASSWORD", os.environ.get("ADMIN_PASSWORD", _DEFAULT_ADMIN_PASSWORD))
-if ADMIN_PASSWORD == _DEFAULT_ADMIN_PASSWORD:
-logger.warning("ADMIN_PASSWORD not configured; admin mode disabled. Set ADMIN_PASSWORD to enable.")
-ADMIN_PASSWORD = _py_secrets.token_urlsafe(48)
-_query_params = st.query_params
-_admin_requested = _query_params.get("admin", "") != ""
-_force_auth_requested = str(_query_params.get("force_auth", "") or "").strip().lower() in {"1", "true", "yes", "on"}
-_mode_from_url = str(_query_params.get("mode", "") or "").strip()
-_url_modes = {"chat", "overview", "assessment", "records", "rx_reader", "medications", "appointments", "insights", "history", "privacy"}
-
-if _force_auth_requested:
-st.session_state.is_authenticated = False
-st.session_state.is_guest = False
-st.session_state.user_email_hash = ""
-st.session_state.user_email_display = ""
-st.session_state.current_conversation_id = ""
-st.session_state.messages = []
-st.session_state.mode = "chat"
-try:
-    del st.query_params["force_auth"]
-except Exception:
-    pass
-
-if _mode_from_url in _url_modes:
-if st.session_state.mode != _mode_from_url:
-    st.session_state.mode = _mode_from_url
-try:
-    del st.query_params["mode"]
-except Exception:
-    pass
-
-# ?conv=<id> → load that conversation into the chat view. Lets the Recent
-# Chats sidebar render as anchor links (giving us proper title-left +
-# time-right flex layout that st.button can't).
-_conv_id_from_url = str(_query_params.get("conv", "") or "").strip()
-if _conv_id_from_url and st.session_state.is_authenticated and st.session_state.user_email_hash:
-_conv_obj = load_conversation(st.session_state.user_email_hash, _conv_id_from_url)
-if _conv_obj is not None:
-    st.session_state.current_conversation_id = _conv_id_from_url
-    st.session_state.messages = _conv_obj.get("messages", []) or []
-    st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
-    st.session_state.feedback = {}
-    st.session_state.last_sources = []
-    st.session_state.emergency_detected = False
-    st.session_state.mode = "chat"
-try:
-    del st.query_params["conv"]
-except Exception:
-    pass
-
-# ?new_chat=1 → start a fresh chat session. Mirrors the ?conv handler so the
-# "+ New chat" pill inside the Recent Chats card can be a true anchor link
-# (nested inside the card's HTML) instead of a Streamlit-wrapped st.button
-# rendered as a sibling.
-_new_chat_from_url = str(_query_params.get("new_chat", "") or "").strip()
-if _new_chat_from_url:
-start_new_chat_session()
-try:
-    del st.query_params["new_chat"]
-except Exception:
-    pass
-
-# ?signout=1 → sign the user out. Lets the small logout icon inside the
-# profile chip (a true HTML child of the chip, not a Streamlit button) clear
-# session state without the negative-margin layout tricks that caused the
-# Recent Chats card to collide with the chip's bottom.
-_signout_from_url = str(_query_params.get("signout", "") or "").strip()
-if _signout_from_url:
-for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context", "rx_reader_result", "rx_uploader_key"]:
-    if k in st.session_state:
-        if k in ("is_authenticated", "is_guest"):
-            st.session_state[k] = False
-        elif k == "patient_memory":
-            st.session_state[k] = {"symptoms": [], "conditions": [], "medications": []}
-        elif k == "messages":
-            st.session_state[k] = []
-        elif k == "rx_reader_result":
-            st.session_state[k] = None
-        elif k == "rx_uploader_key":
-            st.session_state[k] = 0
-        elif k == "qcount":
-            st.session_state[k] = 0
-        elif k == "feedback":
-            st.session_state[k] = {}
-        else:
-            st.session_state[k] = "" if isinstance(st.session_state[k], str) else st.session_state[k]
-st.session_state.current_conversation_id = ""
-try:
-    del st.query_params["signout"]
-except Exception:
-    pass
-st.rerun()
-
-# ?del_conv=<id> → delete a saved conversation. Powers the small × icon on
-# each Recent Chats row (a true HTML child of the row's anchor structure,
-# not a separate Streamlit widget). Uses the existing delete_conversation()
-# function — no data-logic change, just a new UI invocation path.
-_del_conv_from_url = str(_query_params.get("del_conv", "") or "").strip()
-if _del_conv_from_url and st.session_state.is_authenticated and st.session_state.user_email_hash:
-delete_conversation(st.session_state.user_email_hash, _del_conv_from_url)
-# If the deleted conversation was the active one, clear it so a stale
-# active highlight doesn't persist in the sidebar.
-if st.session_state.get("current_conversation_id") == _del_conv_from_url:
-    st.session_state.current_conversation_id = ""
-    st.session_state.messages = []
-try:
-    del st.query_params["del_conv"]
-except Exception:
-    pass
-st.rerun()
-
-if st.session_state.is_guest and not st.session_state.is_authenticated:
-_guest_allowed_modes = {
-    "chat", "overview", "assessment", "records", "rx_reader",
-    "medications", "appointments", "insights", "history", "privacy"
-}
-if st.session_state.mode not in _guest_allowed_modes:
-    st.session_state.mode = "chat"
-
-if _admin_requested and not st.session_state.admin_authenticated:
-st.markdown(
-    '<div style="background:linear-gradient(135deg,#1f2937,#111827);color:white;padding:1.5rem 2rem;border-radius:16px;margin:2rem auto;max-width:500px;box-shadow:0 8px 30px rgba(0,0,0,0.2);">'
-    '<div style="text-align:center;margin-bottom:1.2rem;">'
-    '<div style="font-size:2.5rem;margin-bottom:0.5rem;">🔒</div>'
-    '<div style="font-size:1.3rem;font-weight:700;margin-bottom:0.3rem;">Admin Access Required</div>'
-    '<div style="font-size:0.85rem;opacity:0.8;">Research &amp; Evaluation Dashboard</div>'
-    '</div>'
-    '</div>',
-    unsafe_allow_html=True
-)
-pg_c1, pg_c2, pg_c3 = st.columns([1, 2, 1])
-with pg_c2:
-    with st.form(key="admin_login_form", clear_on_submit=True):
-        admin_pw_input = st.text_input("Password", type="password", placeholder="Enter admin password", label_visibility="collapsed")
-        login_btn = st.form_submit_button("Unlock Analytics", use_container_width=True)
-    if login_btn:
-        if hmac.compare_digest(str(admin_pw_input or ""), str(ADMIN_PASSWORD)):
-            st.session_state.admin_authenticated = True
-            st.session_state.admin_attempt_failed = False
-            st.rerun()
-        else:
-            st.session_state.admin_attempt_failed = True
-            st.rerun()
-    if st.session_state.admin_attempt_failed:
-        st.error("Incorrect password. Access denied.")
-    st.caption("Authorised team members only. This dashboard contains anonymised research data.")
-st.stop()
-
-_is_admin = st.session_state.admin_authenticated
-
-# ── Patient Profile Auth Gate ────────────────────────────────────────
-# Only enforced when Firebase is connected and user is not admin.
-# Users can also continue as Guest (no persistence).
-if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.session_state.is_guest) and st.session_state.mode != "privacy":
-st.markdown("""
-<style>
 /* Premium auth page polish, scoped to auth-only render path. */
 [data-testid="stForm"] {
     background: transparent !important;
