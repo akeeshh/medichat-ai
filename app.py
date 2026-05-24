@@ -10566,13 +10566,39 @@ def strip_excessive_disclaimers(text):
     cleaned = cleaned.strip()
     return cleaned
 
+def is_casual_message(text):
+    if not text:
+        return True
+    val = text.strip().lower().rstrip("?.! ")
+    greetings = {
+        "hi", "hello", "hey", "hola", "g'day", "good morning", "good afternoon", "good evening", 
+        "howdy", "hi there", "hello there", "yo", "sup", "what's up", "whats up", "what's happening", "whats happening"
+    }
+    if val in greetings:
+        return True
+    casual_queries = {
+        "how are you", "how are you doing", "how's it going", "hows it going", "what's new", "whats new",
+        "who are you", "what is your name", "what are you", "are you there", "tell me a joke", 
+        "thanks", "thank you", "ok", "okay"
+    }
+    if val in casual_queries:
+        return True
+    return False
+
 def medichat_rag_stream(question, all_messages, lang_instruction="", patient_name="", pdf_context="", image_context="", past_chats_summary=""):
-    emb = embedder.encode([question]).astype("float32")
-    distances, idxs = index.search(emb, k=6)
-    raw_context = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
-    clean_context = sanitize_rag_context(raw_context)
-    sources = get_sources_used(idxs[0])
-    confidence_level, confidence_pct = calculate_confidence(distances[0].tolist())
+    if is_casual_message(question):
+        clean_context = ""
+        sources = []
+        confidence_level = None
+        confidence_pct = 0
+    else:
+        emb = embedder.encode([question]).astype("float32")
+        distances, idxs = index.search(emb, k=6)
+        raw_context = "\n\n---\n\n".join([documents[i] for i in idxs[0]])
+        clean_context = sanitize_rag_context(raw_context)
+        sources = get_sources_used(idxs[0])
+        confidence_level, confidence_pct = calculate_confidence(distances[0].tolist())
+        
     memory = extract_patient_memory(all_messages)
     memory_context = build_memory_context(memory)
 
