@@ -6279,58 +6279,167 @@ st.markdown("""
     /* Recent Chats card: ultra-tight to fit at 900px viewport.
        margin-top: 0.7rem (~11px) gives a clean visual gap below the
        profile chip area so the two cards don't collide. */
-    [data-testid="stSidebar"] .md-recent-card {
-        padding: 0.45rem 0.5rem 0.4rem 0.5rem !important;
+    /* Recent Chats card: ultra-tight to fit at 900px viewport.
+       margin-top: 0.7rem (~11px) gives a clean visual gap below the
+       profile chip area so the two cards don't collide. */
+    [data-testid="stSidebar"] div.st-key-recent_chats_card {
+        background: #ffffff !important;
+        border: 1px solid #e6edf9 !important;
         border-radius: 11px !important;
+        padding: 0.45rem 0.5rem 0.4rem 0.5rem !important;
         margin-top: 0.7rem !important;
         margin-bottom: 0.25rem !important;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02) !important;
+        box-sizing: border-box !important;
+        margin-left: 0 !important;
+        margin-right: 1.6rem !important;
+        width: calc(100% - 1.6rem) !important;
+        max-width: none !important;
+    }
+    [data-testid="stSidebar"] div.st-key-recent_chats_card [data-testid="stVerticalBlockBorderWrapper"] > div > [data-testid="stVerticalBlock"] {
+        gap: 0.2rem !important;
+    }
+    [data-testid="stSidebar"] div.st-key-recent_chats_card [data-testid="column"] {
+        padding: 0 !important;
     }
     [data-testid="stSidebar"] .md-recent-head {
         margin-bottom: 0.25rem !important;
     }
     [data-testid="stSidebar"] .md-recent-title {
         font-size: 0.76rem !important;
+        font-weight: 700 !important;
+        color: #334155 !important;
+        letter-spacing: -0.005em !important;
+        line-height: 1.45 !important;
     }
-    [data-testid="stSidebar"] .md-recent-seeall {
+    
+    /* See all small link button in header */
+    [data-testid="stSidebar"] div.st-key-recent_see_all_btn button,
+    [data-testid="stSidebar"] div.st-key-recent_see_all_btn button:active,
+    [data-testid="stSidebar"] div.st-key-recent_see_all_btn button:focus {
+        background: transparent !important;
+        border: none !important;
+        color: #4f46e5 !important;
         font-size: 0.64rem !important;
+        font-weight: 600 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        outline: none !important;
+        min-height: unset !important;
+        height: auto !important;
+        float: right !important;
     }
+    [data-testid="stSidebar"] div.st-key-recent_see_all_btn button:hover {
+        color: #3730a3 !important;
+        text-decoration: underline !important;
+        background: transparent !important;
+    }
+
     /* New chat — compact 30px, smaller text. */
     [data-testid="stSidebar"] div.st-key-new_chat_btn button {
+        box-sizing: border-box !important;
+        width: 100% !important;
         min-height: 30px !important;
         height: 30px !important;
         padding: 0 0.6rem !important;
         margin-bottom: 0.35rem !important;
         font-size: 0.72rem !important;
         border-radius: 8px !important;
+        border: 1px solid #dbe4ff !important;
+        background: linear-gradient(135deg, #f5f8ff 0%, #eef2ff 100%) !important;
+        color: #4f46e5 !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 5px rgba(99, 102, 241, 0.05) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.35rem !important;
+        transition: all 0.2s ease !important;
+    }
+    [data-testid="stSidebar"] div.st-key-new_chat_btn button:hover {
+        background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%) !important;
+        border-color: #c7d2fe !important;
+        color: #3730a3 !important;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12) !important;
     }
     [data-testid="stSidebar"] div.st-key-new_chat_btn button p {
         font-size: 0.72rem !important;
+        color: #4f46e5 !important;
+        margin: 0 !important;
+        font-weight: 600 !important;
+        line-height: 1 !important;
     }
     [data-testid="stSidebar"] div.st-key-new_chat_btn button [data-testid="stIconMaterial"] {
         font-size: 0.88rem !important;
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: #4f46e5 !important;
     }
+
     /* Conversation rows — slightly tighter to fit footer at 900px. */
-    [data-testid="stSidebar"] .md-conv-list {
-        gap: 0.15rem !important;
-        margin-top: 0.2rem !important;
-    }
-    [data-testid="stSidebar"] .md-conv-row {
-        padding: 0.4rem 0.45rem !important;
-        gap: 0.35rem !important;
-        border-radius: 10px !important;
+    [data-testid="stSidebar"] div[class*="st-key-conv_select_"] button,
+    [data-testid="stSidebar"] div[class*="st-key-conv_active_"] button {
+        background: transparent !important;
         border: none !important;
-        border-left: 0 !important;
+        border-radius: 8px !important;
+        color: #475569 !important;
+        text-align: left !important;
+        font-size: 0.76rem !important;
+        font-weight: 550 !important;
+        padding: 0.4rem 0.45rem !important;
+        min-height: unset !important;
+        height: auto !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.35rem !important;
+        transition: all 0.15s ease !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
-    [data-testid="stSidebar"] .md-conv-icon {
-        font-size: 0.82rem !important;
+    [data-testid="stSidebar"] div[class*="st-key-conv_select_"] button:hover {
+        background: #f8fafc !important;
+        color: #0f172a !important;
     }
-    [data-testid="stSidebar"] .md-conv-title {
-        font-size: 0.68rem !important;
+    [data-testid="stSidebar"] div[class*="st-key-conv_active_"] button {
+        background: #f1f5f9 !important;
+        color: #0f172a !important;
+        font-weight: 600 !important;
+    }
+    [data-testid="stSidebar"] div[class*="st-key-conv_select_"] button p,
+    [data-testid="stSidebar"] div[class*="st-key-conv_active_"] button p {
+        margin: 0 !important;
+        font-size: 0.76rem !important;
         line-height: 1.15 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
-    [data-testid="stSidebar"] .md-conv-time {
-        font-size: 0.56rem !important;
-        margin-left: 0.2rem !important;
+
+    /* Delete buttons */
+    [data-testid="stSidebar"] div[class*="st-key-conv_del_"] button {
+        background: transparent !important;
+        border: none !important;
+        color: #94a3b8 !important;
+        font-size: 0.74rem !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 20px !important;
+        min-height: 20px !important;
+        box-shadow: none !important;
+        border-radius: 50% !important;
+        transition: background 0.15s ease, color 0.15s ease !important;
+    }
+    [data-testid="stSidebar"] div[class*="st-key-conv_del_"] button:hover {
+        background: #fef2f2 !important;
+        color: #b91c1c !important;
     }
 
     /* Two-line sidebar footer — compact. */
@@ -6348,14 +6457,37 @@ st.markdown("""
         font-weight: 600 !important;
         margin-bottom: 0.22rem !important;
     }
-    [data-testid="stSidebar"] .md-sidebar-foot-links a {
-        color: #64748b !important; /* Muted Slate */
-        text-decoration: none !important;
-        transition: color 0.15s ease !important;
+    
+    /* Footer buttons */
+    [data-testid="stSidebar"] div.st-key-privacy_btn button,
+    [data-testid="stSidebar"] div.st-key-help_btn button {
+        background: transparent !important;
+        border: none !important;
+        color: #64748b !important;
+        font-size: 0.65rem !important;
+        font-weight: 600 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        min-height: unset !important;
+        height: auto !important;
+        box-shadow: none !important;
     }
-    [data-testid="stSidebar"] .md-sidebar-foot-links a:hover {
-        color: #4f46e5 !important; /* Premium brand hover */
+    [data-testid="stSidebar"] div.st-key-privacy_btn button:hover,
+    [data-testid="stSidebar"] div.st-key-help_btn button:hover {
+        color: #4f46e5 !important;
         text-decoration: underline !important;
+        background: transparent !important;
+    }
+    [data-testid="stSidebar"] div.st-key-privacy_btn button p,
+    [data-testid="stSidebar"] div.st-key-help_btn button p {
+        font-size: 0.65rem !important;
+        margin: 0 !important;
+    }
+    [data-testid="stSidebar"] div.st-key-privacy_btn button {
+        float: right !important;
+    }
+    [data-testid="stSidebar"] div.st-key-help_btn button {
+        float: left !important;
     }
     [data-testid="stSidebar"] .md-sidebar-foot-dot {
         color: #cbd5e1 !important;
@@ -11179,9 +11311,6 @@ with st.sidebar:
         _profile_in = "G"
         _profile_sub = "Sign in to save your data"
     # Profile chip: avatar + name/email + "Synced & up to date" status.
-    # The chevron has been replaced by a compact sign-out icon button that
-    # is rendered immediately below and CSS-positioned into the top-right
-    # corner of this chip. See the .st-key-profile_logout CSS rules.
     _sync_dot = '<span class="md-status-dot"></span>Synced &amp; up to date' if st.session_state.is_authenticated else '<span class="md-status-dot md-status-dot-off"></span>Guest mode'
     st.markdown(
         '<div class="md-side-profile md-side-profile-top">'
@@ -11191,47 +11320,53 @@ with st.sidebar:
         '<div class="md-side-psub">' + ui_text(_profile_sub, 40) + '</div>'
         '<div class="md-side-status">' + _sync_dot + '</div>'
         '</div>'
-        + (
-            # Sign-out icon, true child of the chip (anchor link), so it
-            # naturally lives in the chip's top-right corner without any
-            # negative-margin layout tricks that previously caused the
-            # Recent Chats card to overlap. The signout parameter is
-            # handled in Python below: same logout behavior as before.
-            '<a class="md-side-signout" href="javascript:void(0)" target="_self" title="Sign out">'
-            '<span class="material-symbols-rounded">logout</span>'
-            '</a>'
-            if st.session_state.is_authenticated else ''
-        ) +
         '</div>',
         unsafe_allow_html=True
     )
 
-    # Language selector is rendered down in the md-sidebar-bottom block,
-    # just above the Privacy & Consent button.
+    # Sign-out button — native st.button so it actually works.
+    if st.session_state.is_authenticated:
+        if st.button(" ", key="profile_logout", icon=":material/logout:"):
+            for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context", "rx_reader_result", "rx_uploader_key"]:
+                if k in st.session_state:
+                    if k in ("is_authenticated", "is_guest"):
+                        st.session_state[k] = False
+                    elif k == "patient_memory":
+                        st.session_state[k] = {"symptoms": [], "conditions": [], "medications": []}
+                    elif k == "messages":
+                        st.session_state[k] = []
+                    elif k == "rx_reader_result":
+                        st.session_state[k] = None
+                    elif k == "rx_uploader_key":
+                        st.session_state[k] = 0
+                    elif k == "qcount":
+                        st.session_state[k] = 0
+                    elif k == "feedback":
+                        st.session_state[k] = {}
+                    else:
+                        st.session_state[k] = "" if isinstance(st.session_state[k], str) else st.session_state[k]
+            st.session_state.current_conversation_id = ""
+            st.rerun()
 
     if st.session_state.is_authenticated:
 
-        # == Recent Chats card (matches mockup) ==
-        # Render the entire card as ONE HTML block: header + "See all" link
-        # plus "+ New chat" anchor pill and conversation rows. Using anchors for
-        # both buttons (driven by new_chat=1 and conv=<id> JS handlers)
-        # means the whole card is one DOM subtree: Streamlit's per-widget
-        # wrappers can't break the nesting like st.button() did.
+        # == Recent Chats card — native st.button widgets ==
         _convs = list_conversations(st.session_state.user_email_hash, limit=3)
         _active_id = st.session_state.current_conversation_id
-        _card_html = (
-            '<div class="md-recent-card">'
-            '<div class="md-recent-head">'
-            '<div class="md-recent-title">Recent Chats</div>'
-            '<a class="md-recent-seeall" href="javascript:void(0)" target="_self">See all</a>'
-            '</div>'
-            '<a class="md-new-chat-pill" href="javascript:void(0)" target="_self">'
-            '<span class="material-symbols-rounded">add</span>'
-            '<span class="md-new-chat-pill-text">New chat</span>'
-            '</a>'
-        )
+
+        # Card header: "Recent Chats" title + "See all" button
+        st.markdown('<div class="md-recent-head"><div class="md-recent-title">Recent Chats</div></div>', unsafe_allow_html=True)
+        if st.button("See all", key="recent_see_all_btn"):
+            st.session_state.mode = "history"
+            st.rerun()
+
+        # "+ New chat" button
+        if st.button("＋ New chat", key="new_chat_btn", use_container_width=True):
+            start_new_chat_session()
+            st.rerun()
+
+        # Conversation rows
         if _convs:
-            _card_html += '<div class="md-conv-list">'
             for _c in _convs:
                 _is_active = _c["id"] == _active_id
                 _title = (_c.get("title") or "Chat")[:40]
@@ -11251,36 +11386,38 @@ with st.sidebar:
                             _ago = str(_h // 168) + "w ago"
                 except Exception:
                     _ago = ""
-                _row_cls = "md-conv-row md-conv-row-active" if _is_active else "md-conv-row"
-                # Wrap each row in a flex container so we can sit the close delete
-                # icon as a SIBLING of the main click anchor (HTML disallows
-                # nesting <a> inside <a>). The row anchor still occupies the
-                # full flex stretch for the click target; the close button is a tiny
-                # anchor pinned right that triggers the update function.
-                _card_html += (
-                    '<div class="md-conv-row-wrap">'
-                    '<a class="' + _row_cls + '" href="javascript:void(0)" target="_self" data-conv-id="' + ui_escape(_c["id"]) + '">'
-                    '<span class="md-conv-icon material-symbols-rounded">description</span>'
-                    '<span class="md-conv-title">' + ui_escape(_title) + '</span>'
-                    '<span class="md-conv-time">' + ui_escape(_ago) + '</span>'
-                    '</a>'
-                    '<a class="md-conv-del" href="javascript:void(0)" target="_self" data-conv-id="' + ui_escape(_c["id"]) + '" title="Delete conversation" aria-label="Delete">'
-                    '<span class="material-symbols-rounded">close</span>'
-                    '</a>'
-                    '</div>'
-                )
-            _card_html += '</div>'
-        _card_html += '</div>'
-        st.markdown(_card_html, unsafe_allow_html=True)
+                _btn_label = _title + ("  " + _ago if _ago else "")
+                _conv_key_prefix = "conv_active_" if _is_active else "conv_select_"
+                _col_conv, _col_del = st.columns([0.88, 0.12])
+                with _col_conv:
+                    if st.button(_btn_label, key=_conv_key_prefix + _c["id"], use_container_width=True):
+                        _conv_obj = load_conversation(st.session_state.user_email_hash, _c["id"])
+                        if _conv_obj is not None:
+                            st.session_state.current_conversation_id = _c["id"]
+                            st.session_state.messages = _conv_obj.get("messages", []) or []
+                            st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
+                            st.session_state.feedback = {}
+                            st.session_state.last_sources = []
+                            st.session_state.emergency_detected = False
+                            st.session_state.mode = "chat"
+                        st.rerun()
+                with _col_del:
+                    if st.button("✕", key="conv_del_" + _c["id"]):
+                        delete_conversation(st.session_state.user_email_hash, _c["id"])
+                        if st.session_state.get("current_conversation_id") == _c["id"]:
+                            st.session_state.current_conversation_id = ""
+                            st.session_state.messages = []
+                        st.rerun()
+
     elif st.session_state.is_guest:
         pass
 
     L = LANGUAGES[st.session_state.selected_language]
 
-    # ── Sidebar bottom: language picker → Privacy & Consent → footer ──
+    # ── Sidebar bottom: language picker → footer ──
     st.markdown('<div class="md-sidebar-bottom">', unsafe_allow_html=True)
 
-    # Language selector sits immediately above the Privacy & Consent button.
+    # Language selector sits immediately above the footer.
     _lang_keys_top = list(LANGUAGES.keys())
     _current_lang_top = st.session_state.get("selected_language", "English")
     _lang_idx_top = _lang_keys_top.index(_current_lang_top) if _current_lang_top in _lang_keys_top else 0
@@ -11291,9 +11428,8 @@ with st.sidebar:
         key="lang_selector",
         label_visibility="collapsed",
     )
-    # Lock the combobox input to read-only + remove from tab order so the
-    # picker behaves as a tap-to-open button. Runs from a 0-height iframe
-    # and reaches into the parent document via window.parent.
+    # Lock the combobox input to read-only so the picker behaves as a
+    # tap-to-open button.
     import streamlit.components.v1 as _components_lang
     _components_lang.html(
         """
@@ -11310,120 +11446,10 @@ with st.sidebar:
                     });
                 } catch (e) {}
             }
-
-            function setupListeners() {
-                try {
-                    var doc = window.parent.document;
-                    if (!doc) return;
-                    
-                    var signout = doc.querySelector('.md-side-signout');
-                    if (signout && !signout.dataset.hasListener) {
-                        signout.dataset.hasListener = 'true';
-                        signout.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            updateParams({'signout': '1'}, ['conv', 'del_conv', 'new_chat', 'mode']);
-                        });
-                    }
-                    
-                    var newChat = doc.querySelector('.md-new-chat-pill');
-                    if (newChat && !newChat.dataset.hasListener) {
-                        newChat.dataset.hasListener = 'true';
-                        newChat.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            updateParams({'new_chat': '1'}, ['conv', 'del_conv']);
-                        });
-                    }
-                    
-                    var seeAllRecent = doc.querySelector('.md-recent-seeall');
-                    if (seeAllRecent && !seeAllRecent.dataset.hasListener) {
-                        seeAllRecent.dataset.hasListener = 'true';
-                        seeAllRecent.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            updateParams({'mode': 'history'}, ['conv', 'del_conv', 'new_chat']);
-                        });
-                    }
-                    
-                    var wraps = doc.querySelectorAll('.md-conv-row-wrap');
-                    wraps.forEach(function(wrap) {
-                        var row = wrap.querySelector('.md-conv-row');
-                        var del = wrap.querySelector('.md-conv-del');
-                        if (row && !row.dataset.hasListener) {
-                            row.dataset.hasListener = 'true';
-                            var convId = row.getAttribute('data-conv-id');
-                            row.addEventListener('click', function(e) {
-                                e.preventDefault();
-                                updateParams({'conv': convId}, ['new_chat', 'del_conv']);
-                            });
-                        }
-                        if (del && !del.dataset.hasListener) {
-                            del.dataset.hasListener = 'true';
-                            var convId = del.getAttribute('data-conv-id');
-                            del.addEventListener('click', function(e) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                updateParams({'del_conv': convId}, ['conv', 'new_chat']);
-                            });
-                        }
-                    });
-                    
-                    var footerLinks = doc.querySelectorAll('.md-sidebar-foot-links a');
-                    footerLinks.forEach(function(link) {
-                        if (link && !link.dataset.hasListener) {
-                            link.dataset.hasListener = 'true';
-                            link.addEventListener('click', function(e) {
-                                e.preventDefault();
-                                updateParams({'mode': 'privacy'}, ['conv', 'del_conv', 'new_chat']);
-                            });
-                        }
-                    });
-
-                    var overviewSeeAll = doc.querySelector('.md-snap-card .md-rcard-link');
-                    if (overviewSeeAll && !overviewSeeAll.dataset.hasListener) {
-                        overviewSeeAll.dataset.hasListener = 'true';
-                        overviewSeeAll.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            updateParams({'mode': 'overview'}, ['conv', 'del_conv', 'new_chat']);
-                        });
-                    }
-
-                    var recentSeeAll = doc.querySelector('.md-rcard-recent .md-rcard-link');
-                    if (recentSeeAll && !recentSeeAll.dataset.hasListener) {
-                        recentSeeAll.dataset.hasListener = 'true';
-                        recentSeeAll.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            updateParams({'mode': 'history'}, ['conv', 'del_conv', 'new_chat']);
-                        });
-                    }
-                } catch(err) {}
-            }
-
-            function updateParams(toSet, toDel) {
-                try {
-                    var win = window.parent;
-                    var url = new URL(win.location.href);
-                    if (toDel) {
-                        toDel.forEach(function(p) { url.searchParams.delete(p); });
-                    }
-                    if (toSet) {
-                        for (var k in toSet) {
-                            url.searchParams.set(k, toSet[k]);
-                        }
-                    }
-                    win.history.pushState({}, '', url.toString());
-                    win.dispatchEvent(new PopStateEvent('popstate'));
-                } catch(err) {}
-            }
-
             lock();
-            setupListeners();
             setTimeout(lock, 200);
-            setTimeout(setupListeners, 200);
             setTimeout(lock, 800);
-            setTimeout(setupListeners, 800);
-            setInterval(function() {
-                lock();
-                setupListeners();
-            }, 250);
+            setInterval(lock, 1500);
         })();
         </script>
         """,
@@ -11433,18 +11459,20 @@ with st.sidebar:
         st.session_state.selected_language = st.session_state.lang_selector
         st.rerun()
 
-    # Two-line footer (matches mockup): "Privacy & Terms · Help Center" + copyright.
-    # The button was replaced with link-style text; Privacy page still opens
-    # via the URL param handler at the top of the file.
+    # Footer: Privacy & Terms · Help Center + copyright
+    _foot_col1, _foot_col2, _foot_col3 = st.columns([0.45, 0.1, 0.45])
+    with _foot_col1:
+        if st.button("Privacy & Terms", key="privacy_btn"):
+            st.session_state.mode = "privacy"
+            st.rerun()
+    with _foot_col2:
+        st.markdown('<div class="md-sidebar-foot-dot">·</div>', unsafe_allow_html=True)
+    with _foot_col3:
+        if st.button("Help Center", key="help_btn"):
+            st.session_state.mode = "privacy"
+            st.rerun()
     st.markdown(
-        '<div class="md-sidebar-foot">'
-        '<div class="md-sidebar-foot-links">'
-        '<a href="javascript:void(0)" target="_self">Privacy &amp; Terms</a>'
-        '<span class="md-sidebar-foot-dot">·</span>'
-        '<a href="javascript:void(0)" target="_self">Help Center</a>'
-        '</div>'
-        '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>'
-        '</div>',
+        '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>',
         unsafe_allow_html=True
     )
     st.markdown('</div>', unsafe_allow_html=True)
