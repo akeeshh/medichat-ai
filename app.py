@@ -5891,20 +5891,21 @@ st.markdown("""
         position: relative !important;
     }
     [data-testid="stSidebar"] .md-side-signout {
-        position: absolute !important;
-        top: 6px !important;
-        right: 6px !important;
-        width: 28px !important;
-        height: 28px !important;
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        margin: 0.4rem auto 0 auto !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
+        width: 32px !important;
+        height: 32px !important;
         border-radius: 50% !important;
-        background: transparent !important;
-        color: #94a3b8 !important;
+        background: #f1f5f9 !important;
+        color: #64748b !important;
         text-decoration: none !important;
         transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
-        border: 1px solid transparent !important;
+        border: 1px solid #e2e8f0 !important;
     }
     [data-testid="stSidebar"] .md-side-signout:hover {
         background: #fef2f2 !important;
@@ -6069,7 +6070,7 @@ st.markdown("""
     }
     [data-testid="stSidebar"] .md-conv-del {
         position: absolute !important;
-        right: 0.25rem !important;
+        right: 0.4rem !important;
         top: 50% !important;
         transform: translateY(-50%) !important;
         width: 20px !important;
@@ -6078,19 +6079,11 @@ st.markdown("""
         align-items: center !important;
         justify-content: center !important;
         border-radius: 50% !important;
-        color: #cbd5e1 !important;
+        color: #94a3b8 !important;
         text-decoration: none !important;
-        opacity: 0 !important;
-        transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease !important;
-        z-index: 2 !important;
-    }
-    /* Reveal the × only on hover/focus — never permanently visible (the
-       active-row :has() exception was removed because active rows are no
-       longer visually distinguished from non-active ones). Mobile users
-       can long-press / tap-and-hold to reveal in supported browsers. */
-    [data-testid="stSidebar"] .md-conv-row-wrap:hover .md-conv-del,
-    [data-testid="stSidebar"] .md-conv-row-wrap:focus-within .md-conv-del {
         opacity: 1 !important;
+        transition: background 0.15s ease, color 0.15s ease !important;
+        z-index: 2 !important;
     }
     [data-testid="stSidebar"] .md-conv-del:hover {
         background: #fef2f2 !important;
@@ -6145,7 +6138,8 @@ st.markdown("""
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
-        line-height: 1.2 !important;
+        line-height: 1.45 !important;
+        padding-bottom: 2px !important;
     }
     [data-testid="stSidebar"] .md-conv-row-active .md-conv-title {
         font-weight: 550 !important;
@@ -6156,6 +6150,8 @@ st.markdown("""
         font-weight: 600 !important;
         color: #94a3b8 !important;
         margin-left: 0.25rem !important;
+        line-height: 1.45 !important;
+        padding-bottom: 2px !important;
     }
     [data-testid="stSidebar"] .md-conv-row-active .md-conv-time {
         color: #94a3b8 !important;
@@ -6180,31 +6176,49 @@ st.markdown("""
        sync status) doesn't pinch. The chevron was removed, so the right
        padding is also lighter (1.1 instead of 1.2). */
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
-        padding: 0.5rem 1.1rem 0.5rem 0.55rem !important;
-        gap: 0.45rem !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        padding: 1.1rem 1rem !important;
+        gap: 0.65rem !important;
+    }
+    [data-testid="stSidebar"] .md-side-profile-text {
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
     }
     [data-testid="stSidebar"] .md-side-avatar {
-        width: 28px !important;
-        min-width: 28px !important;
-        height: 28px !important;
-        font-size: 0.74rem !important;
+        width: 38px !important;
+        min-width: 38px !important;
+        height: 38px !important;
+        font-size: 0.9rem !important;
+        border-radius: 50% !important;
     }
     [data-testid="stSidebar"] .md-side-pname {
-        font-size: 0.76rem !important;
+        font-size: 0.8rem !important;
         font-weight: 700 !important;
-        line-height: 1.15 !important;
+        line-height: 1.2 !important;
+        text-align: center !important;
     }
     [data-testid="stSidebar"] .md-side-psub {
-        font-size: 0.64rem !important;
-        line-height: 1.2 !important;
+        font-size: 0.66rem !important;
+        line-height: 1.25 !important;
+        text-align: center !important;
+        color: #64748b !important;
     }
     [data-testid="stSidebar"] .md-side-status {
-        font-size: 0.58rem !important;
-        margin-top: 0.15rem !important;
+        font-size: 0.6rem !important;
+        margin-top: 0.25rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.35rem !important;
     }
     [data-testid="stSidebar"] .md-side-chevron {
-        font-size: 0.9rem !important;
-        right: 0.4rem !important;
+        display: none !important;
     }
     /* Sign out — icon-only 28px circle overlaid on the profile chip's
        top-right corner. The negative margins pull the button visually up

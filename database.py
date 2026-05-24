@@ -242,7 +242,7 @@ def derive_chat_title(messages):
     for m in messages or []:
         if m.get("role") == "user" and m.get("content"):
             t = (m["content"] or "").strip().replace("\n", " ")
-            return (t[:50] + "…") if len(t) > 50 else t
+            return (t[:25] + "…") if len(t) > 25 else t
     return "New chat"
 
 def generate_ai_chat_title(messages):
@@ -355,9 +355,12 @@ def save_conversation(email_hash, conv_id, messages):
         "last_assistant_msg": (_last_asst or "")[:320],
         "last_updated": firestore.SERVER_TIMESTAMP if FIREBASE_ACTIVE else now_str,
     }
-    # Title strategy: cheap fallback on first save, AI upgrade once at 4 messages.
+    # Title strategy: generate AI summary immediately on first save if Claude is active.
     if not conv_id:
-        payload["title"] = derive_chat_title(trimmed)
+        if CLAUDE_ACTIVE:
+            payload["title"] = generate_ai_chat_title(trimmed)
+        else:
+            payload["title"] = derive_chat_title(trimmed)
     elif msg_count == 4:
         payload["title"] = generate_ai_chat_title(trimmed)
 
