@@ -11232,7 +11232,7 @@ with st.sidebar:
             # negative-margin layout tricks that previously caused the
             # Recent Chats card to overlap. The signout parameter is
             # handled in Python below: same logout behavior as before.
-            '<a class="md-side-signout" href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'signout\': \'1\'}, [\'conv\', \'del_conv\', \'new_chat\', \'mode\']);" title="Sign out">'
+            '<a class="md-side-signout" href="javascript:void(0)" target="_self" onclick="window.updateMediChatQueryParam({\'signout\': \'1\'}, [\'conv\', \'del_conv\', \'new_chat\', \'mode\']);" title="Sign out">'
             '<span class="material-symbols-rounded">logout</span>'
             '</a>'
             if st.session_state.is_authenticated else ''
@@ -11258,9 +11258,9 @@ with st.sidebar:
             '<div class="md-recent-card">'
             '<div class="md-recent-head">'
             '<div class="md-recent-title">Recent Chats</div>'
-            '<a class="md-recent-seeall" href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'mode\': \'history\'}, [\'conv\', \'del_conv\', \'new_chat\']);">See all</a>'
+            '<a class="md-recent-seeall" href="javascript:void(0)" target="_self" onclick="window.updateMediChatQueryParam({\'mode\': \'history\'}, [\'conv\', \'del_conv\', \'new_chat\']);">See all</a>'
             '</div>'
-            '<a class="md-new-chat-pill" href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'new_chat\': \'1\'}, [\'conv\', \'del_conv\']);">'
+            '<a class="md-new-chat-pill" href="javascript:void(0)" target="_self" onclick="window.updateMediChatQueryParam({\'new_chat\': \'1\'}, [\'conv\', \'del_conv\']);">'
             '<span class="material-symbols-rounded">add</span>'
             '<span class="md-new-chat-pill-text">New chat</span>'
             '</a>'
@@ -11294,12 +11294,12 @@ with st.sidebar:
                 # anchor pinned right that triggers the update function.
                 _card_html += (
                     '<div class="md-conv-row-wrap">'
-                    '<a class="' + _row_cls + '" href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'conv\': \'' + ui_escape(_c["id"]) + '\'}, [\'new_chat\', \'del_conv\']);">'
+                    '<a class="' + _row_cls + '" href="javascript:void(0)" target="_self" onclick="window.updateMediChatQueryParam({\'conv\': \'' + ui_escape(_c["id"]) + '\'}, [\'new_chat\', \'del_conv\']);">'
                     '<span class="md-conv-icon material-symbols-rounded">description</span>'
                     '<span class="md-conv-title">' + ui_escape(_title) + '</span>'
                     '<span class="md-conv-time">' + ui_escape(_ago) + '</span>'
                     '</a>'
-                    '<a class="md-conv-del" href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'del_conv\': \'' + ui_escape(_c["id"]) + '\'}, [\'conv\', \'new_chat\']);" title="Delete conversation" aria-label="Delete">'
+                    '<a class="md-conv-del" href="javascript:void(0)" target="_self" onclick="window.updateMediChatQueryParam({\'del_conv\': \'' + ui_escape(_c["id"]) + '\'}, [\'conv\', \'new_chat\']);" title="Delete conversation" aria-label="Delete">'
                     '<span class="material-symbols-rounded">close</span>'
                     '</a>'
                     '</div>'
@@ -11364,9 +11364,9 @@ with st.sidebar:
     st.markdown(
         '<div class="md-sidebar-foot">'
         '<div class="md-sidebar-foot-links">'
-        '<a href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'mode\': \'privacy\'}, [\'conv\', \'del_conv\', \'new_chat\']);">Privacy &amp; Terms</a>'
+        '<a href="javascript:void(0)" target="_self" onclick="window.updateMediChatQueryParam({\'mode\': \'privacy\'}, [\'conv\', \'del_conv\', \'new_chat\']);">Privacy &amp; Terms</a>'
         '<span class="md-sidebar-foot-dot">·</span>'
-        '<a href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'mode\': \'privacy\'}, [\'conv\', \'del_conv\', \'new_chat\']);">Help Center</a>'
+        '<a href="javascript:void(0)" target="_self" onclick="window.updateMediChatQueryParam({\'mode\': \'privacy\'}, [\'conv\', \'del_conv\', \'new_chat\']);">Help Center</a>'
         '</div>'
         '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>'
         '</div>',
@@ -12793,7 +12793,7 @@ if st.session_state.mode == "chat":
                 ]
                 snap_html = (
                     '<div class="md-rcard md-snap-card">'
-                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><a class="md-rcard-link md-rcard-link-btn" href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'mode\': \'overview\'}, [\'conv\', \'del_conv\', \'new_chat\']);">See all</a></div>'
+                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><a class="md-rcard-link md-rcard-link-btn" href="javascript:void(0)" target="_self" onclick="window.updateMediChatQueryParam({\'mode\': \'overview\'}, [\'conv\', \'del_conv\', \'new_chat\']);">See all</a></div>'
                     '<div class="md-snap-grid">'
                 )
                 for _cls, _icon, _lbl, _val, _status, _line_cls in _tiles:
@@ -12817,7 +12817,7 @@ if st.session_state.mode == "chat":
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 # Recent Conversations (real, from Firestore)
-                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="javascript:void(0)" onclick="window.updateMediChatQueryParam({\'mode\': \'history\'}, [\'conv\', \'del_conv\', \'new_chat\']);" rel="noopener">See all</a></div>'
+                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="javascript:void(0)" target="_self" onclick="window.updateMediChatQueryParam({\'mode\': \'history\'}, [\'conv\', \'del_conv\', \'new_chat\']);" rel="noopener">See all</a></div>'
                 if st.session_state.is_authenticated and st.session_state.user_email_hash:
                     _recent = list_conversations(st.session_state.user_email_hash, limit=4)
                 else:
