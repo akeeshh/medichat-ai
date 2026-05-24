@@ -10,3 +10,4 @@ openpyxl
 firebase-admin
 pypdf
 markdown
+bcrypt
