@@ -11183,8 +11183,6 @@ def parse_report(report_text):
             parsed["summary"] = line.replace("SUMMARY:", "").strip()
         elif line.startswith("SAFETY:"):
             parsed["safety"] = line.replace("SAFETY:", "").strip()
-    return parsed
-
 if "session_started" not in st.session_state:
     st.session_state.session_started = True
     st.session_state.messages = []
@@ -11589,8 +11587,10 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) div[data-testid
             st.session_state.current_conversation_id = ""
             st.rerun()
 
-    if st.session_state.is_authenticated:
+    # Spacing div to prevent clipping/overlapping of Recent Chats card header under profile chip
+    st.markdown('<div style="height: 14px;"></div>', unsafe_allow_html=True)
 
+    if st.session_state.is_authenticated:
         # == Recent Chats card (wrapped in container so grandparent :has targets it) ==
         _convs = list_conversations(st.session_state.user_email_hash, limit=3)
         _active_id = st.session_state.current_conversation_id
@@ -13270,38 +13270,7 @@ if st.session_state.mode == "chat":
                     st.rerun()
                 # Daily Health Tip carousel is rendered below Smart Actions in home_main.
 
-    mem = st.session_state.patient_memory
 
-    if any([mem.get("symptoms"), mem.get("conditions"), mem.get("medications")]) and st.session_state.messages:
-        def _mem_line(items, label):
-            if not items:
-                return ""
-            # Comma-joined summary, capped so the line stays one tidy row.
-            joined = ui_text(", ".join(items), 180)
-            return (
-                '<div class="memory-line">'
-                '<span class="memory-bullet">•</span>'
-                '<span class="memory-line-label">' + label + ':</span> '
-                '<span class="memory-line-text">' + ui_escape(joined) + '</span>'
-                '</div>'
-            )
-
-        st.markdown(
-            '<div class="memory-card">'
-            '<div class="memory-head">'
-            '<div class="memory-icon"><span class="material-symbols-rounded">psychology</span></div>'
-            '<div class="memory-title">MediChat remembers '
-            '<span class="memory-sparkle material-symbols-rounded">auto_awesome</span>'
-            '</div>'
-            '</div>'
-            '<div class="memory-body">'
-            + _mem_line(mem.get("symptoms"), "Symptoms")
-            + _mem_line(mem.get("conditions"), "Conditions")
-            + _mem_line(mem.get("medications"), "Medications")
-            + '</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
 
     show_hero = False
 
