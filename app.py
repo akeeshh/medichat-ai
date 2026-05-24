@@ -5748,7 +5748,7 @@ st.markdown("""
        interactive. Compact 26px, almost invisible until you look for it.
        Label is collapsed in Python. */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] {
-        margin: 0.05rem auto 0.05rem auto !important;
+        margin: 0.5rem auto !important;
     }
     [data-testid="stSidebar"] [data-testid="stSelectbox"] > label,
     [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-testid="stWidgetLabel"] {
@@ -5756,42 +5756,41 @@ st.markdown("""
         height: 0 !important;
         margin: 0 !important;
     }
-    /* Outer shell — borderless + transparent by default. Hover lifts the
-       OUTER container only (not its inner wrapper) so we get one clean
-       white card, not two stacked. Same look as sidebar nav buttons. */
+    /* Outer container - styled as a beautiful white card */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] {
-        min-height: 26px !important;
-        height: 26px !important;
-        background: transparent !important;
-        border: 1px solid transparent !important;
-        box-shadow: none !important;
-        border-radius: 8px !important;
-        transition:
-            background 0.18s ease,
-            border-color 0.18s ease,
-            box-shadow 0.2s ease,
-            transform 0.18s ease !important;
+        min-height: 38px !important;
+        height: 38px !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03) !important;
+        border-radius: 12px !important;
+        cursor: pointer !important;
+        position: relative !important;
+        padding-left: 2.2rem !important; /* Make room for the globe icon */
+        padding-right: 1.8rem !important; /* Make room for the chevron */
+        box-sizing: border-box !important;
+        transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease !important;
     }
-    /* Inner wrapper — never paint its own background/border, always inherit
-       from the outer so there's only one visible "tile". */
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"]:hover {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06) !important;
+        transform: translateY(-1px) !important;
+    }
+    /* Inner wrapper — transparent, resets default padding */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-        min-height: 26px !important;
-        height: 26px !important;
+        min-height: 38px !important;
+        height: 38px !important;
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
         border-radius: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
     }
-    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"]:hover {
-        background: #ffffff !important;
-        border-color: #d6e2f6 !important;
-        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06) !important;
-        transform: translateY(-1px) !important;
-    }
-    /* Completely remove the combobox input from the visible/interactive
-       layer. Clicks on the parent still open the dropdown, but the user
-       can no longer focus or type into the input — it reads as a true
-       button-style picker. */
+    /* Completely remove the combobox input from the visible/interactive layer */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] input[role="combobox"] {
         width: 0 !important;
         min-width: 0 !important;
@@ -5806,29 +5805,19 @@ st.markdown("""
         pointer-events: none !important;
         caret-color: transparent !important;
     }
-    /* Make the entire trigger clickable as a button to open the dropdown. */
-    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] {
-        cursor: pointer !important;
-    }
-
-    /* Show the FULL language name in the sidebar trigger (not a 3-letter
-       code). The selected value div has its native text hidden (font-size 0)
-       and the ::before content displays the full word in the styled font.
-
-       Belt-and-braces: the default ::before content is `attr(value)` — so
-       even if a future language value isn't explicitly listed below, the
-       trigger renders the raw name (e.g. "Spanish") instead of falling
-       back to a hardcoded abbreviation. This makes the auth and guest
-       states consistent forever — no path can produce "ENG" again. */
+    /* Selected value container styling */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value] {
         font-size: 0 !important;
         line-height: 1 !important;
+        display: flex !important;
+        align-items: center !important;
+        height: 100% !important;
     }
     [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value]::before {
         content: attr(value) !important;
-        font-size: 0.78rem !important;
+        font-size: 0.8rem !important;
         font-weight: 600 !important;
-        color: #475569 !important;
+        color: #334155 !important;
         letter-spacing: -0.005em !important;
         line-height: 1 !important;
     }
@@ -5942,68 +5931,74 @@ st.markdown("""
        encloses them. */
     [data-testid="stSidebar"] .md-recent-card {
         background: #ffffff !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 14px !important;
-        padding: 0.7rem !important;
-        margin: 0.7rem auto 0.5rem auto !important;
-        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05) !important;
+        border: 1px solid #e6edf9 !important;
+        border-radius: 16px !important;
+        padding: 0.9rem !important;
+        margin: 0.6rem auto 0.5rem auto !important;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02) !important;
         box-sizing: border-box !important;
     }
-    /* "+ New chat" pill — compact anchor inside the card. */
+    /* "+ New chat" pill — premium card-style button inside the card. */
     [data-testid="stSidebar"] .md-new-chat-pill {
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 0.3rem !important;
+        gap: 0.35rem !important;
         width: 100% !important;
         box-sizing: border-box !important;
-        margin: 0.25rem 0 !important;
-        padding: 0.38rem 0.6rem !important;
-        background: #eef0ff !important;
+        margin: 0.25rem 0 0.55rem 0 !important;
+        padding: 0.45rem 0.6rem !important;
+        background: linear-gradient(135deg, #f5f8ff 0%, #eef2ff 100%) !important;
         color: #4f46e5 !important;
-        border: 1px solid transparent !important;
-        border-radius: 10px !important;
-        font-size: 0.74rem !important;
+        border: 1px solid #dbe4ff !important;
+        border-radius: 12px !important;
+        font-size: 0.76rem !important;
         font-weight: 600 !important;
         text-decoration: none !important;
         letter-spacing: -0.005em !important;
-        transition: background 0.15s ease, border-color 0.15s ease !important;
+        box-shadow: 0 2px 5px rgba(99, 102, 241, 0.05) !important;
+        transition: all 0.2s ease !important;
     }
     [data-testid="stSidebar"] .md-new-chat-pill:hover {
-        background: #e0e7ff !important;
+        background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%) !important;
         border-color: #c7d2fe !important;
         color: #3730a3 !important;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12) !important;
+        transform: translateY(-1px) !important;
         text-decoration: none !important;
     }
     [data-testid="stSidebar"] .md-new-chat-pill .material-symbols-rounded {
-        font-size: 1rem !important;
-        color: #4f46e5 !important;
-        -webkit-text-fill-color: #4f46e5 !important;
+        font-size: 0.95rem !important;
+        color: inherit !important;
+        -webkit-text-fill-color: currentColor !important;
         font-variation-settings: 'FILL' 0, 'wght' 600 !important;
     }
     [data-testid="stSidebar"] .md-new-chat-pill:hover .material-symbols-rounded {
-        color: #3730a3 !important;
-        -webkit-text-fill-color: #3730a3 !important;
+        color: inherit !important;
+        -webkit-text-fill-color: currentColor !important;
     }
     [data-testid="stSidebar"] .md-recent-head {
         display: flex !important;
-        align-items: baseline !important;
+        align-items: center !important;
         justify-content: space-between !important;
         margin-bottom: 0.55rem !important;
+        padding: 0 0.1rem !important;
     }
     [data-testid="stSidebar"] .md-recent-title {
-        font-size: 0.86rem !important;
-        font-weight: 720 !important;
-        color: #0f172a !important;
+        font-size: 0.85rem !important;
+        font-weight: 700 !important;
+        color: #334155 !important;
         letter-spacing: -0.005em !important;
     }
     [data-testid="stSidebar"] .md-recent-seeall {
-        font-size: 0.72rem !important;
+        font-size: 0.74rem !important;
         font-weight: 600 !important;
         color: #4f46e5 !important;
         text-decoration: none !important;
+        transition: color 0.15s ease !important;
     }
     [data-testid="stSidebar"] .md-recent-seeall:hover {
+        color: #3730a3 !important;
         text-decoration: underline !important;
     }
 
@@ -6108,32 +6103,29 @@ st.markdown("""
     [data-testid="stSidebar"] .md-conv-row {
         display: flex !important;
         align-items: center !important;
-        gap: 0.35rem !important;
-        padding: 0.4rem 0.45rem !important;
-        border-radius: 10px !important;
+        gap: 0.4rem !important;
+        padding: 0.45rem 0.6rem !important;
+        border-radius: 8px !important;
+        border-left: 3px solid transparent !important;
         text-decoration: none !important;
         color: #475569 !important;
         background: transparent !important;
-        border: none !important;
-        border-left: 0 !important;
-        transition: background 0.15s ease, color 0.15s ease !important;
+        transition: all 0.15s ease !important;
         min-width: 0 !important;
     }
     [data-testid="stSidebar"] .md-conv-row:hover {
-        background: #f1f5fc !important;
-        color: #1f2a3d !important;
+        background: #f8fafc !important;
+        color: #0f172a !important;
         text-decoration: none !important;
     }
-    /* Active conversation row — visually identical to normal rows per
-       user request. The .md-conv-row-active class is still applied in the
-       Python render (no data-logic change) but the CSS no longer adds a
-       background tint, indigo icon, bold title, or violet timestamp.
-       Hover state still works the same on all rows. */
+    /* Active conversation row — styled beautifully to distinguish from normal ones */
     [data-testid="stSidebar"] .md-conv-row-active {
-        background: transparent !important;
-        border: none !important;
-        border-left: 0 !important;
-        color: #475569 !important;
+        background: #f0f4ff !important;
+        border-left: 3px solid #4f46e5 !important;
+        border-top-left-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+        color: #312e81 !important;
+        font-weight: 600 !important;
     }
     [data-testid="stSidebar"] .md-conv-icon {
         font-size: 0.95rem !important;
@@ -6142,8 +6134,8 @@ st.markdown("""
         flex-shrink: 0 !important;
     }
     [data-testid="stSidebar"] .md-conv-row-active .md-conv-icon {
-        color: #94a3b8 !important;
-        -webkit-text-fill-color: #94a3b8 !important;
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: #4f46e5 !important;
     }
     [data-testid="stSidebar"] .md-conv-title {
         flex: 1 1 auto !important;
@@ -6156,7 +6148,7 @@ st.markdown("""
         line-height: 1.2 !important;
     }
     [data-testid="stSidebar"] .md-conv-row-active .md-conv-title {
-        font-weight: 550 !important;
+        font-weight: 600 !important;
     }
     [data-testid="stSidebar"] .md-conv-time {
         flex-shrink: 0 !important;
@@ -6166,7 +6158,7 @@ st.markdown("""
         margin-left: 0.25rem !important;
     }
     [data-testid="stSidebar"] .md-conv-row-active .md-conv-time {
-        color: #94a3b8 !important;
+        color: #6366f1 !important;
     }
 
     /* ── Force every sidebar-bottom tile to match a single compact width
@@ -6327,33 +6319,39 @@ st.markdown("""
 
     /* Two-line sidebar footer — compact. */
     [data-testid="stSidebar"] .md-sidebar-foot {
-        margin-top: 0.25rem !important;
+        margin-top: 0.6rem !important;
         text-align: center !important;
+        opacity: 0.95 !important;
     }
     [data-testid="stSidebar"] .md-sidebar-foot-links {
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 0.3rem !important;
-        font-size: 0.62rem !important;
+        gap: 0.5rem !important;
+        font-size: 0.65rem !important;
         font-weight: 600 !important;
-        margin-bottom: 0.18rem !important;
+        margin-bottom: 0.22rem !important;
     }
     [data-testid="stSidebar"] .md-sidebar-foot-links a {
-        color: #4f46e5 !important;
+        color: #64748b !important; /* Muted Slate */
         text-decoration: none !important;
+        transition: color 0.15s ease !important;
     }
-    [data-testid="stSidebar"] .md-sidebar-foot-links a:hover { text-decoration: underline !important; }
+    [data-testid="stSidebar"] .md-sidebar-foot-links a:hover {
+        color: #4f46e5 !important; /* Premium brand hover */
+        text-decoration: underline !important;
+    }
     [data-testid="stSidebar"] .md-sidebar-foot-dot {
         color: #cbd5e1 !important;
         font-weight: 700 !important;
     }
     [data-testid="stSidebar"] .md-sidebar-foot-copy {
-        font-size: 0.72rem !important;
-        color: #475569 !important;
+        font-size: 0.62rem !important;
+        color: #94a3b8 !important; /* Muted copyright text */
         font-weight: 500 !important;
         line-height: 1.3 !important;
         margin-top: 0.15rem !important;
+        letter-spacing: 0.01em !important;
     }
 
     /* (Legacy: text-pill sign-out styling SUPERSEDED. Sign out is now an
@@ -6520,30 +6518,27 @@ st.markdown("""
         font-size: 1rem !important;
     }
     /* Globe glyph at the start — sits tight against the text. */
-    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] {
-        position: relative !important;
-        padding-left: 0.8rem !important;
-        padding-right: 0.2rem !important;
-    }
+    /* Globe glyph and chevron styling now fully integrated into the global selectbox card declaration */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"]::before {
         content: "🌐";
-        position: absolute;
-        left: 0.18rem;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 0.7rem;
-        line-height: 1;
-        pointer-events: none;
-        opacity: 0.85;
+        position: absolute !important;
+        left: 0.8rem !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        font-size: 0.9rem !important;
+        line-height: 1 !important;
+        pointer-events: none !important;
+        opacity: 0.9 !important;
     }
-    /* Displayed value styling is now handled by the [value]::before rules
-       further below (3-letter language codes). */
-    /* Tiny chevron, gentle muted color. */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] svg {
-        width: 11px !important;
-        height: 11px !important;
-        fill: #94a3b8 !important;
-        opacity: 0.85 !important;
+        position: absolute !important;
+        right: 0.8rem !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        width: 12px !important;
+        height: 12px !important;
+        fill: #64748b !important;
+        opacity: 0.9 !important;
     }
     [data-testid="stSidebar"] .md-sidebar-bottom {
         padding-top: 0.55rem !important;
@@ -8958,9 +8953,9 @@ st.markdown("""
     }
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"],
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-        min-height: 46px !important;
-        height: 46px !important;
-        border-radius: 14px !important;
+        min-height: 38px !important;
+        height: 38px !important;
+        border-radius: 12px !important;
     }
     [data-testid="stSidebar"] .md-side-profile-top {
         margin-top: 0.1rem !important;
