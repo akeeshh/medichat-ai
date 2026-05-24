@@ -11122,7 +11122,6 @@ with st.sidebar:
     _mode = st.session_state.mode
     nav_items = [
         ("home", "Home", "chat", ":material/home:"),
-        ("new", "New Chat", "chat", ":material/chat_bubble:"),
         ("overview", "Health Overview", "overview", ":material/monitoring:"),
         ("symptom", "Symptoms Checker", "assessment", ":material/stethoscope:"),
         ("prescription", "Prescription Reader", "rx_reader", ":material/prescriptions:"),
