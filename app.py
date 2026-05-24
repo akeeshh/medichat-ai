@@ -11320,53 +11320,44 @@ with st.sidebar:
         '<div class="md-side-psub">' + ui_text(_profile_sub, 40) + '</div>'
         '<div class="md-side-status">' + _sync_dot + '</div>'
         '</div>'
+        + (
+            # Sign-out icon, true child of the chip (anchor link), so it
+            # naturally lives in the chip's top-right corner without any
+            # negative-margin layout tricks that previously caused the
+            # Recent Chats card to overlap. The signout parameter is
+            # handled in Python below: same logout behavior as before.
+            '<a class="md-side-signout" href="?signout=1" target="_self" title="Sign out">'
+            '<span class="material-symbols-rounded">logout</span>'
+            '</a>'
+            if st.session_state.is_authenticated else ''
+        ) +
         '</div>',
         unsafe_allow_html=True
     )
 
-    # Sign-out button — native st.button so it actually works.
-    if st.session_state.is_authenticated:
-        if st.button(" ", key="profile_logout", icon=":material/logout:"):
-            for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context", "rx_reader_result", "rx_uploader_key"]:
-                if k in st.session_state:
-                    if k in ("is_authenticated", "is_guest"):
-                        st.session_state[k] = False
-                    elif k == "patient_memory":
-                        st.session_state[k] = {"symptoms": [], "conditions": [], "medications": []}
-                    elif k == "messages":
-                        st.session_state[k] = []
-                    elif k == "rx_reader_result":
-                        st.session_state[k] = None
-                    elif k == "rx_uploader_key":
-                        st.session_state[k] = 0
-                    elif k == "qcount":
-                        st.session_state[k] = 0
-                    elif k == "feedback":
-                        st.session_state[k] = {}
-                    else:
-                        st.session_state[k] = "" if isinstance(st.session_state[k], str) else st.session_state[k]
-            st.session_state.current_conversation_id = ""
-            st.rerun()
-
     if st.session_state.is_authenticated:
 
-        # == Recent Chats card — native st.button widgets ==
+        # == Recent Chats card (matches mockup) ==
+        # Render the entire card as ONE HTML block: header + "See all" link
+        # plus "+ New chat" anchor pill and conversation rows. Using anchors for
+        # both buttons (driven by new_chat=1 and conv=<id> JS handlers)
+        # means the whole card is one DOM subtree: Streamlit's per-widget
+        # wrappers can't break the nesting like st.button() did.
         _convs = list_conversations(st.session_state.user_email_hash, limit=3)
         _active_id = st.session_state.current_conversation_id
-
-        # Card header: "Recent Chats" title + "See all" button
-        st.markdown('<div class="md-recent-head"><div class="md-recent-title">Recent Chats</div></div>', unsafe_allow_html=True)
-        if st.button("See all", key="recent_see_all_btn"):
-            st.session_state.mode = "history"
-            st.rerun()
-
-        # "+ New chat" button
-        if st.button("＋ New chat", key="new_chat_btn", use_container_width=True):
-            start_new_chat_session()
-            st.rerun()
-
-        # Conversation rows
+        _card_html = (
+            '<div class="md-recent-card">'
+            '<div class="md-recent-head">'
+            '<div class="md-recent-title">Recent Chats</div>'
+            '<a class="md-recent-seeall" href="?mode=history" target="_self">See all</a>'
+            '</div>'
+            '<a class="md-new-chat-pill" href="?new_chat=1" target="_self">'
+            '<span class="material-symbols-rounded">add</span>'
+            '<span class="md-new-chat-pill-text">New chat</span>'
+            '</a>'
+        )
         if _convs:
+            _card_html += '<div class="md-conv-list">'
             for _c in _convs:
                 _is_active = _c["id"] == _active_id
                 _title = (_c.get("title") or "Chat")[:40]
@@ -11386,38 +11377,36 @@ with st.sidebar:
                             _ago = str(_h // 168) + "w ago"
                 except Exception:
                     _ago = ""
-                _btn_label = _title + ("  " + _ago if _ago else "")
-                _conv_key_prefix = "conv_active_" if _is_active else "conv_select_"
-                _col_conv, _col_del = st.columns([0.88, 0.12])
-                with _col_conv:
-                    if st.button(_btn_label, key=_conv_key_prefix + _c["id"], use_container_width=True):
-                        _conv_obj = load_conversation(st.session_state.user_email_hash, _c["id"])
-                        if _conv_obj is not None:
-                            st.session_state.current_conversation_id = _c["id"]
-                            st.session_state.messages = _conv_obj.get("messages", []) or []
-                            st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
-                            st.session_state.feedback = {}
-                            st.session_state.last_sources = []
-                            st.session_state.emergency_detected = False
-                            st.session_state.mode = "chat"
-                        st.rerun()
-                with _col_del:
-                    if st.button("✕", key="conv_del_" + _c["id"]):
-                        delete_conversation(st.session_state.user_email_hash, _c["id"])
-                        if st.session_state.get("current_conversation_id") == _c["id"]:
-                            st.session_state.current_conversation_id = ""
-                            st.session_state.messages = []
-                        st.rerun()
-
+                _row_cls = "md-conv-row md-conv-row-active" if _is_active else "md-conv-row"
+                # Wrap each row in a flex container so we can sit the close delete
+                # icon as a SIBLING of the main click anchor (HTML disallows
+                # nesting <a> inside <a>). The row anchor still occupies the
+                # full flex stretch for the click target; the close button is a tiny
+                # anchor pinned right that triggers the update function.
+                _card_html += (
+                    '<div class="md-conv-row-wrap">'
+                    '<a class="' + _row_cls + '" href="?conv=' + ui_escape(_c["id"]) + '" target="_self">'
+                    '<span class="md-conv-icon material-symbols-rounded">description</span>'
+                    '<span class="md-conv-title">' + ui_escape(_title) + '</span>'
+                    '<span class="md-conv-time">' + ui_escape(_ago) + '</span>'
+                    '</a>'
+                    '<a class="md-conv-del" href="?del_conv=' + ui_escape(_c["id"]) + '" target="_self" title="Delete conversation" aria-label="Delete">'
+                    '<span class="material-symbols-rounded">close</span>'
+                    '</a>'
+                    '</div>'
+                )
+            _card_html += '</div>'
+        _card_html += '</div>'
+        st.markdown(_card_html, unsafe_allow_html=True)
     elif st.session_state.is_guest:
         pass
 
     L = LANGUAGES[st.session_state.selected_language]
 
-    # ── Sidebar bottom: language picker → footer ──
+    # ── Sidebar bottom: language picker → Privacy & Consent → footer ──
     st.markdown('<div class="md-sidebar-bottom">', unsafe_allow_html=True)
 
-    # Language selector sits immediately above the footer.
+    # Language selector sits immediately above the Privacy & Consent button.
     _lang_keys_top = list(LANGUAGES.keys())
     _current_lang_top = st.session_state.get("selected_language", "English")
     _lang_idx_top = _lang_keys_top.index(_current_lang_top) if _current_lang_top in _lang_keys_top else 0
@@ -11459,20 +11448,16 @@ with st.sidebar:
         st.session_state.selected_language = st.session_state.lang_selector
         st.rerun()
 
-    # Footer: Privacy & Terms · Help Center + copyright
-    _foot_col1, _foot_col2, _foot_col3 = st.columns([0.45, 0.1, 0.45])
-    with _foot_col1:
-        if st.button("Privacy & Terms", key="privacy_btn"):
-            st.session_state.mode = "privacy"
-            st.rerun()
-    with _foot_col2:
-        st.markdown('<div class="md-sidebar-foot-dot">·</div>', unsafe_allow_html=True)
-    with _foot_col3:
-        if st.button("Help Center", key="help_btn"):
-            st.session_state.mode = "privacy"
-            st.rerun()
+    # Two-line footer (matches mockup): "Privacy & Terms · Help Center" + copyright.
     st.markdown(
-        '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>',
+        '<div class="md-sidebar-foot">'
+        '<div class="md-sidebar-foot-links">'
+        '<a href="?mode=privacy" target="_self">Privacy &amp; Terms</a>'
+        '<span class="md-sidebar-foot-dot">·</span>'
+        '<a href="?mode=privacy" target="_self">Help Center</a>'
+        '</div>'
+        '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>'
+        '</div>',
         unsafe_allow_html=True
     )
     st.markdown('</div>', unsafe_allow_html=True)
@@ -12896,7 +12881,7 @@ if st.session_state.mode == "chat":
                 ]
                 snap_html = (
                     '<div class="md-rcard md-snap-card">'
-                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><a class="md-rcard-link md-rcard-link-btn" href="javascript:void(0)" target="_self">See all</a></div>'
+                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><a class="md-rcard-link md-rcard-link-btn" href="?mode=overview" target="_self">See all</a></div>'
                     '<div class="md-snap-grid">'
                 )
                 for _cls, _icon, _lbl, _val, _status, _line_cls in _tiles:
@@ -12920,7 +12905,7 @@ if st.session_state.mode == "chat":
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 # Recent Conversations (real, from Firestore)
-                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="javascript:void(0)" target="_self" rel="noopener">See all</a></div>'
+                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="?mode=history" target="_self" rel="noopener">See all</a></div>'
                 if st.session_state.is_authenticated and st.session_state.user_email_hash:
                     _recent = list_conversations(st.session_state.user_email_hash, limit=4)
                 else:
