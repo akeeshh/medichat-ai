@@ -6362,6 +6362,10 @@ st.markdown("""
        Clean divider above the section, refined "YOUR CHATS" label, primary
        indigo "+ New chat" CTA, and each past chat row as a subtle list item
        with title left + tiny × delete on the right. */
+    [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(hr) {
+        overflow: visible !important;
+        height: auto !important;
+    }
     [data-testid="stSidebar"] hr {
         border: none !important;
         height: 1px !important;
@@ -6371,6 +6375,9 @@ st.markdown("""
         margin-left: 0 !important;
         margin-right: 1.6rem !important;
         width: calc(100% - 1.6rem) !important;
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
     }
     [data-testid="stSidebar"] .sb-title {
         font-size: 0.6rem !important;
