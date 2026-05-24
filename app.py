@@ -5748,7 +5748,8 @@ st.markdown("""
        interactive. Compact 26px, almost invisible until you look for it.
        Label is collapsed in Python. */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] {
-        margin: 0.5rem auto !important;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
     }
     [data-testid="stSidebar"] [data-testid="stSelectbox"] > label,
     [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-testid="stWidgetLabel"] {
@@ -5934,7 +5935,8 @@ st.markdown("""
         border: 1px solid #e6edf9 !important;
         border-radius: 16px !important;
         padding: 0.9rem !important;
-        margin: 0.6rem auto 0.5rem auto !important;
+        margin-top: 0.6rem !important;
+        margin-bottom: 0.5rem !important;
         box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02) !important;
         box-sizing: border-box !important;
     }
@@ -6159,11 +6161,9 @@ st.markdown("""
         color: #94a3b8 !important;
     }
 
-    /* ── Force every sidebar-bottom tile to match a single compact width
-       (210px) so nothing ever bleeds past the sidebar's inner edge. The
-       Recent Chats card now contains New chat + conv list as true children,
-       so we only need to constrain the OUTER tiles (profile chip, sign out,
-       card, language selector, footer). */
+    /* Force every sidebar-bottom tile to match the exact same layout offset
+       as the navigation buttons (margin-left 0, margin-right 1.6rem, width
+       calc(100% - 1.6rem)) so they align perfectly on both edges. */
     [data-testid="stSidebar"] div.st-key-profile_logout,
     [data-testid="stSidebar"] div.st-key-profile_logout button,
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top,
@@ -6171,10 +6171,10 @@ st.markdown("""
     [data-testid="stSidebar"] [data-testid="stSelectbox"]:has(.st-key-lang_selector),
     [data-testid="stSidebar"] .md-sidebar-foot {
         box-sizing: border-box !important;
-        max-width: 242px !important; /* Expanded from 210px to align perfectly with nav buttons */
-        margin-left: auto !important;
-        margin-right: auto !important;
-        width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 1.6rem !important;
+        width: calc(100% - 1.6rem) !important;
+        max-width: none !important;
     }
     /* Profile chip — comfortable padding so 3-line content (name + email +
        sync status) doesn't pinch. The chevron was removed, so the right
@@ -6259,13 +6259,14 @@ st.markdown("""
     [data-testid="stSidebar"] div.st-key-profile_logout button p {
         display: none !important;
     }
-    /* Recent Chats card — ultra-tight to fit at 900px viewport.
+    /* Recent Chats card: ultra-tight to fit at 900px viewport.
        margin-top: 0.7rem (~11px) gives a clean visual gap below the
        profile chip area so the two cards don't collide. */
     [data-testid="stSidebar"] .md-recent-card {
         padding: 0.45rem 0.5rem 0.4rem 0.5rem !important;
         border-radius: 11px !important;
-        margin: 0.7rem auto 0.25rem auto !important;
+        margin-top: 0.7rem !important;
+        margin-bottom: 0.25rem !important;
     }
     [data-testid="stSidebar"] .md-recent-head {
         margin-bottom: 0.25rem !important;
