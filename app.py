@@ -11313,6 +11313,18 @@ with st.sidebar:
     # Inject the custom CSS overrides specifically for styling the native Streamlit buttons in the sidebar
     st.markdown("""
 <style>
+/* Hide empty anchor containers to reclaim space */
+div.element-container:has(.md-recent-card-inside),
+div.element-container:has(.md-recent-seeall-anchor),
+div.element-container:has(.md-new-chat-anchor),
+div.element-container:has(.md-conv-select-anchor),
+div.element-container:has(.md-conv-del-anchor),
+div.element-container:has(.md-side-signout-anchor),
+div.element-container:has(.md-privacy-btn-anchor),
+div.element-container:has(.md-help-btn-anchor) {
+    display: none !important;
+}
+
 /* Custom sidebar native button overrides */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) {
     background: #ffffff !important;
@@ -11324,6 +11336,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) {
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02) !important;
     box-sizing: border-box !important;
     position: relative !important;
+    overflow: visible !important;
 }
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [data-testid="stVerticalBlock"] {
     gap: 0.2rem !important;
@@ -11358,7 +11371,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
 /* See all button in card header */
 .element-container:has(.md-recent-seeall-anchor) + .element-container button {
     position: absolute !important;
-    top: -24px !important; /* Pull up inline with Recent Chats header */
+    top: 8px !important; /* Align with Recent Chats header title */
     right: 8px !important;
     background: transparent !important;
     border: none !important;
@@ -11429,7 +11442,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
     text-align: left !important;
     font-size: 0.76rem !important;
     font-weight: 550 !important;
-    padding: 0.4rem 2rem 0.4rem 0.45rem !important; /* Leave space for delete cross */
+    padding: 0.4rem 0.45rem !important;
     min-height: unset !important;
     height: auto !important;
     width: 100% !important;
