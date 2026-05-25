@@ -11344,26 +11344,25 @@ div.element-container:has(.md-new-chat-anchor),
 div.element-container:has(.md-conv-select-anchor),
 div.element-container:has(.md-conv-del-anchor),
 div.element-container:has(.md-side-signout-anchor),
-div.element-container:has(.md-privacy-btn-anchor),
-div.element-container:has(.md-help-btn-anchor) {
+div.element-container:has(.md-lang-selector-anchor) {
     display: none !important;
 }
 
 /* Custom sidebar native button overrides */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) {
     background: #ffffff !important;
-    border: 1px solid #e6edf9 !important;
-    border-radius: 11px !important;
-    padding: 0.45rem 0.5rem 0.4rem 0.5rem !important;
-    margin-top: 0.7rem !important;
-    margin-bottom: 0.25rem !important;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02) !important;
+    border: 1px solid #f1f5f9 !important;
+    border-radius: 16px !important;
+    padding: 0.85rem 0.9rem !important;
+    margin-top: 1.2rem !important;
+    margin-bottom: 0.5rem !important;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03) !important;
     box-sizing: border-box !important;
     position: relative !important;
     overflow: visible !important;
 }
 div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [data-testid="stVerticalBlock"] {
-    gap: 0.2rem !important;
+    gap: 0.25rem !important;
 }
 
 /* Sign out button */
@@ -11392,15 +11391,30 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
     color: #b91c1c !important;
 }
 
+/* Recent Chats Card Header Title */
+.md-recent-head {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 0.5rem !important;
+    padding: 0 2px !important;
+}
+.md-recent-title {
+    font-size: 0.88rem !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    font-family: 'Manrope', system-ui, sans-serif !important;
+}
+
 /* See all button in card header */
 .element-container:has(.md-recent-seeall-anchor) + .element-container button {
     position: absolute !important;
-    top: 8px !important; /* Align with Recent Chats header title */
-    right: 8px !important;
+    top: 14px !important; /* Align with Recent Chats header title */
+    right: 14px !important;
     background: transparent !important;
     border: none !important;
-    color: #4f46e5 !important;
-    font-size: 0.74rem !important;
+    color: #64748b !important;
+    font-size: 0.72rem !important;
     font-weight: 600 !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -11412,8 +11426,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
     display: inline-block !important;
 }
 .element-container:has(.md-recent-seeall-anchor) + .element-container button:hover {
-    color: #3730a3 !important;
-    text-decoration: underline !important;
+    color: #4f46e5 !important;
     background: transparent !important;
 }
 
@@ -11421,83 +11434,38 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
 .element-container:has(.md-new-chat-anchor) + .element-container button {
     box-sizing: border-box !important;
     width: 100% !important;
-    min-height: 30px !important;
-    height: 30px !important;
+    min-height: 38px !important;
+    height: 38px !important;
     padding: 0 0.6rem !important;
-    margin-bottom: 0.35rem !important;
-    font-size: 0.72rem !important;
-    border-radius: 8px !important;
-    border: 1px solid #dbe4ff !important;
-    background: linear-gradient(135deg, #f5f8ff 0%, #eef2ff 100%) !important;
+    margin-bottom: 0.5rem !important;
+    font-size: 0.76rem !important;
+    border-radius: 10px !important;
+    border: none !important;
+    background: #eef2ff !important;
     color: #4f46e5 !important;
     font-weight: 600 !important;
-    box-shadow: 0 2px 5px rgba(99, 102, 241, 0.05) !important;
+    box-shadow: none !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 0.35rem !important;
-    transition: all 0.2s ease !important;
+    transition: background 0.15s ease, color 0.15s ease !important;
 }
 .element-container:has(.md-new-chat-anchor) + .element-container button:hover {
-    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%) !important;
-    border-color: #c7d2fe !important;
+    background: #e0e7ff !important;
     color: #3730a3 !important;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12) !important;
 }
 .element-container:has(.md-new-chat-anchor) + .element-container button p {
-    font-size: 0.72rem !important;
+    font-size: 0.76rem !important;
     color: #4f46e5 !important;
     margin: 0 !important;
     font-weight: 600 !important;
     line-height: 1 !important;
 }
 .element-container:has(.md-new-chat-anchor) + .element-container button [data-testid="stIconMaterial"] {
-    font-size: 0.88rem !important;
+    font-size: 0.95rem !important;
     color: #4f46e5 !important;
     -webkit-text-fill-color: #4f46e5 !important;
-}
-
-/* Conversation row buttons */
-.element-container:has(.md-conv-select-anchor) + .element-container button {
-    background: transparent !important;
-    border: none !important;
-    border-radius: 8px !important;
-    color: #475569 !important;
-    text-align: left !important;
-    font-size: 0.76rem !important;
-    font-weight: 550 !important;
-    padding: 0.4rem 0.45rem !important;
-    min-height: unset !important;
-    height: auto !important;
-    width: 100% !important;
-    box-shadow: none !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 0.35rem !important;
-    transition: all 0.15s ease !important;
-}
-.element-container:has(.md-conv-select-anchor) + .element-container button:hover {
-    background: #f8fafc !important;
-    color: #0f172a !important;
-}
-.element-container:has(.md-conv-select-anchor.md-active) + .element-container button {
-    background: #f1f5f9 !important;
-    color: #0f172a !important;
-    font-weight: 600 !important;
-}
-.element-container:has(.md-conv-select-anchor) + .element-container button p {
-    margin: 0 !important;
-    font-size: 0.76rem !important;
-    line-height: 1.15 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-}
-.element-container:has(.md-conv-select-anchor) + .element-container button [data-testid="stIconMaterial"] {
-    font-size: 0.95rem !important;
-    color: #94a3b8 !important;
-    -webkit-text-fill-color: #94a3b8 !important;
 }
 
 /* Flex layout columns for conversation rows */
@@ -11507,17 +11475,111 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) {
     align-items: center !important;
     justify-content: space-between !important;
     width: 100% !important;
-    gap: 0.1rem !important;
-    margin-bottom: 0.1rem !important;
+    gap: 0px !important;
+    margin-bottom: 0.15rem !important;
+    background: transparent;
+    border-radius: 10px !important;
+    transition: background 0.15s ease !important;
+    position: relative !important;
+    padding: 4px 6px !important;
 }
+div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover {
+    background: #f8fafc !important;
+}
+div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor.md-active) {
+    background: #eef2ff !important;
+}
+
+/* Prevent Streamlit columns from breaking flex layout */
 div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) div[data-testid="column"] {
     padding: 0 !important;
     margin: 0 !important;
     min-width: unset !important;
 }
 
-/* Style delete button */
+/* Select row button */
+.element-container:has(.md-conv-select-anchor) + .element-container button {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0px !important;
+    color: #475569 !important;
+    text-align: left !important;
+    font-size: 0.78rem !important;
+    font-weight: 550 !important;
+    padding: 0.2rem 0 !important;
+    min-height: unset !important;
+    height: auto !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.35rem !important;
+    padding-right: 48px !important; /* spacing for time/delete absolute controls */
+}
+.element-container:has(.md-conv-select-anchor) + .element-container button:hover {
+    background: transparent !important;
+}
+.element-container:has(.md-conv-select-anchor) + .element-container button p {
+    margin: 0 !important;
+    font-size: 0.78rem !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    color: #475569 !important;
+    font-weight: 550 !important;
+}
+.element-container:has(.md-conv-select-anchor.md-active) + .element-container button p {
+    color: #4f46e5 !important;
+    font-weight: 600 !important;
+}
+.element-container:has(.md-conv-select-anchor) + .element-container button [data-testid="stIconMaterial"] {
+    font-size: 0.95rem !important;
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
+}
+.element-container:has(.md-conv-select-anchor.md-active) + .element-container button [data-testid="stIconMaterial"] {
+    color: #4f46e5 !important;
+    -webkit-text-fill-color: #4f46e5 !important;
+}
+
+/* Relative Timestamp & Delete overlay container */
+.md-conv-time-wrap {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+.md-conv-time {
+    color: #94a3b8;
+    font-size: 0.72rem;
+    font-weight: 500;
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.15s ease;
+}
+div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor.md-active) .md-conv-time {
+    color: #4f46e5;
+    font-weight: 600;
+}
+
+/* Delete Button Overlays */
 .element-container:has(.md-conv-del-anchor) + .element-container button {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease !important;
+    position: absolute !important;
+    right: 4px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    z-index: 5 !important;
     background: transparent !important;
     border: none !important;
     color: #94a3b8 !important;
@@ -11527,49 +11589,87 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) div[data-testid
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 20px !important;
-    height: 20px !important;
-    min-width: 20px !important;
-    min-height: 20px !important;
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
     box-shadow: none !important;
     border-radius: 50% !important;
-    transition: background 0.15s ease, color 0.15s ease !important;
 }
 .element-container:has(.md-conv-del-anchor) + .element-container button:hover {
     background: #fef2f2 !important;
     color: #b91c1c !important;
 }
 
-/* Privacy & Terms and Help Center footer buttons */
-.element-container:has(.md-privacy-btn-anchor) + .element-container button,
-.element-container:has(.md-help-btn-anchor) + .element-container button {
-    background: transparent !important;
+/* Hover transitions to switch timestamp with delete button */
+div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover .md-conv-time {
+    opacity: 0 !important;
+}
+div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover .element-container:has(.md-conv-del-anchor) + .element-container button {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+/* Custom styled Selectbox (Language Selector) */
+.element-container:has(.md-lang-selector-anchor) + .element-container [data-testid="stSelectbox"] [data-baseweb="select"] {
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    background-color: #ffffff !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234f46e5' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-.778.099-1.533.284-2.253' /%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: left 12px center !important;
+    background-size: 16px 16px !important;
+    padding-left: 24px !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+}
+.element-container:has(.md-lang-selector-anchor) + .element-container [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+    background-color: transparent !important;
     border: none !important;
+}
+.element-container:has(.md-lang-selector-anchor) + .element-container [data-testid="stSelectbox"] input {
+    color: #334155 !important;
+    font-weight: 550 !important;
+    font-size: 0.8rem !important;
+}
+.element-container:has(.md-lang-selector-anchor) + .element-container [data-testid="stSelectbox"] [data-testid="stSelectbox-Svg"] {
     color: #64748b !important;
-    font-size: 0.65rem !important;
-    font-weight: 600 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    min-height: unset !important;
-    height: auto !important;
-    box-shadow: none !important;
 }
-.element-container:has(.md-privacy-btn-anchor) + .element-container button:hover,
-.element-container:has(.md-help-btn-anchor) + .element-container button:hover {
+
+/* Footer Section Styling */
+.md-sidebar-footer {
+    text-align: center !important;
+    margin-top: 1.8rem !important;
+    margin-bottom: 0.4rem !important;
+    font-family: 'Manrope', system-ui, sans-serif !important;
+    padding: 0 0.5rem !important;
+}
+.md-sidebar-foot-links {
+    font-size: 0.72rem !important;
+    font-weight: 550 !important;
+    color: #64748b !important;
+    margin-bottom: 0.35rem !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+.md-sidebar-foot-links a {
+    color: #64748b !important;
+    text-decoration: none !important;
+    transition: color 0.15s ease !important;
+}
+.md-sidebar-foot-links a:hover {
     color: #4f46e5 !important;
-    text-decoration: underline !important;
-    background: transparent !important;
 }
-.element-container:has(.md-privacy-btn-anchor) + .element-container button p,
-.element-container:has(.md-help-btn-anchor) + .element-container button p {
-    font-size: 0.65rem !important;
-    margin: 0 !important;
+.md-sidebar-foot-dot {
+    color: #cbd5e1 !important;
+    font-size: 0.75rem !important;
+    font-weight: bold !important;
 }
-.element-container:has(.md-privacy-btn-anchor) + .element-container button {
-    float: right !important;
-}
-.element-container:has(.md-help-btn-anchor) + .element-container button {
-    float: left !important;
+.md-sidebar-foot-copy {
+    font-size: 0.64rem !important;
+    color: #94a3b8 !important;
+    margin-top: 4px !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -11666,10 +11766,10 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) div[data-testid
                     _conv_key_prefix = "conv_active_" if _is_active else "conv_select_"
                     
                     # Conversation row select/delete column layout
-                    _row_col1, _row_col2 = st.columns([0.85, 0.15])
+                    _row_col1, _row_col2 = st.columns([0.75, 0.25])
                     with _row_col1:
                         st.markdown(f'<div class="md-conv-select-anchor{" md-active" if _is_active else ""}"></div>', unsafe_allow_html=True)
-                        if st.button(_btn_label, icon=":material/description:", key=_conv_key_prefix + _c["id"], use_container_width=True):
+                        if st.button(_title, icon=":material/description:", key=_conv_key_prefix + _c["id"], use_container_width=True):
                             _conv_obj = load_conversation(st.session_state.user_email_hash, _c["id"])
                             if _conv_obj is not None:
                                 st.session_state.current_conversation_id = _c["id"]
@@ -11681,7 +11781,7 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) div[data-testid
                                 st.session_state.mode = "chat"
                             st.rerun()
                     with _row_col2:
-                        st.markdown('<div class="md-conv-del-anchor"></div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="md-conv-time-wrap"><span class="md-conv-time">{_ago}</span><div class="md-conv-del-anchor"></div></div>', unsafe_allow_html=True)
                         if st.button("✕", key="conv_del_" + _c["id"], use_container_width=True):
                             delete_conversation(st.session_state.user_email_hash, _c["id"])
                             if st.session_state.get("current_conversation_id") == _c["id"]:
@@ -11701,6 +11801,7 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) div[data-testid
     _lang_keys_top = list(LANGUAGES.keys())
     _current_lang_top = st.session_state.get("selected_language", "English")
     _lang_idx_top = _lang_keys_top.index(_current_lang_top) if _current_lang_top in _lang_keys_top else 0
+    st.markdown('<div class="md-lang-selector-anchor"></div>', unsafe_allow_html=True)
     st.selectbox(
         "Language",
         options=_lang_keys_top,
@@ -11740,21 +11841,15 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) div[data-testid
         st.rerun()
 
     # Footer: Privacy & Terms · Help Center + copyright
-    _foot_col1, _foot_col2, _foot_col3 = st.columns([0.45, 0.1, 0.45])
-    with _foot_col1:
-        st.markdown('<div class="md-privacy-btn-anchor"></div>', unsafe_allow_html=True)
-        if st.button("Privacy & Terms", key="privacy_btn"):
-            st.session_state.mode = "privacy"
-            st.rerun()
-    with _foot_col2:
-        st.markdown('<div class="md-sidebar-foot-dot">·</div>', unsafe_allow_html=True)
-    with _foot_col3:
-        st.markdown('<div class="md-help-btn-anchor"></div>', unsafe_allow_html=True)
-        if st.button("Help Center", key="help_btn"):
-            st.session_state.mode = "privacy"
-            st.rerun()
     st.markdown(
-        '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>',
+        '<div class="md-sidebar-footer">'
+        '<div class="md-sidebar-foot-links">'
+        '<a href="?mode=privacy" target="_self">Privacy & Terms</a>'
+        '<span class="md-sidebar-foot-dot">•</span>'
+        '<a href="?mode=privacy" target="_self">Help Center</a>'
+        '</div>'
+        '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>'
+        '</div>',
         unsafe_allow_html=True
     )
 
