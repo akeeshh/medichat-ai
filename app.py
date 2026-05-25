@@ -6011,38 +6011,38 @@ st.markdown("""
         box-sizing: border-box !important;
         width: 100% !important;
         max-width: 100% !important;
-        min-height: 36px !important;
-        height: 36px !important;
+        min-height: 38px !important;
+        height: 38px !important;
         padding: 0 0.8rem !important;
         border-radius: 10px !important;
-        border: 1px dashed rgba(99, 102, 241, 0.35) !important;
-        background: rgba(99, 102, 241, 0.08) !important;
+        border: none !important;
+        background: #eef2ff !important;
         color: #4f46e5 !important;
-        font-weight: 660 !important;
-        font-size: 0.82rem !important;
+        font-weight: 600 !important;
+        font-size: 0.76rem !important;
         box-shadow: none !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         gap: 0.35rem !important;
         margin-bottom: 0.5rem !important;
-        transition: background 0.15s ease, border-color 0.15s ease !important;
+        transition: background 0.15s ease, color 0.15s ease !important;
     }
     [data-testid="stSidebar"] div.st-key-new_chat_btn button:hover {
-        background: rgba(99, 102, 241, 0.14) !important;
-        border-color: rgba(99, 102, 241, 0.5) !important;
+        background: #e0e7ff !important;
+        color: #3730a3 !important;
     }
     [data-testid="stSidebar"] div.st-key-new_chat_btn button p {
         color: #4f46e5 !important;
         margin: 0 !important;
-        font-size: 0.82rem !important;
-        font-weight: 660 !important;
+        font-size: 0.76rem !important;
+        font-weight: 600 !important;
         line-height: 1 !important;
     }
     [data-testid="stSidebar"] div.st-key-new_chat_btn button [data-testid="stIconMaterial"] {
         color: #4f46e5 !important;
         -webkit-text-fill-color: #4f46e5 !important;
-        font-size: 1rem !important;
+        font-size: 0.95rem !important;
     }
 
     /* Conversation rows — anchor links with flex layout (icon | title | time).
@@ -10902,13 +10902,13 @@ with st.sidebar:
     st.markdown("""
 <style>
 /* Hide empty anchor containers to reclaim space */
-div.element-container:has(.md-recent-card-inside),
-div.element-container:has(.md-recent-seeall-anchor),
-div.element-container:has(.md-new-chat-anchor),
-div.element-container:has(.md-conv-select-anchor),
-div.element-container:has(.md-conv-del-anchor),
-div.element-container:has(.md-side-signout-anchor),
-div.element-container:has(.md-lang-selector-anchor) {
+div[data-testid="element-container"]:has(.md-recent-card-inside),
+div[data-testid="element-container"]:has(.md-recent-seeall-anchor),
+div[data-testid="element-container"]:has(.md-new-chat-anchor),
+div[data-testid="element-container"]:has(.md-conv-select-anchor),
+div[data-testid="element-container"]:has(.md-conv-del-anchor),
+div[data-testid="element-container"]:has(.md-side-signout-anchor),
+div[data-testid="element-container"]:has(.md-lang-selector-anchor) {
     display: none !important;
 }
 
@@ -10918,7 +10918,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) {
     border: 1px solid #f1f5f9 !important;
     border-radius: 16px !important;
     padding: 0.85rem 0.9rem !important;
-    margin-top: 1.2rem !important;
+    margin-top: 2.2rem !important;
     margin-bottom: 0.5rem !important;
     box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03) !important;
     box-sizing: border-box !important;
@@ -10930,7 +10930,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
 }
 
 /* Sign out button */
-.element-container:has(.md-side-signout-anchor) + .element-container button {
+div[data-testid="element-container"]:has(.md-side-signout-anchor) + div[data-testid="element-container"] button {
     position: absolute !important;
     top: -55px !important; /* Pull up to align with the top profile card */
     right: 12px !important;
@@ -10949,7 +10949,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
     z-index: 10 !important;
     box-shadow: none !important;
 }
-.element-container:has(.md-side-signout-anchor) + .element-container button:hover {
+div[data-testid="element-container"]:has(.md-side-signout-anchor) + div[data-testid="element-container"] button:hover {
     background: #fef2f2 !important;
     border-color: #fecaca !important;
     color: #b91c1c !important;
@@ -10971,7 +10971,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
 }
 
 /* See all button in card header */
-.element-container:has(.md-recent-seeall-anchor) + .element-container button {
+div[data-testid="element-container"]:has(.md-recent-seeall-anchor) + div[data-testid="element-container"] button {
     position: absolute !important;
     top: 14px !important; /* Align with Recent Chats header title */
     right: 14px !important;
@@ -10989,13 +10989,13 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
     z-index: 5 !important;
     display: inline-block !important;
 }
-.element-container:has(.md-recent-seeall-anchor) + .element-container button:hover {
+div[data-testid="element-container"]:has(.md-recent-seeall-anchor) + div[data-testid="element-container"] button:hover {
     color: #4f46e5 !important;
     background: transparent !important;
 }
 
 /* + New chat button inside the card */
-.element-container:has(.md-new-chat-anchor) + .element-container button {
+div[data-testid="element-container"]:has(.md-new-chat-anchor) + div[data-testid="element-container"] button {
     box-sizing: border-box !important;
     width: 100% !important;
     min-height: 38px !important;
@@ -11015,18 +11015,18 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
     gap: 0.35rem !important;
     transition: background 0.15s ease, color 0.15s ease !important;
 }
-.element-container:has(.md-new-chat-anchor) + .element-container button:hover {
+div[data-testid="element-container"]:has(.md-new-chat-anchor) + div[data-testid="element-container"] button:hover {
     background: #e0e7ff !important;
     color: #3730a3 !important;
 }
-.element-container:has(.md-new-chat-anchor) + .element-container button p {
+div[data-testid="element-container"]:has(.md-new-chat-anchor) + div[data-testid="element-container"] button p {
     font-size: 0.76rem !important;
     color: #4f46e5 !important;
     margin: 0 !important;
     font-weight: 600 !important;
     line-height: 1 !important;
 }
-.element-container:has(.md-new-chat-anchor) + .element-container button [data-testid="stIconMaterial"] {
+div[data-testid="element-container"]:has(.md-new-chat-anchor) + div[data-testid="element-container"] button [data-testid="stIconMaterial"] {
     font-size: 0.95rem !important;
     color: #4f46e5 !important;
     -webkit-text-fill-color: #4f46e5 !important;
@@ -11062,7 +11062,7 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) div[data-testid
 }
 
 /* Select row button */
-.element-container:has(.md-conv-select-anchor) + .element-container button {
+div[data-testid="element-container"]:has(.md-conv-select-anchor) + div[data-testid="element-container"] button {
     background: transparent !important;
     border: none !important;
     border-radius: 0px !important;
@@ -11081,10 +11081,10 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) div[data-testid
     gap: 0.35rem !important;
     padding-right: 48px !important; /* spacing for time/delete absolute controls */
 }
-.element-container:has(.md-conv-select-anchor) + .element-container button:hover {
+div[data-testid="element-container"]:has(.md-conv-select-anchor) + div[data-testid="element-container"] button:hover {
     background: transparent !important;
 }
-.element-container:has(.md-conv-select-anchor) + .element-container button p {
+div[data-testid="element-container"]:has(.md-conv-select-anchor) + div[data-testid="element-container"] button p {
     margin: 0 !important;
     font-size: 0.78rem !important;
     line-height: 1.2 !important;
@@ -11094,16 +11094,16 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) div[data-testid
     color: #475569 !important;
     font-weight: 550 !important;
 }
-.element-container:has(.md-conv-select-anchor.md-active) + .element-container button p {
+div[data-testid="element-container"]:has(.md-conv-select-anchor.md-active) + div[data-testid="element-container"] button p {
     color: #4f46e5 !important;
     font-weight: 600 !important;
 }
-.element-container:has(.md-conv-select-anchor) + .element-container button [data-testid="stIconMaterial"] {
+div[data-testid="element-container"]:has(.md-conv-select-anchor) + div[data-testid="element-container"] button [data-testid="stIconMaterial"] {
     font-size: 0.95rem !important;
     color: #94a3b8 !important;
     -webkit-text-fill-color: #94a3b8 !important;
 }
-.element-container:has(.md-conv-select-anchor.md-active) + .element-container button [data-testid="stIconMaterial"] {
+div[data-testid="element-container"]:has(.md-conv-select-anchor.md-active) + div[data-testid="element-container"] button [data-testid="stIconMaterial"] {
     color: #4f46e5 !important;
     -webkit-text-fill-color: #4f46e5 !important;
 }
@@ -11135,7 +11135,7 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor.md-active) .md-c
 }
 
 /* Delete Button Overlays */
-.element-container:has(.md-conv-del-anchor) + .element-container button {
+div[data-testid="element-container"]:has(.md-conv-del-anchor) + div[data-testid="element-container"] button {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease !important;
@@ -11160,7 +11160,7 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor.md-active) .md-c
     box-shadow: none !important;
     border-radius: 50% !important;
 }
-.element-container:has(.md-conv-del-anchor) + .element-container button:hover {
+div[data-testid="element-container"]:has(.md-conv-del-anchor) + div[data-testid="element-container"] button:hover {
     background: #fef2f2 !important;
     color: #b91c1c !important;
 }
@@ -11169,13 +11169,13 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor.md-active) .md-c
 div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover .md-conv-time {
     opacity: 0 !important;
 }
-div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover .element-container:has(.md-conv-del-anchor) + .element-container button {
+div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover div[data-testid="element-container"]:has(.md-conv-del-anchor) + div[data-testid="element-container"] button {
     opacity: 1 !important;
     pointer-events: auto !important;
 }
 
 /* Custom styled Selectbox (Language Selector) */
-.element-container:has(.md-lang-selector-anchor) + .element-container [data-testid="stSelectbox"] [data-baseweb="select"] {
+div[data-testid="element-container"]:has(.md-lang-selector-anchor) + div[data-testid="element-container"] [data-testid="stSelectbox"] [data-baseweb="select"] {
     border: 1px solid #e2e8f0 !important;
     border-radius: 12px !important;
     background-color: #ffffff !important;
@@ -11186,16 +11186,16 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover .element-
     padding-left: 24px !important;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
 }
-.element-container:has(.md-lang-selector-anchor) + .element-container [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+div[data-testid="element-container"]:has(.md-lang-selector-anchor) + div[data-testid="element-container"] [data-testid="stSelectbox"] [data-baseweb="select"] > div {
     background-color: transparent !important;
     border: none !important;
 }
-.element-container:has(.md-lang-selector-anchor) + .element-container [data-testid="stSelectbox"] input {
+div[data-testid="element-container"]:has(.md-lang-selector-anchor) + div[data-testid="element-container"] [data-testid="stSelectbox"] input {
     color: #334155 !important;
     font-weight: 550 !important;
     font-size: 0.8rem !important;
 }
-.element-container:has(.md-lang-selector-anchor) + .element-container [data-testid="stSelectbox"] [data-testid="stSelectbox-Svg"] {
+div[data-testid="element-container"]:has(.md-lang-selector-anchor) + div[data-testid="element-container"] [data-testid="stSelectbox"] [data-testid="stSelectbox-Svg"] {
     color: #64748b !important;
 }
 
