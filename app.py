@@ -5768,9 +5768,28 @@ st.markdown("""
         cursor: pointer !important;
         position: relative !important;
         padding-left: 2.2rem !important; /* Make room for the globe icon */
-        padding-right: 1.8rem !important; /* Make room for the chevron */
+        padding-right: 0.6rem !important; /* Chevron now pinned to the far right corner */
         box-sizing: border-box !important;
         transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease !important;
+    }
+    /* Push the chevron arrow to the absolute right edge of the tile.
+       Position is absolute relative to the BaseWeb icons-container (not
+       the tile itself), so use negative right to escape the wrapper's
+       padding and sit flush in the tile's corner with ~6px breathing
+       room from the tile's actual border. */
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] [data-baseweb="icon"][title="open"] {
+        position: absolute !important;
+        right: 0 !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        margin: 0 !important;
+    }
+    /* Strip ALL padding from the BaseWeb icons-container so the chevron
+       can sit at the true right edge of the tile. */
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div > div:last-child,
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] [data-baseweb="select-control-container"] {
+        padding-right: 0 !important;
+        margin-right: 0 !important;
     }
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"]:hover {
         background: #f8fafc !important;
@@ -6228,33 +6247,50 @@ st.markdown("""
        onto the chip AND shrink the column contribution from +29px to -20px
        (49px reclaimed) so the column can comfortably fit Recent Chats + 3
        rows + language + footer at 900px viewport without scrolling. */
-    /* st-key-profile_logout is no longer rendered (the Streamlit button was
-       replaced by an anchor `?signout=1` inside the chip's HTML, removing
-       all the negative-margin layout gymnastics that caused the Recent
-       Chats card to collide with the chip's bottom). The selectors are
-       retained inert so future legacy CSS that references them is harmless. */
+    /* HIDE the legacy Streamlit sign-out button entirely — the visible
+       affordance is now the inline anchor (.md-side-signout-inline)
+       rendered as a true child of the profile chip. The st.button is
+       kept in the Python tree as a Python-callable fallback. */
     [data-testid="stSidebar"] div.st-key-profile_logout {
         display: none !important;
-    }
-    [data-testid="stSidebar"] div.st-key-profile_logout button,
-    [data-testid="stSidebar"] div.st-key-profile_logout .stButton > button {
-        width: 28px !important;
-        min-width: 28px !important;
-        max-width: 28px !important;
-        height: 28px !important;
-        min-height: 28px !important;
+        height: 0 !important;
+        margin: 0 !important;
         padding: 0 !important;
-        border-radius: 50% !important;
-        background: transparent !important;
-        border: 1px solid transparent !important;
-        color: #94a3b8 !important;
-        -webkit-text-fill-color: #94a3b8 !important;
-        display: flex !important;
+        overflow: hidden !important;
+    }
+    /* Inline sign-out icon — true child of .md-side-profile-top, positioned
+       in the chip's top-right corner. Tiny 26px circle, slate by default,
+       red on hover. Clicking it triggers ?signout=1 which the Python URL
+       handler picks up to clear session and rerun. */
+    [data-testid="stSidebar"] .md-side-signout-inline {
+        position: absolute !important;
+        top: 50% !important;
+        right: 0.55rem !important;
+        transform: translateY(-50%) !important;
+        width: 26px !important;
+        height: 26px !important;
+        display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        margin: 0 !important;
-        box-shadow: none !important;
-        font-size: 0 !important;
+        border-radius: 50% !important;
+        background: transparent !important;
+        color: #94a3b8 !important;
+        text-decoration: none !important;
+        border: 1px solid transparent !important;
+        transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
+        z-index: 5 !important;
+    }
+    [data-testid="stSidebar"] .md-side-signout-inline:hover {
+        background: #fef2f2 !important;
+        color: #b91c1c !important;
+        border-color: #fecaca !important;
+        text-decoration: none !important;
+    }
+    [data-testid="stSidebar"] .md-side-signout-inline .material-symbols-rounded {
+        font-size: 1rem !important;
+        color: inherit !important;
+        -webkit-text-fill-color: currentColor !important;
+        line-height: 1 !important;
     }
     [data-testid="stSidebar"] div.st-key-profile_logout button:hover,
     [data-testid="stSidebar"] div.st-key-profile_logout .stButton > button:hover {
@@ -6270,13 +6306,34 @@ st.markdown("""
         color: inherit !important;
         -webkit-text-fill-color: currentColor !important;
     }
-    /* Hide the space-character label so the icon is dead-centered in the
-       circle. Also hide any wrapped Streamlit tooltip-trigger inner spans. */
-    [data-testid="stSidebar"] div.st-key-profile_logout button [data-testid="stMarkdownContainer"],
+    /* "Sign out" label IS shown now (compact row design, not icon-only).
+       Re-enable visibility of the markdown container + p element. */
+    [data-testid="stSidebar"] div.st-key-profile_logout button [data-testid="stMarkdownContainer"] {
+        display: flex !important;
+        align-items: center !important;
+    }
     [data-testid="stSidebar"] div.st-key-profile_logout button p {
+        display: inline-block !important;
+        margin: 0 !important;
+        font-size: 0.8rem !important;
+        font-weight: 500 !important;
+        color: #475569 !important;
+        line-height: 1 !important;
+    }
+    /* The sentinel anchor div placed before the button (md-side-signout-anchor)
+       takes 0 space so it doesn't disturb layout. Hide both the marker div
+       AND its containing stElementContainer so the column flow is unchanged
+       from before this button was added. */
+    [data-testid="stSidebar"] .md-side-signout-anchor,
+    [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(> [data-testid="stMarkdown"] .md-side-signout-anchor) {
         display: none !important;
     }
-    /* (Legacy sidebar overrides removed) */
+    /* Profile chip becomes the positioning context — required so the
+       absolute z-index stack of the sign-out button renders cleanly above
+       it on hover (no clipping by the chip's own padding). */
+    [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
+        position: relative !important;
+    }
 
     /* ────────────────────────────────────────────────────────────────────
        Apple-style polish — home dashboard at 1366×768.
@@ -10929,30 +10986,59 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
     gap: 0.25rem !important;
 }
 
-/* Sign out button */
+/* Sign out — compact left-aligned row directly under the profile chip
+   (matches the mockup). Logout icon on the left, button takes full
+   container width. Removed the previous absolute-overlay positioning
+   because Streamlit's nested layout wrappers were misaligning it. */
 div[data-testid="stElementContainer"]:has(.md-side-signout-anchor) + div[data-testid="stElementContainer"] button {
-    position: absolute !important;
-    top: -55px !important; /* Pull up to align with the top profile card */
-    right: 12px !important;
-    width: 28px !important;
-    height: 28px !important;
-    min-width: 28px !important;
-    min-height: 28px !important;
-    padding: 0 !important;
-    border-radius: 50% !important;
+    position: static !important;
+    top: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    max-width: 230px !important;
+    height: 34px !important;
+    min-width: 0 !important;
+    min-height: 34px !important;
+    padding: 0 0.65rem !important;
+    margin: 0 !important;
+    border-radius: 9px !important;
     background: transparent !important;
     border: 1px solid transparent !important;
-    color: #94a3b8 !important;
+    color: #475569 !important;
+    -webkit-text-fill-color: #475569 !important;
     display: flex !important;
     align-items: center !important;
-    justify-content: center !important;
-    z-index: 10 !important;
+    justify-content: flex-start !important;
+    gap: 0.55rem !important;
+    z-index: auto !important;
     box-shadow: none !important;
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
+}
+div[data-testid="stElementContainer"]:has(.md-side-signout-anchor) + div[data-testid="stElementContainer"] button p {
+    color: #475569 !important;
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    margin: 0 !important;
+    line-height: 1 !important;
+}
+div[data-testid="stElementContainer"]:has(.md-side-signout-anchor) + div[data-testid="stElementContainer"] button [data-testid="stIconMaterial"] {
+    font-size: 1.05rem !important;
+    color: #64748b !important;
+    -webkit-text-fill-color: #64748b !important;
+    margin: 0 !important;
 }
 div[data-testid="stElementContainer"]:has(.md-side-signout-anchor) + div[data-testid="stElementContainer"] button:hover {
     background: #fef2f2 !important;
     border-color: #fecaca !important;
     color: #b91c1c !important;
+    -webkit-text-fill-color: #b91c1c !important;
+}
+div[data-testid="stElementContainer"]:has(.md-side-signout-anchor) + div[data-testid="stElementContainer"] button:hover p,
+div[data-testid="stElementContainer"]:has(.md-side-signout-anchor) + div[data-testid="stElementContainer"] button:hover [data-testid="stIconMaterial"] {
+    color: #b91c1c !important;
+    -webkit-text-fill-color: #b91c1c !important;
 }
 
     /* Recent Chats Card Header Title */
@@ -11357,13 +11443,25 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     color: #64748b !important;
 }
 
-/* Footer Section Styling */
+/* Footer Section Styling — centered within the sidebar's visible content
+   area (not the parent stVerticalBlock, which extends 14px past the
+   sidebar's right edge per the earlier stSidebarUserContent fix). Width
+   capped to 220px + auto margins for true visual centering. */
 .md-sidebar-footer {
     text-align: center !important;
-    margin-top: 1rem !important;
-    margin-bottom: 1.45rem !important;
+    /* Match the language selector's exact width + position. The parent
+       stVerticalBlock starts at the sidebar's left padding (x=14) and is
+       270px wide — using `auto` margins centers within that 270px box,
+       which is shifted right of the actual sidebar center. Setting
+       margin-left: 0 flushes the footer to the parent's left edge (= the
+       sidebar's content-area left), and the 242px width matches the
+       language tile above so they align edge-to-edge. */
+    margin: 1rem auto 1.45rem 0 !important;
+    max-width: 242px !important;
+    width: 100% !important;
     font-family: 'Manrope', system-ui, sans-serif !important;
-    padding: 0 0.5rem !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
 }
 .md-sidebar-foot-links {
     font-size: 0.72rem !important;
@@ -11374,6 +11472,7 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     justify-content: center !important;
     align-items: center !important;
     gap: 8px !important;
+    text-align: center !important;
 }
 .md-sidebar-foot-links a {
     color: #64748b !important;
@@ -11392,14 +11491,27 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     font-size: 0.64rem !important;
     color: #94a3b8 !important;
     margin-top: 4px !important;
-    line-height: 1.2 !important;
-    white-space: nowrap !important;
+    line-height: 1.3 !important;
+    white-space: normal !important;
+    text-align: center !important;
+    word-wrap: break-word !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
     # Profile chip: avatar + name/email + "Synced & up to date" status.
+    # The logout icon is rendered as a TRUE CHILD of the chip via an
+    # inline anchor → ?signout=1 URL handler (NOT a Streamlit button).
+    # This makes positioning trivial (absolute relative to the chip itself)
+    # and matches the user's request: just an icon ON the chip, no separate
+    # row. Sign-out is the one URL-driven action where a session disconnect
+    # is acceptable (we WANT to clear the session).
     _sync_dot = '<span class="md-status-dot"></span>Synced &amp; up to date' if st.session_state.is_authenticated else '<span class="md-status-dot md-status-dot-off"></span>Guest mode'
+    _signout_html = (
+        '<a class="md-side-signout-inline" href="?signout=1" target="_self" title="Sign out" aria-label="Sign out">'
+        '<span class="material-symbols-rounded">logout</span>'
+        '</a>'
+    ) if st.session_state.is_authenticated else ''
     st.markdown(
         '<div class="md-side-profile md-side-profile-top">'
         '<div class="md-side-avatar">' + ui_escape(_profile_in) + '</div>'
@@ -11408,14 +11520,18 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
         '<div class="md-side-psub">' + ui_text(_profile_sub, 40) + '</div>'
         '<div class="md-side-status">' + _sync_dot + '</div>'
         '</div>'
+        + _signout_html +
         '</div>',
         unsafe_allow_html=True
     )
 
-    # Sign-out icon button (overlaid absolutely on top of profile card top-right)
+    # Keep the legacy hidden st.button as a fallback Python click target —
+    # it's now invisible (CSS hides it) but its handler still runs if any
+    # automated test or stale URL keeps triggering it. The visible affordance
+    # is the inline anchor above (?signout=1).
     if st.session_state.is_authenticated:
-        st.markdown('<div class="md-side-signout-anchor"></div>', unsafe_allow_html=True)
-        if st.button(" ", key="profile_logout", icon=":material/logout:"):
+        st.markdown('<div class="md-side-signout-anchor" style="display:none"></div>', unsafe_allow_html=True)
+        if st.button("Sign out", key="profile_logout", icon=":material/logout:"):
             for k in ["is_authenticated", "is_guest", "user_email_hash", "user_email_display", "patient_name", "patient_memory", "messages", "qcount", "feedback", "last_sources", "last_pdf_context", "last_image_context", "rx_reader_result", "rx_uploader_key"]:
                 if k in st.session_state:
                     if k in ("is_authenticated", "is_guest"):
@@ -11591,13 +11707,19 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
 [data-testid="stSidebar"] div[data-testid="stLayoutWrapper"]:has(.md-recent-card-native):not(:has(div[data-testid="stVerticalBlockBorderWrapper"] .md-recent-card-native)) {
     background: #ffffff !important;
     border: 1px solid #e7eef9 !important;
-    border-radius: 18px !important;
-    padding: 0.78rem 0.72rem 0.78rem !important;
-    margin: 0.55rem 1.2rem 0.72rem 0 !important;
-    width: calc(100% - 1.2rem) !important;
-    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.045) !important;
+    border-radius: 14px !important;
+    padding: 0.7rem 0.7rem 0.7rem 0.7rem !important;
+    /* Centered in the sidebar with symmetric breathing room inside the
+       sidebar's visible 270px width. Parent stVerticalBlock extends past
+       the sidebar's right edge (it's 270px wide but starts at the sidebar's
+       13.6px left padding), so we use a fixed max-width that fits cleanly
+       INSIDE the sidebar's visible bounds, then auto-margin centers it. */
+    margin: 0.55rem auto 0.6rem auto !important;
+    width: 100% !important;
+    max-width: 230px !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04) !important;
     box-sizing: border-box !important;
-    overflow: hidden !important;
+    overflow: visible !important;
 }
 [data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-native) [data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor),
 [data-testid="stSidebar"] div[data-testid="stLayoutWrapper"]:has(.md-recent-card-native):not(:has(div[data-testid="stVerticalBlockBorderWrapper"] .md-recent-card-native)) [data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) {
