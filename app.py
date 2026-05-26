@@ -1971,8 +1971,22 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
 }
 .md-conv-row:first-of-type { border-top: none; }
 .md-conv-bubble { width: 26px; height: 26px; border-radius: 8px; background: var(--md-soft-blue); color: #1d4ed8; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; flex-shrink: 0; }
-.md-conv-title { flex: 1; color: var(--md-text-1); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.md-conv-time { font-size: 0.68rem; color: var(--md-text-3); flex-shrink: 0; }
+.md-conv-title { flex: 1; min-width: 0; color: var(--md-text-1); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.md-conv-time { font-size: 0.68rem; color: var(--md-text-3); flex-shrink: 0; margin-left: 0.5rem; white-space: nowrap; }
+a.md-conv-row-link, a.md-conv-row-link:visited {
+    text-decoration: none !important;
+    color: inherit !important;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+    border-radius: 10px;
+    padding: 0.5rem 0.5rem;
+    margin: 0 -0.5rem;
+    border-top: 1px solid var(--md-border);
+}
+a.md-conv-row-link:first-of-type { border-top: none; }
+a.md-conv-row-link:hover { background: var(--md-soft-blue); }
+a.md-conv-row-link:hover .md-conv-title { color: var(--md-brand-2); }
+a.md-conv-row-link:hover .md-conv-bubble { background: var(--md-brand-2); color: #ffffff; }
 
 /* Health Tip card */
 .md-tip {
@@ -13389,37 +13403,52 @@ if st.session_state.mode == "chat":
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 # Recent Conversations (real, from Firestore)
-                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="?mode=history">See all</a></div>'
+                # Use st.html (not st.markdown) so anchor tags survive verbatim —
+                # the markdown renderer unwraps <a> when it wraps block-level
+                # children and force-injects target="_blank", which spawns a new
+                # Streamlit session (= logged-out UX).
+                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="?mode=history" target="_top">See all</a></div>'
                 if st.session_state.is_authenticated and st.session_state.user_email_hash:
                     _recent = list_conversations(st.session_state.user_email_hash, limit=4)
                 else:
                     _recent = []  # Real conversations only: no mock entries.
                 if _recent:
                     for _r in _recent:
-                        _rt = (_r.get("title") or "Chat")[:32]
+                        _rt = (_r.get("title") or "Chat")[:24]
+                        _rid = str(_r.get("id") or "").strip()
                         _ru = _r.get("last_updated")
                         try:
                             if _ru and hasattr(_ru, "strftime"):
-                                _delta = datetime.utcnow() - _ru.replace(tzinfo=None) if _ru.tzinfo else datetime.utcnow() - _ru
+                                _delta = datetime.utcnow() - (_ru.replace(tzinfo=None) if _ru.tzinfo else _ru)
+                                _mins = int(_delta.total_seconds() // 60)
                                 _hours = int(_delta.total_seconds() // 3600)
                                 if _hours < 1:
-                                    _ago = str(int(_delta.total_seconds() // 60)) + "m ago"
+                                    _ago = str(max(1, _mins)) + "m ago"
                                 elif _hours < 24:
                                     _ago = str(_hours) + "h ago"
-                                else:
+                                elif _hours < 168:
                                     _ago = str(_hours // 24) + "d ago"
+                                else:
+                                    _ago = str(_hours // 168) + "w ago"
                             else:
                                 _ago = ""
                         except Exception:
                             _ago = ""
-                        recent_html += '<div class="md-conv-row"><div class="md-conv-bubble material-symbols-rounded">chat_bubble</div><div class="md-conv-title">' + ui_text(_rt, 40) + '</div><div class="md-conv-time">' + ui_text(_ago, 20) + '</div></div>'
+                        _href = ("?conv=" + html.escape(_rid, quote=True)) if _rid else "#"
+                        recent_html += (
+                            '<a class="md-conv-row md-conv-row-link" href="' + _href + '" target="_top">'
+                            '<div class="md-conv-bubble material-symbols-rounded">chat_bubble</div>'
+                            '<div class="md-conv-title">' + ui_text(_rt, 32) + '</div>'
+                            '<div class="md-conv-time">' + ui_text(_ago, 12) + '</div>'
+                            '</a>'
+                        )
                 else:
                     if st.session_state.is_authenticated:
                         recent_html += '<div class="md-conv-row md-conv-empty">No recent conversations yet. Start a chat to see it here.</div>'
                     else:
                         recent_html += '<div class="md-conv-row md-conv-empty">Sign in to save and revisit your conversations.</div>'
                 recent_html += '</div>'
-                st.markdown(recent_html, unsafe_allow_html=True)
+                st.html(recent_html)
                 st.markdown('<div class="md-view-all-wrap">', unsafe_allow_html=True)
                 if st.button("View all chats →", key="view_all_recent", use_container_width=True):
                     st.session_state.mode = "history"
