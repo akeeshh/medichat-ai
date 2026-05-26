@@ -2011,7 +2011,7 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
     border-right: 1px solid var(--md-border) !important;
 }
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: 0.15rem !important; }
-[data-testid="stSidebar"] [data-testid="element-container"] { margin-bottom: 0 !important; }
+[data-testid="stSidebar"] [data-testid="stElementContainer"] { margin-bottom: 0 !important; }
 [data-testid="stSidebar"] hr { margin: 0.6rem 0 !important; }
 [data-testid="stSidebar"] .stButton { margin: 0 !important; }
 [data-testid="stSidebar"] .stButton > button {
@@ -4016,7 +4016,7 @@ html, body, [class*="css"], [data-testid="stAppViewContainer"], .stApp, .stMarkd
 [data-testid="stAppViewContainer"] .main {
     padding-top: 0 !important;
 }
-[data-testid="stVerticalBlock"] > [data-testid="element-container"]:first-child {
+[data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:first-child {
     margin-top: 0 !important;
 }
 
@@ -6144,7 +6144,7 @@ st.markdown("""
     [data-testid="stSidebar"] .md-conv-row-active .md-conv-title {
         font-weight: 550 !important;
     }
-    [data-testid="stSidebar"] .md-conv-time {
+    [data-testid="stSidebar"] .md-conv-row .md-conv-time {
         flex-shrink: 0 !important;
         font-size: 0.64rem !important;
         font-weight: 600 !important;
@@ -10902,13 +10902,13 @@ with st.sidebar:
     st.markdown("""
 <style>
 /* Hide empty anchor containers to reclaim space */
-div[data-testid="element-container"]:has(.md-recent-card-inside),
-div[data-testid="element-container"]:has(.md-recent-seeall-anchor),
-div[data-testid="element-container"]:has(.md-new-chat-anchor),
-div[data-testid="element-container"]:has(.md-conv-select-anchor),
-div[data-testid="element-container"]:has(.md-conv-del-anchor),
-div[data-testid="element-container"]:has(.md-side-signout-anchor),
-div[data-testid="element-container"]:has(.md-lang-selector-anchor) {
+div[data-testid="stElementContainer"]:has(.md-recent-card-inside),
+div[data-testid="stElementContainer"]:has(.md-recent-seeall-anchor),
+div[data-testid="stElementContainer"]:has(.md-new-chat-anchor),
+div[data-testid="stElementContainer"]:has(.md-conv-select-anchor),
+div[data-testid="stElementContainer"]:has(.md-conv-del-anchor),
+div[data-testid="stElementContainer"]:has(.md-side-signout-anchor),
+div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) {
     display: none !important;
 }
 
@@ -10930,7 +10930,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
 }
 
 /* Sign out button */
-div[data-testid="element-container"]:has(.md-side-signout-anchor) + div[data-testid="element-container"] button {
+div[data-testid="stElementContainer"]:has(.md-side-signout-anchor) + div[data-testid="stElementContainer"] button {
     position: absolute !important;
     top: -55px !important; /* Pull up to align with the top profile card */
     right: 12px !important;
@@ -10949,32 +10949,42 @@ div[data-testid="element-container"]:has(.md-side-signout-anchor) + div[data-tes
     z-index: 10 !important;
     box-shadow: none !important;
 }
-div[data-testid="element-container"]:has(.md-side-signout-anchor) + div[data-testid="element-container"] button:hover {
+div[data-testid="stElementContainer"]:has(.md-side-signout-anchor) + div[data-testid="stElementContainer"] button:hover {
     background: #fef2f2 !important;
     border-color: #fecaca !important;
     color: #b91c1c !important;
 }
 
-/* Recent Chats Card Header Title */
-.md-recent-head {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    margin-bottom: 0.5rem !important;
-    padding: 0 2px !important;
-}
-.md-recent-title {
-    font-size: 0.88rem !important;
-    font-weight: 700 !important;
-    color: #0f172a !important;
-    font-family: 'Manrope', system-ui, sans-serif !important;
-}
+    /* Recent Chats Card Header Title */
+    [data-testid="stSidebar"] .md-recent-card.md-recent-card-compact {
+        background: #ffffff !important;
+        border: 1px solid #e7eef9 !important;
+        border-radius: 18px !important;
+        padding: 0.82rem 0.72rem 0.78rem !important;
+        margin: 0.55rem 1.6rem 0.7rem 0 !important;
+        width: calc(100% - 1.6rem) !important;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.045) !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+    .md-recent-head {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        margin-bottom: 0.6rem !important;
+        padding: 0 2px !important;
+    }
+    .md-recent-title {
+        font-size: 0.92rem !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        font-family: 'Manrope', system-ui, sans-serif !important;
+        line-height: 1.1 !important;
+    }
 
 /* See all button in card header */
-div[data-testid="element-container"]:has(.md-recent-seeall-anchor) + div[data-testid="element-container"] button {
-    position: absolute !important;
-    top: 14px !important; /* Align with Recent Chats header title */
-    right: 14px !important;
+div[data-testid="stElementContainer"]:has(.md-recent-seeall-anchor) + div[data-testid="stElementContainer"] button {
+    position: static !important;
     background: transparent !important;
     border: none !important;
     color: #64748b !important;
@@ -10985,17 +10995,29 @@ div[data-testid="element-container"]:has(.md-recent-seeall-anchor) + div[data-te
     box-shadow: none !important;
     min-height: unset !important;
     height: auto !important;
-    width: auto !important;
+    width: 100% !important;
     z-index: 5 !important;
-    display: inline-block !important;
-}
-div[data-testid="element-container"]:has(.md-recent-seeall-anchor) + div[data-testid="element-container"] button:hover {
-    color: #4f46e5 !important;
-    background: transparent !important;
-}
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+		}
+	div[data-testid="stElementContainer"]:has(.md-recent-seeall-anchor) + div[data-testid="stElementContainer"] button:hover {
+	    color: #4f46e5 !important;
+	    background: transparent !important;
+	}
+    [data-testid="stSidebar"] .md-recent-card-compact .md-recent-seeall {
+        color: #94a3b8 !important;
+        font-size: 0.76rem !important;
+        font-weight: 700 !important;
+        text-decoration: none !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-recent-seeall:hover {
+        color: #4f46e5 !important;
+        text-decoration: none !important;
+    }
 
-/* + New chat button inside the card */
-div[data-testid="element-container"]:has(.md-new-chat-anchor) + div[data-testid="element-container"] button {
+	/* + New chat button inside the card */
+div[data-testid="stElementContainer"]:has(.md-new-chat-anchor) + div[data-testid="stElementContainer"] button {
     box-sizing: border-box !important;
     width: 100% !important;
     min-height: 38px !important;
@@ -11015,24 +11037,51 @@ div[data-testid="element-container"]:has(.md-new-chat-anchor) + div[data-testid=
     gap: 0.35rem !important;
     transition: background 0.15s ease, color 0.15s ease !important;
 }
-div[data-testid="element-container"]:has(.md-new-chat-anchor) + div[data-testid="element-container"] button:hover {
+div[data-testid="stElementContainer"]:has(.md-new-chat-anchor) + div[data-testid="stElementContainer"] button:hover {
     background: #e0e7ff !important;
     color: #3730a3 !important;
 }
-div[data-testid="element-container"]:has(.md-new-chat-anchor) + div[data-testid="element-container"] button p {
+div[data-testid="stElementContainer"]:has(.md-new-chat-anchor) + div[data-testid="stElementContainer"] button p {
     font-size: 0.76rem !important;
     color: #4f46e5 !important;
     margin: 0 !important;
     font-weight: 600 !important;
     line-height: 1 !important;
 }
-div[data-testid="element-container"]:has(.md-new-chat-anchor) + div[data-testid="element-container"] button [data-testid="stIconMaterial"] {
-    font-size: 0.95rem !important;
-    color: #4f46e5 !important;
-    -webkit-text-fill-color: #4f46e5 !important;
-}
+	div[data-testid="stElementContainer"]:has(.md-new-chat-anchor) + div[data-testid="stElementContainer"] button [data-testid="stIconMaterial"] {
+	    font-size: 0.95rem !important;
+	    color: #4f46e5 !important;
+	    -webkit-text-fill-color: #4f46e5 !important;
+	}
+    [data-testid="stSidebar"] .md-recent-card-compact .md-new-chat-pill {
+        height: 40px !important;
+        margin: 0 0 0.55rem !important;
+        border: none !important;
+        border-radius: 11px !important;
+        background: linear-gradient(180deg, #f5f3ff 0%, #eef2ff 100%) !important;
+        color: #4f46e5 !important;
+        font-size: 0.88rem !important;
+        font-weight: 800 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.42rem !important;
+        text-decoration: none !important;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.7) !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-new-chat-pill:hover {
+        color: #3730a3 !important;
+        background: #e8edff !important;
+        text-decoration: none !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-new-chat-pill .material-symbols-rounded {
+        color: inherit !important;
+        -webkit-text-fill-color: currentColor !important;
+        font-size: 1.12rem !important;
+        font-weight: 800 !important;
+    }
 
-/* Flex layout columns for conversation rows */
+	/* Flex layout columns for conversation rows */
 div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) {
     display: flex !important;
     flex-direction: row !important;
@@ -11051,7 +11100,7 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover {
     background: #f8fafc !important;
 }
 div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor.md-active) {
-    background: #eef2ff !important;
+    background: transparent !important;
 }
 
 /* Prevent Streamlit columns from breaking flex layout */
@@ -11062,7 +11111,7 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) div[data-testid
 }
 
 /* Select row button */
-div[data-testid="element-container"]:has(.md-conv-select-anchor) + div[data-testid="element-container"] button {
+div[data-testid="stElementContainer"]:has(.md-conv-select-anchor) + div[data-testid="stElementContainer"] button {
     background: transparent !important;
     border: none !important;
     border-radius: 0px !important;
@@ -11081,10 +11130,10 @@ div[data-testid="element-container"]:has(.md-conv-select-anchor) + div[data-test
     gap: 0.35rem !important;
     padding-right: 48px !important; /* spacing for time/delete absolute controls */
 }
-div[data-testid="element-container"]:has(.md-conv-select-anchor) + div[data-testid="element-container"] button:hover {
+div[data-testid="stElementContainer"]:has(.md-conv-select-anchor) + div[data-testid="stElementContainer"] button:hover {
     background: transparent !important;
 }
-div[data-testid="element-container"]:has(.md-conv-select-anchor) + div[data-testid="element-container"] button p {
+div[data-testid="stElementContainer"]:has(.md-conv-select-anchor) + div[data-testid="stElementContainer"] button p {
     margin: 0 !important;
     font-size: 0.78rem !important;
     line-height: 1.2 !important;
@@ -11094,18 +11143,18 @@ div[data-testid="element-container"]:has(.md-conv-select-anchor) + div[data-test
     color: #475569 !important;
     font-weight: 550 !important;
 }
-div[data-testid="element-container"]:has(.md-conv-select-anchor.md-active) + div[data-testid="element-container"] button p {
+div[data-testid="stElementContainer"]:has(.md-conv-select-anchor.md-active) + div[data-testid="stElementContainer"] button p {
     color: #4f46e5 !important;
     font-weight: 600 !important;
 }
-div[data-testid="element-container"]:has(.md-conv-select-anchor) + div[data-testid="element-container"] button [data-testid="stIconMaterial"] {
+div[data-testid="stElementContainer"]:has(.md-conv-select-anchor) + div[data-testid="stElementContainer"] button [data-testid="stIconMaterial"] {
     font-size: 0.95rem !important;
-    color: #94a3b8 !important;
-    -webkit-text-fill-color: #94a3b8 !important;
+    color: #6d5dfc !important;
+    -webkit-text-fill-color: #6d5dfc !important;
 }
-div[data-testid="element-container"]:has(.md-conv-select-anchor.md-active) + div[data-testid="element-container"] button [data-testid="stIconMaterial"] {
-    color: #4f46e5 !important;
-    -webkit-text-fill-color: #4f46e5 !important;
+div[data-testid="stElementContainer"]:has(.md-conv-select-anchor.md-active) + div[data-testid="stElementContainer"] button [data-testid="stIconMaterial"] {
+    color: #6d5dfc !important;
+    -webkit-text-fill-color: #6d5dfc !important;
 }
 
 /* Relative Timestamp & Delete overlay container */
@@ -11135,7 +11184,7 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor.md-active) .md-c
 }
 
 /* Delete Button Overlays */
-div[data-testid="element-container"]:has(.md-conv-del-anchor) + div[data-testid="element-container"] button {
+div[data-testid="stElementContainer"]:has(.md-conv-del-anchor) + div[data-testid="stElementContainer"] button {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease !important;
@@ -11160,7 +11209,7 @@ div[data-testid="element-container"]:has(.md-conv-del-anchor) + div[data-testid=
     box-shadow: none !important;
     border-radius: 50% !important;
 }
-div[data-testid="element-container"]:has(.md-conv-del-anchor) + div[data-testid="element-container"] button:hover {
+div[data-testid="stElementContainer"]:has(.md-conv-del-anchor) + div[data-testid="stElementContainer"] button:hover {
     background: #fef2f2 !important;
     color: #b91c1c !important;
 }
@@ -11169,13 +11218,122 @@ div[data-testid="element-container"]:has(.md-conv-del-anchor) + div[data-testid=
 div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover .md-conv-time {
     opacity: 0 !important;
 }
-div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover div[data-testid="element-container"]:has(.md-conv-del-anchor) + div[data-testid="element-container"] button {
-    opacity: 1 !important;
-    pointer-events: auto !important;
-}
+	div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover div[data-testid="stElementContainer"]:has(.md-conv-del-anchor) + div[data-testid="stElementContainer"] button {
+	    opacity: 1 !important;
+	    pointer-events: auto !important;
+	}
+    [data-testid="stSidebar"] .md-recent-card-compact .md-conv-list {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.08rem !important;
+        margin: 0 !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-conv-row-wrap {
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        min-width: 0 !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-conv-row {
+        display: grid !important;
+        grid-template-columns: 18px minmax(0, 1fr) 38px !important;
+        align-items: center !important;
+        column-gap: 0.44rem !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 34px !important;
+        padding: 0.36rem 0.52rem !important;
+        padding-right: 0.52rem !important;
+        border-radius: 10px !important;
+        background: transparent !important;
+        color: #334155 !important;
+        text-decoration: none !important;
+        box-sizing: border-box !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-conv-row:hover {
+        background: #f8fafc !important;
+        text-decoration: none !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-conv-row-active {
+        background: transparent !important;
+        color: #334155 !important;
+        font-weight: 700 !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-conv-icon {
+        width: 18px !important;
+        min-width: 18px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        color: #6d5dfc !important;
+        -webkit-text-fill-color: #6d5dfc !important;
+        font-size: 1rem !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-conv-row-active .md-conv-icon {
+        color: #6d5dfc !important;
+        -webkit-text-fill-color: #6d5dfc !important;
+        background: rgba(109, 93, 252, 0.12) !important;
+        border-radius: 6px !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-conv-title {
+        min-width: 0 !important;
+        max-width: 100% !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        font-size: 0.78rem !important;
+        line-height: 1.2 !important;
+        font-weight: 700 !important;
+        color: inherit !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-conv-time {
+        position: static !important;
+        transform: none !important;
+        font-size: 0.74rem !important;
+        font-weight: 700 !important;
+        color: #94a3b8 !important;
+        pointer-events: none !important;
+        width: 38px !important;
+        text-align: right !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        justify-self: end !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-conv-del {
+        position: absolute !important;
+        right: 0.42rem !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        width: 22px !important;
+        height: 22px !important;
+        border-radius: 999px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        color: #94a3b8 !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        text-decoration: none !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        z-index: 2 !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-conv-row-wrap:hover .md-conv-del {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-conv-row-wrap:hover .md-conv-time {
+        opacity: 0 !important;
+    }
+    [data-testid="stSidebar"] .md-recent-card-compact .md-conv-empty {
+        color: #94a3b8 !important;
+        font-size: 0.76rem !important;
+        line-height: 1.35 !important;
+        padding: 0.35rem 0.45rem 0.15rem !important;
+    }
 
-/* Custom styled Selectbox (Language Selector) */
-div[data-testid="element-container"]:has(.md-lang-selector-anchor) + div[data-testid="element-container"] [data-testid="stSelectbox"] [data-baseweb="select"] {
+	/* Custom styled Selectbox (Language Selector) */
+div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-testid="stElementContainer"] [data-testid="stSelectbox"] [data-baseweb="select"] {
     border: 1px solid #e2e8f0 !important;
     border-radius: 12px !important;
     background-color: #ffffff !important;
@@ -11186,24 +11344,24 @@ div[data-testid="element-container"]:has(.md-lang-selector-anchor) + div[data-te
     padding-left: 24px !important;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
 }
-div[data-testid="element-container"]:has(.md-lang-selector-anchor) + div[data-testid="element-container"] [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-testid="stElementContainer"] [data-testid="stSelectbox"] [data-baseweb="select"] > div {
     background-color: transparent !important;
     border: none !important;
 }
-div[data-testid="element-container"]:has(.md-lang-selector-anchor) + div[data-testid="element-container"] [data-testid="stSelectbox"] input {
+div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-testid="stElementContainer"] [data-testid="stSelectbox"] input {
     color: #334155 !important;
     font-weight: 550 !important;
     font-size: 0.8rem !important;
 }
-div[data-testid="element-container"]:has(.md-lang-selector-anchor) + div[data-testid="element-container"] [data-testid="stSelectbox"] [data-testid="stSelectbox-Svg"] {
+div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-testid="stElementContainer"] [data-testid="stSelectbox"] [data-testid="stSelectbox-Svg"] {
     color: #64748b !important;
 }
 
 /* Footer Section Styling */
 .md-sidebar-footer {
     text-align: center !important;
-    margin-top: 1.8rem !important;
-    margin-bottom: 0.4rem !important;
+    margin-top: 1rem !important;
+    margin-bottom: 1.45rem !important;
     font-family: 'Manrope', system-ui, sans-serif !important;
     padding: 0 0.5rem !important;
 }
@@ -11234,6 +11392,8 @@ div[data-testid="element-container"]:has(.md-lang-selector-anchor) + div[data-te
     font-size: 0.64rem !important;
     color: #94a3b8 !important;
     margin-top: 4px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -11277,38 +11437,39 @@ div[data-testid="element-container"]:has(.md-lang-selector-anchor) + div[data-te
             st.session_state.current_conversation_id = ""
             st.rerun()
 
-    # Spacing div to prevent clipping/overlapping of Recent Chats card header under profile chip
-    st.markdown('<div style="height: 14px;"></div>', unsafe_allow_html=True)
-
     if st.session_state.is_authenticated:
-        # == Recent Chats card (wrapped in container so grandparent :has targets it) ==
-        _convs = list_conversations(st.session_state.user_email_hash, limit=3)
+        # == Recent Chats card ==
+        # Use native Streamlit buttons for every action so the user stays in the
+        # same live session. Raw ?query anchors can create a fresh websocket
+        # session in Streamlit and make the app appear to log the user out.
+        _convs = list_conversations(st.session_state.user_email_hash, limit=4)
         _active_id = st.session_state.current_conversation_id
 
         with st.container(border=True):
-            # Class markup to identify this st.container wrapper block
-            st.markdown('<div class="md-recent-card-inside"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="md-recent-card-native"></div>', unsafe_allow_html=True)
+            _recent_head_l, _recent_head_r = st.columns([0.62, 0.38], gap="small")
+            with _recent_head_l:
+                st.markdown('<div class="md-recent-title">Recent Chats</div>', unsafe_allow_html=True)
+            with _recent_head_r:
+                st.markdown('<div class="md-recent-seeall-anchor"></div>', unsafe_allow_html=True)
+                if st.button("See all", key="recent_seeall_btn", use_container_width=True):
+                    st.session_state.mode = "history"
+                    st.session_state.nav_clicked = True
+                    st.rerun()
 
-            # Card header title
-            st.markdown('<div class="md-recent-head"><div class="md-recent-title">Recent Chats</div></div>', unsafe_allow_html=True)
-            
-            # Card header "See all" button
-            st.markdown('<div class="md-recent-seeall-anchor"></div>', unsafe_allow_html=True)
-            if st.button("See all", key="recent_see_all_btn"):
-                st.session_state.mode = "history"
-                st.rerun()
-
-            # "+ New chat" button inside card
             st.markdown('<div class="md-new-chat-anchor"></div>', unsafe_allow_html=True)
-            if st.button("＋ New chat", key="new_chat_btn", use_container_width=True):
+            if st.button("New chat", key="new_chat_btn", icon=":material/add:", use_container_width=True):
                 start_new_chat_session()
+                st.session_state.nav_clicked = True
                 st.rerun()
 
-            # Conversation rows
+            st.markdown('<div class="md-conv-list-native"></div>', unsafe_allow_html=True)
             if _convs:
                 for _c in _convs:
-                    _is_active = _c["id"] == _active_id
-                    _title = (_c.get("title") or "Chat")[:40]
+                    _conv_raw_id = str(_c["id"])
+                    _conv_key = hashlib.sha1(_conv_raw_id.encode("utf-8")).hexdigest()[:12]
+                    _is_active = _conv_raw_id == _active_id
+                    _title = _c.get("title") or "New chat"
                     _lu = _c.get("last_updated")
                     _ago = ""
                     try:
@@ -11325,33 +11486,38 @@ div[data-testid="element-container"]:has(.md-lang-selector-anchor) + div[data-te
                                 _ago = str(_h // 168) + "w ago"
                     except Exception:
                         _ago = ""
-                    
-                    _btn_label = _title + ("  " + _ago if _ago else "")
-                    _conv_key_prefix = "conv_active_" if _is_active else "conv_select_"
-                    
-                    # Conversation row select/delete column layout
-                    _row_col1, _row_col2 = st.columns([0.75, 0.25])
-                    with _row_col1:
-                        st.markdown(f'<div class="md-conv-select-anchor{" md-active" if _is_active else ""}"></div>', unsafe_allow_html=True)
-                        if st.button(_title, icon=":material/description:", key=_conv_key_prefix + _c["id"], use_container_width=True):
-                            _conv_obj = load_conversation(st.session_state.user_email_hash, _c["id"])
+
+                    _row_cols = st.columns([0.52, 0.40, 0.08], gap=None)
+                    with _row_cols[0]:
+                        _active_cls = "md-conv-select-anchor md-active" if _is_active else "md-conv-select-anchor"
+                        st.markdown('<div class="' + _active_cls + '"></div>', unsafe_allow_html=True)
+                        if st.button(ui_text(_title, 14), key="conv_select_" + _conv_key, icon=":material/article:", use_container_width=True):
+                            _conv_obj = load_conversation(st.session_state.user_email_hash, _conv_raw_id)
                             if _conv_obj is not None:
-                                st.session_state.current_conversation_id = _c["id"]
+                                st.session_state.current_conversation_id = _conv_raw_id
                                 st.session_state.messages = _conv_obj.get("messages", []) or []
                                 st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
                                 st.session_state.feedback = {}
                                 st.session_state.last_sources = []
                                 st.session_state.emergency_detected = False
                                 st.session_state.mode = "chat"
-                            st.rerun()
-                    with _row_col2:
-                        st.markdown(f'<div class="md-conv-time-wrap"><span class="md-conv-time">{_ago}</span><div class="md-conv-del-anchor"></div></div>', unsafe_allow_html=True)
-                        if st.button("✕", key="conv_del_" + _c["id"], use_container_width=True):
-                            delete_conversation(st.session_state.user_email_hash, _c["id"])
-                            if st.session_state.get("current_conversation_id") == _c["id"]:
+                                st.rerun()
+                    with _row_cols[1]:
+                        st.markdown('<div class="md-conv-time-wrap"><span class="md-conv-time">' + ui_text(_ago, 8) + '</span></div>', unsafe_allow_html=True)
+                    with _row_cols[2]:
+                        st.markdown('<div class="md-conv-del-anchor"></div>', unsafe_allow_html=True)
+                        if st.button(" ", key="conv_delete_" + _conv_key, icon=":material/close:"):
+                            delete_conversation(st.session_state.user_email_hash, _conv_raw_id)
+                            if st.session_state.get("current_conversation_id") == _conv_raw_id:
                                 st.session_state.current_conversation_id = ""
                                 st.session_state.messages = []
+                            try:
+                                st.query_params.clear()
+                            except Exception:
+                                pass
                             st.rerun()
+            else:
+                st.markdown('<div class="md-conv-empty">No saved chats yet. Start a new chat to begin.</div>', unsafe_allow_html=True)
 
     elif st.session_state.is_guest:
         pass
@@ -11415,6 +11581,250 @@ div[data-testid="element-container"]:has(.md-lang-selector-anchor) + div[data-te
         '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>'
         '</div>',
         unsafe_allow_html=True
+    )
+    st.markdown(
+        """
+<style>
+/* Final Recent Chats native-widget polish. These selectors intentionally target
+   only the session-safe Streamlit buttons used by Recent Chats. */
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-native),
+[data-testid="stSidebar"] div[data-testid="stLayoutWrapper"]:has(.md-recent-card-native):not(:has(div[data-testid="stVerticalBlockBorderWrapper"] .md-recent-card-native)) {
+    background: #ffffff !important;
+    border: 1px solid #e7eef9 !important;
+    border-radius: 18px !important;
+    padding: 0.78rem 0.72rem 0.78rem !important;
+    margin: 0.55rem 1.2rem 0.72rem 0 !important;
+    width: calc(100% - 1.2rem) !important;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.045) !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+}
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-native) [data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor),
+[data-testid="stSidebar"] div[data-testid="stLayoutWrapper"]:has(.md-recent-card-native):not(:has(div[data-testid="stVerticalBlockBorderWrapper"] .md-recent-card-native)) [data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 70px 10px !important;
+    column-gap: 2px !important;
+}
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-native) [data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) > div[data-testid="stColumn"],
+[data-testid="stSidebar"] div[data-testid="stLayoutWrapper"]:has(.md-recent-card-native):not(:has(div[data-testid="stVerticalBlockBorderWrapper"] .md-recent-card-native)) [data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) > div[data-testid="stColumn"] {
+    width: auto !important;
+    min-width: 0 !important;
+}
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-native) [data-testid="stVerticalBlock"],
+[data-testid="stSidebar"] div[data-testid="stLayoutWrapper"]:has(.md-recent-card-native):not(:has(div[data-testid="stVerticalBlockBorderWrapper"] .md-recent-card-native)) [data-testid="stVerticalBlock"] {
+    gap: 0.12rem !important;
+}
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-native) [data-testid="stHorizontalBlock"]:has(.md-recent-seeall-anchor),
+[data-testid="stSidebar"] div[data-testid="stLayoutWrapper"]:has(.md-recent-card-native):not(:has(div[data-testid="stVerticalBlockBorderWrapper"] .md-recent-card-native)) [data-testid="stHorizontalBlock"]:has(.md-recent-seeall-anchor) {
+    display: flex !important;
+    align-items: center !important;
+    margin: 0 0 0.38rem !important;
+    padding: 0 0.06rem !important;
+}
+[data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-native) .md-recent-title,
+[data-testid="stSidebar"] div[data-testid="stLayoutWrapper"]:has(.md-recent-card-native):not(:has(div[data-testid="stVerticalBlockBorderWrapper"] .md-recent-card-native)) .md-recent-title {
+    font-size: 0.92rem !important;
+    font-weight: 800 !important;
+    line-height: 1.1 !important;
+    color: #0f172a !important;
+    letter-spacing: -0.01em !important;
+}
+[data-testid="stSidebar"] div.st-key-recent_seeall_btn button[data-testid="stBaseButton-secondary"] {
+    height: 18px !important;
+    min-height: 18px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: #94a3b8 !important;
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    text-align: right !important;
+}
+[data-testid="stSidebar"] div.st-key-recent_seeall_btn button[data-testid="stBaseButton-secondary"] p {
+    color: #94a3b8 !important;
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+}
+[data-testid="stSidebar"] div.st-key-recent_seeall_btn button[data-testid="stBaseButton-secondary"]:hover p {
+    color: #4f46e5 !important;
+}
+[data-testid="stSidebar"] div.st-key-new_chat_btn button[data-testid="stBaseButton-secondary"][kind="secondary"]:has([data-testid="stIconMaterial"]) {
+    width: 100% !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    margin: 0.08rem 0 0.5rem !important;
+    padding: 0 0.82rem !important;
+    border-radius: 11px !important;
+    border: 0 !important;
+    background: linear-gradient(180deg, #f5f3ff 0%, #eef2ff 100%) !important;
+    color: #4f46e5 !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.72) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.42rem !important;
+    text-align: center !important;
+}
+[data-testid="stSidebar"] div.st-key-new_chat_btn button[data-testid="stBaseButton-secondary"][kind="secondary"]:has([data-testid="stIconMaterial"]) p,
+[data-testid="stSidebar"] div.st-key-new_chat_btn button[data-testid="stBaseButton-secondary"][kind="secondary"]:has([data-testid="stIconMaterial"]) [data-testid="stIconMaterial"] {
+    color: #4f46e5 !important;
+    -webkit-text-fill-color: #4f46e5 !important;
+    font-weight: 800 !important;
+}
+[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) {
+    min-height: 32px !important;
+    margin: 0.03rem 0 !important;
+    padding: 0.08rem 0.08rem !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    display: flex !important;
+    align-items: center !important;
+    transition: background 0.15s ease !important;
+}
+[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover {
+    background: #f8fafc !important;
+}
+[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) [data-testid="stColumn"] {
+    padding: 0 !important;
+    min-width: 0 !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-conv_select_"] button[data-testid="stBaseButton-secondary"][kind="secondary"]:has([data-testid="stIconMaterial"]) {
+    width: 100% !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 0.16rem !important;
+    margin: 0 !important;
+    border-radius: 8px !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #475569 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.36rem !important;
+    text-align: left !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+[data-testid="stSidebar"] div[data-testid="stElementContainer"]:has(.md-conv-select-anchor) + div[data-testid="stElementContainer"] button {
+    padding-right: 0.14rem !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-conv_select_"] button[data-testid="stBaseButton-secondary"][kind="secondary"]:has([data-testid="stIconMaterial"]) [data-testid="stIconMaterial"] {
+    width: 18px !important;
+    min-width: 18px !important;
+    height: 18px !important;
+    border-radius: 6px !important;
+    background: rgba(109, 93, 252, 0.12) !important;
+    color: #6d5dfc !important;
+    -webkit-text-fill-color: #6d5dfc !important;
+    font-size: 0.92rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-conv_select_"] button[data-testid="stBaseButton-secondary"][kind="secondary"]:has([data-testid="stIconMaterial"]) p {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    color: #475569 !important;
+    font-size: 0.76rem !important;
+    font-weight: 800 !important;
+    line-height: 1.15 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    flex: 1 1 auto !important;
+}
+[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor.md-active) div[class*="st-key-conv_select_"] button p {
+    color: #4f46e5 !important;
+}
+[data-testid="stSidebar"] .md-conv-time-wrap {
+    position: static !important;
+    min-height: 28px !important;
+    height: 28px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    min-width: 70px !important;
+    width: 70px !important;
+    padding-right: 0 !important;
+}
+[data-testid="stSidebar"] .md-conv-time {
+    position: static !important;
+    transform: none !important;
+    color: #334155 !important;
+    font-size: 0.74rem !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    text-align: right !important;
+    pointer-events: none !important;
+    opacity: 1 !important;
+    width: 70px !important;
+}
+[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor) .md-conv-time,
+[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover .md-conv-time {
+    opacity: 1 !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-conv_delete_"] button[data-testid="stBaseButton-secondary"][kind="secondary"]:has([data-testid="stIconMaterial"]) {
+    position: static !important;
+    right: auto !important;
+    top: auto !important;
+    transform: none !important;
+    width: 10px !important;
+    min-width: 10px !important;
+    height: 10px !important;
+    min-height: 10px !important;
+    padding: 0 !important;
+    margin: 6px 0 0 0 !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #cbd5e1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    opacity: 0 !important;
+}
+[data-testid="stSidebar"] div[data-testid="stElementContainer"]:has(.md-conv-del-anchor) + div[data-testid="stElementContainer"] button {
+    position: static !important;
+    right: auto !important;
+    top: auto !important;
+    transform: none !important;
+    z-index: auto !important;
+    width: 10px !important;
+    min-width: 10px !important;
+    height: 10px !important;
+    min-height: 10px !important;
+    padding: 0 !important;
+    margin: 6px 0 0 auto !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover .md-conv-time {
+    opacity: 1 !important;
+}
+[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover div[class*="st-key-conv_delete_"] button {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+[data-testid="stSidebar"] div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover div[data-testid="stElementContainer"]:has(.md-conv-del-anchor) + div[data-testid="stElementContainer"] button {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-conv_delete_"] button [data-testid="stIconMaterial"] {
+    font-size: 0.7rem !important;
+}
+</style>
+        """,
+        unsafe_allow_html=True,
     )
 
 L = LANGUAGES[st.session_state.selected_language]
@@ -12384,17 +12794,13 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
                             st.session_state.patient_name = profile.get("name", "") or ""
                             st.session_state.patient_memory = profile.get("patient_memory", {"symptoms": [], "conditions": [], "medications": []})
                             st.session_state.selected_language = profile.get("language", "English")
-                            recent = list_conversations(profile["email_hash"], limit=1)
-                            if recent:
-                                conv = load_conversation(st.session_state.user_email_hash, recent[0]["id"])
-                                if conv:
-                                    st.session_state.current_conversation_id = recent[0]["id"]
-                                    st.session_state.messages = conv.get("messages", []) or []
-                                    st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
-                            else:
-                                st.session_state.current_conversation_id = ""
-                                st.session_state.messages = []
-                                st.session_state.qcount = 0
+                            start_new_chat_session()
+                            # A stale URL route from Recent Chats should not reopen an old thread immediately after login.
+                            for _auth_route_key in ("conv", "mode", "new_chat", "del_conv"):
+                                try:
+                                    del st.query_params[_auth_route_key]
+                                except Exception:
+                                    pass
                             st.success("Welcome back" + ((", " + profile.get("name", "")) if profile.get("name") else "") + ". Loading your profile…")
                             st.rerun()
                         elif status == "not_found":
@@ -12433,6 +12839,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
                             st.session_state.user_email_hash = profile["email_hash"]
                             st.session_state.user_email_display = su_email.strip()
                             st.session_state.patient_name = profile.get("name", "") or ""
+                            start_new_chat_session()
                             st.success("Profile created. Welcome to MediChat.")
                             st.rerun()
 
@@ -12836,7 +13243,7 @@ if st.session_state.mode == "chat":
                 ]
                 snap_html = (
                     '<div class="md-rcard md-snap-card">'
-                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><span class="md-rcard-link md-rcard-link-btn" style="cursor: default;">See all</span></div>'
+                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><a class="md-rcard-link md-rcard-link-btn" href="?mode=overview">See all</a></div>'
                     '<div class="md-snap-grid">'
                 )
                 for _cls, _icon, _lbl, _val, _status, _line_cls in _tiles:
@@ -12860,7 +13267,7 @@ if st.session_state.mode == "chat":
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 # Recent Conversations (real, from Firestore)
-                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><span class="md-rcard-link md-rcard-link-btn" style="cursor: default;">See all</span></div>'
+                recent_html = '<div class="md-rcard md-rcard-recent"><div class="md-rcard-head"><div class="md-rcard-title">Recent Conversations</div><a class="md-rcard-link md-rcard-link-btn" href="?mode=history">See all</a></div>'
                 if st.session_state.is_authenticated and st.session_state.user_email_hash:
                     _recent = list_conversations(st.session_state.user_email_hash, limit=4)
                 else:
