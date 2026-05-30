@@ -5,6 +5,16 @@ try:
     ANTHROPIC_AVAILABLE = True
 except ImportError:
     ANTHROPIC_AVAILABLE = False
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+try:
+    from streamlit_mic_recorder import mic_recorder
+    MIC_RECORDER_AVAILABLE = True
+except ImportError:
+    MIC_RECORDER_AVAILABLE = False
 from sentence_transformers import SentenceTransformer
 from datasets import load_dataset
 import faiss
@@ -37,6 +47,51 @@ def _safe_int_env(name, default):
         return int(os.environ.get(name, str(default)))
     except Exception:
         return default
+
+def _persist_browser_session(email_hash, email_display, patient_name=""):
+    """Persist the user's auth credentials in the URL as ?s=<base64-json>.
+
+    URLs survive page refreshes natively, which is exactly what we need
+    to keep users signed in. Encoded as urlsafe-base64 of the JSON blob
+    with padding stripped — produces a clean URL like
+        http://.../?s=eyJlaCI6IjlibGFiYS4uLn0
+    that's ~120 chars for a typical user.
+
+    Earlier attempts used browser localStorage + a JS iframe to redirect
+    back into the page with the credentials in a query param, but
+    Streamlit's components.html iframe is sandboxed without
+    `allow-top-navigation`, so the redirect was blocked. Storing the
+    session in the URL itself bypasses the sandbox entirely.
+
+    Security note: the blob contains only email_hash + display + name —
+    no PIN, no secret token. Same trust model as the existing cookie /
+    localStorage approach: anyone with the URL has the same access as
+    anyone with the browser. If you bookmark or share the live URL,
+    they share access. For a future hardening pass, swap email_hash for
+    a server-issued opaque token with expiry stored in Firebase.
+    """
+    try:
+        import base64 as _ps_b64, json as _ps_json
+        payload = _ps_json.dumps({
+            "eh": email_hash or "",
+            "ed": email_display or "",
+            "pn": patient_name or "",
+        }, separators=(",", ":"))  # compact form, no whitespace
+        encoded = _ps_b64.urlsafe_b64encode(payload.encode("utf-8")).decode("ascii").rstrip("=")
+        st.query_params["s"] = encoded
+    except Exception as _e:
+        print("[session-persist] failed:", repr(_e))
+
+
+def _clear_browser_session():
+    """Remove the persisted session token from the URL. Called on sign-out
+    so a refresh right after logout doesn't auto-restore the user."""
+    try:
+        if "s" in st.query_params:
+            del st.query_params["s"]
+    except Exception as _e:
+        print("[session-clear] failed:", repr(_e))
+
 
 def _safe_secret(name, default=None):
     try:
@@ -372,8 +427,17 @@ def _ensure_guest_store():
             "appointments": [],
             "health_records": [],
             "daily_metrics": {},
+            "allergies": [],
+            "family_history": [],
+            "surgical_history": [],
         }
-    return st.session_state[GUEST_DATA_KEY]
+    # Defensive: backfill new keys for older guest sessions started before
+    # the v2 schema rolled out, so list_*() never KeyErrors.
+    _store = st.session_state[GUEST_DATA_KEY]
+    for _k in ("allergies", "family_history", "surgical_history"):
+        if _k not in _store:
+            _store[_k] = []
+    return _store
 
 def _today_key():
     return datetime.now().strftime("%Y-%m-%d")
@@ -470,13 +534,125 @@ def delete_appointment(appt_id):
         store["appointments"] = [a for a in store["appointments"] if a.get("id") != appt_id]
     return True
 
+# ── Allergies ────────────────────────────────────────────────────────
+def list_allergies():
+    if st.session_state.get("is_authenticated"):
+        return (get_user_doc() or {}).get("allergies", []) or []
+    return _ensure_guest_store()["allergies"]
+
+def add_allergy(name, severity="", reaction="", notes=""):
+    name = (name or "").strip()
+    if not name:
+        return False
+    entry = {
+        "id": str(_uuid.uuid4())[:12],
+        "name": name[:80],
+        "severity": (severity or "")[:30],
+        "reaction": (reaction or "").strip()[:120],
+        "notes": (notes or "").strip()[:240],
+        "added_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    if st.session_state.get("is_authenticated"):
+        current = list_allergies()
+        update_user_doc({"allergies": current + [entry]})
+    else:
+        _ensure_guest_store()["allergies"].append(entry)
+    return True
+
+def delete_allergy(allergy_id):
+    if st.session_state.get("is_authenticated"):
+        current = [a for a in list_allergies() if a.get("id") != allergy_id]
+        update_user_doc({"allergies": current})
+    else:
+        store = _ensure_guest_store()
+        store["allergies"] = [a for a in store["allergies"] if a.get("id") != allergy_id]
+    return True
+
+# ── Family medical history ───────────────────────────────────────────
+def list_family_history():
+    if st.session_state.get("is_authenticated"):
+        return (get_user_doc() or {}).get("family_history", []) or []
+    return _ensure_guest_store()["family_history"]
+
+def add_family_history(condition, relationship="", age_at_diagnosis="", notes=""):
+    condition = (condition or "").strip()
+    if not condition:
+        return False
+    entry = {
+        "id": str(_uuid.uuid4())[:12],
+        "condition": condition[:100],
+        "relationship": (relationship or "")[:40],
+        "age_at_diagnosis": (age_at_diagnosis or "")[:20],
+        "notes": (notes or "").strip()[:240],
+        "added_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    if st.session_state.get("is_authenticated"):
+        current = list_family_history()
+        update_user_doc({"family_history": current + [entry]})
+    else:
+        _ensure_guest_store()["family_history"].append(entry)
+    return True
+
+def delete_family_history(fh_id):
+    if st.session_state.get("is_authenticated"):
+        current = [f for f in list_family_history() if f.get("id") != fh_id]
+        update_user_doc({"family_history": current})
+    else:
+        store = _ensure_guest_store()
+        store["family_history"] = [f for f in store["family_history"] if f.get("id") != fh_id]
+    return True
+
+# ── Surgical history ─────────────────────────────────────────────────
+def list_surgical_history():
+    if st.session_state.get("is_authenticated"):
+        return (get_user_doc() or {}).get("surgical_history", []) or []
+    return _ensure_guest_store()["surgical_history"]
+
+def add_surgical_history(procedure, year="", hospital="", notes=""):
+    procedure = (procedure or "").strip()
+    if not procedure:
+        return False
+    entry = {
+        "id": str(_uuid.uuid4())[:12],
+        "procedure": procedure[:120],
+        "year": (year or "")[:10],
+        "hospital": (hospital or "").strip()[:80],
+        "notes": (notes or "").strip()[:240],
+        "added_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    if st.session_state.get("is_authenticated"):
+        current = list_surgical_history()
+        update_user_doc({"surgical_history": current + [entry]})
+    else:
+        _ensure_guest_store()["surgical_history"].append(entry)
+    return True
+
+def delete_surgical_history(surg_id):
+    if st.session_state.get("is_authenticated"):
+        current = [s for s in list_surgical_history() if s.get("id") != surg_id]
+        update_user_doc({"surgical_history": current})
+    else:
+        store = _ensure_guest_store()
+        store["surgical_history"] = [s for s in store["surgical_history"] if s.get("id") != surg_id]
+    return True
+
 # ── Health Records (file metadata only — file content not stored to keep doc <1MB) ──
 def list_health_records():
     if st.session_state.get("is_authenticated"):
         return (get_user_doc() or {}).get("health_records", []) or []
     return _ensure_guest_store()["health_records"]
 
-def add_health_record(name, file_type, size_bytes, summary=""):
+def add_health_record(name, file_type, size_bytes, summary="", raw_text=""):
+    """Save a health record (PDF/image/scan/letter etc.) to the patient's
+    profile.
+
+    `summary` is the patient-friendly AI explanation shown in the UI and
+    surfaced to future chat as a quick narrative.
+    `raw_text` is the actual extracted text from a PDF or the AI's visual
+    findings on an image — this is what lets MediChat compare lab values
+    across time ("your HbA1c was 6.4% in February and is 5.9% now"),
+    because the summary alone often paraphrases the values away.
+    """
     name = (name or "").strip()
     if not name:
         return False
@@ -486,6 +662,7 @@ def add_health_record(name, file_type, size_bytes, summary=""):
         "file_type": (file_type or "")[:24],
         "size_bytes": int(size_bytes or 0),
         "summary": (summary or "").strip()[:1500],
+        "raw_text": (raw_text or "").strip()[:3500],
         "uploaded_at": datetime.now().isoformat(timespec="seconds"),
     }
     if st.session_state.get("is_authenticated"):
@@ -522,6 +699,79 @@ def get_daily_metrics(date_key=None):
     # Merge with defaults so missing keys are explicit None rather than KeyError-prone.
     raw = all_dm.get(date_key, {})
     return {**DAILY_METRIC_DEFAULTS, **raw}
+
+
+def get_all_daily_metrics():
+    """Return the full daily_metrics map (dict keyed by ISO date) for the
+    current user. One DB fetch — for callers that need history across many
+    days (e.g. sparklines on the home page) instead of just one day."""
+    if st.session_state.get("is_authenticated"):
+        return (get_user_doc() or {}).get("daily_metrics", {}) or {}
+    return _ensure_guest_store()["daily_metrics"]
+
+
+def get_metric_series(all_dm, metric_key, days=7):
+    """Return numeric values for the last `days` days (oldest first),
+    skipping any day where the metric has no value.
+
+    Pure / side-effect-free: takes the daily_metrics dict as input so
+    callers can fetch once and reuse across multiple metrics. Returns
+    floats (raw values coerced if possible, skipped if not numeric).
+    """
+    if not isinstance(all_dm, dict):
+        return []
+    today = datetime.now().date()
+    values = []
+    for i in range(days - 1, -1, -1):
+        d = (today - timedelta(days=i)).strftime("%Y-%m-%d")
+        day = all_dm.get(d, {}) or {}
+        v = day.get(metric_key)
+        if v is None:
+            continue
+        try:
+            values.append(float(v))
+        except (TypeError, ValueError):
+            continue
+    return values
+
+
+def render_sparkline_path(values, view_w=96, view_h=28, padding=2):
+    """Build an SVG path 'd' attribute that plots `values` as a polyline
+    across the given viewBox. Empty string if fewer than 2 values so the
+    caller can show an honest empty state instead of a fake decorative
+    curve.
+
+    Normalization is per-metric (each call uses its own min/max), so a
+    series of values like [60, 72, 65] renders the same visual amplitude
+    as [8000, 12000, 9500] — the shape encodes the *trend* faithfully.
+
+    Y is inverted to match how charts read: higher values draw higher
+    on the page. SVG natively has y=0 at top, so we flip the
+    normalized value before placing.
+    """
+    if not values or len(values) < 2:
+        return ""
+    n = len(values)
+    min_v = min(values)
+    max_v = max(values)
+    avail_w = view_w - 2 * padding
+    avail_h = view_h - 2 * padding
+    if max_v == min_v:
+        # All values identical — draw a flat centerline so the user
+        # sees "no change" rather than a misleading slope or empty SVG.
+        y_mid = round(view_h / 2, 1)
+        return ("M" + str(padding) + "," + str(y_mid) +
+                " L" + str(view_w - padding) + "," + str(y_mid))
+    points = []
+    for i, v in enumerate(values):
+        x = padding + (i / (n - 1)) * avail_w
+        normalized = (v - min_v) / (max_v - min_v)
+        y = view_h - padding - normalized * avail_h
+        points.append((round(x, 1), round(y, 1)))
+    path = "M" + str(points[0][0]) + "," + str(points[0][1])
+    for x, y in points[1:]:
+        path += " L" + str(x) + "," + str(y)
+    return path
 
 def heart_rate_status(bpm):
     """Return (label, css_status_class) for a resting heart rate, or (None, None)."""
@@ -1824,6 +2074,92 @@ st.markdown("""
 }
 * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
 
+/* Text-selection highlight removed entirely — Chrome's default dark purple
+   looked harsh on UI chrome. Two-layer fix: (1) transparent selection so
+   any accidental selection is invisible, (2) user-select:none on the
+   non-content UI chrome (labels, buttons, headings, sidebar, nav) so the
+   user can't accidentally select that chrome at all. Content areas (chat
+   messages, AI replies, medical report text) stay selectable so copy
+   still works where it's actually useful. */
+::selection {
+    background: transparent !important;
+    color: inherit !important;
+}
+::-moz-selection {
+    background: transparent !important;
+    color: inherit !important;
+}
+*::selection {
+    background: transparent !important;
+    color: inherit !important;
+}
+*::-moz-selection {
+    background: transparent !important;
+    color: inherit !important;
+}
+/* Non-selectable UI chrome: prevents accidental drag-selection on labels,
+   buttons, headings, sidebar nav, and form widget chrome. Streamlit's
+   Base Web components especially are prone to leaving stuck selections
+   on checkbox / radio labels. */
+label,
+button,
+[data-baseweb="checkbox"],
+[data-baseweb="checkbox"] *,
+[data-baseweb="radio"],
+[data-baseweb="radio"] *,
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] *,
+[data-testid="stCheckbox"] label,
+[data-testid="stCheckbox"] label *,
+[data-testid="stRadio"] label,
+[data-testid="stRadio"] label *,
+[data-testid="stSidebar"] [data-testid="stMarkdown"],
+.stButton button,
+.stButton button *,
+.stFormSubmitButton button,
+.stFormSubmitButton button *,
+[data-testid="stForm"] label,
+[data-testid="stForm"] label *,
+h1, h2, h3, h4, h5, h6 {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+}
+
+/* AI summary body inside <details> on the Health Records page. The
+   markdown_to_html output includes <p class='md-p'>, <ul>, <li>, <strong>
+   etc.; tighten the spacing so it reads as a compact briefing rather than
+   loose paragraphs. */
+.md-ai-summary-body p,
+.md-ai-summary-body p.md-p {
+    margin: 0.25rem 0 0.5rem 0 !important;
+    line-height: 1.55 !important;
+}
+.md-ai-summary-body p:last-child {
+    margin-bottom: 0 !important;
+}
+.md-ai-summary-body ul,
+.md-ai-summary-body ul.md-ul,
+.md-ai-summary-body ol {
+    margin: 0.3rem 0 0.5rem 1.2rem !important;
+    padding: 0 !important;
+}
+.md-ai-summary-body li {
+    margin: 0.15rem 0 !important;
+    line-height: 1.5 !important;
+}
+.md-ai-summary-body strong {
+    color: #0f172a;
+    font-weight: 640;
+}
+.md-ai-summary-body hr,
+.md-ai-summary-body hr.md-hr {
+    margin: 0.6rem 0 !important;
+    border: none !important;
+    border-top: 1px solid #e2e8f0 !important;
+}
+
 /* Compliance / status strip */
 @keyframes mdPulse {
     0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
@@ -2906,6 +3242,257 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
 .md-home-file-preview {
     border-radius: 18px !important;
     background: rgba(255,255,255,0.92) !important;
+}
+
+/* Guest profile tile — clickable affordance.
+   When the guest tile is rendered as an <a> (so the whole card routes to the
+   auth screen), give it a clear hover state, a subtle right-arrow chevron,
+   and remove the default anchor styling (color, underline) so it looks
+   identical to the static tile until hovered. */
+.md-side-pc.md-side-profile-clickable {
+    cursor: pointer !important;
+    text-decoration: none !important;
+    color: inherit !important;
+    position: relative !important;
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.18s ease,
+        border-color 0.15s ease,
+        background 0.18s ease !important;
+}
+.md-side-pc.md-side-profile-clickable:hover {
+    transform: translateY(-1px) !important;
+    border-color: rgba(99, 102, 241, 0.42) !important;
+    box-shadow:
+        0 6px 18px rgba(99, 102, 241, 0.16),
+        0 1px 0 rgba(255, 255, 255, 0.95) inset !important;
+}
+.md-side-pc.md-side-profile-clickable:hover .md-side-pc-email {
+    color: #4f46e5 !important;
+}
+.md-side-pc.md-side-profile-clickable:hover .md-side-pc-chevron {
+    transform: translateX(2px);
+    color: #4f46e5;
+}
+.md-side-pc-chevron {
+    position: absolute !important;
+    right: 0.85rem !important;
+    top: 50% !important;
+    transform: translateY(-50%);
+    font-size: 1.05rem !important;
+    color: #94a3b8 !important;
+    transition: transform 0.2s ease, color 0.2s ease !important;
+    pointer-events: none !important;
+}
+.md-side-pc.md-side-profile-clickable .md-side-pc-chevron {
+    transform: translateY(-50%);
+}
+.md-side-pc.md-side-profile-clickable:hover .md-side-pc-chevron {
+    transform: translateY(-50%) translateX(3px);
+}
+
+/* Polish uploaded-image preview thumbnails inside the vision upload panel:
+   rounded corners, soft shadow, max-height cap so very tall photos (full-body
+   X-rays, prescription scrolls) don't dominate the page. Caption gets a
+   subtler, italic look so it reads as a label rather than competing copy. */
+[data-testid="stImage"] img {
+    border-radius: 14px !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
+    max-height: 360px !important;
+    object-fit: contain !important;
+    background: rgba(255, 255, 255, 0.6);
+}
+[data-testid="stImageCaption"] {
+    font-size: 0.78rem !important;
+    font-style: italic !important;
+    color: #64748b !important;
+    text-align: center !important;
+    margin-top: 0.35rem !important;
+}
+
+/* ── Voice & Vision panels — premium redesign (May 2026) ─────────────
+   Upgrades the header card with subtle radial-gradient texture, swaps
+   the icon to the same gradient palette as the welcome shield, restyles
+   the mic_recorder iframe wrapper + file-uploader dropzone to look like
+   "recording / drop zones", and gives the action buttons gradient
+   primary + ghost secondary treatments to match. Scoped via st-key
+   prefixes so it only touches the voice & vision controls. */
+.md-vision-panel,
+.md-voice-panel {
+    margin: 1rem 0 0.85rem 0 !important;
+    padding: 1rem 1.2rem !important;
+    border-radius: 18px !important;
+    background:
+        radial-gradient(circle at 8% 12%, rgba(191, 219, 254, 0.34), transparent 50%),
+        radial-gradient(circle at 92% 88%, rgba(167, 139, 250, 0.20), transparent 55%),
+        linear-gradient(135deg, rgba(248, 250, 255, 0.96) 0%, rgba(243, 244, 255, 0.96) 100%) !important;
+    border: 1px solid rgba(217, 228, 248, 0.85) !important;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.95) inset,
+        0 5px 16px rgba(15, 23, 42, 0.045) !important;
+}
+.md-vision-panel .md-panel-icon,
+.md-voice-panel .md-panel-icon {
+    background:
+        radial-gradient(circle at 28% 22%, rgba(255,255,255,0.55), transparent 46%),
+        linear-gradient(145deg, #3b82f6 0%, #6366f1 58%, #8b5cf6 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 18px rgba(99, 102, 241, 0.28) !important;
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 13px !important;
+}
+.md-vision-panel .md-panel-icon .material-symbols-rounded,
+.md-voice-panel .md-panel-icon .material-symbols-rounded {
+    color: #ffffff !important;
+    font-size: 1.4rem !important;
+}
+
+/* mic_recorder iframe wrapper — style as a "recording zone" tile. The
+   inner button is rendered inside an iframe (we can't reach it from
+   parent CSS), so we dress up the surrounding container instead. */
+div[class*="st-key-mic_recorder"] {
+    margin-top: 0.55rem !important;
+    padding: 0.65rem 0.85rem !important;
+    background:
+        linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.07) 100%) !important;
+    border: 1.5px dashed rgba(99, 102, 241, 0.32) !important;
+    border-radius: 16px !important;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+div[class*="st-key-mic_recorder"]:hover {
+    border-color: rgba(99, 102, 241, 0.55) !important;
+    background:
+        linear-gradient(135deg, rgba(99, 102, 241, 0.09) 0%, rgba(139, 92, 246, 0.11) 100%) !important;
+}
+
+/* File uploader inside vision panel — styled drop zone with gradient
+   border, accent-coloured icon, and friendlier hover state. */
+div[class*="st-key-home_vision_uploader"] [data-testid="stFileUploaderDropzone"],
+div[class*="st-key-chat_vision_uploader"] [data-testid="stFileUploaderDropzone"] {
+    background:
+        linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0%, rgba(139, 92, 246, 0.06) 100%) !important;
+    border: 1.5px dashed rgba(99, 102, 241, 0.32) !important;
+    border-radius: 16px !important;
+    padding: 1.05rem 1rem !important;
+    transition: border-color 0.2s ease, background 0.2s ease !important;
+}
+div[class*="st-key-home_vision_uploader"] [data-testid="stFileUploaderDropzone"]:hover,
+div[class*="st-key-chat_vision_uploader"] [data-testid="stFileUploaderDropzone"]:hover {
+    border-color: rgba(99, 102, 241, 0.55) !important;
+    background:
+        linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.10) 100%) !important;
+}
+div[class*="st-key-home_vision_uploader"] [data-testid="stFileUploaderDropzoneInstructions"] svg,
+div[class*="st-key-chat_vision_uploader"] [data-testid="stFileUploaderDropzoneInstructions"] svg {
+    color: #6366f1 !important;
+    width: 26px !important;
+    height: 26px !important;
+}
+div[class*="st-key-home_vision_uploader"] [data-testid="stFileUploaderDropzoneInstructions"] span[class*="emotion-cache"]:first-child,
+div[class*="st-key-chat_vision_uploader"] [data-testid="stFileUploaderDropzoneInstructions"] span[class*="emotion-cache"]:first-child {
+    font-weight: 580 !important;
+    color: #1e293b !important;
+}
+
+/* Primary action buttons — Transcribe voice, Analyze with Vision Ai —
+   gradient fill matching the panel icon, lifts on hover. */
+div[class*="st-key-voice_transcribe"] button,
+div[class*="st-key-home_vision_analyze"] button,
+div[class*="st-key-chat_vision_analyze"] button {
+    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%) !important;
+    border: none !important;
+    box-shadow: 0 8px 22px rgba(99, 102, 241, 0.32) !important;
+    color: #ffffff !important;
+    font-weight: 640 !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+div[class*="st-key-voice_transcribe"] button:hover,
+div[class*="st-key-voice_transcribe"] button:focus,
+div[class*="st-key-voice_transcribe"] button:active,
+div[class*="st-key-home_vision_analyze"] button:hover,
+div[class*="st-key-home_vision_analyze"] button:focus,
+div[class*="st-key-home_vision_analyze"] button:active,
+div[class*="st-key-chat_vision_analyze"] button:hover,
+div[class*="st-key-chat_vision_analyze"] button:focus,
+div[class*="st-key-chat_vision_analyze"] button:active {
+    /* Re-assert the gradient + colour + opacity on every interactive state
+       to defeat Streamlit's default primary-button hover, which applies an
+       opacity reduction / colour shift that visually "washes out" our
+       gradient and makes the white text look blurred. */
+    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%) !important;
+    background-color: #6366f1 !important;
+    color: #ffffff !important;
+    opacity: 1 !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+    border: none !important;
+    outline: none !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 12px 28px rgba(99, 102, 241, 0.42) !important;
+}
+div[class*="st-key-voice_transcribe"] button:hover p,
+div[class*="st-key-voice_transcribe"] button:focus p,
+div[class*="st-key-voice_transcribe"] button:active p,
+div[class*="st-key-home_vision_analyze"] button:hover p,
+div[class*="st-key-home_vision_analyze"] button:focus p,
+div[class*="st-key-home_vision_analyze"] button:active p,
+div[class*="st-key-chat_vision_analyze"] button:hover p,
+div[class*="st-key-chat_vision_analyze"] button:focus p,
+div[class*="st-key-chat_vision_analyze"] button:active p,
+div[class*="st-key-voice_transcribe"] button:hover span[data-testid="stIconMaterial"],
+div[class*="st-key-voice_transcribe"] button:focus span[data-testid="stIconMaterial"],
+div[class*="st-key-voice_transcribe"] button:active span[data-testid="stIconMaterial"],
+div[class*="st-key-home_vision_analyze"] button:hover span[data-testid="stIconMaterial"],
+div[class*="st-key-home_vision_analyze"] button:focus span[data-testid="stIconMaterial"],
+div[class*="st-key-home_vision_analyze"] button:active span[data-testid="stIconMaterial"],
+div[class*="st-key-chat_vision_analyze"] button:hover span[data-testid="stIconMaterial"],
+div[class*="st-key-chat_vision_analyze"] button:focus span[data-testid="stIconMaterial"],
+div[class*="st-key-chat_vision_analyze"] button:active span[data-testid="stIconMaterial"] {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+div[class*="st-key-voice_transcribe"] button p,
+div[class*="st-key-home_vision_analyze"] button p,
+div[class*="st-key-chat_vision_analyze"] button p {
+    color: #ffffff !important;
+}
+div[class*="st-key-voice_transcribe"] button span[data-testid="stIconMaterial"],
+div[class*="st-key-home_vision_analyze"] button span[data-testid="stIconMaterial"],
+div[class*="st-key-chat_vision_analyze"] button span[data-testid="stIconMaterial"] {
+    color: #ffffff !important;
+}
+
+/* Cancel / dismiss buttons — subtle ghost treatment so the primary CTA
+   remains the obvious next step. */
+div[class*="st-key-voice_cancel"] button,
+div[class*="st-key-home_vision_cancel"] button,
+div[class*="st-key-chat_vision_cancel"] button {
+    background: rgba(241, 245, 249, 0.55) !important;
+    border: 1px solid rgba(203, 213, 225, 0.75) !important;
+    color: #475569 !important;
+    font-weight: 540 !important;
+    box-shadow: none !important;
+    transition: background 0.15s ease, border-color 0.15s ease !important;
+}
+div[class*="st-key-voice_cancel"] button:hover,
+div[class*="st-key-home_vision_cancel"] button:hover,
+div[class*="st-key-chat_vision_cancel"] button:hover {
+    background: rgba(241, 245, 249, 1) !important;
+    border-color: rgba(148, 163, 184, 0.85) !important;
+    color: #334155 !important;
+}
+div[class*="st-key-voice_cancel"] button p,
+div[class*="st-key-home_vision_cancel"] button p,
+div[class*="st-key-chat_vision_cancel"] button p {
+    color: #475569 !important;
+}
+
+/* Recording / file-ready confirmation caption — subtle success tint. */
+.md-voice-panel + div + div + div + div .stCaptionContainer,
+.md-vision-panel + div + div + div + div .stCaptionContainer {
+    color: #166534 !important;
+    font-weight: 540 !important;
 }
 
 .md-snap-card {
@@ -9097,7 +9684,8 @@ st.markdown("""
         font-size: 0.72rem !important;
     }
     .md-smart-head {
-        margin-top: 0.54rem !important;
+        margin-top: 3rem !important;
+        margin-bottom: 0.85rem !important;
     }
     .st-key-sa_sym .stButton > button,
     .st-key-sa_rec .stButton > button,
@@ -9203,9 +9791,14 @@ st.markdown("""
     .md-passport-check {
         padding: 0.08rem 0 !important;
     }
-    .md-passport-check:nth-of-type(n+4) {
-        display: none !important;
-    }
+    /* Previously: .md-passport-check:nth-of-type(n+4) { display: none }
+       intended to trim the passport list to 3 rows in this large-viewport
+       layout to save vertical space. The selector is buggy: :nth-of-type
+       counts among ALL <div> siblings, and the passport's first three
+       siblings (.md-passport-head, .md-passport-sub, .md-passport-progress)
+       are already divs — so the first check row was the 4th div-of-type,
+       and the rule hid every single check row instead of just rows 4-6.
+       Removed; the passport shows all 6 rows consistently across viewports. */
     .st-key-home_passport_records .stButton > button,
     .st-key-home_passport_overview .stButton > button,
     .st-key-home_passport_meds .stButton > button {
@@ -9590,38 +10183,179 @@ if ANTHROPIC_AVAILABLE and ANTHROPIC_API_KEY:
 
 CLAUDE_ACTIVE = anthropic_client is not None
 
+# OpenAI as an additional fallback backend. Sits between Claude and Groq in the
+# dispatcher: if Claude is unavailable / fails, try OpenAI before Groq.
+OPENAI_API_KEY = _safe_secret("OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
+OPENAI_MODEL = _safe_secret("OPENAI_MODEL", "gpt-4o-mini")
+openai_client = None
+if OPENAI_AVAILABLE and OPENAI_API_KEY:
+    try:
+        openai_client = OpenAI(api_key=OPENAI_API_KEY)
+    except Exception as e:
+        print("OpenAI init failed:", e)
+        openai_client = None
+
+OPENAI_ACTIVE = openai_client is not None
+
+# Dual-model second-opinion review.
+# When the primary backend (OpenAI) finishes streaming an answer, the secondary
+# (Claude Haiku) is asked to act as an independent reviewer. If Claude flags a
+# clinically important correction, that note is streamed-in below the primary
+# answer. If Claude agrees or any error occurs, the primary answer is shown
+# alone. This keeps streaming UX fast and only costs one extra short call per
+# question. Disable by setting ENABLE_DUAL_REVIEW = false in secrets.toml.
+ENABLE_DUAL_REVIEW = bool(_safe_secret("ENABLE_DUAL_REVIEW", True))
+
 def transcribe_voice_note(audio_file):
-    """Transcribe a browser-recorded or uploaded audio note with Groq Whisper."""
-    if not GROQ_ACTIVE or groq_client is None:
-        return ""
+    """Transcribe a browser-recorded or uploaded audio note.
+
+    Backend order:
+      1. Groq Whisper (`whisper-large-v3-turbo`) — when configured.
+      2. OpenAI Whisper (`whisper-1`) — fallback when Groq isn't configured.
+
+    Writes the audio to a real temporary file on disk (rather than passing a
+    BytesIO buffer) — both SDKs are more reliable with a genuine file handle
+    that has a real path and extension.
+
+    Logs to stderr (via sys.stderr.write) so output is captured by Streamlit's
+    log pipeline reliably — print() statements were being swallowed.
+    """
+    import sys as _sys
+    import tempfile as _tempfile
+    import traceback as _tb
+
+    def _log(*parts):
+        try:
+            _sys.stderr.write("[voice] " + " ".join(str(p) for p in parts) + "\n")
+            _sys.stderr.flush()
+        except Exception:
+            pass
+
+    _log("transcribe_voice_note called, audio_file type =",
+         type(audio_file).__name__ if audio_file else None)
+
     if not audio_file:
+        _log("FAIL: audio_file is None / falsy")
         return ""
+
+    # streamlit_mic_recorder returns a dict: {'bytes': b'...', 'sample_rate': ...,
+    # 'sample_width': ..., 'id': ...}. Adapt it into a file-like for the
+    # downstream code path.
+    if isinstance(audio_file, dict):
+        _log("audio_file is dict (streamlit_mic_recorder format), keys =",
+             list(audio_file.keys()))
+        _mr_bytes = audio_file.get("bytes", b"") or b""
+        if not _mr_bytes:
+            _log("FAIL: mic_recorder dict had no audio bytes")
+            return ""
+        import io as _io
+        _wrapped = _io.BytesIO(_mr_bytes)
+        _wrapped.name = "voice-note.wav"  # mic_recorder always produces WAV
+        _wrapped.type = "audio/wav"
+        audio_file = _wrapped
+
+    # Pull bytes from the UploadedFile / BytesIO / file-uploader object.
     try:
         audio_file.seek(0)
-    except Exception:
-        pass
+    except Exception as e:
+        _log("seek(0) failed (continuing):", e)
+    audio_bytes = b""
     try:
         audio_bytes = audio_file.read()
-    except Exception:
+    except Exception as e:
+        _log("read() failed, trying getvalue():", e)
         try:
             audio_bytes = audio_file.getvalue()
-        except Exception:
+        except Exception as e2:
+            _log("getvalue() also failed:", e2)
             audio_bytes = b""
+    _log("audio_bytes length =", len(audio_bytes), "bytes")
     if not audio_bytes:
+        _log("FAIL: audio_bytes is empty (recording was empty?)")
         return ""
-    file_name = getattr(audio_file, "name", "voice-note.wav") or "voice-note.wav"
+
+    # Decide on a file extension. st.audio_input produces:
+    #   • Chrome / Edge: blob with .type "audio/wav"
+    #   • Firefox: "audio/wav" too in newer versions, "audio/ogg" otherwise
+    #   • Safari: "audio/mp4" or "audio/wav"
+    file_name_in = getattr(audio_file, "name", "") or ""
     mime_type = getattr(audio_file, "type", "audio/wav") or "audio/wav"
+    _log("source name =", repr(file_name_in), " mime =", repr(mime_type))
+
+    _ext_map = {
+        "audio/wav": ".wav", "audio/x-wav": ".wav", "audio/wave": ".wav",
+        "audio/mp3": ".mp3", "audio/mpeg": ".mp3",
+        "audio/mp4": ".mp4", "audio/x-m4a": ".m4a",
+        "audio/m4a": ".m4a", "audio/ogg": ".ogg", "audio/opus": ".ogg",
+        "audio/webm": ".webm", "audio/flac": ".flac",
+    }
+    # Prefer the existing extension if there is one; otherwise derive from mime;
+    # otherwise default to .wav (most universally supported).
+    if "." in file_name_in:
+        ext = "." + file_name_in.rsplit(".", 1)[1].lower()
+    else:
+        ext = _ext_map.get(mime_type.lower(), ".wav")
+    _log("chosen extension =", ext)
+
+    _log("backends — GROQ_ACTIVE =", GROQ_ACTIVE, " OPENAI_ACTIVE =", OPENAI_ACTIVE)
+
+    # Persist the audio to a real temp file. Both Groq and OpenAI SDKs accept
+    # a file handle opened in "rb" mode — this is the most reliable form.
+    tmp_path = None
     try:
-        transcription = groq_client.audio.transcriptions.create(
-            file=(file_name, audio_bytes, mime_type),
-            model=os.environ.get("GROQ_TRANSCRIPTION_MODEL", "whisper-large-v3-turbo"),
-            response_format="json",
-            temperature=0,
-        )
-        return (getattr(transcription, "text", "") or "").strip()
-    except Exception as e:
-        print("Voice transcription failed:", e)
+        with _tempfile.NamedTemporaryFile(suffix=ext, delete=False) as _tf:
+            _tf.write(audio_bytes)
+            tmp_path = _tf.name
+        _log("wrote temp file:", tmp_path)
+
+        # Tier 1 — Groq Whisper.
+        if GROQ_ACTIVE and groq_client is not None:
+            try:
+                _log("trying Groq Whisper...")
+                with open(tmp_path, "rb") as _fh:
+                    transcription = groq_client.audio.transcriptions.create(
+                        file=_fh,
+                        model=os.environ.get("GROQ_TRANSCRIPTION_MODEL", "whisper-large-v3-turbo"),
+                        response_format="json",
+                        temperature=0,
+                    )
+                text = (getattr(transcription, "text", "") or "").strip()
+                _log("Groq returned", len(text), "chars")
+                if text:
+                    return text
+            except Exception as e:
+                _log("Groq voice transcription failed:", repr(e))
+                _tb.print_exc(file=_sys.stderr)
+
+        # Tier 2 — OpenAI Whisper.
+        if OPENAI_ACTIVE and openai_client is not None:
+            try:
+                _log("trying OpenAI Whisper (model =",
+                     repr(_safe_secret("OPENAI_TRANSCRIPTION_MODEL", "whisper-1")), ")...")
+                with open(tmp_path, "rb") as _fh:
+                    transcription = openai_client.audio.transcriptions.create(
+                        file=_fh,
+                        model=_safe_secret("OPENAI_TRANSCRIPTION_MODEL", "whisper-1"),
+                        response_format="json",
+                        temperature=0,
+                    )
+                text = (getattr(transcription, "text", "") or "").strip()
+                _log("OpenAI returned", len(text), "chars")
+                if text:
+                    return text
+            except Exception as e:
+                _log("OpenAI voice transcription failed:", repr(e))
+                _tb.print_exc(file=_sys.stderr)
+
+        _log("FAIL: all transcription backends exhausted")
         return ""
+    finally:
+        # Clean up the temp file.
+        if tmp_path:
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass
 
 # ── Language Config ───────────────────────────────────────────────────
 LANGUAGES = {
@@ -10133,6 +10867,15 @@ def medichat_pdf_analysis(question, pdf_text, all_messages, lang_instruction="")
     )
     if lang_instruction:
         system += lang_instruction + "\n\n"
+    # Saved profile data (medications, conditions, past records) gives the
+    # PDF reviewer context like "this patient is on metformin so a 6.2% HbA1c
+    # reads differently than for someone with no diabetes meds".
+    profile_context = build_user_profile_context()
+    if profile_context:
+        system += (
+            "PATIENT'S SAVED MEDICHAT PROFILE (authoritative — reference when relevant "
+            "to interpreting the report below):\n" + profile_context + "\n\n"
+        )
     if memory_context:
         system += "What this patient has told you in conversation:\n" + memory_context + "\n\n"
 
@@ -10201,6 +10944,322 @@ def build_memory_context(memory):
     if memory["medications"]:
         parts.append("Referenced medications: " + ", ".join(memory["medications"]))
     return "\n".join(parts)
+
+
+def build_user_profile_context():
+    """Build a structured context block of the patient's explicitly-saved
+    profile data — medications, appointments, uploaded health records and
+    their summaries, plus today's vitals. This is the missing piece that
+    lets the assistant give personalised answers grounded in what the user
+    actually saved, rather than asking them to re-state everything.
+
+    All four sources (medications, appointments, health records, daily
+    metrics) work for both authenticated AND guest users — the underlying
+    list_* helpers transparently swap between Firebase (signed-in) and the
+    in-session guest store.
+
+    Returns an empty string if the patient has not saved anything yet —
+    callers should check before injecting into a system prompt so we don't
+    waste tokens on a blank block.
+    """
+    parts = []
+
+    # MEDICATIONS — most frequently referenced. Sort newest first so the
+    # most recent additions appear at the top.
+    try:
+        meds = list_medications() or []
+    except Exception:
+        meds = []
+    if meds:
+        lines = [
+            "MEDICATIONS ON FILE (this patient has explicitly saved these to "
+            "their MediChat profile — treat as authoritative):"
+        ]
+        for m in meds[:25]:
+            head = (m.get("name") or "(unnamed)").strip()
+            spec_bits = []
+            if m.get("dose"):
+                spec_bits.append(str(m["dose"]).strip())
+            if m.get("frequency"):
+                spec_bits.append(str(m["frequency"]).strip())
+            if m.get("time_of_day"):
+                spec_bits.append(str(m["time_of_day"]).strip())
+            spec = " · ".join([b for b in spec_bits if b])
+            line = "  - " + head
+            if spec:
+                line += " (" + spec + ")"
+            notes = (m.get("notes") or "").strip()
+            if notes:
+                line += " — Note: " + notes[:200]
+            lines.append(line)
+        parts.append("\n".join(lines))
+
+    # APPOINTMENTS — past + upcoming. Most useful for context like
+    # "remember my follow-up next week" or "what did we plan to discuss".
+    try:
+        appts = list_appointments() or []
+    except Exception:
+        appts = []
+    if appts:
+        # Sort by date if present, descending (most recent first).
+        try:
+            appts_sorted = sorted(appts, key=lambda a: (a.get("date") or ""), reverse=True)
+        except Exception:
+            appts_sorted = appts
+        lines = ["APPOINTMENTS ON FILE:"]
+        for a in appts_sorted[:10]:
+            head_bits = []
+            if a.get("date"):
+                head_bits.append(str(a["date"]).strip())
+            if a.get("title"):
+                head_bits.append(str(a["title"]).strip())
+            tail_bits = []
+            if a.get("doctor"):
+                tail_bits.append("Dr " + str(a["doctor"]).strip())
+            if a.get("location"):
+                tail_bits.append("at " + str(a["location"]).strip())
+            line = "  - " + " — ".join([b for b in head_bits if b])
+            if tail_bits:
+                line += " (" + ", ".join(tail_bits) + ")"
+            notes = (a.get("notes") or "").strip()
+            if notes:
+                line += " — Note: " + notes[:200]
+            lines.append(line)
+        parts.append("\n".join(lines))
+
+    # HEALTH RECORDS — uploaded reports/scans. The `summary` field captures
+    # extracted text from PDFs and Vision-AI summaries from images, so the
+    # assistant CAN actually reason about previously-uploaded content even
+    # when those files aren't in the current chat.
+    try:
+        records = list_health_records() or []
+    except Exception:
+        records = []
+    if records:
+        try:
+            records_sorted = sorted(records, key=lambda r: (r.get("uploaded_at") or ""), reverse=True)
+        except Exception:
+            records_sorted = records
+        lines = [
+            "UPLOADED HEALTH RECORDS (file metadata + AI summary + actual "
+            "extracted text — use the 'Key values' field to compare numeric "
+            "results across multiple uploads of the same kind):"
+        ]
+        for r in records_sorted[:8]:
+            head = (r.get("name") or "(unnamed)").strip()
+            uploaded = (r.get("uploaded_at") or "")[:10]
+            ftype = (r.get("file_type") or "").strip()
+            line = "  - "
+            if uploaded:
+                line += uploaded + ": "
+            line += head
+            if ftype:
+                line += " (" + ftype + ")"
+            lines.append(line)
+            summary = (r.get("summary") or "").strip()
+            if summary:
+                lines.append("    AI summary: " + summary[:500])
+            raw = (r.get("raw_text") or "").strip()
+            if raw and raw != summary:
+                # Collapse repeated whitespace so it reads cleanly in the prompt.
+                raw_clean = re.sub(r"[ \t]+", " ", raw)
+                raw_clean = re.sub(r"\n{3,}", "\n\n", raw_clean)
+                lines.append("    Key values / extracted text: " + raw_clean[:900])
+        parts.append("\n".join(lines))
+
+    # TODAY'S VITALS — heart rate, sleep, steps, water, mood.
+    try:
+        dm = get_daily_metrics() or {}
+    except Exception:
+        dm = {}
+    vital_lines = []
+    if dm.get("heart_rate_resting") is not None:
+        vital_lines.append("  - Resting heart rate: " + str(dm["heart_rate_resting"]) + " bpm")
+    if dm.get("sleep_hours") is not None:
+        vital_lines.append("  - Sleep last night: " + str(dm["sleep_hours"]) + " hours")
+    if dm.get("steps") is not None:
+        vital_lines.append("  - Steps today: " + str(dm["steps"]))
+    wg = dm.get("water_glasses")
+    if wg is not None and (isinstance(wg, (int, float)) and wg >= 0):
+        vital_lines.append("  - Water intake today: " + str(wg) + "/8 glasses")
+    if dm.get("mood"):
+        vital_lines.append("  - Mood today: " + str(dm["mood"]))
+    if vital_lines:
+        parts.append(
+            "TODAY'S VITALS (most recent values the patient logged on their "
+            "MediChat Health Overview):\n" + "\n".join(vital_lines)
+        )
+
+    # ALLERGIES — clinically critical, surface prominently.
+    try:
+        allergies = list_allergies() or []
+    except Exception:
+        allergies = []
+    if allergies:
+        lines = [
+            "KNOWN ALLERGIES (clinically critical — ALWAYS check any drug or "
+            "treatment suggestion against this list before recommending):"
+        ]
+        for a in allergies[:25]:
+            head = (a.get("name") or "").strip()
+            details = []
+            sev = (a.get("severity") or "").strip()
+            if sev:
+                details.append("severity: " + sev)
+            rxn = (a.get("reaction") or "").strip()
+            if rxn:
+                details.append("reaction: " + rxn[:80])
+            line = "  - " + head
+            if details:
+                line += " (" + "; ".join(details) + ")"
+            if a.get("notes"):
+                line += " — " + a["notes"][:120]
+            lines.append(line)
+        parts.append("\n".join(lines))
+
+    # FAMILY HISTORY — affects risk modeling for genetic/familial conditions.
+    try:
+        fh = list_family_history() or []
+    except Exception:
+        fh = []
+    if fh:
+        lines = [
+            "FAMILY MEDICAL HISTORY (genetic / risk context — use when "
+            "assessing the patient's likelihood of related conditions):"
+        ]
+        for f in fh[:20]:
+            cond = (f.get("condition") or "").strip()
+            rel = (f.get("relationship") or "").strip()
+            line = "  - " + cond
+            if rel:
+                line += " (" + rel + ")"
+            if f.get("age_at_diagnosis"):
+                line += " — diagnosed at " + str(f["age_at_diagnosis"])
+            if f.get("notes"):
+                line += "; " + f["notes"][:120]
+            lines.append(line)
+        parts.append("\n".join(lines))
+
+    # SURGICAL HISTORY — affects anatomy / drug clearance / future risk.
+    try:
+        surg = list_surgical_history() or []
+    except Exception:
+        surg = []
+    if surg:
+        try:
+            surg_sorted = sorted(surg, key=lambda s: (s.get("year") or ""), reverse=True)
+        except Exception:
+            surg_sorted = surg
+        lines = [
+            "SURGICAL HISTORY (past procedures — relevant for anatomy, "
+            "post-op risks, and drug-clearance assumptions):"
+        ]
+        for s in surg_sorted[:15]:
+            proc = (s.get("procedure") or "").strip()
+            year = (s.get("year") or "").strip()
+            hosp = (s.get("hospital") or "").strip()
+            line = "  - " + proc
+            if year:
+                line += " (" + year + ")"
+            if hosp:
+                line += " at " + hosp
+            if s.get("notes"):
+                line += " — " + s["notes"][:120]
+            lines.append(line)
+        parts.append("\n".join(lines))
+
+    return "\n\n".join(parts)
+
+
+# Reasonable symptom keyword set for timeline matching. Kept lowercase for
+# substring comparisons. Phrases longer than single words are included for
+# specificity (e.g. "chest pain" vs. just "pain").
+_SYMPTOM_KEYWORDS = [
+    "headache", "migraine", "fever", "cough", "fatigue", "tiredness",
+    "shortness of breath", "breathless", "wheezing",
+    "chest pain", "chest tight", "palpitations",
+    "stomach pain", "abdominal pain", "stomach ache", "bloating",
+    "nausea", "vomiting", "diarrhea", "diarrhoea", "constipation",
+    "dizziness", "lightheaded", "fainting", "blackout",
+    "rash", "itch", "swelling",
+    "back pain", "neck pain", "joint pain", "muscle pain",
+    "sore throat", "runny nose", "congestion",
+    "insomnia", "trouble sleeping", "anxiety", "panic", "depressed",
+    "weight loss", "weight gain", "appetite",
+    "blurred vision", "vision change", "ringing in ears", "tinnitus",
+    "numbness", "tingling", "weakness", "tremor",
+    "burning urination", "urinary", "frequent urination",
+    "menstrual", "period pain", "cramps",
+]
+
+
+def build_symptom_timeline(current_messages, current_conversation_id=""):
+    """Scan past conversations (for authenticated users) plus the current
+    chat for symptom mentions, group by symptom, and return a structured
+    timeline. Lets the AI surface patterns like "headache reported 4 times
+    over the past 3 months" without the patient having to mention them.
+
+    For guests, only the current conversation is scanned (we don't have
+    durable storage of past conversations for them).
+    """
+    occurrences = {}  # symptom → list of "YYYY-MM-DD (snippet)"
+
+    def _scan_text(text, date_str):
+        if not text:
+            return
+        low = text.lower()
+        for kw in _SYMPTOM_KEYWORDS:
+            if kw in low:
+                occurrences.setdefault(kw, []).append(date_str or "unknown date")
+
+    # Current chat — user messages only.
+    if current_messages:
+        try:
+            today = datetime.now().strftime("%Y-%m-%d")
+            for m in current_messages:
+                if m.get("role") == "user":
+                    _scan_text(m.get("content", ""), today)
+        except Exception:
+            pass
+
+    # Past conversations — authenticated users only.
+    if st.session_state.get("is_authenticated") and st.session_state.get("user_email_hash"):
+        try:
+            convs = list_conversations(st.session_state.user_email_hash, limit=20) or []
+        except Exception:
+            convs = []
+        for c in convs:
+            try:
+                cid = c.get("id") or ""
+                if cid == current_conversation_id:
+                    continue  # already scanned via current_messages
+                date_str = (c.get("updated_at") or c.get("created_at") or "")[:10] or "earlier chat"
+                # Use the cheaper summary fields rather than loading the
+                # full conversation — keeps profile-context build fast.
+                snippet = " ".join([
+                    str(c.get("first_user_msg") or ""),
+                    str(c.get("title") or ""),
+                    str(c.get("last_assistant_msg") or ""),
+                ])
+                _scan_text(snippet, date_str)
+            except Exception:
+                continue
+
+    if not occurrences:
+        return ""
+
+    lines = [
+        "SYMPTOM TIMELINE (mentions of symptoms across this patient's past "
+        "and current chats — useful for spotting recurrence or patterns):"
+    ]
+    # Sort by frequency descending so the most-reported issues appear first.
+    for kw, dates in sorted(occurrences.items(), key=lambda kv: -len(kv[1])):
+        unique_dates = sorted(set(dates), reverse=True)
+        date_str = ", ".join(unique_dates[:5])
+        if len(unique_dates) > 5:
+            date_str += ", …"
+        lines.append("  - " + kw + " — mentioned " + str(len(dates)) + "× (" + date_str + ")")
+    return "\n".join(lines)
 
 EMERGENCY_KEYWORDS = [
     "suicide", "suicidal", "kill myself", "end my life", "want to die", "self harm",
@@ -10483,15 +11542,37 @@ def check_drug_interactions(response_text, memory):
     return alerts
 
 def calculate_confidence(distances):
+    """Distance→confidence mapping calibrated for this RAG corpus.
+
+    The previous formula (1.8-floor curve) bottomed out at 5% for any normal
+    conversational query against a PubMed-style corpus where distances
+    typically run 1.4-2.2 — making the UI look pessimistic on perfectly
+    reasonable questions. This curve is more generous: a typical query
+    (avg_dist ~1.5) now lands around 50% rather than 5%.
+
+    Distance reference (smaller = closer match):
+      0.4  → 83%   (high)
+      0.7  → 74%   (high)
+      1.0  → 65%   (medium)
+      1.3  → 56%   (medium)
+      1.5  → 50%   (medium)
+      1.7  → 44%   (low)
+      2.0  → 35%   (low)
+      2.3  → 26%   (low)
+      2.5+ → 20%   (floor)
+    """
     if not distances or len(distances) == 0:
-        return "low", 0
+        return "low", 20
     avg_dist = sum(distances) / len(distances)
-    if avg_dist < 0.8:
-        return "high", round((1 - avg_dist / 2) * 100)
-    elif avg_dist < 1.3:
-        return "medium", round((1 - avg_dist / 2) * 100)
+    raw_pct = round(95 - (avg_dist * 30))
+    pct = max(20, min(98, raw_pct))
+    if avg_dist < 0.9:
+        level = "high"
+    elif avg_dist < 1.6:
+        level = "medium"
     else:
-        return "low", max(20, round((1 - avg_dist / 2.5) * 100))
+        level = "low"
+    return level, pct
 
 def get_sources_used(idxs):
     pubmed_split = max(1, len(documents) // 2)
@@ -10569,6 +11650,37 @@ def markdown_to_html(text):
             html_text,
             flags=re.DOTALL
         )
+
+    # Dual-model second-opinion marker swap. Markers are inserted in the
+    # streaming response (see dispatcher's OpenAI branch). They survive
+    # html.escape (brackets are not escaped) and markdown processing (plain
+    # text inside <p>), then we swap them here for an explicit styled wrapper
+    # that defeats the chat bubble's paragraph-collapsing CSS.
+    _verify_open = (
+        "<div class='md-verify-block' style='"
+        "margin-top:1.4rem;padding-top:1rem;"
+        "border-top:1.5px solid #cbd5e1;'>"
+        "<div class='md-verify-head' style='"
+        "font-weight:600;color:#334155;"
+        "margin-bottom:0.5rem;font-size:0.97em;'>"
+        "🩺 MediChat Verify "
+        "<span style='font-weight:400;font-style:italic;color:#64748b;font-size:0.92em;'>"
+        "— second medical AI perspective</span>"
+        "</div>"
+        "<div class='md-verify-body' style='"
+        "color:#475569;font-style:italic;line-height:1.55;'>"
+    )
+    _verify_close = "</div></div>"
+    html_text = html_text.replace(
+        "<p class='md-p'>[[VERIFY_START]]</p>", _verify_open
+    )
+    html_text = html_text.replace(
+        "<p class='md-p'>[[VERIFY_END]]</p>", _verify_close
+    )
+    # Belt-and-braces: handle the case where markdown left the markers
+    # adjacent without paragraph wrapping (rare, but harmless to guard).
+    html_text = html_text.replace("[[VERIFY_START]]", _verify_open)
+    html_text = html_text.replace("[[VERIFY_END]]", _verify_close)
     return html_text
 
 def strip_excessive_disclaimers(text):
@@ -10619,6 +11731,117 @@ def is_casual_message(text):
         return True
     return False
 
+def dual_model_review(question, primary_answer, history=None):
+    """Always-visible second opinion from Claude Haiku on the OpenAI primary
+    answer. Returns Claude's brief perspective (1-3 sentences) as a plain
+    string. Returns empty string only when disabled, Claude isn't configured,
+    primary is empty, or the API call fails — caller appends the result
+    verbatim when truthy.
+
+    history: optional list of prior {role, content} messages so Claude can
+    correctly review follow-up questions ("Are you sure?", "Why?", "What
+    about X?") that only make sense in context of earlier turns. Without
+    history, Claude saw a bare question + a long answer and got confused
+    about whether the answer matched the question.
+
+    Design notes:
+    - "Always show" variant: Claude adds ONE useful piece of nuance, context,
+      alternative, or correction on every response.
+    - Prompt forbids rephrasing the primary answer — must add or flag, not repeat.
+    - Output capped (max_tokens=220, 600-char defensive trim).
+    - Errors swallowed: broken reviewer must never break the primary answer.
+    """
+    if not ENABLE_DUAL_REVIEW:
+        return ""
+    if not CLAUDE_ACTIVE or anthropic_client is None:
+        return ""
+    if not primary_answer or not primary_answer.strip():
+        return ""
+    try:
+        # Build a short context block from the last ~3 exchanges so Claude
+        # understands follow-up questions. Strip past verify markers so
+        # Claude doesn't see its own previous output bleeding into context,
+        # and truncate each turn to keep token cost low.
+        context_block = ""
+        if history:
+            recent = [m for m in history if m.get("role") in ("user", "assistant")]
+            recent = recent[-6:]
+            if recent:
+                lines = ["PRIOR CONVERSATION (for context only):"]
+                for m in recent:
+                    role = m.get("role")
+                    content = (m.get("content") or "").strip()
+                    # Strip any previous verify block so Claude doesn't see
+                    # its own past second-opinions mixed into the transcript.
+                    content = re.sub(
+                        r"\[\[VERIFY_START\]\].*?\[\[VERIFY_END\]\]",
+                        "",
+                        content,
+                        flags=re.DOTALL,
+                    ).strip()
+                    if not content:
+                        continue
+                    if len(content) > 500:
+                        content = content[:500].rstrip() + "…"
+                    speaker = "Patient" if role == "user" else "Primary AI"
+                    lines.append(f"{speaker}: {content}")
+                context_block = "\n".join(lines) + "\n\n---\n\n"
+        review_prompt = (
+            context_block +
+            "LATEST EXCHANGE:\n"
+            f"Patient: {question}\n\n"
+            f"Primary AI answered:\n{primary_answer}\n\n"
+            "---\n\n"
+            "Your job: write a brief SECOND OPINION (1-3 sentences, max 55 words) "
+            "that adds genuine value to the patient. Use the PRIOR CONVERSATION "
+            "context to interpret short follow-up questions correctly.\n\n"
+            "Choose ONE angle based on what's most useful here:\n"
+            "  • Add an important nuance, caveat, or context the primary answer missed.\n"
+            "  • Mention a relevant alternative, safer option, or different consideration.\n"
+            "  • Flag a safety concern, red-flag symptom, or drug interaction the primary didn't fully address.\n"
+            "  • Clarify a common misconception related to the question.\n"
+            "  • Confirm the answer and add ONE concise piece of supporting context (only if there's truly nothing else to add).\n\n"
+            "Hard rules:\n"
+            "- Do NOT rephrase or repeat what the primary answer covered.\n"
+            "- Do NOT speculate or invent facts.\n"
+            "- Do NOT say things like 'I can't review without knowing the question' — use the prior conversation above to understand context.\n"
+            "- Do NOT include phrases like 'The primary answer is correct' or 'I agree' — go straight to the value.\n"
+            "- Write directly to the patient (use 'you' / 'your').\n"
+            "- No preamble. Start with the substance.\n\n"
+            "Your second-opinion note (1-3 sentences):"
+        )
+        resp = anthropic_client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=220,
+            system="You are a careful, concise second medical AI giving a brief value-add second opinion to a patient. Be direct and useful, not redundant.",
+            messages=[{"role": "user", "content": review_prompt}],
+            temperature=0.25,
+        )
+        raw = ""
+        if getattr(resp, "content", None):
+            for block in resp.content:
+                if hasattr(block, "text"):
+                    raw += block.text
+        raw = raw.strip()
+        # Diagnostic: visible in the preview server's stderr for tuning.
+        print("[dual_model_review] Claude raw:", repr(raw[:200]))
+        if not raw:
+            return ""
+        # Strip any accidental "Second opinion:" / "Note:" preamble.
+        for prefix in ("Second opinion:", "Second Opinion:", "SECOND OPINION:",
+                       "Note:", "NOTE:", "Important:", "IMPORTANT:"):
+            if raw.startswith(prefix):
+                raw = raw[len(prefix):].strip()
+                break
+        # Defensive length cap.
+        if len(raw) > 600:
+            raw = raw[:600].rstrip() + "…"
+        return raw
+    except Exception as e:
+        print("Second-opinion review failed (continuing without review):", e)
+        return ""
+
+
 def medichat_rag_stream(question, all_messages, lang_instruction="", patient_name="", pdf_context="", image_context="", past_chats_summary=""):
     if is_casual_message(question):
         clean_context = ""
@@ -10657,11 +11880,51 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
 
         "HARD RULES (NEVER BREAK THESE)\n\n"
 
-        "RULE 1 — NEVER FABRICATE PATIENT HISTORY:\n"
-        "The <patient_history> block below shows EXACTLY what this patient has told you. "
-        "The <reference_knowledge> block is generic medical information — it does NOT describe this patient. "
-        "You must NEVER say 'you mentioned', 'you said', 'you told me', or 'you're taking' unless "
-        "the thing you're referencing appears LITERALLY in <patient_history> or in the conversation turns below.\n\n"
+        "RULE 1 — YOU ARE THIS PATIENT'S PERSONAL VIRTUAL GP:\n"
+        "You have READ-ACCESS to their MediChat chart. Three blocks below describe THIS "
+        "specific patient and are AUTHORITATIVE:\n"
+        "  • <patient_profile> — data the patient explicitly SAVED to their MediChat profile "
+        "(medications, appointments, uploaded health records with extracted summaries, today's "
+        "vitals). These records ARE PRE-LOADED into your context every turn — you do not need "
+        "to ask the patient to re-share them. Reference specific entries by name when relevant. "
+        "If asked 'what meds do I take' you MUST list the medications from <patient_profile> "
+        "rather than asking them. If asked 'have you looked at my blood report' and a relevant "
+        "record summary is in <patient_profile>, you MUST refer to it directly (e.g. 'Yes, "
+        "looking at your blood report from 2026-05-15, your HbA1c was…').\n"
+        "  • <patient_history> — symptoms / conditions / medications extracted from this and "
+        "previous conversations with you.\n"
+        "  • The conversation turns themselves.\n"
+        "The <reference_knowledge> block is generic medical information and does NOT describe "
+        "this patient.\n\n"
+        "FORBIDDEN PHRASES — never use these when <patient_profile> contains the answer:\n"
+        "  • 'I don't have access to your records'\n"
+        "  • 'I can't check your records in real time'\n"
+        "  • 'I won't be able to analyze them directly'\n"
+        "  • 'You can share relevant details from those reports'\n"
+        "  • 'If you save your reports I can reference them' (you ALREADY can — they're above)\n"
+        "These phrases break trust. If the profile is empty for a topic, just say what you "
+        "see ('your profile doesn't have any blood reports saved yet') and offer to look "
+        "when they upload one.\n\n"
+        "CONVERSELY — you must NEVER fabricate. Do not say 'you mentioned', 'you said', "
+        "'you told me', or 'you're taking' unless the thing referenced appears LITERALLY in "
+        "<patient_profile>, <patient_history>, or in the conversation turns.\n\n"
+
+        "COMPARE RECORDS OVER TIME:\n"
+        "The UPLOADED HEALTH RECORDS section in <patient_profile> lists records "
+        "newest-first. When the patient asks about progress, change, or trends "
+        "('am I better?', 'how do my numbers look this time?', 'what changed since "
+        "last time?', 'is my X improving?'), or when you notice multiple records of "
+        "the same kind (two blood tests, three scans, repeat lipid panels, etc.), "
+        "you MUST compare them directly and cite both dates. Pull specific numbers "
+        "from the 'Key values' field on each record. Example: 'Comparing your blood "
+        "report from 2026-02-15 to today's, your HbA1c dropped from 6.4% to 5.9% — "
+        "that is a meaningful improvement consistent with the Metformin you started "
+        "in March.' Be honest when a value got worse too — patients deserve the truth.\n"
+        "This applies to ANY medical record: blood reports, urine tests, "
+        "X-rays, MRIs, CTs, ultrasounds, ECGs, skin photos, allergy results, "
+        "spirometry, vaccination records, discharge summaries, doctor letters. "
+        "Identify pairs / series of the same type and walk the patient through "
+        "what changed.\n\n"
 
         "RULE 2 — RED FLAG SCREENING FIRST:\n"
         "For these presentations, screen for danger signs BEFORE general advice:\n"
@@ -10718,6 +11981,31 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
     if lang_instruction:
         system += lang_instruction + "\n\n"
 
+    # Pull all explicitly-saved profile data (meds, appointments, records,
+    # vitals, allergies, family hx, surgical hx) plus a symptom timeline
+    # scanned across past conversations.
+    profile_context = build_user_profile_context()
+    try:
+        timeline_context = build_symptom_timeline(
+            all_messages,
+            st.session_state.get("current_conversation_id", ""),
+        )
+    except Exception:
+        timeline_context = ""
+    if timeline_context:
+        profile_context = (
+            (profile_context + "\n\n") if profile_context else ""
+        ) + timeline_context
+    if profile_context:
+        system += (
+            "<patient_profile>\n"
+            "This is the patient's saved MediChat profile. Treat this as authoritative "
+            "ground truth about who they are and what they're on. Reference specific "
+            "entries by name when relevant to their question.\n\n"
+            + profile_context + "\n"
+            "</patient_profile>\n\n"
+        )
+
     system += "<patient_history>\n"
     if memory_context:
         system += "What this patient has told you across all your conversations with them:\n" + memory_context + "\n"
@@ -10766,6 +12054,56 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
 
     full_response = ""
 
+    # Backend order: OpenAI (primary) → Claude Haiku (backup) → Groq (last resort).
+    if OPENAI_ACTIVE:
+        try:
+            openai_msgs = [{"role": "system", "content": system}] + history + [{"role": "user", "content": question}]
+            stream = openai_client.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=openai_msgs,
+                temperature=0.55,
+                max_tokens=1024,
+                stream=True,
+            )
+            for chunk in stream:
+                delta = ""
+                try:
+                    delta = chunk.choices[0].delta.content or ""
+                except Exception:
+                    delta = ""
+                if delta:
+                    full_response += delta
+                    yield ("chunk", delta, full_response)
+
+            # Dual-model second opinion (always visible when Claude is configured).
+            # The primary answer has already finished streaming to the patient;
+            # this appends a brief value-add perspective from MediChat Verify
+            # below, clearly separated as its own paragraph block. Silent only
+            # if Claude is disabled, not configured, or the call fails.
+            review_text = dual_model_review(question, full_response, history=history)
+            if review_text:
+                # Use marker-pattern that survives markdown's smart-typography
+                # and the chat bubble's CSS paragraph collapsing. Markers are
+                # plain ASCII strings that markdown leaves untouched, then
+                # markdown_to_html() swaps them for explicit styled <div>s
+                # AFTER the markdown pass — guaranteeing a visible separator,
+                # bold heading on its own line, and an italic body block
+                # that's clearly distinct from the primary answer above.
+                appended = (
+                    "\n\n[[VERIFY_START]]\n"
+                    f"{review_text}\n"
+                    "[[VERIFY_END]]"
+                )
+                full_response += appended
+                yield ("chunk", appended, full_response)
+
+            engine_label = "openai+claude_review" if review_text else "openai"
+            yield ("done", full_response, {"memory": memory, "sources": sources, "confidence": confidence_level, "confidence_pct": confidence_pct, "engine": engine_label})
+            return
+        except Exception as e:
+            print("OpenAI stream failed, falling back to Claude/Groq:", e)
+            full_response = ""
+
     if CLAUDE_ACTIVE:
         try:
             anthropic_messages = history + [{"role": "user", "content": question}]
@@ -10801,8 +12139,8 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
 
     if groq_client is None:
         raise RuntimeError(
-            "No AI backend is available. Check that GROQ_API_KEY (and optionally ANTHROPIC_API_KEY) "
-            "are set in your Streamlit Cloud secrets."
+            "No AI backend is available. Check that at least one of GROQ_API_KEY, "
+            "ANTHROPIC_API_KEY, or OPENAI_API_KEY is set in your Streamlit secrets."
         )
 
     msgs = [{"role": "system", "content": system}] + history + [{"role": "user", "content": question}]
@@ -10830,8 +12168,15 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
 def medichat_vision(question, b64, all_messages, lang_instruction=""):
     memory = extract_patient_memory(all_messages)
     memory_context = build_memory_context(memory)
+    # Saved profile data informs image analysis too — e.g. a patient on
+    # Foracort has asthma, which changes how a chest X-ray reads.
+    profile_context = build_user_profile_context()
     prompt = question.strip() if question.strip() else "Please analyse this medical image."
-    memory_note = ("\n\nPatient context: " + memory_context) if memory_context else ""
+    memory_note = ("\n\nPatient context (from earlier conversations): " + memory_context) if memory_context else ""
+    profile_note = (
+        "\n\nPATIENT'S SAVED MEDICHAT PROFILE (authoritative — reference when "
+        "relevant to interpreting the image):\n" + profile_context
+    ) if profile_context else ""
     lang_note = ("\n\n" + lang_instruction) if lang_instruction else ""
 
     system_text = (
@@ -10850,7 +12195,7 @@ def medichat_vision(question, b64, all_messages, lang_instruction=""):
         "- Use bullet points (- item) on their own lines for lists.\n"
         "- Do not provide a final diagnosis or medication dosage instructions.\n"
         "- One brief disclaimer at most."
-        + memory_note + lang_note
+        + profile_note + memory_note + lang_note
     )
 
     if CLAUDE_ACTIVE:
@@ -11029,6 +12374,306 @@ def generate_doctor_visit_summary(messages, patient_name=""):
 
     pdf_bytes = bytes(pdf.output(dest="S"))
     return pdf_bytes, summary_text
+
+
+def generate_full_medical_record_pdf(patient_name=""):
+    """Build a comprehensive medical-record PDF the patient can hand to (or
+    email) their GP. Pulls everything saved on MediChat: meds, allergies,
+    family history, surgical history, appointments, uploaded records with
+    AI summaries + extracted key values, and today's vitals. Designed to
+    save a busy GP 5-10 minutes of history-taking on intake.
+    """
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_margins(20, 20, 20)
+
+    # ── Cover banner ─────────────────────────────────────────────
+    pdf.set_fill_color(33, 118, 174)
+    pdf.rect(0, 0, 210, 42, "F")
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 22)
+    pdf.set_y(10)
+    pdf.cell(0, 10, "Patient Medical Record", ln=True, align="C")
+    pdf.set_font("Helvetica", "", 10)
+    _patient_label = patient_name if patient_name and patient_name.lower() != "guest" else "Patient"
+    pdf.cell(0, 7, "Prepared by MediChat for: " + _patient_label, ln=True, align="C")
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.cell(0, 5, "Generated " + datetime.now().strftime("%B %d, %Y at %I:%M %p"),
+             ln=True, align="C")
+
+    pdf.set_y(50)
+    pdf.set_fill_color(237, 246, 252)
+    pdf.set_text_color(20, 66, 114)
+    pdf.set_font("Helvetica", "", 9)
+    pdf.multi_cell(
+        0, 5,
+        "This is a structured summary of the patient's MediChat profile. "
+        "All entries below were saved by the patient or extracted from "
+        "documents they uploaded. Use as a starting point for clinical "
+        "history; verify with the patient where needed.",
+        fill=True, border=0
+    )
+    pdf.ln(4)
+
+    def _section(title, body_lines, color=(20, 66, 114)):
+        if not body_lines:
+            return
+        pdf.set_text_color(*color)
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.ln(2)
+        pdf.cell(0, 7, title, ln=True)
+        pdf.set_draw_color(*color)
+        pdf.line(20, pdf.get_y(), 190, pdf.get_y())
+        pdf.ln(2)
+        pdf.set_text_color(40, 40, 40)
+        pdf.set_font("Helvetica", "", 10)
+        for line in body_lines:
+            cleaned = clean_text(line)
+            if cleaned.startswith("•") or cleaned.startswith("-"):
+                pdf.set_x(25)
+                pdf.cell(5, 5, "-", ln=False)
+                pdf.multi_cell(0, 5, cleaned.lstrip("•- ").strip())
+            elif cleaned.endswith(":") and len(cleaned) < 60:
+                pdf.set_font("Helvetica", "B", 10)
+                pdf.cell(0, 5, cleaned, ln=True)
+                pdf.set_font("Helvetica", "", 10)
+            else:
+                pdf.multi_cell(0, 5, cleaned)
+
+    # ── Medications ──────────────────────────────────────────────
+    try:
+        meds = list_medications() or []
+    except Exception:
+        meds = []
+    if meds:
+        med_lines = []
+        for m in meds:
+            head = (m.get("name") or "").strip()
+            bits = []
+            if m.get("dose"):
+                bits.append(m["dose"])
+            if m.get("frequency"):
+                bits.append(m["frequency"])
+            if m.get("time_of_day"):
+                bits.append(m["time_of_day"])
+            line = "- " + head
+            if bits:
+                line += " (" + ", ".join(bits) + ")"
+            if m.get("notes"):
+                line += " - " + m["notes"]
+            med_lines.append(line)
+        _section("Current Medications", med_lines)
+
+    # ── Allergies (red emphasis) ─────────────────────────────────
+    try:
+        allergies = list_allergies() or []
+    except Exception:
+        allergies = []
+    if allergies:
+        a_lines = []
+        for a in allergies:
+            head = (a.get("name") or "").strip()
+            extras = []
+            if a.get("severity"):
+                extras.append("severity: " + a["severity"])
+            if a.get("reaction"):
+                extras.append("reaction: " + a["reaction"])
+            line = "- " + head
+            if extras:
+                line += " (" + "; ".join(extras) + ")"
+            if a.get("notes"):
+                line += " - " + a["notes"]
+            a_lines.append(line)
+        _section("Known Allergies", a_lines, color=(190, 30, 30))
+
+    # ── Family history ───────────────────────────────────────────
+    try:
+        fh = list_family_history() or []
+    except Exception:
+        fh = []
+    if fh:
+        fh_lines = []
+        for f in fh:
+            head = (f.get("condition") or "").strip()
+            extras = []
+            if f.get("relationship"):
+                extras.append(f["relationship"])
+            if f.get("age_at_diagnosis"):
+                extras.append("dx age " + str(f["age_at_diagnosis"]))
+            line = "- " + head
+            if extras:
+                line += " (" + ", ".join(extras) + ")"
+            if f.get("notes"):
+                line += " - " + f["notes"]
+            fh_lines.append(line)
+        _section("Family Medical History", fh_lines)
+
+    # ── Surgical history ─────────────────────────────────────────
+    try:
+        surg = list_surgical_history() or []
+    except Exception:
+        surg = []
+    if surg:
+        try:
+            surg_sorted = sorted(surg, key=lambda s: (s.get("year") or ""), reverse=True)
+        except Exception:
+            surg_sorted = surg
+        s_lines = []
+        for s in surg_sorted:
+            head = (s.get("procedure") or "").strip()
+            extras = []
+            if s.get("year"):
+                extras.append(s["year"])
+            if s.get("hospital"):
+                extras.append(s["hospital"])
+            line = "- " + head
+            if extras:
+                line += " (" + ", ".join(extras) + ")"
+            if s.get("notes"):
+                line += " - " + s["notes"]
+            s_lines.append(line)
+        _section("Surgical History", s_lines)
+
+    # ── Upcoming / recent appointments ──────────────────────────
+    try:
+        appts = list_appointments() or []
+    except Exception:
+        appts = []
+    if appts:
+        try:
+            appts_sorted = sorted(appts, key=lambda a: (a.get("date") or ""), reverse=True)
+        except Exception:
+            appts_sorted = appts
+        ap_lines = []
+        for a in appts_sorted[:8]:
+            head_bits = []
+            if a.get("date"):
+                head_bits.append(a["date"])
+            if a.get("title"):
+                head_bits.append(a["title"])
+            tail_bits = []
+            if a.get("doctor"):
+                tail_bits.append("Dr " + a["doctor"])
+            if a.get("location"):
+                tail_bits.append("at " + a["location"])
+            line = "- " + " - ".join(head_bits)
+            if tail_bits:
+                line += " (" + ", ".join(tail_bits) + ")"
+            ap_lines.append(line)
+        _section("Appointments", ap_lines)
+
+    # ── Today's vitals ───────────────────────────────────────────
+    try:
+        dm = get_daily_metrics() or {}
+    except Exception:
+        dm = {}
+    v_lines = []
+    if dm.get("heart_rate_resting") is not None:
+        v_lines.append("- Resting heart rate: " + str(dm["heart_rate_resting"]) + " bpm")
+    if dm.get("sleep_hours") is not None:
+        v_lines.append("- Sleep last night: " + str(dm["sleep_hours"]) + " hours")
+    if dm.get("steps") is not None:
+        v_lines.append("- Steps today: " + str(dm["steps"]))
+    if dm.get("water_glasses") is not None:
+        v_lines.append("- Water intake today: " + str(dm["water_glasses"]) + "/8 glasses")
+    if dm.get("mood"):
+        v_lines.append("- Mood: " + str(dm["mood"]))
+    if v_lines:
+        _section("Today's Vitals", v_lines)
+
+    # ── Uploaded health records with AI summaries ────────────────
+    try:
+        records = list_health_records() or []
+    except Exception:
+        records = []
+    if records:
+        try:
+            records_sorted = sorted(records, key=lambda r: (r.get("uploaded_at") or ""), reverse=True)
+        except Exception:
+            records_sorted = records
+        # New page for records since each block can be long.
+        pdf.add_page()
+        pdf.set_x(pdf.l_margin)
+        pdf.set_text_color(20, 66, 114)
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(0, 8, "Uploaded Health Records", ln=True)
+        pdf.set_draw_color(20, 66, 114)
+        pdf.line(20, pdf.get_y(), 190, pdf.get_y())
+        pdf.ln(3)
+
+        # FPDF2 doesn't reliably reset the x-cursor to the left margin
+        # after multi_cell() — calling another multi_cell can then crash
+        # with "Not enough horizontal space to render a single character"
+        # because the available width has shrunk to zero. Wrapping each
+        # multi_cell in this helper guarantees a clean left-margin start
+        # AND swallows the same exception defensively so a single
+        # malformed record can't kill the whole PDF.
+        def _safe_mc(text, line_h=4):
+            try:
+                pdf.set_x(pdf.l_margin)
+                pdf.multi_cell(0, line_h, clean_text(text))
+            except Exception as _mc_e:
+                # If a long unbreakable token (e.g. a binary blob in the
+                # extracted text) still fails, fall back to a small fixed
+                # width and a truncated version so we lose this record's
+                # detail rather than the whole PDF.
+                try:
+                    pdf.set_x(pdf.l_margin)
+                    pdf.multi_cell(
+                        170, line_h,
+                        clean_text(text[:400]) +
+                        "  [truncated — content not renderable]"
+                    )
+                except Exception:
+                    # Give up on this block entirely, keep the PDF alive.
+                    print("safe_mc giving up on record block:", repr(_mc_e))
+
+        for r in records_sorted[:10]:
+            head = (r.get("name") or "(unnamed)").strip()
+            uploaded = (r.get("uploaded_at") or "")[:10]
+            ftype = (r.get("file_type") or "").strip()
+            pdf.set_x(pdf.l_margin)
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.set_text_color(30, 58, 54)
+            title_bits = []
+            if uploaded:
+                title_bits.append(uploaded)
+            title_bits.append(head)
+            if ftype:
+                title_bits.append("(" + ftype + ")")
+            _safe_mc(" - ".join(title_bits), line_h=5)
+            summary = (r.get("summary") or "").strip()
+            if summary:
+                pdf.set_font("Helvetica", "I", 9)
+                pdf.set_text_color(60, 60, 60)
+                _safe_mc("AI summary: " + summary[:1200], line_h=4)
+            raw = (r.get("raw_text") or "").strip()
+            if raw and raw != summary:
+                pdf.set_font("Helvetica", "", 9)
+                pdf.set_text_color(40, 40, 40)
+                cleaned_raw = re.sub(r"[ \t]+", " ", raw)[:1400]
+                _safe_mc("Extracted key values: " + cleaned_raw, line_h=4)
+            pdf.ln(3)
+
+    # ── Footer disclaimer on the last page ───────────────────────
+    pdf.ln(6)
+    pdf.set_draw_color(168, 197, 189)
+    pdf.line(20, pdf.get_y(), 190, pdf.get_y())
+    pdf.ln(3)
+    pdf.set_font("Helvetica", "I", 7)
+    pdf.set_text_color(120, 120, 120)
+    pdf.multi_cell(
+        0, 4,
+        "MediChat is a research prototype, not a medical device. This record is "
+        "compiled from patient-submitted data and AI-extracted text and may contain "
+        "errors or omissions. Always rely on the patient's stated history and your "
+        "own clinical judgement for diagnosis and treatment."
+    )
+    pdf.ln(2)
+    pdf.cell(0, 4, APP_VERSION_LABEL, ln=True, align="C")
+
+    return bytes(pdf.output(dest="S"))
+
 
 def generate_chat_pdf(messages):
     pdf = FPDF()
@@ -11226,11 +12871,63 @@ def generate_assessment_report(assessment_data, lang_instruction=""):
         "SUMMARY: [2-3 warm, clear sentences summarising the assessment]\n"
         "SAFETY: [one line with emergency fallback if symptoms worsen]\n"
     )
-    r = groq_client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": prompt}], temperature=0.3, max_tokens=1024)
-    return r.choices[0].message.content
+    # Backend dispatch — mirrors medichat_rag_stream's order
+    # (OpenAI primary, Claude backup, Groq last resort) so the assessment
+    # works regardless of which keys the user has configured. Previously
+    # this function was Groq-only and crashed with AttributeError on any
+    # user without GROQ_API_KEY set, leaving them stuck on a "Step N+1 of
+    # N" screen with no rendered report.
+    _msgs = [{"role": "user", "content": prompt}]
+
+    if OPENAI_ACTIVE and openai_client is not None:
+        try:
+            resp = openai_client.chat.completions.create(
+                model=OPENAI_MODEL,
+                messages=_msgs,
+                temperature=0.3,
+                max_tokens=1024,
+            )
+            return resp.choices[0].message.content
+        except Exception as _e:
+            print("Assessment via OpenAI failed, falling back:", repr(_e))
+
+    if CLAUDE_ACTIVE and anthropic_client is not None:
+        try:
+            resp = anthropic_client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=1024,
+                messages=_msgs,
+                temperature=0.3,
+            )
+            # Anthropic returns list of content blocks
+            return "".join(
+                getattr(b, "text", "") for b in (resp.content or [])
+            )
+        except Exception as _e:
+            print("Assessment via Claude failed, falling back to Groq:", repr(_e))
+
+    if groq_client is not None:
+        try:
+            r = groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=_msgs,
+                temperature=0.3,
+                max_tokens=1024,
+            )
+            return r.choices[0].message.content
+        except Exception as _e:
+            print("Assessment via Groq failed:", repr(_e))
+
+    raise RuntimeError(
+        "No AI backend available to generate the symptom assessment. "
+        "Configure at least one of OPENAI_API_KEY, ANTHROPIC_API_KEY, "
+        "or GROQ_API_KEY in your secrets.toml."
+    )
 
 def parse_report(report_text):
     parsed = {"urgency": "", "conditions": [], "next_steps": [], "summary": "", "safety": ""}
+    if not report_text:
+        return parsed
     for line in report_text.strip().split("\n"):
         line = line.strip()
         if line.startswith("URGENCY:"):
@@ -11243,6 +12940,25 @@ def parse_report(report_text):
             parsed["summary"] = line.replace("SUMMARY:", "").strip()
         elif line.startswith("SAFETY:"):
             parsed["safety"] = line.replace("SAFETY:", "").strip()
+    # Sensible defaults so the result UI never renders an empty page even
+    # if the LLM omitted a field. Conditions / next_steps can stay empty —
+    # the UI just hides those sections.
+    if not parsed["urgency"]:
+        parsed["urgency"] = "See a doctor soon"
+    if not parsed["summary"]:
+        parsed["summary"] = (
+            "Based on the symptoms you described, please consult a healthcare "
+            "professional for a full evaluation."
+        )
+    if not parsed["safety"]:
+        parsed["safety"] = (
+            "If symptoms worsen suddenly or you experience any red-flag signs "
+            "(chest pain, severe shortness of breath, confusion, fainting), "
+            "seek emergency care immediately."
+        )
+    return parsed
+
+
 if "session_started" not in st.session_state:
     st.session_state.session_started = True
     st.session_state.messages = []
@@ -11286,6 +13002,89 @@ if "session_started" not in st.session_state:
     st.session_state.voice_audio_key = 0
 
 
+# Selection-clear: CSS alone keeps losing the specificity battle against
+# Streamlit's Base Web checkbox / radio component styles, so any accidental
+# drag-select or persisted text selection on a label/button shows the dark
+# purple browser highlight. This injects a JS listener on the parent doc
+# that immediately calls getSelection().removeAllRanges() whenever the
+# selection lands inside non-content UI chrome (labels, buttons, checkboxes,
+# headings, sidebar nav, page hero text). Content areas (chat bubbles, AI
+# summaries, report text) are NOT cleared — copy still works there.
+try:
+    import streamlit.components.v1 as _selclr_components
+    _selclr_components.html(
+        """
+        <script>
+        (function() {
+            try {
+                const win = window.parent;
+                const doc = win.document;
+                if (win.__medichatSelectionClearV1) return;
+                win.__medichatSelectionClearV1 = true;
+
+                // Clear any selection inherited from before this script loaded
+                try { win.getSelection().removeAllRanges(); } catch (e) {}
+
+                const NON_SELECTABLE_SELECTOR = [
+                    'label',
+                    'button',
+                    '[data-baseweb="checkbox"]',
+                    '[data-baseweb="radio"]',
+                    '[data-testid="stWidgetLabel"]',
+                    '[data-testid="stCheckbox"]',
+                    '[data-testid="stRadio"]',
+                    '[data-testid="stForm"] label',
+                    '[data-testid="stSidebar"] [data-testid="stMarkdown"]',
+                    '.stButton',
+                    '.stFormSubmitButton',
+                    '.md-page-hero',
+                    '.md-page-hero-title',
+                    '.assessment-title',
+                    '.assessment-subtitle',
+                    'h1', 'h2', 'h3', 'h4', 'h5', 'h6'
+                ].join(', ');
+
+                function isInsideNonSelectable(node) {
+                    if (!node) return false;
+                    let el = node.nodeType === 3 ? node.parentElement : node;
+                    if (!el) return false;
+                    return !!el.closest(NON_SELECTABLE_SELECTOR);
+                }
+
+                doc.addEventListener('selectionchange', function() {
+                    try {
+                        const sel = win.getSelection();
+                        if (!sel || sel.rangeCount === 0) return;
+                        const range = sel.getRangeAt(0);
+                        if (isInsideNonSelectable(range.startContainer) ||
+                            isInsideNonSelectable(range.endContainer)) {
+                            sel.removeAllRanges();
+                        }
+                    } catch (e) { /* swallow */ }
+                });
+
+                // Also clear on mouseup as a safety net for browsers that
+                // don't fire selectionchange reliably during fast drags.
+                doc.addEventListener('mouseup', function(ev) {
+                    try {
+                        if (isInsideNonSelectable(ev.target)) {
+                            const sel = win.getSelection();
+                            if (sel) sel.removeAllRanges();
+                        }
+                    } catch (e) {}
+                });
+
+                console.log('[MediChat] selection-clear V1 installed');
+            } catch (e) { console.error('[MediChat] selection-clear setup failed:', e); }
+        })();
+        </script>
+        """,
+        height=0,
+    )
+except Exception:
+    pass
+
+
 with st.sidebar:
     _brand_logo_uri = get_brand_logo_data_uri()
     if _brand_logo_uri:
@@ -11308,6 +13107,228 @@ with st.sidebar:
             '</div>',
             unsafe_allow_html=True
         )
+
+    # ── Guest auth-gate dialog ───────────────────────────────────
+    # Features that require a signed-in account. Guest users get a popup
+    # nudging them to sign in / create an account when they tap any of these.
+    # Home, Symptoms Checker, and Prescription Reader stay open for guests so
+    # they can still try the core chat + analysis flows without committing.
+    _AUTH_REQUIRED_NAV = {"recent", "overview", "records", "meds", "insights", "appts"}
+
+    @st.dialog("Members only", width="small")
+    def _show_auth_required_dialog(feature_label):
+        # Scoped styling — uses the same blue→indigo→purple palette as the
+        # welcome card so the dialog feels native to MediChat rather than
+        # like a generic Streamlit modal.
+        st.markdown(
+            """
+            <style>
+            /* Tighten the modal body so our hero block sits closer to the top
+               and the dialog header bar gets a hairline of breathing room. */
+            div[data-testid="stDialog"] [data-testid="stModalBody"],
+            div[data-testid="stDialog"] [class*="ModalBody"] {
+                padding-top: 0.3rem !important;
+            }
+            .md-auth-dlg-hero {
+                text-align: center;
+                margin: 0.3rem 0 1.1rem 0;
+            }
+            .md-auth-dlg-icon {
+                width: 78px;
+                height: 78px;
+                margin: 0 auto 0.85rem auto;
+                border-radius: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background:
+                    radial-gradient(circle at 28% 22%, rgba(255,255,255,0.55), transparent 46%),
+                    linear-gradient(145deg, #3b82f6 0%, #6366f1 58%, #8b5cf6 100%);
+                box-shadow:
+                    0 14px 32px rgba(99, 102, 241, 0.34),
+                    0 2px 6px rgba(59, 130, 246, 0.20);
+                position: relative;
+                overflow: hidden;
+            }
+            .md-auth-dlg-icon::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: radial-gradient(120% 80% at 50% 110%, rgba(255,255,255,0.18), transparent 60%);
+                pointer-events: none;
+            }
+            .md-auth-dlg-icon .material-symbols-rounded {
+                color: #ffffff;
+                font-size: 40px;
+                font-weight: 500;
+                position: relative;
+                z-index: 1;
+            }
+            .md-auth-dlg-eyebrow {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.32rem;
+                padding: 0.18rem 0.6rem;
+                border-radius: 999px;
+                background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%);
+                color: #4f46e5;
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.07em;
+                text-transform: uppercase;
+                margin-bottom: 0.55rem;
+            }
+            .md-auth-dlg-eyebrow .material-symbols-rounded {
+                font-size: 0.85rem;
+            }
+            .md-auth-dlg-title {
+                font-size: 1.5rem;
+                font-weight: 760;
+                color: #0f172a;
+                letter-spacing: -0.015em;
+                line-height: 1.2;
+                margin-bottom: 0.45rem;
+            }
+            .md-auth-dlg-title-feature {
+                background: linear-gradient(120deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%);
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+                color: transparent;
+            }
+            .md-auth-dlg-copy {
+                font-size: 0.92rem;
+                color: #475569;
+                line-height: 1.5;
+                margin: 0 auto;
+                max-width: 30rem;
+            }
+            .md-auth-dlg-perks {
+                margin: 1.05rem 0 0.4rem 0;
+                padding: 0.85rem 1rem;
+                border-radius: 14px;
+                background:
+                    radial-gradient(circle at 8% 15%, rgba(191, 219, 254, 0.42), transparent 50%),
+                    radial-gradient(circle at 92% 88%, rgba(167, 139, 250, 0.30), transparent 55%),
+                    linear-gradient(135deg, rgba(248, 250, 255, 0.96) 0%, rgba(243, 244, 255, 0.96) 100%);
+                border: 1px solid rgba(217, 228, 248, 0.85);
+                box-shadow: 0 1px 0 rgba(255, 255, 255, 0.95) inset;
+            }
+            .md-auth-dlg-perk {
+                display: flex;
+                align-items: center;
+                gap: 0.7rem;
+                font-size: 0.875rem;
+                color: #1e293b;
+                padding: 0.3rem 0;
+                line-height: 1.4;
+            }
+            .md-auth-dlg-perk .material-symbols-rounded {
+                font-size: 1.1rem;
+                color: #6366f1;
+                flex-shrink: 0;
+                width: 1.2rem;
+                text-align: center;
+            }
+            .md-auth-dlg-perk strong {
+                color: #0f172a;
+                font-weight: 620;
+            }
+            /* Make the primary CTA button feel "premium" with a gradient fill
+               matching the hero icon. Targets the dialog's stButton by key. */
+            div[data-testid="stDialog"] div.st-key-_auth_dlg_signin_btn button {
+                background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%) !important;
+                border: none !important;
+                box-shadow: 0 8px 22px rgba(99, 102, 241, 0.32) !important;
+                font-weight: 640 !important;
+                letter-spacing: -0.005em !important;
+                transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+            }
+            div[data-testid="stDialog"] div.st-key-_auth_dlg_signin_btn button:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 12px 28px rgba(99, 102, 241, 0.42) !important;
+            }
+            div[data-testid="stDialog"] div.st-key-_auth_dlg_signin_btn button p {
+                color: #ffffff !important;
+            }
+            div[data-testid="stDialog"] div.st-key-_auth_dlg_dismiss_btn button {
+                background: rgba(241, 245, 249, 0.6) !important;
+                border: 1px solid rgba(203, 213, 225, 0.7) !important;
+                color: #475569 !important;
+                font-weight: 540 !important;
+            }
+            div[data-testid="stDialog"] div.st-key-_auth_dlg_dismiss_btn button:hover {
+                background: rgba(241, 245, 249, 1) !important;
+                border-color: rgba(148, 163, 184, 0.7) !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Hero block: eyebrow chip, gradient icon, headline with the feature
+        # name gradient-highlighted, and a single-line subtitle.
+        st.markdown(
+            f"""
+            <div class="md-auth-dlg-hero">
+              <div class="md-auth-dlg-icon">
+                <span class="material-symbols-rounded">lock_person</span>
+              </div>
+              <div class="md-auth-dlg-eyebrow">
+                <span class="material-symbols-rounded">verified_user</span>
+                Account required
+              </div>
+              <div class="md-auth-dlg-title">
+                Unlock <span class="md-auth-dlg-title-feature">{html.escape(feature_label)}</span>
+              </div>
+              <div class="md-auth-dlg-copy">
+                Your health data deserves a secure home. Create a free
+                account or sign in to use this feature.
+              </div>
+            </div>
+            <div class="md-auth-dlg-perks">
+              <div class="md-auth-dlg-perk">
+                <span class="material-symbols-rounded">history</span>
+                <span><strong>Save your conversations</strong> and pick up where you left off.</span>
+              </div>
+              <div class="md-auth-dlg-perk">
+                <span class="material-symbols-rounded">devices</span>
+                <span><strong>Sync across devices</strong> — phone, tablet, and laptop.</span>
+              </div>
+              <div class="md-auth-dlg-perk">
+                <span class="material-symbols-rounded">encrypted</span>
+                <span><strong>Encrypted in transit</strong> and at rest. We never see your raw data.</span>
+              </div>
+              <div class="md-auth-dlg-perk">
+                <span class="material-symbols-rounded">balance</span>
+                <span><strong>APP &middot; HIPAA aligned</strong> privacy controls by default.</span>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        _dlg_c1, _dlg_c2 = st.columns([1.4, 1])
+        with _dlg_c1:
+            if st.button(
+                "Sign in or create account",
+                key="_auth_dlg_signin_btn",
+                use_container_width=True,
+                type="primary",
+                icon=":material/arrow_forward:",
+            ):
+                # Drop guest status so the auth gate (around line 12950)
+                # routes them to the sign-in / sign-up screen on next render.
+                st.session_state.is_guest = False
+                st.session_state.nav_clicked = False
+                st.rerun()
+        with _dlg_c2:
+            if st.button(
+                "Not now",
+                key="_auth_dlg_dismiss_btn",
+                use_container_width=True,
+            ):
+                st.rerun()
 
     # ── Primary nav ─────────────────────────────────────────────
     _mode = st.session_state.mode
@@ -11338,16 +13359,43 @@ with st.sidebar:
         active_cls = "md-nav-active" if is_active else ""
         st.markdown('<div class="' + active_cls + '">', unsafe_allow_html=True)
         if st.button(nav_label, key="nav_" + nav_key, use_container_width=True, icon=nav_icon, type=_btn_type):
-            try:
-                st.query_params.clear()
-            except Exception:
-                pass
-            st.session_state.nav_clicked = True
-            if nav_key == "home" or nav_key == "new":
-                start_new_chat_session()
+            # Guest auth-gate: intercept restricted features before mode switch.
+            # The dialog opens in-place; the button handler doesn't rerun, so
+            # the dialog stays mounted until the user picks an action inside it.
+            if (
+                nav_key in _AUTH_REQUIRED_NAV
+                and not st.session_state.is_authenticated
+            ):
+                _show_auth_required_dialog(nav_label)
             else:
-                st.session_state.mode = target_mode
-            st.rerun()
+                # Clear stale URL params from the previous view (conv/etc.)
+                # but PRESERVE the session token `s` — otherwise nav clicks
+                # destroy the persisted session and a refresh on the new
+                # page would log the user out.
+                _preserved_s = st.query_params.get("s") if "s" in st.query_params else None
+                try:
+                    st.query_params.clear()
+                except Exception:
+                    pass
+                if _preserved_s:
+                    try:
+                        st.query_params["s"] = _preserved_s
+                    except Exception:
+                        pass
+                st.session_state.nav_clicked = True
+                if nav_key == "home" or nav_key == "new":
+                    start_new_chat_session()
+                    # No ?mode= for home — absence of the param IS the
+                    # home/chat default, so refresh just lands on home.
+                else:
+                    st.session_state.mode = target_mode
+                    # Also write ?mode=<target> to the URL so a refresh on
+                    # this page comes back here instead of falling to home.
+                    try:
+                        st.query_params["mode"] = target_mode
+                    except Exception:
+                        pass
+                st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
     # Divider sits between Appointments (last nav item) and the profile chip.
@@ -12442,18 +14490,51 @@ div.st-key-privacy_delete_account button [data-testid="stIconMaterial"] {
             '</div>'
         )
 
-    st.markdown(
-        '<div class="md-side-pc md-side-profile md-side-profile-top">'
+    # Guest tile is a real <a> that routes to the auth screen via the existing
+    # ?force_auth=1 URL handler — this is the only way to upgrade from guest
+    # mode without forcing a manual browser refresh. Authenticated users get
+    # the same tile as a plain <div> (their sign-out lives inline as a
+    # separate <a> rendered above).
+    #
+    # IMPORTANT: this block uses `st.html` rather than `st.markdown`. The
+    # markdown parser destroys block-level <div> children inside an <a>
+    # wrapper — it re-wraps each text node in its own <a>, exploding the
+    # layout. `st.html` bypasses the parser and renders the HTML verbatim.
+    if st.session_state.is_authenticated:
+        _tile_open = '<div class="md-side-pc md-side-profile md-side-profile-top">'
+        _tile_close = '</div>'
+        _tile_chevron = ''
+    else:
+        _tile_open = (
+            '<a class="md-side-pc md-side-profile md-side-profile-top md-side-profile-clickable" '
+            'href="?force_auth=1" target="_self" '
+            'title="Sign in or create your MediChat account">'
+        )
+        _tile_close = '</a>'
+        _tile_chevron = (
+            '<span class="md-side-pc-chevron material-symbols-rounded" aria-hidden="true">'
+            'arrow_forward'
+            '</span>'
+        )
+
+    _tile_html = (
+        _tile_open +
         '<div class="md-side-pc-avatar">' + ui_escape(_profile_in) + '</div>'
         '<div class="md-side-pc-body">'
         '<div class="md-side-pc-name">' + ui_text(_profile_nm, 24) + '</div>'
         '<div class="md-side-pc-email" title="' + ui_escape(_profile_sub) + '">' + ui_text(_profile_sub, 32) + '</div>'
         + _status_pill +
         '</div>'
-        + _signout_link +
-        '</div>',
-        unsafe_allow_html=True
+        + _signout_link
+        + _tile_chevron
+        + _tile_close
     )
+    if hasattr(st, "html"):
+        st.html(_tile_html)
+    else:
+        # Streamlit < 1.32 fallback — older versions don't have st.html,
+        # so we have to live with the markdown parser quirks.
+        st.markdown(_tile_html, unsafe_allow_html=True)
 
     # Keep the legacy hidden st.button as a fallback Python click target —
     # it's now invisible (CSS hides it) but its handler still runs if any
@@ -12820,10 +14901,12 @@ if _force_auth_requested:
 if _mode_from_url in _url_modes:
     if st.session_state.mode != _mode_from_url:
         st.session_state.mode = _mode_from_url
-    try:
-        del st.query_params["mode"]
-    except Exception:
-        pass
+    # DO NOT delete ?mode= from the URL after consuming. Previously this
+    # was deleted to keep URLs "tidy", but that broke refresh-stays-on-page:
+    # after deletion, a refresh would find no mode param and fall back to
+    # the default home view, even though the user was clearly on, e.g.,
+    # Health Overview. Keeping ?mode= in the URL makes every page bookmark-
+    # able and refresh-safe.
 
 # ?conv=<id> → load that conversation into the chat view. Lets the Recent
 # Chats sidebar render as anchor links (giving us proper title-left +
@@ -12885,6 +14968,9 @@ if _signout_from_url:
         del st.query_params["signout"]
     except Exception:
         pass
+    # Also clear the persisted session in browser localStorage so a refresh
+    # right after signing out doesn't auto-restore the session.
+    _clear_browser_session()
     st.rerun()
 
 # ?del_conv=<id> → delete a saved conversation. Powers the small × icon on
@@ -12943,6 +15029,51 @@ if _admin_requested and not st.session_state.admin_authenticated:
     st.stop()
 
 _is_admin = st.session_state.admin_authenticated
+
+# ── Session restore from browser localStorage ────────────────────────
+# Streamlit's session_state lives in memory and is wiped whenever the
+# browser tab reloads — that's why refreshing logs you out. To keep
+# users signed in across refreshes, the sign-in handlers below persist
+# the user's email_hash + display + name to browser localStorage via
+# components.html. On every fresh render where the user isn't yet
+# authenticated AND isn't a guest, the JS at the bottom of this block
+# reads localStorage and reloads the page with a `?_mcr=<base64-json>`
+# param. The Python handler below validates it against Firebase and
+# rehydrates the session, then strips the param from the URL.
+# ── Session restore via URL query param ─────────────────────────────
+# Streamlit's components.html iframes are sandboxed without
+# `allow-top-navigation`, so the previous localStorage→navigate approach
+# was blocked by the browser. URLs, however, survive refreshes natively
+# — so we encode the session into ?s=<base64-json> and read it back at
+# the top of every script run. The URL persists across refreshes and
+# even across bookmarks of the live URL, which is exactly what we want.
+_session_param = str(_query_params.get("s", "") or "").strip()
+if _session_param and not st.session_state.is_authenticated and not st.session_state.is_guest:
+    try:
+        import base64 as _sp_b64, json as _sp_json
+        # urlsafe_b64decode requires correct padding; we strip = on encode,
+        # so re-pad here before decoding.
+        _pad = "=" * ((4 - len(_session_param) % 4) % 4)
+        _sp_decoded = _sp_b64.urlsafe_b64decode((_session_param + _pad).encode()).decode("utf-8")
+        _sp_data = _sp_json.loads(_sp_decoded)
+        _sp_email_hash = (_sp_data.get("eh") or "").strip()
+        _sp_email_display = (_sp_data.get("ed") or "").strip()
+        _sp_pn = (_sp_data.get("pn") or "").strip()
+        if _sp_email_hash:
+            _sp_profile = get_profile(_sp_email_hash)
+            if _sp_profile is not None:
+                st.session_state.is_authenticated = True
+                st.session_state.user_email_hash = _sp_email_hash
+                st.session_state.user_email_display = _sp_email_display
+                st.session_state.patient_name = _sp_profile.get("name", _sp_pn) or _sp_pn
+                st.session_state.patient_memory = _sp_profile.get(
+                    "patient_memory",
+                    {"symptoms": [], "conditions": [], "medications": []},
+                )
+                st.session_state.selected_language = _sp_profile.get("language", "English")
+                print("[session-restore] restored from URL for hash", _sp_email_hash[:8] + "…")
+    except Exception as _sp_e:
+        print("[session-restore] URL decode failed:", repr(_sp_e))
 
 # ── Patient Profile Auth Gate ────────────────────────────────────────
 # Only enforced when Firebase is connected and user is not admin.
@@ -13701,83 +15832,105 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         font-weight: 620;
     }
 
-    /* Welcome hero v2 — compact (May 2026). Tighter padding, smaller
-       title/copy, single-line trust strip. */
+    /* Welcome hero v2 — ultra-compact. */
     .md-auth-welcome-v2 {
-        padding: 1.05rem 1.35rem 0.95rem 1.35rem !important;
+        padding: 0.7rem 1.1rem 0.65rem 1.1rem !important;
+        grid-template-columns: 148px minmax(0, 1fr) 148px !important;
         background:
-            radial-gradient(circle at 12% 18%, rgba(191, 219, 254, 0.48), rgba(0, 0, 0, 0) 46%),
-            radial-gradient(circle at 88% 88%, rgba(167, 139, 250, 0.24), rgba(0, 0, 0, 0) 50%),
+            radial-gradient(circle at 12% 18%, rgba(191, 219, 254, 0.45), rgba(0, 0, 0, 0) 46%),
+            radial-gradient(circle at 88% 88%, rgba(167, 139, 250, 0.22), rgba(0, 0, 0, 0) 50%),
             linear-gradient(132deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 255, 0.96) 100%) !important;
         border: 1px solid #d9e4f8 !important;
         box-shadow:
             0 1px 0 rgba(255, 255, 255, 0.95) inset,
-            0 8px 22px rgba(15, 23, 42, 0.05) !important;
+            0 5px 16px rgba(15, 23, 42, 0.045) !important;
+    }
+    /* Suppress the decorative bottom-left rotated ellipse and bottom glow
+       overlay on the v2 card — they were producing a visible horizontal
+       seam across the middle of the card. v2 wants a single clean wash. */
+    .md-auth-welcome-v2::before,
+    .md-auth-welcome-v2::after {
+        display: none !important;
+    }
+    .md-auth-welcome-v2 .md-auth-shield,
+    .md-auth-welcome-v2 .md-auth-shield.md-auth-shield-image {
+        width: 136px !important;
+        height: 136px !important;
+    }
+    .md-auth-welcome-v2 .md-auth-shield-alt {
+        width: 108px !important;
+        height: 108px !important;
+        font-size: 3.6rem !important;
+        border-radius: 32px !important;
+        justify-self: center !important;
     }
     .md-auth-welcome-v2 .md-auth-welcome-title {
-        font-size: 1.55rem !important;
+        font-size: 2.1rem !important;
         line-height: 1.15 !important;
-        margin-bottom: 0.32rem !important;
+        margin-bottom: 0.35rem !important;
     }
     .md-auth-welcome-v2 .md-auth-welcome-copy {
-        font-size: 0.85rem !important;
-        line-height: 1.45 !important;
-        max-width: 580px;
+        font-size: 0.74rem !important;
+        line-height: 1.4 !important;
+        max-width: 560px;
         margin: 0 auto !important;
     }
     .md-auth-welcome-v2 .md-auth-chip-row {
-        margin-top: 0.7rem !important;
-        gap: 0.4rem !important;
+        margin-top: 0.45rem !important;
+        gap: 0.32rem !important;
     }
     .md-auth-welcome-v2 .md-auth-chip {
-        padding: 0.28rem 0.7rem !important;
-        font-size: 0.72rem !important;
+        padding: 0.2rem 0.55rem !important;
+        font-size: 0.66rem !important;
+    }
+    .md-auth-welcome-v2 .md-auth-chip .material-symbols-rounded {
+        font-size: 0.82rem !important;
     }
     .md-auth-welcome-eyebrow {
         display: inline-flex;
         align-items: center;
-        gap: 0.32rem;
-        padding: 0.22rem 0.6rem 0.26rem 0.45rem;
+        gap: 0.28rem;
+        padding: 0.16rem 0.5rem 0.2rem 0.38rem;
         border-radius: 999px;
         background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
         border: 1px solid rgba(99, 102, 241, 0.22);
         color: #4338ca;
-        font-size: 0.62rem;
+        font-size: 0.56rem;
         font-weight: 720;
         text-transform: uppercase;
         letter-spacing: 0.08em;
         line-height: 1.3;
-        margin-bottom: 0.45rem;
+        margin-bottom: 0.3rem;
     }
     .md-auth-welcome-eyebrow .material-symbols-rounded {
         color: #6366f1 !important;
         -webkit-text-fill-color: #6366f1 !important;
-        font-size: 0.82rem !important;
+        font-size: 0.72rem !important;
     }
 
-    /* Trust strip — single line, divider-separated, honest claims only. */
+    /* Trust strip — single line, divider-separated. */
     .md-auth-welcome-trust-strip {
-        margin-top: 0.75rem;
-        padding-top: 0.7rem;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
         border-top: 1px solid rgba(99, 102, 241, 0.14);
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 0.85rem;
+        gap: 0.7rem;
         flex-wrap: wrap;
     }
     .md-auth-welcome-trust-item {
         display: inline-flex;
         align-items: center;
-        gap: 0.4rem;
+        gap: 0.32rem;
         color: #475569;
-        font-size: 0.72rem;
+        font-size: 0.66rem;
         line-height: 1.3;
     }
     .md-auth-welcome-trust-item .material-symbols-rounded {
         color: #4f46e5 !important;
         -webkit-text-fill-color: #4f46e5 !important;
-        font-size: 0.95rem !important;
+        font-size: 0.85rem !important;
         flex-shrink: 0;
     }
     .md-auth-welcome-trust-item strong {
@@ -13787,11 +15940,11 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
     }
     .md-auth-welcome-trust-divider {
         width: 1px;
-        height: 14px;
+        height: 11px;
         background: rgba(99, 102, 241, 0.2);
     }
     @media (max-width: 900px) {
-        .md-auth-welcome-trust-strip { gap: 0.55rem; }
+        .md-auth-welcome-trust-strip { gap: 0.45rem; }
         .md-auth-welcome-trust-divider { display: none; }
     }
 
@@ -14091,6 +16244,14 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
             '</div>'
         )
 
+    # Right-side companion icon — stethoscope signals the medical/clinical
+    # focus while the left shield signals privacy. Purely decorative.
+    _auth_stethoscope_html = (
+        '<div class="md-auth-shield md-auth-shield-alt material-symbols-rounded" aria-hidden="true">'
+        'stethoscope'
+        '</div>'
+    )
+
     # Welcome hero. Compact, no em-dashes, claims trimmed to what we can
     # honestly stand behind (no clinician co-creation claim).
     st.markdown(
@@ -14127,6 +16288,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         '</div>'
         '</div>'
         '</div>'
+        + _auth_stethoscope_html +
         '</div>',
         unsafe_allow_html=True
     )
@@ -14184,6 +16346,11 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
                                     del st.query_params[_auth_route_key]
                                 except Exception:
                                     pass
+                            _persist_browser_session(
+                                profile["email_hash"],
+                                si_email.strip(),
+                                profile.get("name", "") or "",
+                            )
                             st.success("Welcome back" + ((", " + profile.get("name", "")) if profile.get("name") else "") + ". Loading your profile…")
                             st.rerun()
                         elif status == "not_found":
@@ -14223,6 +16390,11 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
                             st.session_state.user_email_display = su_email.strip()
                             st.session_state.patient_name = profile.get("name", "") or ""
                             start_new_chat_session()
+                            _persist_browser_session(
+                                profile["email_hash"],
+                                su_email.strip(),
+                                profile.get("name", "") or "",
+                            )
                             st.success("Profile created. Welcome to MediChat.")
                             st.rerun()
 
@@ -14350,22 +16522,11 @@ else:
 
 st.markdown('<div class="disclaimer">MediChat offers general health information, not personal medical advice. Please consult a qualified doctor for any health concerns that need diagnosis or treatment.</div>', unsafe_allow_html=True)
 
-if st.session_state.emergency_detected:
-    reason = st.session_state.get("emergency_reason", "Emergency indicators detected")
-    st.markdown(
-        '<div class="emergency-banner">'
-        '<div class="emergency-title">🚨 This May Be a Medical Emergency</div>'
-        '<div class="emergency-text"><strong>Detected pattern:</strong> ' + ui_text(reason, 120) + '. Based on what you described, you may need immediate medical attention. Please stop and call emergency services now. Do not wait.</div>'
-        '<div class="emergency-number">📞 Call 000 (Australia)</div>'
-        '<div style="font-size:0.75rem;margin-top:0.5rem;opacity:0.9;">Other countries: 911 (USA) | 999 (UK) | 112 (EU) | 119 (Sri Lanka) | 102 (India)</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-    cols = st.columns([3, 1])
-    with cols[1]:
-        if st.button("Dismiss alert", key="dismiss_emergency"):
-            st.session_state.emergency_detected = False
-            st.rerun()
+# Emergency banner removed per developer request. Detection logic still runs
+# (detect_emergency() still sets st.session_state.emergency_detected for the
+# analytics log at line ~17365), but nothing renders to the user. To restore
+# the banner UI, reintroduce the `if st.session_state.emergency_detected:`
+# st.markdown block that previously lived here.
 
 # Triage tier banner removed per UI/UX refinement pass to clear screen real estate.
 
@@ -14476,7 +16637,9 @@ if st.session_state.mode == "chat":
                             unsafe_allow_html=True
                         )
                     else:
-                        st.image(home_uploaded_image, caption="Ready for Vision Ai analysis", use_column_width=True)
+                        _ip1, _ip2, _ip3 = st.columns([1, 2, 1])
+                        with _ip2:
+                            st.image(home_uploaded_image, caption="Ready for Vision Ai analysis", width=380)
                 vu1, vu2 = st.columns([1, 1])
                 with vu1:
                     home_vision_analyze = st.button("Analyze with Vision Ai", key="home_vision_analyze", type="primary", use_container_width=True, icon=":material/image_search:")
@@ -14499,7 +16662,22 @@ if st.session_state.mode == "chat":
                     unsafe_allow_html=True
                 )
                 voice_audio = None
-                if hasattr(st, "audio_input"):
+                # Primary recorder: streamlit_mic_recorder. Reliable dedicated
+                # component with explicit Record/Stop buttons that returns a
+                # dict with the audio bytes. We fall back to st.audio_input
+                # only if the package isn't installed.
+                if MIC_RECORDER_AVAILABLE:
+                    voice_audio = mic_recorder(
+                        start_prompt="🎤  Start recording",
+                        stop_prompt="⏹  Stop recording",
+                        just_once=False,
+                        use_container_width=True,
+                        format="wav",
+                        key="mic_recorder_" + str(st.session_state.voice_audio_key),
+                    )
+                    if voice_audio and isinstance(voice_audio, dict):
+                        st.caption(f"✓ Recorded {len(voice_audio.get('bytes', b''))//1024} KB — click Transcribe voice below.")
+                elif hasattr(st, "audio_input"):
                     voice_audio = st.audio_input("Record your question", key="voice_audio_" + str(st.session_state.voice_audio_key))
                 else:
                     voice_audio = st.file_uploader(
@@ -14669,18 +16847,55 @@ if st.session_state.mode == "chat":
                 _water_display = (f"{_wc_int} / 8 glasses") if _wc_int is not None else "-"
                 _water_status_text = (str(min(100, int(round((_wc_int / 8) * 100)))) + "%") if _wc_int else ""
 
+                # Fetch the full daily_metrics map ONCE for the 7-day
+                # sparklines. Each metric pulls its own series from this dict
+                # so we don't hit Firebase four times per render.
+                _all_dm = get_all_daily_metrics()
                 _tiles = [
-                    ("md-accent-pink", "favorite", "Heart Rate", _heart_rate_display, _heart_rate_status_text, "md-line-pink"),
-                    ("md-accent-green", "directions_walk", "Steps", _steps_display, _steps_status_text, "md-line-green"),
-                    ("md-accent-purple", "bedtime", "Sleep", _sleep_display, _sleep_status_text, "md-line-purple"),
-                    ("md-accent-blue", "water_drop", "Water Intake", _water_display, _water_status_text, "md-line-blue"),
+                    ("md-accent-pink", "favorite", "Heart Rate", _heart_rate_display, _heart_rate_status_text, "md-line-pink", "heart_rate_resting"),
+                    ("md-accent-green", "directions_walk", "Steps", _steps_display, _steps_status_text, "md-line-green", "steps"),
+                    ("md-accent-purple", "bedtime", "Sleep", _sleep_display, _sleep_status_text, "md-line-purple", "sleep_hours"),
+                    ("md-accent-blue", "water_drop", "Water Intake", _water_display, _water_status_text, "md-line-blue", "water_glasses"),
                 ]
                 snap_html = (
                     '<div class="md-rcard md-snap-card">'
-                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><a class="md-rcard-link md-rcard-link-btn" href="?mode=overview">See all</a></div>'
+                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div></div>'
                     '<div class="md-snap-grid">'
                 )
-                for _cls, _icon, _lbl, _val, _status, _line_cls in _tiles:
+                for _cls, _icon, _lbl, _val, _status, _line_cls, _metric_key in _tiles:
+                    # Build a REAL sparkline from the last 7 days of this
+                    # metric. If fewer than 2 days of values exist we draw
+                    # a faint dashed centerline marker rather than a fake
+                    # trend — keeps the tile layout consistent but never
+                    # lies about a trend that isn't there.
+                    _series_vals = get_metric_series(_all_dm, _metric_key, days=7)
+                    _spark_path = render_sparkline_path(_series_vals)
+                    if _spark_path:
+                        _spark_title = (
+                            _lbl + " — last " + str(len(_series_vals)) +
+                            " day" + ("s" if len(_series_vals) != 1 else "") +
+                            ": " + ", ".join(
+                                (str(int(v)) if float(v).is_integer() else str(round(v, 1)))
+                                for v in _series_vals
+                            )
+                        )
+                        _spark_svg = (
+                            '<svg class="md-spark ' + _line_cls + '" viewBox="0 0 96 28" '
+                            'aria-hidden="true">'
+                            '<title>' + ui_escape(_spark_title) + '</title>'
+                            '<path d="' + _spark_path + '" />'
+                            '</svg>'
+                        )
+                    else:
+                        _spark_svg = (
+                            '<svg class="md-spark md-spark-empty" viewBox="0 0 96 28" '
+                            'aria-hidden="true">'
+                            '<title>Log at least 2 days of values to see a trend</title>'
+                            '<path d="M2 14 L94 14" stroke="#94a3b8" '
+                            'stroke-width="1" stroke-dasharray="2.5,3" '
+                            'fill="none" opacity="0.4" />'
+                            '</svg>'
+                        )
                     snap_html += (
                         '<div class="md-snap-tile">'
                         '<div class="md-snap-icon ' + _cls + ' material-symbols-rounded">' + ui_escape(_icon) + '</div>'
@@ -14689,7 +16904,7 @@ if st.session_state.mode == "chat":
                         '<div class="md-snap-value">' + ui_text(_val, 40) + '</div></div>'
                         '<div class="md-snap-status">' + ui_text(_status, 20) + '</div>'
                         '</div>'
-                        '<svg class="md-spark ' + _line_cls + '" viewBox="0 0 96 28" aria-hidden="true"><path d="M2 18 C12 18 14 11 24 14 S38 24 48 15 S62 2 72 10 S84 19 94 13" /></svg>'
+                        + _spark_svg +
                         '</div>'
                     )
                 snap_html += '</div></div>'
@@ -14882,7 +17097,7 @@ if st.session_state.mode == "chat":
         st.markdown("---")
         st.markdown("**" + L["download_chat"] + "**")
 
-        dl_col1, dl_col2 = st.columns(2)
+        dl_col1, dl_col2, dl_col3 = st.columns(3)
         with dl_col1:
             if st.button(L["download_chat_btn"], use_container_width=True, key="dl_chat_btn"):
                 pdf_bytes = generate_chat_pdf(st.session_state.messages)
@@ -14904,9 +17119,44 @@ if st.session_state.mode == "chat":
                 else:
                     st.error("Could not generate summary. Please try again or have a longer conversation first.")
 
+        with dl_col3:
+            if st.button(
+                "📁 Share full record with GP",
+                use_container_width=True,
+                key="dl_full_record_btn",
+                help="Compiles your entire MediChat profile (medications, allergies, family + surgical history, uploaded records with AI summaries) into one PDF you can email or hand to any clinician."
+            ):
+                with st.spinner("Compiling your full medical record..."):
+                    full_pdf = None
+                    _full_err = ""
+                    try:
+                        full_pdf = generate_full_medical_record_pdf(st.session_state.patient_name)
+                    except Exception as _e:
+                        import traceback as _tb
+                        _full_err = repr(_e) + "\n" + _tb.format_exc()
+                        import sys as _sys
+                        _sys.stderr.write("[full-record-pdf] FAILED: " + _full_err + "\n")
+                        _sys.stderr.flush()
+                if full_pdf:
+                    st.download_button(
+                        label="Save Full Medical Record PDF",
+                        data=full_pdf,
+                        file_name="MediChat_FullMedicalRecord_" + datetime.now().strftime("%Y%m%d_%H%M") + ".pdf",
+                        mime="application/pdf",
+                        use_container_width=True,
+                        key="dl_full_record_dl"
+                    )
+                elif _full_err:
+                    # Show the actual exception so we can fix it instead of
+                    # the generic "try again" message that hid the root cause.
+                    st.error("PDF generation hit an error. Details below — please paste these to fix:")
+                    st.code(_full_err, language="text")
+                else:
+                    st.error("Could not generate full medical record (no exception, but no PDF returned). Try again, or ensure you have something saved to your profile first.")
+
         st.markdown(
             '<div style="font-size:0.72rem;color:var(--neutral-500);margin-top:0.5rem;text-align:center;font-style:italic;">'
-            'The Doctor Visit Summary is a structured one-pager you can bring to your next GP appointment.'
+            "Doctor Visit Summary = today's conversation distilled. Share full record = your entire MediChat profile to hand to any GP."
             '</div>',
             unsafe_allow_html=True
         )
@@ -14988,7 +17238,9 @@ if st.session_state.mode == "chat":
                         unsafe_allow_html=True
                     )
                 else:
-                    st.image(uploaded_image, caption="Ready for Vision Ai analysis", use_column_width=True)
+                    _ip1, _ip2, _ip3 = st.columns([1, 2, 1])
+                    with _ip2:
+                        st.image(uploaded_image, caption="Ready for Vision Ai analysis", width=380)
             vu1, vu2, vu3 = st.columns([1, 1, 1])
             with vu1:
                 home_vision_analyze = st.button("Analyze with Vision Ai", key="chat_vision_analyze", type="primary", use_container_width=True, icon=":material/image_search:")
@@ -15014,7 +17266,21 @@ if st.session_state.mode == "chat":
                 unsafe_allow_html=True
             )
             voice_audio = None
-            if hasattr(st, "audio_input"):
+            # Primary recorder: streamlit_mic_recorder (more reliable than
+            # st.audio_input which can silently fail to capture in re-rendered
+            # forms). Falls back to audio_input → file_uploader.
+            if MIC_RECORDER_AVAILABLE:
+                voice_audio = mic_recorder(
+                    start_prompt="🎤  Start recording",
+                    stop_prompt="⏹  Stop recording",
+                    just_once=False,
+                    use_container_width=True,
+                    format="wav",
+                    key="mic_recorder_chat_" + str(st.session_state.voice_audio_key),
+                )
+                if voice_audio and isinstance(voice_audio, dict):
+                    st.caption(f"✓ Recorded {len(voice_audio.get('bytes', b''))//1024} KB — click Transcribe voice below.")
+            elif hasattr(st, "audio_input"):
                 voice_audio = st.audio_input("Record your question", key="voice_audio_chat_" + str(st.session_state.voice_audio_key))
             else:
                 voice_audio = st.file_uploader(
@@ -15063,7 +17329,7 @@ if st.session_state.mode == "chat":
         else:
             ia, ib, ic = st.columns([1, 2, 1])
             with ib:
-                st.image(uploaded_image, caption="Ready for analysis", use_column_width=True)
+                st.image(uploaded_image, caption="Ready for analysis", use_container_width=True)
 
     if not home_empty_chat:
         st.markdown(
@@ -15076,9 +17342,202 @@ if st.session_state.mode == "chat":
     st.markdown('<div id="page-bottom-anchor" style="height:1px;"></div>', unsafe_allow_html=True)
 
     # Enter-to-send (Shift+Enter keeps newline) for both home and in-chat composers.
-    st.markdown(
-        '''<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="(function(){try{if(!window.__medichatEnterSendBoundV4){window.__medichatEnterSendBoundV4=true;console.log('Enter-to-send V4 listener initialized');document.addEventListener('keydown',function(ev){if(!ev.defaultPrevented&&ev.key==='Enter'&&!ev.shiftKey&&!ev.ctrlKey&&!ev.metaKey&&!ev.altKey&&!ev.isComposing){const target=ev.target;if(target&&target.tagName==='TEXTAREA'){const label=(target.getAttribute('aria-label')||'').trim().toLowerCase();const placeholder=(target.getAttribute('placeholder')||'').trim().toLowerCase();if(label.includes('start a chat')||label.includes('your message')||placeholder.includes('ask anything about your health')||target.closest('[class*=st-key-home_chat_input], [class*=st-key-chat_input]')){ev.preventDefault();const form=target.closest('[data-testid=stForm]');if(form){const btn=form.querySelector('[class*=st-key-home_send_btn] button, [class*=st-key-chat_send_btn] button, button[kind=primaryFormSubmit], button[kind=primary], [data-testid=stFormSubmitButton] button');if(btn&&!btn.disabled)btn.click();}}}}},true);}}catch(e){console.error('Enter-to-send V4 error:',e);}})()" style="display:none;position:absolute;width:0;height:0;">''',
-        unsafe_allow_html=True,
+    # Note: prior V1-V4 attempts used `<img onload="...">` injected via st.markdown,
+    # but Streamlit's DOMPurify-based sanitiser strips inline event handlers, so the
+    # JS never ran. components.html drops the script inside an iframe; we reach the
+    # parent doc via window.parent to install a single global keydown listener.
+    import streamlit.components.v1 as _enter_send_components
+    _enter_send_components.html(
+        """
+        <script>
+        (function() {
+            const win = window.parent;
+            const doc = win.document;
+            // V9: V8's keydown-only approach was blocked by browser extensions
+            // (notably Grammarly) that intercept keydown on textareas before
+            // any user listener can fire. V9 adds a `beforeinput` fallback
+            // — that event fires with `inputType: "insertLineBreak"` BEFORE
+            // the newline is inserted into the textarea, at a layer below
+            // most extension interception. preventing it stops the newline
+            // and lets us submit instead. Shift+Enter is still distinguished
+            // by tracking the most recent Enter keydown — if that listener
+            // is also blocked, all Enter presses submit (Shift+Enter loses
+            // its newline behavior on this site for those users — fine for
+            // a chat composer where short messages dominate).
+            if (win.__medichatEnterSendBoundV9) return;
+            win.__medichatEnterSendBoundV9 = true;
+            try {
+                console.log('[MediChat V9] installing enter-to-send (keydown + beforeinput fallback)');
+
+                // Track when the most recent Enter keydown had shift held.
+                // Used by the beforeinput handler to allow newline for
+                // Shift+Enter and submit for plain Enter. If keydown is
+                // blocked by an extension, this flag stays false → all
+                // Enters submit (acceptable for a chat composer).
+                var shiftEnterAt = 0;
+                function wasRecentShiftEnter() {
+                    return (Date.now() - shiftEnterAt) < 300;
+                }
+
+                function submitForm(form, btn, source) {
+                    if (!btn || btn.disabled) {
+                        console.warn('[MediChat V9]', source, '- no enabled submit button', form);
+                        return false;
+                    }
+                    console.log('[MediChat V9]', source, '- submitting via', btn);
+                    // Tier 1: native form.requestSubmit(btn) — fires the
+                    // submit event with `submitter` set. Streamlit's form
+                    // handler listens for this and processes the submission.
+                    try {
+                        if (form.requestSubmit) {
+                            form.requestSubmit(btn);
+                            console.log('[MediChat V9] requestSubmit succeeded');
+                            return true;
+                        }
+                    } catch (e) {
+                        console.warn('[MediChat V9] requestSubmit failed:', e);
+                    }
+                    // Tier 2: full mouse event sequence.
+                    try {
+                        ['mousedown', 'mouseup', 'click'].forEach(function(type) {
+                            btn.dispatchEvent(new MouseEvent(type, {
+                                bubbles: true, cancelable: true, view: win
+                            }));
+                        });
+                        console.log('[MediChat V9] mouse event sequence dispatched');
+                        return true;
+                    } catch (e) {
+                        console.warn('[MediChat V9] mouse sequence failed:', e);
+                    }
+                    // Tier 3: bare click.
+                    try {
+                        btn.click();
+                        console.log('[MediChat V9] bare click dispatched');
+                        return true;
+                    } catch (e) {
+                        console.error('[MediChat V9] all submit strategies failed:', e);
+                        return false;
+                    }
+                }
+
+                function findSendButton(form) {
+                    var btn = (
+                        form.querySelector('[class*="st-key-home_send_btn"] button') ||
+                        form.querySelector('[class*="st-key-chat_send_btn"] button') ||
+                        form.querySelector('button[kind="primaryFormSubmit"]') ||
+                        form.querySelector('[data-testid="stFormSubmitButton"] button[kind*="primary" i]')
+                    );
+                    if (!btn) {
+                        var all = form.querySelectorAll(
+                            'button[kind*="FormSubmit" i], [data-testid="stFormSubmitButton"] button'
+                        );
+                        if (all.length) btn = all[all.length - 1];
+                    }
+                    return btn;
+                }
+
+                function isChatComposerTextarea(t) {
+                    if (!t || t.tagName !== 'TEXTAREA') return false;
+                    var placeholder = (t.getAttribute('placeholder') || '').toLowerCase();
+                    return placeholder.includes('ask anything');
+                }
+
+                function handleKeydown(ev) {
+                    if (ev.key !== 'Enter') return;
+                    var t = ev.target;
+                    if (!isChatComposerTextarea(t)) return;
+                    var modified = ev.shiftKey || ev.ctrlKey || ev.metaKey || ev.altKey;
+                    console.log('[MediChat V9] keydown Enter on chat composer, shifted=' + modified);
+                    if (modified) {
+                        // Mark recent shift+enter so beforeinput allows the newline.
+                        shiftEnterAt = Date.now();
+                        return;
+                    }
+                    if (ev.isComposing) return;
+                    if (ev.defaultPrevented) return;
+                    var form = t.closest('[data-testid="stForm"]');
+                    if (!form) {
+                        console.warn('[MediChat V9] keydown: no parent form');
+                        return;
+                    }
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    var btn = findSendButton(form);
+                    submitForm(form, btn, 'keydown');
+                }
+
+                // beforeinput fires when the browser is about to insert
+                // content. inputType "insertLineBreak" / "insertParagraph"
+                // is the linebreak the Enter key would cause. This event
+                // is harder for extensions to intercept than keydown, so
+                // it works even when keydown handlers are blocked.
+                function handleBeforeInput(ev) {
+                    if (ev.inputType !== 'insertLineBreak' &&
+                        ev.inputType !== 'insertParagraph') return;
+                    var t = ev.target;
+                    if (!isChatComposerTextarea(t)) return;
+                    if (wasRecentShiftEnter()) {
+                        console.log('[MediChat V9] beforeinput: shift+enter, allowing newline');
+                        return;
+                    }
+                    console.log('[MediChat V9] beforeinput: catching linebreak as submit');
+                    var form = t.closest('[data-testid="stForm"]');
+                    if (!form) return;
+                    ev.preventDefault();
+                    var btn = findSendButton(form);
+                    submitForm(form, btn, 'beforeinput');
+                }
+
+                function attach(t) {
+                    if (!t || t.__medichatAttachedV9) return;
+                    t.__medichatAttachedV9 = true;
+                    t.addEventListener('keydown', handleKeydown, true);
+                    t.addEventListener('beforeinput', handleBeforeInput, true);
+                    if (isChatComposerTextarea(t)) {
+                        console.log('[MediChat V9] attached to chat composer textarea', t);
+                    }
+                }
+
+                // Window-level keydown as belt-and-braces (in case textarea
+                // listener is blocked but window-level isn't).
+                try {
+                    win.addEventListener('keydown', handleKeydown, true);
+                } catch (e) {}
+
+                // Initial scan
+                try {
+                    doc.querySelectorAll('textarea').forEach(attach);
+                } catch (e) { console.error('[MediChat V9] initial scan failed:', e); }
+
+                // MutationObserver for new textareas (Streamlit recreates them
+                // every rerun, especially after clear_on_submit=True forms).
+                try {
+                    var observer = new win.MutationObserver(function(muts) {
+                        for (var i = 0; i < muts.length; i++) {
+                            var nodes = muts[i].addedNodes;
+                            for (var j = 0; j < nodes.length; j++) {
+                                var node = nodes[j];
+                                if (!node || node.nodeType !== 1) continue;
+                                if (node.tagName === 'TEXTAREA') {
+                                    attach(node);
+                                } else if (node.querySelectorAll) {
+                                    node.querySelectorAll('textarea').forEach(attach);
+                                }
+                            }
+                        }
+                    });
+                    observer.observe(doc.body, {childList: true, subtree: true});
+                    console.log('[MediChat V9] MutationObserver started');
+                } catch (e) {
+                    console.error('[MediChat V9] observer setup failed:', e);
+                }
+            } catch (e) {
+                console.error('[MediChat V9] top-level setup failed:', e);
+            }
+        })();
+        </script>
+        """,
+        height=0,
     )
 
     if st.session_state.messages:
@@ -15124,9 +17583,23 @@ if st.session_state.mode == "chat":
     effective_user_input = pending_user_input if pending_user_input else user_input
     auto_submit = bool(pending_user_input)
 
+    # Deferred streaming from a previous home-view submission. When the user
+    # submits from the home page (no prior messages), the text-path branch
+    # below appends the user message and st.reruns immediately so the home
+    # grid + composer are replaced by the chat view BEFORE the spinner +
+    # streaming response appear. The streaming context is stashed in
+    # session state and picked up here on the next render.
+    _defer_streaming = bool(st.session_state.get("_defer_streaming"))
+    if _defer_streaming:
+        effective_user_input = st.session_state.get("_deferred_input", "")
+        auto_submit = True
+
     if (submit or auto_submit) and (effective_user_input.strip() or uploaded_image):
         if auto_submit:
             st.session_state.pending_user_input = ""
+        if _defer_streaming:
+            st.session_state._defer_streaming = False
+            st.session_state._deferred_input = ""
         st.session_state.qcount += 1
         lang_instruction = LANGUAGES[st.session_state.selected_language]["lang_instruction"]
 
@@ -15160,6 +17633,31 @@ if st.session_state.mode == "chat":
                         reply = strip_excessive_disclaimers(reply)
                 st.session_state.last_sources = ["PDF Report Analysis"]
                 st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75, "engine": engine_used, "ts": _msg_now_ts()})
+                # Auto-persist the analyzed PDF to the patient's Health Records
+                # so it shows up in <patient_profile> on future chats. Without
+                # this, the report only lives in session state and vanishes
+                # the moment the conversation ends — defeating the "virtual GP
+                # who remembers your chart" promise.
+                try:
+                    if pdf_text:
+                        _size_bytes = 0
+                        try:
+                            uploaded_image.seek(0)
+                            _size_bytes = len(uploaded_image.getbuffer())
+                        except Exception:
+                            try:
+                                _size_bytes = len(uploaded_image.read())
+                            except Exception:
+                                _size_bytes = 0
+                        add_health_record(
+                            uploaded_image.name,
+                            uploaded_image.type or "application/pdf",
+                            _size_bytes,
+                            reply,  # the AI's analysis becomes the saved summary
+                            raw_text=pdf_text,  # actual extracted PDF — enables cross-report comparison
+                        )
+                except Exception as _e:
+                    print("Auto-save PDF to health records failed:", _e)
                 st.session_state.uploader_key += 1
                 st.session_state.home_show_vision_upload = False
             else:
@@ -15184,6 +17682,26 @@ if st.session_state.mode == "chat":
                     )
                     st.session_state.last_sources = ["Prescription Reader"]
                     st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": conf_level, "confidence_pct": conf_pct, "engine": vision_engine, "ts": _msg_now_ts()})
+                    # Persist the transcribed prescription to Health Records.
+                    try:
+                        _size_bytes = 0
+                        try:
+                            uploaded_image.seek(0)
+                            _size_bytes = len(uploaded_image.getbuffer())
+                        except Exception:
+                            try:
+                                _size_bytes = len(uploaded_image.read())
+                            except Exception:
+                                _size_bytes = 0
+                        add_health_record(
+                            "Prescription: " + uploaded_image.name,
+                            uploaded_image.type or "image/jpeg",
+                            _size_bytes,
+                            reply,
+                            raw_text=reply,  # transcription IS the values; same string
+                        )
+                    except Exception as _e:
+                        print("Auto-save prescription to health records failed:", _e)
                 else:
                     with st.spinner("Analysing your image..."):
                         uploaded_image.seek(0)
@@ -15196,11 +17714,44 @@ if st.session_state.mode == "chat":
                     )
                     st.session_state.last_sources = ["Image Analysis"]
                     st.session_state.messages.append({"role": "assistant", "type": "text", "content": reply, "sources": st.session_state.last_sources, "confidence": "medium", "confidence_pct": 75, "engine": vision_engine, "ts": _msg_now_ts()})
+                    # Persist the analyzed image (X-ray, scan, skin photo) to
+                    # Health Records so it accumulates into the profile context
+                    # on future chats.
+                    try:
+                        _size_bytes = 0
+                        try:
+                            uploaded_image.seek(0)
+                            _size_bytes = len(uploaded_image.getbuffer())
+                        except Exception:
+                            try:
+                                _size_bytes = len(uploaded_image.read())
+                            except Exception:
+                                _size_bytes = 0
+                        add_health_record(
+                            uploaded_image.name,
+                            uploaded_image.type or "image/jpeg",
+                            _size_bytes,
+                            reply,
+                            raw_text=reply,  # Vision findings ARE the structured data
+                        )
+                    except Exception as _e:
+                        print("Auto-save image to health records failed:", _e)
                 st.session_state.uploader_key += 1
                 st.session_state.home_show_vision_upload = False
         else:
-            user_msg = {"role": "user", "type": "text", "content": effective_user_input.strip()}
-            st.session_state.messages.append(user_msg)
+            # When this is a deferred-from-home submission, the user message
+            # was already appended in the previous render — skip the re-append.
+            # Otherwise: check if we were on the home view (no prior messages);
+            # if so, append + stash + rerun so the home grid is replaced by
+            # the chat view BEFORE the spinner shows.
+            if not _defer_streaming:
+                _was_home_view = (len(st.session_state.messages) == 0)
+                user_msg = {"role": "user", "type": "text", "content": effective_user_input.strip(), "ts": _msg_now_ts()}
+                st.session_state.messages.append(user_msg)
+                if _was_home_view:
+                    st.session_state._defer_streaming = True
+                    st.session_state._deferred_input = effective_user_input
+                    st.rerun()
             _t0 = time.time()
 
             name_for_rag = "" if st.session_state.patient_name == "Guest" else st.session_state.patient_name
@@ -16050,6 +18601,155 @@ elif st.session_state.mode == "medications":
                 delete_medication(m.get("id"))
                 st.rerun()
 
+    # ── Allergies ───────────────────────────────────────────────────
+    st.markdown(
+        '<div style="margin-top:2rem;"></div>'
+        '<div class="md-form-intro">Allergies</div>'
+        '<div class="md-form-sub">Drug, food, and environmental allergies. MediChat checks these before suggesting any treatment.</div>',
+        unsafe_allow_html=True
+    )
+    with st.form("add_allergy_form", clear_on_submit=True):
+        ac1, ac2 = st.columns(2)
+        with ac1:
+            al_name = st.text_input("Allergen", placeholder="e.g. Penicillin, peanuts, latex")
+            al_sev = st.selectbox("Severity", ["", "Mild", "Moderate", "Severe", "Anaphylaxis"])
+        with ac2:
+            al_rxn = st.text_input("Reaction", placeholder="e.g. rash, swelling, breathing difficulty")
+            al_notes = st.text_input("Notes (optional)", placeholder="e.g. confirmed via skin-prick test 2024")
+        if st.form_submit_button("Save allergy", use_container_width=True, type="primary", icon=":material/save:"):
+            if add_allergy(al_name, al_sev, al_rxn, al_notes):
+                st.success("Allergy added.")
+                st.rerun()
+            else:
+                st.error("Please enter an allergen name.")
+
+    allergies = list_allergies()
+    if not allergies:
+        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.2rem;font-size:0.85rem;">No allergies recorded yet.</div>', unsafe_allow_html=True)
+    else:
+        for a in allergies:
+            sev = (a.get("severity") or "").strip()
+            sev_color = {"Anaphylaxis": "#ef4444", "Severe": "#f97316", "Moderate": "#f59e0b", "Mild": "#22c55e"}.get(sev, "#94a3b8")
+            ah = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
+            ah += '<div class="md-metric-icon" style="width:42px;height:42px;flex-shrink:0;background:rgba(239,68,68,0.12);color:#ef4444;">⚠️</div>'
+            ah += '<div style="flex:1;min-width:0;">'
+            ah += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + ui_text(a.get("name", ""), 90) + '</div>'
+            if sev or a.get("reaction"):
+                ah += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.15rem;">'
+                if sev:
+                    ah += '<span style="display:inline-block;padding:0.1rem 0.5rem;border-radius:6px;background:' + sev_color + '20;color:' + sev_color + ';font-weight:600;font-size:0.72rem;margin-right:0.5rem;">' + sev + '</span>'
+                if a.get("reaction"):
+                    ah += ui_text(a.get("reaction"), 200)
+                ah += '</div>'
+            if a.get("notes"):
+                ah += '<div style="font-size:0.76rem;color:var(--md-text-2);margin-top:0.3rem;font-style:italic;">' + ui_text(a.get("notes"), 260) + '</div>'
+            ah += '</div></div></div>'
+            st.markdown(ah, unsafe_allow_html=True)
+            if st.button("Remove", key="del_allergy_" + str(a.get("id", "")), use_container_width=False):
+                delete_allergy(a.get("id"))
+                st.rerun()
+
+    # ── Family medical history ──────────────────────────────────────
+    st.markdown(
+        '<div style="margin-top:2rem;"></div>'
+        '<div class="md-form-intro">Family medical history</div>'
+        '<div class="md-form-sub">Conditions in close blood relatives — helps MediChat assess genetic and familial risk.</div>',
+        unsafe_allow_html=True
+    )
+    with st.form("add_fh_form", clear_on_submit=True):
+        fc1, fc2 = st.columns(2)
+        with fc1:
+            fh_cond = st.text_input("Condition", placeholder="e.g. Type 2 diabetes, breast cancer, hypertension")
+            fh_rel = st.selectbox(
+                "Relationship",
+                ["", "Mother", "Father", "Sister", "Brother", "Maternal grandmother",
+                 "Maternal grandfather", "Paternal grandmother", "Paternal grandfather",
+                 "Aunt", "Uncle", "Cousin", "Child"]
+            )
+        with fc2:
+            fh_age = st.text_input("Age at diagnosis (optional)", placeholder="e.g. 52")
+            fh_notes = st.text_input("Notes (optional)", placeholder="e.g. died from complications")
+        if st.form_submit_button("Save family history", use_container_width=True, type="primary", icon=":material/save:"):
+            if add_family_history(fh_cond, fh_rel, fh_age, fh_notes):
+                st.success("Family history added.")
+                st.rerun()
+            else:
+                st.error("Please enter a condition.")
+
+    fh_list = list_family_history()
+    if not fh_list:
+        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.2rem;font-size:0.85rem;">No family history recorded yet.</div>', unsafe_allow_html=True)
+    else:
+        for f in fh_list:
+            fh_card = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
+            fh_card += '<div class="md-metric-icon md-hp-blue" style="width:42px;height:42px;flex-shrink:0;">👪</div>'
+            fh_card += '<div style="flex:1;min-width:0;">'
+            fh_card += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + ui_text(f.get("condition", ""), 100) + '</div>'
+            sub_bits = []
+            if f.get("relationship"):
+                sub_bits.append(f["relationship"])
+            if f.get("age_at_diagnosis"):
+                sub_bits.append("diagnosed at " + str(f["age_at_diagnosis"]))
+            if sub_bits:
+                fh_card += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.15rem;">' + ui_text(" · ".join(sub_bits), 200) + '</div>'
+            if f.get("notes"):
+                fh_card += '<div style="font-size:0.76rem;color:var(--md-text-2);margin-top:0.3rem;font-style:italic;">' + ui_text(f.get("notes"), 260) + '</div>'
+            fh_card += '</div></div></div>'
+            st.markdown(fh_card, unsafe_allow_html=True)
+            if st.button("Remove", key="del_fh_" + str(f.get("id", "")), use_container_width=False):
+                delete_family_history(f.get("id"))
+                st.rerun()
+
+    # ── Surgical history ────────────────────────────────────────────
+    st.markdown(
+        '<div style="margin-top:2rem;"></div>'
+        '<div class="md-form-intro">Surgical history</div>'
+        '<div class="md-form-sub">Past surgeries — changes anatomy, drug clearance, and post-op risk profile.</div>',
+        unsafe_allow_html=True
+    )
+    with st.form("add_surg_form", clear_on_submit=True):
+        sc1, sc2 = st.columns(2)
+        with sc1:
+            surg_proc = st.text_input("Procedure", placeholder="e.g. Appendectomy, cholecystectomy")
+            surg_year = st.text_input("Year (optional)", placeholder="e.g. 2018")
+        with sc2:
+            surg_hosp = st.text_input("Hospital / surgeon (optional)", placeholder="e.g. City Hospital")
+            surg_notes = st.text_input("Notes (optional)", placeholder="e.g. complications, follow-up")
+        if st.form_submit_button("Save surgery", use_container_width=True, type="primary", icon=":material/save:"):
+            if add_surgical_history(surg_proc, surg_year, surg_hosp, surg_notes):
+                st.success("Surgical history added.")
+                st.rerun()
+            else:
+                st.error("Please enter a procedure name.")
+
+    surg_list = list_surgical_history()
+    if not surg_list:
+        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.2rem;font-size:0.85rem;">No surgical history recorded yet.</div>', unsafe_allow_html=True)
+    else:
+        try:
+            surg_sorted = sorted(surg_list, key=lambda s: (s.get("year") or ""), reverse=True)
+        except Exception:
+            surg_sorted = surg_list
+        for s in surg_sorted:
+            surg_card = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
+            surg_card += '<div class="md-metric-icon md-hp-green" style="width:42px;height:42px;flex-shrink:0;">🏥</div>'
+            surg_card += '<div style="flex:1;min-width:0;">'
+            surg_card += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + ui_text(s.get("procedure", ""), 120) + '</div>'
+            sub_bits = []
+            if s.get("year"):
+                sub_bits.append(s["year"])
+            if s.get("hospital"):
+                sub_bits.append(s["hospital"])
+            if sub_bits:
+                surg_card += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.15rem;">' + ui_text(" · ".join(sub_bits), 200) + '</div>'
+            if s.get("notes"):
+                surg_card += '<div style="font-size:0.76rem;color:var(--md-text-2);margin-top:0.3rem;font-style:italic;">' + ui_text(s.get("notes"), 260) + '</div>'
+            surg_card += '</div></div></div>'
+            st.markdown(surg_card, unsafe_allow_html=True)
+            if st.button("Remove", key="del_surg_" + str(s.get("id", "")), use_container_width=False):
+                delete_surgical_history(s.get("id"))
+                st.rerun()
+
 elif st.session_state.mode == "appointments":
     # ── Appointments ────────────────────────────────────────────────
     st.markdown(
@@ -16149,16 +18849,18 @@ elif st.session_state.mode == "records":
             else:
                 size = len(rec_file.getbuffer())
                 summary = ""
+                raw_text_for_record = ""
                 if rec_keep_summary:
                     try:
                         if rec_file.name.lower().endswith(".pdf"):
                             txt = extract_pdf_text(rec_file)
                             if txt:
+                                raw_text_for_record = txt[:3500]
                                 ai_resp, _ = medichat_pdf_analysis("Briefly summarise the key findings of this report in plain language for a patient.", txt[:6000], st.session_state.messages)
                                 summary = strip_excessive_disclaimers(ai_resp or "")[:1400]
                     except Exception as _e:
                         print("record summary failed:", _e)
-                if add_health_record(rec_label, rec_file.type or rec_file.name.split(".")[-1].upper(), size, summary):
+                if add_health_record(rec_label, rec_file.type or rec_file.name.split(".")[-1].upper(), size, summary, raw_text=raw_text_for_record):
                     st.success("Record saved.")
                     st.rerun()
 
@@ -16181,7 +18883,7 @@ elif st.session_state.mode == "records":
             rh += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.96rem;">' + ui_text(r.get("name", ""), 120) + '</div>'
             rh += '<div style="font-size:0.74rem;color:var(--md-text-3);margin-top:0.15rem;">' + ui_text(r.get("file_type", ""), 30) + ' · ' + ui_text(size_lbl, 20) + ' · uploaded ' + ui_text(uploaded, 30) + '</div>'
             if r.get("summary"):
-                rh += '<details style="margin-top:0.4rem;"><summary style="cursor:pointer;font-size:0.78rem;color:var(--md-brand-2);font-weight:600;">View Ai summary</summary><div style="font-size:0.8rem;color:var(--md-text-2);margin-top:0.4rem;line-height:1.5;">' + ui_lines(r.get("summary")) + '</div></details>'
+                rh += '<details style="margin-top:0.4rem;"><summary style="cursor:pointer;font-size:0.78rem;color:var(--md-brand-2);font-weight:600;">View Ai summary</summary><div class="md-ai-summary-body" style="font-size:0.84rem;color:var(--md-text-2);margin-top:0.4rem;line-height:1.55;">' + markdown_to_html(r.get("summary")) + '</div></details>'
             rh += '</div></div></div>'
             st.markdown(rh, unsafe_allow_html=True)
             if st.button("Remove", key="del_rec_" + str(r.get("id", "")), use_container_width=False):
@@ -16915,7 +19617,51 @@ else:
         L = LANGUAGES[st.session_state.selected_language]
         stage = st.session_state.assessment_stage
         total = len(ASSESSMENT_STAGES)
-        progress = int((stage / total) * 100)
+        # Step display: 1-indexed for the user (stage 0 = "Step 1"),
+        # capped at total so the stuck state shows "Step 10 of 10"
+        # instead of "Step 11 of 10" while the auto-retry runs.
+        _display_stage = min(stage + 1, total)
+        progress = min(100, int((min(stage, total) / total) * 100)) if total else 0
+
+        # Stuck-state auto-recovery: if the user is past the last question
+        # but the assessment never completed (e.g. earlier LLM call crashed
+        # because Groq wasn't configured), retry generation now that the
+        # backend chain falls back to OpenAI/Claude. Prevents a permanently
+        # broken "Step 11 of 10, 100% complete, no report" screen.
+        if (stage >= total
+                and not st.session_state.assessment_complete
+                and st.session_state.assessment_data
+                and not st.session_state.get("_assessment_retry_in_progress")):
+            st.session_state._assessment_retry_in_progress = True
+            with st.spinner("Generating your personalised assessment…"):
+                try:
+                    _lang_inst = LANGUAGES[st.session_state.selected_language].get("lang_instruction", "")
+                    _retry_report = generate_assessment_report(
+                        st.session_state.assessment_data, _lang_inst
+                    )
+                    st.session_state.assessment_report = _retry_report
+                    st.session_state.assessment_parsed = parse_report(_retry_report)
+                    st.session_state.assessment_complete = True
+                except Exception as _retry_e:
+                    print("Assessment retry failed:", repr(_retry_e))
+                    st.error(
+                        "Could not generate the assessment report: "
+                        + str(_retry_e) +
+                        ". Please check your API keys, then click 'Start a new "
+                        "assessment' below to try again."
+                    )
+                    if st.button("Start a new assessment", key="assess_recovery_restart", type="primary"):
+                        st.session_state.assessment_stage = 0
+                        st.session_state.assessment_data = {}
+                        st.session_state.assessment_complete = False
+                        st.session_state.assessment_report = None
+                        st.session_state.assessment_parsed = None
+                        st.session_state._assessment_retry_in_progress = False
+                        st.rerun()
+                    st.stop()
+            st.session_state._assessment_retry_in_progress = False
+            if st.session_state.assessment_complete:
+                st.rerun()
 
         st.markdown(
             '<div class="assessment-card">'
@@ -16926,7 +19672,7 @@ else:
             '<div class="assessment-subtitle">' + L["symptom_subtitle"] + '</div>'
             '</div>'
             '</div>'
-            '<div class="progress-label"><span>Step ' + str(stage + 1) + ' of ' + str(total) + '</span><span>' + str(progress) + '% complete</span></div>'
+            '<div class="progress-label"><span>Step ' + str(_display_stage) + ' of ' + str(total) + '</span><span>' + str(progress) + '% complete</span></div>'
             '<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:' + str(progress) + '%;"></div></div>'
             '</div>',
             unsafe_allow_html=True
