@@ -22,3 +22,12 @@ cache/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Local-only debug screenshots / dev utilities (kept out of the public zip)
+/.alignment_debug.png
+/.codex_*.png
+/.nav_*.png
+/scripts/
+
+# Python bytecode caches anywhere
+*.pyc

@@ -437,6 +437,10 @@ def _ensure_guest_store():
     for _k in ("allergies", "family_history", "surgical_history"):
         if _k not in _store:
             _store[_k] = []
+    if "calendar_settings" not in _store:
+        _store["calendar_settings"] = {}
+    if "style_preferences" not in _store:
+        _store["style_preferences"] = {}
     return _store
 
 def _today_key():
@@ -505,10 +509,31 @@ def list_appointments():
         return (get_user_doc() or {}).get("appointments", []) or []
     return _ensure_guest_store()["appointments"]
 
-def add_appointment(title, date_iso, doctor, location, notes=""):
+def add_appointment(title, date_iso, doctor, location, notes="", source="manual", external_uid=""):
+    """Save an appointment. `source` is "manual" | "calendar" | "chat".
+    `external_uid` is the iCalendar UID for synced events — used to dedupe
+    on re-sync so the same event isn't added twice when the calendar
+    refreshes.
+    """
     title = (title or "").strip()
     if not title or not date_iso:
         return False
+    # Dedupe by external_uid on calendar imports — update existing instead
+    # of creating a duplicate when the source event changes time/location.
+    if external_uid:
+        current = list_appointments()
+        for a in current:
+            if (a.get("external_uid") or "") == external_uid:
+                a["title"] = title[:80]
+                a["date"] = date_iso
+                a["doctor"] = (doctor or "").strip()[:60]
+                a["location"] = (location or "").strip()[:80]
+                a["notes"] = (notes or "").strip()[:240]
+                a["source"] = source
+                a["updated_at"] = datetime.now().isoformat(timespec="seconds")
+                if st.session_state.get("is_authenticated"):
+                    update_user_doc({"appointments": current})
+                return True
     entry = {
         "id": str(_uuid.uuid4())[:12],
         "title": title[:80],
@@ -516,6 +541,8 @@ def add_appointment(title, date_iso, doctor, location, notes=""):
         "doctor": (doctor or "").strip()[:60],
         "location": (location or "").strip()[:80],
         "notes": (notes or "").strip()[:240],
+        "source": source,
+        "external_uid": (external_uid or "")[:80],
         "added_at": datetime.now().isoformat(timespec="seconds"),
     }
     if st.session_state.get("is_authenticated"):
@@ -533,6 +560,220 @@ def delete_appointment(appt_id):
         store = _ensure_guest_store()
         store["appointments"] = [a for a in store["appointments"] if a.get("id") != appt_id]
     return True
+
+# ── Calendar sync (ICS) ──────────────────────────────────────────────
+# Patients don't want to retype appointments — they already book them in
+# Google / Apple / Outlook calendar. This block lets them subscribe to a
+# calendar feed (URL or .ics file) and have MediChat keep its
+# appointments list in sync automatically, filtering for health-related
+# events so we don't ingest birthdays and meetings.
+DEFAULT_CALENDAR_KEYWORDS = [
+    "doctor", "dr ", "dr.", "gp ", "clinic", "hospital", "specialist",
+    "appointment", "appt", "check-up", "checkup", "follow-up", "followup",
+    "physio", "physiotherapy", "dentist", "dental", "optometrist", "optician",
+    "vaccine", "vaccination", "immunisation", "immunization", "booster",
+    "pathology", "blood test", "scan", "x-ray", "xray", "ultrasound", "mri", "ct ",
+    "psychologist", "psychiatrist", "therapy", "counselling", "counseling",
+    "podiatrist", "chiropractor", "osteopath", "dermatologist", "cardiologist",
+    "obgyn", "ob/gyn", "gynaecologist", "gynecologist", "pediatrician", "paediatrician",
+    "medichat", "consult", "review", "surgery", "operation", "procedure",
+]
+
+def get_calendar_settings():
+    if st.session_state.get("is_authenticated"):
+        return (get_user_doc() or {}).get("calendar_settings", {}) or {}
+    return _ensure_guest_store().setdefault("calendar_settings", {})
+
+def update_calendar_settings(patch):
+    cur = get_calendar_settings()
+    cur.update(patch or {})
+    if st.session_state.get("is_authenticated"):
+        update_user_doc({"calendar_settings": cur})
+    else:
+        _ensure_guest_store()["calendar_settings"] = cur
+    return True
+
+def _ics_unfold(text):
+    """ICS lines wrapped at col 75 are continued with a leading space/tab.
+    Join those continuation lines back into single logical lines."""
+    out = []
+    for ln in (text or "").splitlines():
+        if ln and ln[0] in (" ", "\t") and out:
+            out[-1] += ln[1:]
+        else:
+            out.append(ln)
+    return out
+
+def _ics_unescape(s):
+    if not s:
+        return ""
+    return (s.replace("\\,", ",").replace("\\;", ";").replace("\\n", "\n").replace("\\N", "\n").replace("\\\\", "\\"))
+
+def _ics_parse_dt(value, params):
+    """Parse an ICS DTSTART/DTEND value into a timezone-naive ISO string
+    suitable for our `date` field. Best-effort — supports:
+      20260530T143000Z  (UTC)
+      20260530T143000   (floating local)
+      20260530          (all-day)
+      DTSTART;TZID=Australia/Melbourne:20260530T143000
+    """
+    if not value:
+        return ""
+    v = value.strip()
+    try:
+        if v.endswith("Z"):
+            dt = datetime.strptime(v, "%Y%m%dT%H%M%SZ")
+            # Convert UTC → user's local tz (best-effort).
+            try:
+                tz_name = ""
+                try:
+                    tz_name = getattr(st.context, "timezone", "") or ""
+                except Exception:
+                    tz_name = ""
+                if ZoneInfo and tz_name:
+                    dt = dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo(tz_name)).replace(tzinfo=None)
+            except Exception:
+                pass
+            return dt.isoformat(timespec="minutes")
+        if "T" in v:
+            dt = datetime.strptime(v, "%Y%m%dT%H%M%S")
+            return dt.isoformat(timespec="minutes")
+        if len(v) == 8:  # all-day
+            dt = datetime.strptime(v, "%Y%m%d").replace(hour=9, minute=0)
+            return dt.isoformat(timespec="minutes")
+    except Exception:
+        pass
+    return ""
+
+def parse_ics_bytes(b):
+    """Minimal ICS → list of event dicts. Skips RRULE expansion (only the
+    first occurrence of a recurring event is captured) — acceptable for an
+    appointment view, since most clinical bookings aren't recurring."""
+    try:
+        text = (b.decode("utf-8", errors="replace") if isinstance(b, (bytes, bytearray)) else str(b or ""))
+    except Exception:
+        return []
+    lines = _ics_unfold(text)
+    events = []
+    cur = None
+    for ln in lines:
+        if ln == "BEGIN:VEVENT":
+            cur = {}
+            continue
+        if ln == "END:VEVENT":
+            if cur:
+                events.append(cur)
+            cur = None
+            continue
+        if cur is None or ":" not in ln:
+            continue
+        head, _, value = ln.partition(":")
+        # Split parameters from the key (e.g. DTSTART;TZID=...:val)
+        params = {}
+        if ";" in head:
+            key, _, rest = head.partition(";")
+            for p in rest.split(";"):
+                if "=" in p:
+                    pk, _, pv = p.partition("=")
+                    params[pk.upper()] = pv
+        else:
+            key = head
+        key_u = key.upper()
+        if key_u == "SUMMARY":
+            cur["summary"] = _ics_unescape(value)
+        elif key_u == "DESCRIPTION":
+            cur["description"] = _ics_unescape(value)
+        elif key_u == "LOCATION":
+            cur["location"] = _ics_unescape(value)
+        elif key_u == "DTSTART":
+            cur["dtstart"] = _ics_parse_dt(value, params)
+        elif key_u == "DTEND":
+            cur["dtend"] = _ics_parse_dt(value, params)
+        elif key_u == "UID":
+            cur["uid"] = value.strip()
+        elif key_u == "ORGANIZER":
+            cur["organizer"] = value.strip()
+    return events
+
+def event_is_health_related(ev, keywords):
+    hay = " ".join([(ev.get("summary") or ""), (ev.get("description") or ""), (ev.get("location") or "")]).lower()
+    if not hay.strip():
+        return False
+    for kw in keywords:
+        if kw and kw.lower() in hay:
+            return True
+    return False
+
+def _fetch_ics_url(url, timeout=10):
+    """Fetch an ICS file from a URL. Supports webcal:// by rewriting to https://."""
+    import urllib.request as _urlreq
+    if not url:
+        return b""
+    u = url.strip()
+    if u.lower().startswith("webcal://"):
+        u = "https://" + u[len("webcal://"):]
+    req = _urlreq.Request(u, headers={"User-Agent": "MediChat/1.0 (calendar-sync)"})
+    with _urlreq.urlopen(req, timeout=timeout) as resp:
+        return resp.read()
+
+def sync_calendar_appointments(ics_bytes=None, ics_url=None, keywords=None, lookback_days=14):
+    """Parse events from `ics_bytes` (or fetch `ics_url`), filter to
+    health-related ones, dedupe by UID, and upsert into appointments.
+    Returns (added_count, updated_count, skipped_count, error_str)."""
+    kws = list(keywords) if keywords else DEFAULT_CALENDAR_KEYWORDS
+    err = ""
+    raw = ics_bytes
+    try:
+        if raw is None and ics_url:
+            raw = _fetch_ics_url(ics_url)
+    except Exception as e:
+        return (0, 0, 0, "Could not fetch calendar URL: " + str(e)[:160])
+    if not raw:
+        return (0, 0, 0, "No calendar data to parse.")
+    events = parse_ics_bytes(raw)
+    if not events:
+        return (0, 0, 0, "No events found in calendar feed.")
+    cutoff = datetime.now() - timedelta(days=max(1, int(lookback_days or 0)))
+    cutoff_iso = cutoff.isoformat(timespec="minutes")
+    existing = list_appointments() or []
+    existing_uids = {(a.get("external_uid") or ""): a for a in existing if a.get("external_uid")}
+    added = 0
+    updated = 0
+    skipped = 0
+    for ev in events:
+        if not event_is_health_related(ev, kws):
+            skipped += 1
+            continue
+        date_iso = ev.get("dtstart") or ""
+        if not date_iso or date_iso < cutoff_iso:
+            skipped += 1
+            continue
+        title = (ev.get("summary") or "Appointment").strip()[:80]
+        loc = (ev.get("location") or "").strip()[:80]
+        notes_parts = []
+        if ev.get("description"):
+            notes_parts.append(ev["description"].strip())
+        notes = "  ".join(notes_parts)[:240]
+        # Doctor heuristic: pick "Dr Xxx" / "Dr. Xxx" from title or description.
+        doc = ""
+        m = re.search(r"(Dr\.?\s+[A-Z][a-zA-Z\-']+(?:\s+[A-Z][a-zA-Z\-']+)?)", (ev.get("summary") or "") + " " + (ev.get("description") or ""))
+        if m:
+            doc = m.group(1)[:60]
+        uid = ev.get("uid") or ""
+        was_existing = uid and uid in existing_uids
+        ok = add_appointment(title, date_iso, doc, loc, notes, source="calendar", external_uid=uid)
+        if ok:
+            if was_existing:
+                updated += 1
+            else:
+                added += 1
+    update_calendar_settings({
+        "last_sync_at": datetime.now().isoformat(timespec="seconds"),
+        "last_added": added,
+        "last_updated": updated,
+        "last_skipped": skipped,
+    })
+    return (added, updated, skipped, err)
 
 # ── Allergies ────────────────────────────────────────────────────────
 def list_allergies():
@@ -642,7 +883,7 @@ def list_health_records():
         return (get_user_doc() or {}).get("health_records", []) or []
     return _ensure_guest_store()["health_records"]
 
-def add_health_record(name, file_type, size_bytes, summary="", raw_text=""):
+def add_health_record(name, file_type, size_bytes, summary="", raw_text="", patient_name="", record_type=""):
     """Save a health record (PDF/image/scan/letter etc.) to the patient's
     profile.
 
@@ -652,6 +893,11 @@ def add_health_record(name, file_type, size_bytes, summary="", raw_text=""):
     findings on an image — this is what lets MediChat compare lab values
     across time ("your HbA1c was 6.4% in February and is 5.9% now"),
     because the summary alone often paraphrases the values away.
+    `patient_name` (optional) is the name printed on a prescription script
+    so the AI can later confirm the script actually belongs to this user
+    before incorporating it into analysis.
+    `record_type` (optional) e.g. "prescription" — lets the analysis layer
+    apply name-matching rules only to prescription records.
     """
     name = (name or "").strip()
     if not name:
@@ -663,6 +909,8 @@ def add_health_record(name, file_type, size_bytes, summary="", raw_text=""):
         "size_bytes": int(size_bytes or 0),
         "summary": (summary or "").strip()[:1500],
         "raw_text": (raw_text or "").strip()[:3500],
+        "patient_name": (patient_name or "").strip()[:120],
+        "record_type": (record_type or "").strip()[:32],
         "uploaded_at": datetime.now().isoformat(timespec="seconds"),
     }
     if st.session_state.get("is_authenticated"):
@@ -899,6 +1147,7 @@ def _msg_now_ts():
 
 def reset_prescription_reader_state():
     st.session_state.rx_reader_result = None
+    st.session_state.rx_reader_saved_id = None
     st.session_state.rx_uploader_key = st.session_state.get("rx_uploader_key", 0) + 1
 
 def start_new_chat_session():
@@ -2259,6 +2508,20 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
 }
 .md-rcard-title { font-size: 0.88rem; font-weight: 700; color: var(--md-text-1); }
 .md-rcard-link { font-size: 0.72rem; color: var(--md-brand-2); font-weight: 600; }
+/* "Last synced …" label in Health Overview card head. Sits on the right
+   thanks to the existing .md-rcard-head flex-between layout. */
+.md-snap-sync {
+    font-size: 0.7rem;
+    color: #64748b;
+    font-weight: 580;
+    white-space: nowrap;
+    letter-spacing: -0.005em;
+    background: rgba(99, 102, 241, 0.06);
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid rgba(99, 102, 241, 0.14);
+}
+
 .md-rcard-link-btn {
     text-decoration: none !important;
     display: inline-flex;
@@ -9148,6 +9411,225 @@ st.markdown("""
        page hero — which we render via raw HTML — still uses the real ℞
        serif glyph for the authentic pharmacy-pad look. */
 /* (End of canonical-styling block — was previously the @media closing brace.) */
+
+/* ────────────────────────────────────────────────────────────────────────
+   MediChat unified input theme.
+   One consistent shell for every text / textarea / select / date / time /
+   number / file_uploader input across the main content area. Matches the
+   chat-composer aesthetic: pure-white surface, soft border, brand-indigo
+   focus ring, no grey fill. Replaces the legacy mix of Streamlit defaults
+   and per-form overrides so every page (Appointments, Medications,
+   Records, History, Prescription Reader, Assessment, AI Insights, etc.)
+   shares the same look.
+   Scoped to `[data-testid="stMain"]` so the chat composer pinned at the
+   page bottom, the sidebar, and the home hero composer keep their custom
+   styling.
+   ──────────────────────────────────────────────────────────────────────── */
+[data-testid="stMain"] [data-testid="stTextInput"] [data-testid="stTextInputRootElement"],
+[data-testid="stMain"] [data-testid="stTextArea"] [data-testid="stTextAreaRootElement"],
+[data-testid="stMain"] [data-testid="stNumberInput"] [data-baseweb="base-input"],
+[data-testid="stMain"] [data-testid="stNumberInput"] div[data-baseweb="input"],
+[data-testid="stMain"] [data-testid="stNumberInput"] > div > div:first-child,
+[data-testid="stMain"] [data-testid="stDateInput"] > div > div,
+[data-testid="stMain"] [data-testid="stTimeInput"] > div > div,
+[data-testid="stMain"] [data-testid="stSelectbox"] div[data-baseweb="select"] {
+    background: #ffffff !important;
+    border: 1px solid #e6ecf6 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+    min-height: 42px !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease !important;
+}
+[data-testid="stMain"] [data-testid="stTextInput"] [data-testid="stTextInputRootElement"]:hover,
+[data-testid="stMain"] [data-testid="stTextArea"] [data-testid="stTextAreaRootElement"]:hover,
+[data-testid="stMain"] [data-testid="stNumberInput"] [data-baseweb="base-input"]:hover,
+[data-testid="stMain"] [data-testid="stNumberInput"] div[data-baseweb="input"]:hover,
+[data-testid="stMain"] [data-testid="stNumberInput"] > div > div:first-child:hover,
+[data-testid="stMain"] [data-testid="stDateInput"] > div > div:hover,
+[data-testid="stMain"] [data-testid="stTimeInput"] > div > div:hover,
+[data-testid="stMain"] [data-testid="stSelectbox"] div[data-baseweb="select"]:hover {
+    border-color: #cdd6e8 !important;
+}
+[data-testid="stMain"] [data-testid="stTextInput"] [data-testid="stTextInputRootElement"]:focus-within,
+[data-testid="stMain"] [data-testid="stTextArea"] [data-testid="stTextAreaRootElement"]:focus-within,
+[data-testid="stMain"] [data-testid="stNumberInput"] [data-baseweb="base-input"]:focus-within,
+[data-testid="stMain"] [data-testid="stNumberInput"] div[data-baseweb="input"]:focus-within,
+[data-testid="stMain"] [data-testid="stNumberInput"] > div > div:first-child:focus-within,
+[data-testid="stMain"] [data-testid="stDateInput"] > div > div:focus-within,
+[data-testid="stMain"] [data-testid="stTimeInput"] > div > div:focus-within,
+[data-testid="stMain"] [data-testid="stSelectbox"] div[data-baseweb="select"]:focus-within {
+    border-color: rgba(99, 102, 241, 0.55) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14) !important;
+    background: #ffffff !important;
+}
+/* Streamlit applies an error/invalid red border on number_input when the
+   value is at the min/max edge or being typed — neutralise it so the
+   indigo theme stays consistent. Also kill the BaseWeb "focused" class
+   default which sometimes renders as a coral outline. */
+[data-testid="stMain"] [data-testid="stNumberInput"] [aria-invalid="true"],
+[data-testid="stMain"] [data-testid="stNumberInput"] div[data-baseweb="input"][class*="error"],
+[data-testid="stMain"] [data-testid="stNumberInput"] div[data-baseweb="input"][aria-invalid="true"] {
+    border-color: #e6ecf6 !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+}
+[data-testid="stMain"] [data-testid="stNumberInput"] div[data-baseweb="input"].focused,
+[data-testid="stMain"] [data-testid="stNumberInput"] div.focused {
+    border-color: rgba(99, 102, 241, 0.55) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14) !important;
+    background: #ffffff !important;
+}
+/* Cover the +/- stepper buttons so they sit flush inside the indigo shell
+   and never paint a competing red/coral edge. */
+[data-testid="stMain"] [data-testid="stNumberInput"] button[data-testid="stNumberInputStepUp"],
+[data-testid="stMain"] [data-testid="stNumberInput"] button[data-testid="stNumberInputStepDown"] {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: #475569 !important;
+}
+[data-testid="stMain"] [data-testid="stNumberInput"] button[data-testid="stNumberInputStepUp"]:hover,
+[data-testid="stMain"] [data-testid="stNumberInput"] button[data-testid="stNumberInputStepDown"]:hover {
+    background: #f1f5f9 !important;
+    color: #4f46e5 !important;
+}
+[data-testid="stMain"] [data-testid="stTextInput"] [data-testid="stTextInputRootElement"] [data-baseweb="base-input"],
+[data-testid="stMain"] [data-testid="stTextArea"] [data-testid="stTextAreaRootElement"] [data-baseweb="base-input"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+[data-testid="stMain"] [data-testid="stTextInput"] input,
+[data-testid="stMain"] [data-testid="stTextArea"] textarea,
+[data-testid="stMain"] [data-testid="stNumberInput"] input,
+[data-testid="stMain"] [data-testid="stDateInput"] input,
+[data-testid="stMain"] [data-testid="stTimeInput"] input {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #1f2a3d !important;
+    font-size: 0.92rem !important;
+}
+[data-testid="stMain"] [data-testid="stTextInput"] input::placeholder,
+[data-testid="stMain"] [data-testid="stTextArea"] textarea::placeholder,
+[data-testid="stMain"] [data-testid="stNumberInput"] input::placeholder {
+    color: #94a3b8 !important;
+    opacity: 1 !important;
+}
+[data-testid="stMain"] label[data-testid="stWidgetLabel"] {
+    font-size: 0.8rem !important;
+    color: #64748b !important;
+    font-weight: 600 !important;
+    margin-bottom: 0.32rem !important;
+    letter-spacing: 0.01em !important;
+}
+/* Textarea grows naturally — don't force 42px height. */
+[data-testid="stMain"] [data-testid="stTextArea"] [data-testid="stTextAreaRootElement"] {
+    min-height: 88px !important;
+    padding: 0 !important;
+}
+[data-testid="stMain"] [data-testid="stTextArea"] textarea {
+    padding: 0.55rem 0.85rem !important;
+    line-height: 1.5 !important;
+}
+/* Date/time/select inner combobox — match input height + clear grey fill. */
+[data-testid="stMain"] [data-testid="stDateInput"] input,
+[data-testid="stMain"] [data-testid="stTimeInput"] input {
+    padding: 0 0.85rem !important;
+}
+[data-testid="stMain"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+    background: transparent !important;
+    min-height: 40px !important;
+}
+[data-testid="stMain"] [data-testid="stSelectbox"] [role="combobox"] {
+    color: #1f2a3d !important;
+    font-size: 0.92rem !important;
+    font-weight: 500 !important;
+    background: transparent !important;
+}
+/* File uploader drop-zone — clean indigo dashed border, white shell. */
+[data-testid="stMain"] [data-testid="stFileUploaderDropzone"] {
+    background: #ffffff !important;
+    border: 1px dashed #cdd6e8 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+    transition: border-color 0.15s ease, background 0.15s ease !important;
+}
+[data-testid="stMain"] [data-testid="stFileUploaderDropzone"]:hover {
+    border-color: rgba(99, 102, 241, 0.55) !important;
+    background: #fbfcff !important;
+}
+/* Checkbox label colour to match the new tracker style. */
+[data-testid="stMain"] [data-testid="stCheckbox"] label p {
+    color: #1f2a3d !important;
+    font-size: 0.88rem !important;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Composer override — applies to BOTH the home composer and the
+   in-chat composer.  The unified input theme above paints a 1px
+   border on every textarea root which produced a faint grey shade
+   around the chat box.  Composers already sit inside their own
+   form card, so the inner textarea must stay borderless. The
+   Upload / Voice / Clear ghost buttons also lose their grey
+   outline for a single clean surface.
+   ────────────────────────────────────────────────────────────── */
+[data-testid="stForm"]:has(.st-key-home_send_btn),
+[data-testid="stForm"]:has(.st-key-chat_send_btn) {
+    border: 1px solid #eef1f7 !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] [data-testid="stTextAreaRootElement"],
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] [data-baseweb="base-input"],
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] [data-baseweb="textarea"],
+[data-testid="stForm"]:has(.st-key-chat_send_btn) [data-testid="stTextArea"] [data-testid="stTextAreaRootElement"],
+[data-testid="stForm"]:has(.st-key-chat_send_btn) [data-testid="stTextArea"] [data-baseweb="base-input"],
+[data-testid="stForm"]:has(.st-key-chat_send_btn) [data-testid="stTextArea"] [data-baseweb="textarea"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    min-height: 0 !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] [data-testid="stTextAreaRootElement"]:hover,
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] [data-testid="stTextAreaRootElement"]:focus-within,
+[data-testid="stForm"]:has(.st-key-chat_send_btn) [data-testid="stTextArea"] [data-testid="stTextAreaRootElement"]:hover,
+[data-testid="stForm"]:has(.st-key-chat_send_btn) [data-testid="stTextArea"] [data-testid="stTextAreaRootElement"]:focus-within {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea,
+[data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea:focus,
+[data-testid="stForm"]:has(.st-key-chat_send_btn) [data-testid="stTextArea"] textarea,
+[data-testid="stForm"]:has(.st-key-chat_send_btn) [data-testid="stTextArea"] textarea:focus {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+/* Upload + Voice + Clear — plain ghost pills, no grey outline.
+   Applies to both home composer and in-chat composer buttons. */
+.st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button,
+.st-key-home_voice_btn  [data-testid="stFormSubmitButton"] > button,
+.st-key-chat_upload_btn [data-testid="stFormSubmitButton"] > button,
+.st-key-chat_voice_btn  [data-testid="stFormSubmitButton"] > button,
+.st-key-chat_clear_btn  [data-testid="stFormSubmitButton"] > button {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+    color: #475569 !important;
+}
+.st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button:hover,
+.st-key-home_voice_btn  [data-testid="stFormSubmitButton"] > button:hover,
+.st-key-chat_upload_btn [data-testid="stFormSubmitButton"] > button:hover,
+.st-key-chat_voice_btn  [data-testid="stFormSubmitButton"] > button:hover {
+    background: #f5f3ff !important;
+    border-color: #ddd6fe !important;
+    color: #4f46e5 !important;
+}
+.st-key-chat_clear_btn [data-testid="stFormSubmitButton"] > button:hover {
+    background: #fef2f2 !important;
+    border-color: #fecaca !important;
+    color: #dc2626 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -10645,7 +11127,10 @@ Read this order:
 4. Dose, frequency, route, quantity, repeats
 5. Date and signature
 
-Output this exact format:
+Output this exact format (do NOT add extra sections or commentary):
+
+**PATIENT**
+Name: <as written on the script, or "not specified" if no patient name appears>
 
 **MEDICATION**
 Reading: <best transcription>
@@ -10675,9 +11160,7 @@ Name: <as written or unclear>
 Date: <as written or unclear>
 
 **OVERALL CONFIDENCE**: high | medium | low
-**ILLEGIBLE SECTIONS**: <list regions that are genuinely unreadable>
-
-**IMPORTANT**: Transcription only. Do not use this output as dosing or diagnosis advice. Confirm with a pharmacist or prescriber.
+**ILLEGIBLE SECTIONS**: <list regions that are genuinely unreadable, or "none">
 """
 
 def preprocess_prescription(image_bytes):
@@ -10792,7 +11275,63 @@ def read_prescription(image_bytes, user_note="", lang_instruction=""):
     if overall_match:
         overall = overall_match.group(1).lower()
 
-    return {"reading": reading, "model_used": model_used, "overall_confidence": overall, "drug_validation": validation}
+    parsed = parse_prescription_reading(reading)
+    return {
+        "reading": reading,
+        "model_used": model_used,
+        "overall_confidence": overall,
+        "drug_validation": validation,
+        "parsed": parsed,
+        "patient_name": parsed.get("patient_name", ""),
+    }
+
+def parse_prescription_reading(text):
+    """Break the structured **SECTION** transcription into a dict the UI can
+    render as a clean, aligned prescription card. Missing sections degrade
+    gracefully to empty strings — the renderer hides empty rows.
+    """
+    out = {
+        "patient_name": "",
+        "medication": "", "medication_match": "", "medication_conf": "",
+        "strength": "", "strength_conf": "",
+        "frequency": "", "frequency_plain": "", "frequency_conf": "",
+        "route": "",
+        "quantity": "",
+        "refills": "",
+        "prescriber_name": "", "prescriber_date": "",
+        "illegible": "",
+        "drug_check": "",
+    }
+    if not text:
+        return out
+    def _grab(pattern, default=""):
+        m = re.search(pattern, text, flags=re.IGNORECASE | re.DOTALL)
+        if not m:
+            return default
+        return (m.group(1) or "").strip().splitlines()[0].strip()
+
+    out["patient_name"]      = _grab(r"\*\*PATIENT\*\*[\s\S]*?Name:\s*([^\n]+)")
+    out["medication"]        = _grab(r"\*\*MEDICATION\*\*[\s\S]*?Reading:\s*([^\n]+)")
+    out["medication_match"]  = _grab(r"\*\*MEDICATION\*\*[\s\S]*?Matches known drug:\s*([^\n]+)")
+    out["medication_conf"]   = _grab(r"\*\*MEDICATION\*\*[\s\S]*?Confidence:\s*(high|medium|low)")
+    out["strength"]          = _grab(r"\*\*STRENGTH\s*/\s*DOSE\*\*[\s\S]*?Reading:\s*([^\n]+)")
+    out["strength_conf"]     = _grab(r"\*\*STRENGTH\s*/\s*DOSE\*\*[\s\S]*?Confidence:\s*(high|medium|low)")
+    out["frequency"]         = _grab(r"\*\*FREQUENCY\s*/\s*DIRECTIONS\*\*[\s\S]*?As written:\s*([^\n]+)")
+    out["frequency_plain"]   = _grab(r"\*\*FREQUENCY\s*/\s*DIRECTIONS\*\*[\s\S]*?Plain English:\s*([^\n]+)")
+    out["frequency_conf"]    = _grab(r"\*\*FREQUENCY\s*/\s*DIRECTIONS\*\*[\s\S]*?Confidence:\s*(high|medium|low)")
+    out["route"]             = _grab(r"\*\*ROUTE\*\*[\s\S]*?Reading:\s*([^\n]+)")
+    out["quantity"]          = _grab(r"\*\*QUANTITY\*\*[\s\S]*?Reading:\s*([^\n]+)")
+    out["refills"]           = _grab(r"\*\*REFILLS\*\*[\s\S]*?Reading:\s*([^\n]+)")
+    out["prescriber_name"]   = _grab(r"\*\*PRESCRIBER\*\*[\s\S]*?Name:\s*([^\n]+)")
+    out["prescriber_date"]   = _grab(r"\*\*PRESCRIBER\*\*[\s\S]*?Date:\s*([^\n]+)")
+    out["illegible"]         = _grab(r"\*\*ILLEGIBLE SECTIONS\*\*\s*:\s*([^\n]+)")
+    out["drug_check"]        = _grab(r"\*\*Drug name check:\*\*\s*([^\n]+)")
+    # Clean "not specified" / "unclear" / "none" → empty so the row hides
+    for k, v in list(out.items()):
+        vl = (v or "").strip().lower()
+        if vl in {"not specified", "unclear", "none", "n/a", "na", "-", "—"}:
+            out[k] = ""
+    return out
 
 def looks_like_prescription_request(text):
     t = (text or "").lower()
@@ -11040,6 +11579,27 @@ def build_user_profile_context():
             records_sorted = sorted(records, key=lambda r: (r.get("uploaded_at") or ""), reverse=True)
         except Exception:
             records_sorted = records
+        # Prescription records are only safe to use if the name on the
+        # script matches the profile owner — otherwise the assistant might
+        # discuss someone else's medications as if they were the user's.
+        _profile_name = ""
+        try:
+            _profile_name = (st.session_state.get("patient_name") or "").strip().lower()
+        except Exception:
+            _profile_name = ""
+        def _rx_name_matches(rec):
+            rtype = (rec.get("record_type") or "").lower()
+            is_rx = (rtype == "prescription") or ((rec.get("name") or "").lower().startswith("prescription"))
+            if not is_rx:
+                return True  # non-prescription records always included
+            rx_name = (rec.get("patient_name") or "").strip().lower()
+            if not rx_name:
+                return False  # script with no recoverable name → exclude
+            if not _profile_name:
+                return False
+            # Match if profile name appears in rx name or vice-versa
+            return (_profile_name in rx_name) or (rx_name in _profile_name)
+        records_sorted = [r for r in records_sorted if _rx_name_matches(r)]
         lines = [
             "UPLOADED HEALTH RECORDS (file metadata + AI summary + actual "
             "extracted text — use the 'Key values' field to compare numeric "
@@ -11841,6 +12401,459 @@ def dual_model_review(question, primary_answer, history=None):
         print("Second-opinion review failed (continuing without review):", e)
         return ""
 
+
+# ════════════════════════════════════════════════════════════════════
+# Adaptive Memory Layer — MediChat's "self-learning" per-user system.
+#
+# This is an HONEST self-learning implementation: we never re-train the
+# underlying LLMs (Claude/OpenAI/Groq) — those weights are frozen and
+# fine-tuning them on raw medical conversations would be unsafe + breach
+# patient privacy across users. What we DO is build a private,
+# per-patient adaptive layer that:
+#
+#   1. Auto-extracts structured facts from each chat message (allergies,
+#      medications, conditions, symptoms, appointments) using a small
+#      Claude/OpenAI call and silently grows the user's profile.
+#   2. Embeds past chats and retrieves the most relevant prior exchanges
+#      when a new question is asked, so MediChat remembers "you asked
+#      about this last month".
+#   3. Learns the user's preferred answer style from thumbs-up/down
+#      feedback and message-length patterns.
+#   4. Surfaces cross-time correlations between metrics (sleep, HR,
+#      steps) and symptom mentions — patterns the user might miss.
+#
+# All four layers feed back into the system prompt of the next chat
+# turn, so MediChat genuinely *adapts* over time without ever touching
+# the foundation models.
+# ════════════════════════════════════════════════════════════════════
+
+_DEFAULT_STYLE_PREFS = {
+    "depth": "balanced",         # concise | balanced | detailed
+    "tone": "warm",              # warm | clinical | direct
+    "technical_level": "plain",  # plain | mixed | technical
+    "thumbs_up": 0,
+    "thumbs_down": 0,
+    "avg_user_msg_len": 0.0,
+    "msg_count_sampled": 0,
+    "last_updated": "",
+}
+
+def get_style_preferences():
+    if st.session_state.get("is_authenticated"):
+        prefs = (get_user_doc() or {}).get("style_preferences", {}) or {}
+    else:
+        prefs = _ensure_guest_store().setdefault("style_preferences", {}) or {}
+    out = dict(_DEFAULT_STYLE_PREFS)
+    out.update(prefs)
+    return out
+
+def update_style_preferences(patch):
+    cur = get_style_preferences()
+    cur.update(patch or {})
+    cur["last_updated"] = datetime.now().isoformat(timespec="seconds")
+    if st.session_state.get("is_authenticated"):
+        update_user_doc({"style_preferences": cur})
+    else:
+        _ensure_guest_store()["style_preferences"] = cur
+    return cur
+
+def adapt_style_from_message(user_msg, feedback=None):
+    """Incremental style learning. Called after every user message.
+
+    Heuristics (cheap, deterministic — no LLM call needed):
+      • Short user messages (< 12 words) → user prefers concise answers.
+      • Long detailed user messages → user wants depth, mirror their level.
+      • Frequent thumbs-up on long answers → prefers detailed.
+      • Frequent thumbs-down on long answers → prefers concise.
+      • Use of medical jargon (e.g. "HbA1c", "BP", "GFR") → technical level.
+    """
+    if not user_msg:
+        return
+    prefs = get_style_preferences()
+    words = (user_msg or "").split()
+    wlen = len(words)
+    # Rolling average of user message length (last ~20 samples).
+    n = max(1, int(prefs.get("msg_count_sampled", 0)))
+    new_avg = (prefs.get("avg_user_msg_len", 0.0) * min(n, 20) + wlen) / (min(n, 20) + 1)
+    prefs["avg_user_msg_len"] = round(new_avg, 1)
+    prefs["msg_count_sampled"] = min(n + 1, 100)
+    # Depth — based on rolling average length.
+    if prefs["avg_user_msg_len"] < 8:
+        prefs["depth"] = "concise"
+    elif prefs["avg_user_msg_len"] > 35:
+        prefs["depth"] = "detailed"
+    else:
+        prefs["depth"] = "balanced"
+    # Technical level — jargon detector.
+    jargon = ["hba1c", "bp", "gfr", "ldl", "hdl", "tsh", "egfr", "wbc", "rbc", "mri", "ct scan",
+              "ecg", "ekg", "echo", "ssri", "snri", "beta blocker", "ace inhibitor", "statin",
+              "metformin", "warfarin", "anticoagulant", "thyroid"]
+    lo = (user_msg or "").lower()
+    if any(j in lo for j in jargon):
+        prefs["technical_level"] = "technical" if prefs.get("technical_level") in ("technical", "mixed") else "mixed"
+    # Persist.
+    update_style_preferences(prefs)
+
+def record_message_feedback(thumbs):
+    """Called from the 👍 / 👎 UI buttons. `thumbs` is +1 or -1."""
+    prefs = get_style_preferences()
+    if thumbs > 0:
+        prefs["thumbs_up"] = int(prefs.get("thumbs_up", 0)) + 1
+    elif thumbs < 0:
+        prefs["thumbs_down"] = int(prefs.get("thumbs_down", 0)) + 1
+        # On negative feedback, gently nudge toward concise + warmer.
+        if prefs.get("depth") == "detailed":
+            prefs["depth"] = "balanced"
+        elif prefs.get("depth") == "balanced":
+            prefs["depth"] = "concise"
+    update_style_preferences(prefs)
+
+def build_style_directive():
+    """Render style preferences as a one-line directive for the system prompt."""
+    prefs = get_style_preferences()
+    d = prefs.get("depth", "balanced")
+    t = prefs.get("technical_level", "plain")
+    tone = prefs.get("tone", "warm")
+    depth_phrase = {
+        "concise":   "Keep answers tight — 3–5 sentences max unless the user asks for detail.",
+        "balanced":  "Match the user's typical message length; explain key things but don't pad.",
+        "detailed":  "The user welcomes depth — feel free to go into mechanism + practical detail.",
+    }.get(d, "Match the user's typical message length.")
+    tech_phrase = {
+        "plain":     "Use plain English, define any clinical term you introduce.",
+        "mixed":     "Use clinical terms where useful but always with a short plain-English gloss.",
+        "technical": "The user is comfortable with clinical terminology — you can use it freely.",
+    }.get(t, "Use plain English.")
+    return "Adaptive style — Depth: " + d + "; Tone: " + tone + "; Technical: " + t + ". " + depth_phrase + " " + tech_phrase
+
+# ── 1. Auto-extract facts from chat ─────────────────────────────────
+_FACT_EXTRACT_SYSTEM = (
+    "You are a careful clinical NLP extractor. Read the user's chat message and return ONLY a strict JSON "
+    "object with these keys (each is a list of short strings; empty list if none): "
+    "allergies, medications, conditions, symptoms. Plus appointment (object with title, date_iso, doctor, "
+    "location — or null). Plus confidence (high|medium|low). Rules:\n"
+    "- Only extract facts the USER says about THEMSELVES (first person).\n"
+    "- Skip negations (e.g. 'I'm NOT allergic to peanuts' → don't extract).\n"
+    "- Skip past-only mentions ('I used to take X' → skip).\n"
+    "- Allergies: just the substance + (severity if stated).\n"
+    "- Medications: just 'name dose freq' if stated.\n"
+    "- Conditions: chronic diagnoses (diabetes, asthma, hypertension), NOT today's symptoms.\n"
+    "- Symptoms: short noun phrase (e.g. 'headache 3 days', 'sharp chest pain').\n"
+    "- Appointment: only if user says they HAVE BOOKED one (not 'I should book').\n"
+    "- Date format: YYYY-MM-DDTHH:MM if specified, else null.\n"
+    "Return only JSON, no markdown fences."
+)
+
+def adaptive_extract_facts(user_msg, recent_assistant_msg=""):
+    """Run a lightweight LLM extraction over the user's latest message.
+
+    Returns a dict with keys allergies/medications/conditions/symptoms/
+    appointment/confidence — or None if extraction failed or the message
+    is clearly chit-chat.
+    """
+    if not user_msg or len(user_msg.strip()) < 8:
+        return None
+    txt_lo = user_msg.lower()
+    # Skip obvious non-medical messages to save tokens.
+    triggers = ["i have", "i'm", "im ", "i am", "i feel", "i was", "i take", "i'm on", "im on",
+                "allerg", "allerg", "diagnos", "prescrib", "mg", "appoint", "booked", "scheduled",
+                "dr ", "dr.", "clinic", "hospital", "next week", "tomorrow", "tuesday", "monday",
+                "wednesday", "thursday", "friday", "saturday", "sunday"]
+    if not any(t in txt_lo for t in triggers):
+        return None
+
+    prompt = "User just said:\n" + user_msg.strip()[:1200]
+    if recent_assistant_msg:
+        prompt += "\n\nPrior assistant turn (context only):\n" + recent_assistant_msg.strip()[:400]
+
+    raw = ""
+    try:
+        if OPENAI_ACTIVE:
+            r = openai_client.chat.completions.create(
+                model=OPENAI_MODEL, temperature=0.0, max_tokens=380,
+                response_format={"type": "json_object"},
+                messages=[{"role": "system", "content": _FACT_EXTRACT_SYSTEM}, {"role": "user", "content": prompt}],
+            )
+            raw = (r.choices[0].message.content or "").strip()
+        elif CLAUDE_ACTIVE:
+            resp = anthropic_client.messages.create(
+                model=CLAUDE_MODEL, max_tokens=380, temperature=0.0,
+                system=_FACT_EXTRACT_SYSTEM,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = (resp.content[0].text or "").strip()
+    except Exception as e:
+        print("Adaptive fact extraction failed:", e)
+        return None
+
+    if not raw:
+        return None
+    # Strip markdown fences if any
+    raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip(), flags=re.IGNORECASE)
+    try:
+        import json as _j
+        data = _j.loads(raw)
+        if not isinstance(data, dict):
+            return None
+        data.setdefault("allergies", [])
+        data.setdefault("medications", [])
+        data.setdefault("conditions", [])
+        data.setdefault("symptoms", [])
+        data.setdefault("appointment", None)
+        data.setdefault("confidence", "medium")
+        return data
+    except Exception as e:
+        print("Adaptive fact extraction JSON parse failed:", e, raw[:200])
+        return None
+
+def apply_extracted_facts(facts):
+    """Silently merge extracted facts into the patient profile.
+
+    Returns a list of human-readable strings describing what was added,
+    so the UI can show a tiny "MediChat noticed and saved: …" chip
+    under the next assistant reply.
+    """
+    if not facts:
+        return []
+    noticed = []
+    try:
+        existing_allergies = {(a.get("name") or "").strip().lower() for a in (list_allergies() or [])}
+        for item in (facts.get("allergies") or [])[:5]:
+            name = (item or "").strip()
+            if not name or name.lower() in existing_allergies:
+                continue
+            if add_allergy(name):
+                noticed.append("allergy: " + name[:50])
+                existing_allergies.add(name.lower())
+    except Exception as e:
+        print("apply_extracted_facts allergies failed:", e)
+    try:
+        existing_meds = {(m.get("name") or "").strip().lower() for m in (list_medications() or [])}
+        for item in (facts.get("medications") or [])[:5]:
+            s = (item or "").strip()
+            if not s:
+                continue
+            # Parse "name dose freq" loosely
+            parts = s.split()
+            name = parts[0]
+            dose = ""
+            freq = ""
+            for p in parts[1:]:
+                pl = p.lower()
+                if re.search(r"\d", p) and ("mg" in pl or "mcg" in pl or "ml" in pl or "g" == pl[-1:]):
+                    dose = (dose + " " + p).strip()
+                elif pl in ("daily", "twice", "tid", "bid", "qid", "morning", "night", "evening"):
+                    freq = (freq + " " + p).strip()
+            if name.lower() in existing_meds:
+                continue
+            if add_medication(name, dose, freq or "Once daily", ""):
+                noticed.append("medication: " + s[:50])
+                existing_meds.add(name.lower())
+    except Exception as e:
+        print("apply_extracted_facts meds failed:", e)
+    try:
+        mem = st.session_state.patient_memory or {"symptoms": [], "conditions": [], "medications": []}
+        existing_cond = {c.lower() for c in (mem.get("conditions") or [])}
+        for item in (facts.get("conditions") or [])[:5]:
+            c = (item or "").strip()
+            if not c or c.lower() in existing_cond:
+                continue
+            mem.setdefault("conditions", []).append(c)
+            existing_cond.add(c.lower())
+            noticed.append("condition: " + c[:50])
+        existing_sym = {s.lower() for s in (mem.get("symptoms") or [])}
+        for item in (facts.get("symptoms") or [])[:5]:
+            s = (item or "").strip()
+            if not s or s.lower() in existing_sym:
+                continue
+            mem.setdefault("symptoms", []).append(s)
+            existing_sym.add(s.lower())
+            noticed.append("symptom: " + s[:50])
+        st.session_state.patient_memory = mem
+    except Exception as e:
+        print("apply_extracted_facts memory failed:", e)
+    try:
+        appt = facts.get("appointment")
+        if isinstance(appt, dict) and appt.get("title") and appt.get("date_iso"):
+            ok = add_appointment(
+                appt.get("title", ""),
+                appt.get("date_iso", ""),
+                appt.get("doctor", ""),
+                appt.get("location", ""),
+                "",
+                source="chat",
+            )
+            if ok:
+                noticed.append("appointment: " + appt.get("title", "")[:50])
+    except Exception as e:
+        print("apply_extracted_facts appointment failed:", e)
+    return noticed
+
+# ── 2. Embed + retrieve past chats ──────────────────────────────────
+def _retrieval_corpus_key():
+    if st.session_state.get("is_authenticated"):
+        return "u:" + (st.session_state.get("user_email_hash") or "anon")
+    return "guest"
+
+def build_past_chat_corpus():
+    """Assemble (text, meta) pairs from saved conversations for retrieval."""
+    pairs = []
+    try:
+        if st.session_state.is_authenticated and st.session_state.user_email_hash:
+            convs = list_conversations(st.session_state.user_email_hash, limit=30) or []
+        else:
+            convs = []
+        for c in convs:
+            msgs = c.get("messages") or []
+            # Build user→assistant pairs
+            prev_user = None
+            for m in msgs:
+                role = m.get("role")
+                text = (m.get("content") or "").strip()
+                if not text:
+                    continue
+                if role == "user":
+                    prev_user = text
+                elif role == "assistant" and prev_user:
+                    blob = "Q: " + prev_user[:400] + "\nA: " + text[:600]
+                    pairs.append((blob, {
+                        "conv_id": c.get("id"),
+                        "title": (c.get("title") or "")[:100],
+                        "ts": c.get("updated_at") or c.get("created_at") or "",
+                    }))
+                    prev_user = None
+                if len(pairs) > 200:
+                    break
+        # Also append current in-session messages
+        cur = st.session_state.get("messages") or []
+        prev_user = None
+        for m in cur:
+            role = m.get("role")
+            text = (m.get("content") or "").strip()
+            if not text:
+                continue
+            if role == "user":
+                prev_user = text
+            elif role == "assistant" and prev_user:
+                blob = "Q: " + prev_user[:400] + "\nA: " + text[:600]
+                pairs.append((blob, {"conv_id": "current", "title": "Current session", "ts": ""}))
+                prev_user = None
+    except Exception as e:
+        print("build_past_chat_corpus failed:", e)
+    return pairs
+
+def retrieve_relevant_past_chats(query, k=3):
+    """Semantic retrieval over the user's own past chat Q&A pairs.
+    Cached per (corpus_key, version) so we don't re-embed every turn."""
+    if not query or len(query.strip()) < 6:
+        return []
+    key = _retrieval_corpus_key()
+    cache = st.session_state.setdefault("_past_chat_index", {})
+    pairs = build_past_chat_corpus()
+    sig = len(pairs)  # cheap freshness sig
+    if cache.get("key") != key or cache.get("sig") != sig or "embeddings" not in cache:
+        if not pairs:
+            cache.update({"key": key, "sig": sig, "embeddings": None, "pairs": []})
+            return []
+        try:
+            texts = [p[0] for p in pairs]
+            emb = embedder.encode(texts, show_progress_bar=False).astype("float32")
+            cache.update({"key": key, "sig": sig, "embeddings": emb, "pairs": pairs})
+        except Exception as e:
+            print("past-chat embedding failed:", e)
+            return []
+    emb = cache.get("embeddings")
+    pairs = cache.get("pairs") or []
+    if emb is None or not len(pairs):
+        return []
+    try:
+        q_emb = embedder.encode([query], show_progress_bar=False).astype("float32")
+        # Cosine similarity via dot product on L2-normed vectors.
+        import numpy as _np
+        a = q_emb / (_np.linalg.norm(q_emb, axis=1, keepdims=True) + 1e-9)
+        b = emb / (_np.linalg.norm(emb, axis=1, keepdims=True) + 1e-9)
+        scores = (a @ b.T)[0]
+        top_idx = scores.argsort()[::-1][:max(1, int(k))]
+        out = []
+        for i in top_idx:
+            if scores[i] < 0.35:  # too dissimilar — skip
+                continue
+            out.append({"text": pairs[i][0], "meta": pairs[i][1], "score": float(scores[i])})
+        return out
+    except Exception as e:
+        print("past-chat retrieval failed:", e)
+        return []
+
+def build_past_chat_retrieval_context(query, k=3):
+    """Render top-k retrieval results as a system-prompt block."""
+    hits = retrieve_relevant_past_chats(query, k=k)
+    if not hits:
+        return ""
+    lines = ["RELEVANT PRIOR CONVERSATIONS (this patient's own past Q&A — use only if directly relevant):"]
+    for h in hits:
+        ts = (h.get("meta", {}).get("ts") or "")[:10]
+        title = h.get("meta", {}).get("title") or ""
+        prefix = "  - "
+        if ts:
+            prefix += "[" + ts + "] "
+        if title and title != "Current session":
+            prefix += "(" + title[:40] + ") "
+        lines.append(prefix + h["text"][:700])
+    return "\n".join(lines)
+
+# ── 4. Personal pattern / correlation detection ─────────────────────
+def detect_personal_patterns():
+    """Cross-correlate the last 7-day metrics with current symptoms +
+    chat-extracted symptom timeline. Returns a list of short observations,
+    each grounded in the actual numeric pattern (not LLM-generated)."""
+    out = []
+    try:
+        hist = get_metrics_history(7) or []
+    except Exception:
+        return out
+    if len(hist) < 4:
+        return out
+    sleeps = [(d, m.get("sleep_hours")) for d, m in hist if isinstance(m.get("sleep_hours"), (int, float))]
+    hrs = [(d, m.get("heart_rate_resting")) for d, m in hist if isinstance(m.get("heart_rate_resting"), (int, float)) and m.get("heart_rate_resting") > 0]
+    steps = [(d, m.get("steps")) for d, m in hist if isinstance(m.get("steps"), (int, float)) and m.get("steps") > 0]
+    moods = [(d, m.get("mood")) for d, m in hist if m.get("mood")]
+    # Pattern A: low sleep → next-day high HR
+    if len(sleeps) >= 4 and len(hrs) >= 4:
+        sleep_map = dict(sleeps)
+        hr_map = dict(hrs)
+        coupled = 0
+        total = 0
+        for d, s in sleeps:
+            try:
+                next_day = (datetime.strptime(d, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+            except Exception:
+                continue
+            if next_day in hr_map and s is not None:
+                total += 1
+                if s < 6 and hr_map[next_day] > (sum(h for _, h in hrs) / len(hrs)) + 4:
+                    coupled += 1
+        if total >= 3 and coupled >= 2:
+            out.append("On days after sleeping <6 h, your resting HR tends to rise 4+ bpm above your weekly average.")
+    # Pattern B: low steps day → low mood next day
+    if len(steps) >= 4 and len(moods) >= 3:
+        step_map = dict(steps)
+        low_mood = {d for d, m in moods if str(m).lower() in {"sad", "low", "down", "anxious", "stressed", "😟", "😞", "😢"}}
+        if low_mood:
+            triggers = 0
+            for d in low_mood:
+                try:
+                    prev = (datetime.strptime(d, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
+                except Exception:
+                    continue
+                if prev in step_map and step_map[prev] < 3500:
+                    triggers += 1
+            if triggers >= 2:
+                out.append("Low-mood days often follow days under 3,500 steps — light movement looks protective for you.")
+    # Pattern C: hydration consistency
+    waters = [int(m.get("water_glasses") or 0) for _, m in hist]
+    if waters and (sum(1 for w in waters if w < 3) >= 4):
+        out.append("Hydration has been under 3 glasses on 4+ of the last 7 days — this often shows up later as headaches or fatigue.")
+    return out
 
 def medichat_rag_stream(question, all_messages, lang_instruction="", patient_name="", pdf_context="", image_context="", past_chats_summary=""):
     if is_casual_message(question):
@@ -13083,6 +14096,45 @@ try:
     )
 except Exception:
     pass
+
+
+# ── Early session-restore (BEFORE the sidebar renders) ──────────────
+# The sidebar profile tile renders ~1900 lines later but its display
+# depends on st.session_state.is_authenticated. Without this early-restore,
+# a fresh page-load (e.g. browser refresh) draws the sidebar with the
+# default is_authenticated=False BEFORE the URL handler reads the ?s=
+# token further down. Result: the tile flickers as "Guest" until the
+# next interaction. Reading + restoring here means the sidebar sees the
+# correct state on the very first render. The original restore block
+# further down is kept as a no-op fallback (its `not is_authenticated`
+# guard makes it skip when we've already restored here).
+try:
+    _early_qp = st.query_params
+    _early_s = str(_early_qp.get("s", "") or "").strip()
+    if (_early_s
+            and not st.session_state.is_authenticated
+            and not st.session_state.is_guest):
+        import base64 as _esb64, json as _esjson
+        _epad = "=" * ((4 - len(_early_s) % 4) % 4)
+        _edec = _esb64.urlsafe_b64decode((_early_s + _epad).encode()).decode("utf-8")
+        _edata = _esjson.loads(_edec)
+        _eeh = (_edata.get("eh") or "").strip()
+        _eed = (_edata.get("ed") or "").strip()
+        _epn = (_edata.get("pn") or "").strip()
+        if _eeh:
+            _eprof = get_profile(_eeh)
+            if _eprof is not None:
+                st.session_state.is_authenticated = True
+                st.session_state.user_email_hash = _eeh
+                st.session_state.user_email_display = _eed
+                st.session_state.patient_name = _eprof.get("name", _epn) or _epn
+                st.session_state.patient_memory = _eprof.get(
+                    "patient_memory",
+                    {"symptoms": [], "conditions": [], "medications": []},
+                )
+                st.session_state.selected_language = _eprof.get("language", "English")
+except Exception as _e_early:
+    print("[early-session-restore] failed:", repr(_e_early))
 
 
 with st.sidebar:
@@ -16851,6 +17903,30 @@ if st.session_state.mode == "chat":
                 # sparklines. Each metric pulls its own series from this dict
                 # so we don't hit Firebase four times per render.
                 _all_dm = get_all_daily_metrics()
+                # Find the most recent day with ANY logged metric — surfaced
+                # as a "Last synced: …" label in the card head so the user
+                # sees at a glance how fresh the snapshot is.
+                _last_sync_label = "No data yet"
+                try:
+                    _today = datetime.now().date()
+                    for _i in range(60):
+                        _dk = (_today - timedelta(days=_i)).strftime("%Y-%m-%d")
+                        _day = _all_dm.get(_dk, {}) or {}
+                        if any(_day.get(_k) is not None for _k in
+                               ("heart_rate_resting", "steps", "sleep_hours",
+                                "water_glasses", "mood")):
+                            _delta_days = _i
+                            if _delta_days == 0:
+                                _last_sync_label = "Synced today"
+                            elif _delta_days == 1:
+                                _last_sync_label = "Synced yesterday"
+                            elif _delta_days < 7:
+                                _last_sync_label = "Synced " + str(_delta_days) + " days ago"
+                            else:
+                                _last_sync_label = "Synced " + _dk
+                            break
+                except Exception:
+                    pass
                 _tiles = [
                     ("md-accent-pink", "favorite", "Heart Rate", _heart_rate_display, _heart_rate_status_text, "md-line-pink", "heart_rate_resting"),
                     ("md-accent-green", "directions_walk", "Steps", _steps_display, _steps_status_text, "md-line-green", "steps"),
@@ -16859,7 +17935,7 @@ if st.session_state.mode == "chat":
                 ]
                 snap_html = (
                     '<div class="md-rcard md-snap-card">'
-                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div></div>'
+                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><div class="md-snap-sync">' + _last_sync_label + '</div></div>'
                     '<div class="md-snap-grid">'
                 )
                 for _cls, _icon, _lbl, _val, _status, _line_cls, _metric_key in _tiles:
@@ -17081,16 +18157,55 @@ if st.session_state.mode == "chat":
                         '<span class="rag-text">' + str(conf_pct) + '% match</span>'
                     )
 
-                if engine_html or source_tags or conf_html:
-                    parts = []
-                    if engine_html or source_tags:
-                        parts.append('<span class="meta-label meta-label-sources"><span class="material-symbols-rounded">verified_user</span>Sources</span>' + engine_html + source_tags)
-                    if conf_html:
-                        parts.append('<span class="meta-label meta-label-conf">Confidence</span>' + conf_html)
-                    st.markdown('<div class="meta-row">' + "".join(parts) + '</div>', unsafe_allow_html=True)
+                # Sources + Confidence meta-row removed per user request —
+                # the row added visual noise after each reply. The
+                # underlying signals (msg["sources"], msg["confidence"])
+                # are still tracked in session state for analytics, just
+                # no longer rendered to the user.
 
                 if msg_ts:
                     st.markdown('<div class="bot-ts">' + ui_escape(msg_ts) + '</div>', unsafe_allow_html=True)
+
+                # Adaptive-memory: render a tiny "MediChat noticed" chip
+                # showing what was silently saved to the profile from the
+                # preceding user message (allergies, meds, conditions,
+                # symptoms, appointment). Makes the self-learning visible
+                # and editable — user can always remove these on Medications
+                # / Records / Appointments pages.
+                _noticed = msg.get("noticed_facts") or []
+                if _noticed:
+                    _chips_html = ""
+                    _icon_map = {
+                        "allergy":     ("warning",     "#dc2626", "#fef2f2", "#fecaca"),
+                        "medication":  ("medication",  "#0ea5e9", "#eff6ff", "#bfdbfe"),
+                        "condition":   ("monitor_heart","#9333ea", "#f5f3ff", "#ddd6fe"),
+                        "symptom":     ("local_hospital","#f59e0b", "#fffbeb", "#fde68a"),
+                        "appointment": ("event",       "#10b981", "#ecfdf5", "#a7f3d0"),
+                    }
+                    for _item in _noticed[:6]:
+                        _kind, _, _val = (_item or "").partition(":")
+                        _kind = _kind.strip().lower()
+                        _val = _val.strip()
+                        _ic, _fg, _bg, _bd = _icon_map.get(_kind, ("bookmark", "#475569", "#f1f5f9", "#e2e8f0"))
+                        _chips_html += (
+                            '<span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.22rem 0.55rem;'
+                            'background:' + _bg + ';border:1px solid ' + _bd + ';border-radius:999px;'
+                            'font-size:0.72rem;font-weight:600;color:' + _fg + ';margin:0.18rem 0.25rem 0.18rem 0;">'
+                            '<span class="material-symbols-rounded" style="font-size:0.85rem;">' + _ic + '</span>'
+                            + ui_text(_kind.capitalize() + ": " + _val, 60) +
+                            '</span>'
+                        )
+                    st.markdown(
+                        '<div style="margin-top:0.45rem;padding:0.55rem 0.7rem;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;">'
+                        '<div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;display:flex;align-items:center;gap:0.35rem;margin-bottom:0.35rem;">'
+                        '<span class="material-symbols-rounded" style="font-size:0.85rem;color:#7c3aed;">auto_awesome</span>'
+                        'MediChat noticed and saved'
+                        '</div>'
+                        '<div style="display:flex;flex-wrap:wrap;align-items:center;">' + _chips_html + '</div>'
+                        '<div style="font-size:0.66rem;color:#94a3b8;margin-top:0.4rem;">You can review or remove these on Medications, Records, or Appointments.</div>'
+                        '</div>',
+                        unsafe_allow_html=True
+                    )
 
     if st.session_state.messages:
         # Feedback row removed per user request.
@@ -17699,6 +18814,8 @@ if st.session_state.mode == "chat":
                             _size_bytes,
                             reply,
                             raw_text=reply,  # transcription IS the values; same string
+                            patient_name=rx_result.get("patient_name", ""),
+                            record_type="prescription",
                         )
                     except Exception as _e:
                         print("Auto-save prescription to health records failed:", _e)
@@ -17773,6 +18890,52 @@ if st.session_state.mode == "chat":
                             _entry += "\n  Last response summary: " + _outcome[:240]
                         _lines.append(_entry)
                     past_chats_summary = "\n".join(_lines)
+
+            # ── Adaptive memory layer ───────────────────────────────
+            # 1. Update style preferences from this message (cheap, local).
+            try:
+                adapt_style_from_message(effective_user_input)
+            except Exception as _e:
+                print("adapt_style_from_message failed:", _e)
+            # 2. Extract structured facts (allergies, meds, conditions,
+            #    symptoms, appointments) via a small LLM call and silently
+            #    apply them to the profile.
+            _noticed_facts = []
+            try:
+                _recent_assistant = ""
+                for _m in reversed(st.session_state.messages[:-1]):
+                    if _m.get("role") == "assistant":
+                        _recent_assistant = _m.get("content", "")
+                        break
+                _facts = adaptive_extract_facts(effective_user_input, _recent_assistant)
+                if _facts:
+                    _noticed_facts = apply_extracted_facts(_facts) or []
+                    if _noticed_facts:
+                        st.session_state._adaptive_noticed = _noticed_facts
+            except Exception as _e:
+                print("adaptive_extract_facts call failed:", _e)
+            # 3. Retrieve relevant prior Q&A and bolt onto past-chats
+            #    summary so the model sees them in this turn.
+            try:
+                _retrieval_block = build_past_chat_retrieval_context(effective_user_input, k=3)
+                if _retrieval_block:
+                    if past_chats_summary:
+                        past_chats_summary = past_chats_summary + "\n\n" + _retrieval_block
+                    else:
+                        past_chats_summary = _retrieval_block
+            except Exception as _e:
+                print("past chat retrieval failed:", _e)
+            # 4. Append the adaptive style directive so the model adapts
+            #    tone, depth, and technical level to this user.
+            try:
+                _style_line = build_style_directive()
+                if _style_line:
+                    if past_chats_summary:
+                        past_chats_summary = past_chats_summary + "\n\n" + _style_line
+                    else:
+                        past_chats_summary = _style_line
+            except Exception as _e:
+                print("style directive failed:", _e)
 
             # Ensure _bot_avatar_html is always defined regardless of which
             # history-rendering branch executed above (the elif/pass branch
@@ -17876,7 +19039,11 @@ if st.session_state.mode == "chat":
             st.session_state.eval_log.append(_log_entry)
             log_query_to_firestore(_log_entry)
 
-            st.session_state.messages.append({"role": "assistant", "type": "text", "content": final_text, "sources": sources, "confidence": conf_level, "confidence_pct": conf_pct, "engine": engine_used, "ts": _msg_now_ts()})
+            _assistant_msg = {"role": "assistant", "type": "text", "content": final_text, "sources": sources, "confidence": conf_level, "confidence_pct": conf_pct, "engine": engine_used, "ts": _msg_now_ts()}
+            _noticed_for_msg = st.session_state.pop("_adaptive_noticed", None)
+            if _noticed_for_msg:
+                _assistant_msg["noticed_facts"] = _noticed_for_msg
+            st.session_state.messages.append(_assistant_msg)
 
         if st.session_state.is_authenticated and st.session_state.user_email_hash:
             persist_profile_state(
@@ -18265,34 +19432,183 @@ elif st.session_state.mode == "eval":
                 st.rerun()
 
 elif st.session_state.mode == "history":
-    # ── Your Chats — full conversation library (redesign, May 2026) ──
-    # Hero header matches every other page (icon + title + sub), top
-    # action bar (Start new + Back home), KPI strip, then date-grouped
-    # cards (Today / Yesterday / This week / Earlier). All clicks go
-    # through st.button so we stay in the live websocket session.
-    st.markdown(
-        '<div class="md-page-hero md-page-hero-history">'
-        '<div class="md-page-hero-ic"><span class="material-symbols-rounded">forum</span></div>'
-        '<div class="md-page-hero-text">'
-        '<div class="md-page-hero-title">Your Chats</div>'
-        '<div class="md-page-hero-sub">Every conversation you have had with MediChat. Open one to continue, or start a fresh thread anytime.</div>'
-        '</div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
+    # ── Your Chats — compact library view (redesign, late May 2026) ──
+    # Tighter than before: inline header + action buttons, 4 stat tiles,
+    # search + filter chips + sort toolbar, flat list (no date-group
+    # headers). All buttons still drive the same st.session_state +
+    # st.rerun flow so nothing breaks.
+    st.markdown("""
+        <style>
+        /* Heading */
+        .md-hist2-title { font-size:1.85rem; font-weight:800; color:var(--md-text-1); letter-spacing:-0.01em; line-height:1.1; }
+        .md-hist2-sub   { font-size:0.88rem; color:var(--md-text-2); margin-top:0.3rem; line-height:1.45; max-width:640px; }
 
-    # Top action bar — primary "Start new chat" + subtle "Back to home"
-    _hist_ab1, _hist_ab2 = st.columns([0.7, 0.3], gap="small")
-    with _hist_ab1:
-        st.markdown('<div class="md-hist-new-anchor"></div>', unsafe_allow_html=True)
-        if st.button("Start a new chat", key="hist_new_chat", icon=":material/add:", use_container_width=True, type="primary"):
-            start_new_chat_session()
-            st.rerun()
-    with _hist_ab2:
-        st.markdown('<div class="md-hist-back-anchor"></div>', unsafe_allow_html=True)
-        if st.button("Back to home", key="hist_back", icon=":material/home:", use_container_width=True):
-            st.session_state.mode = "chat"
-            st.rerun()
+        /* Stat tiles */
+        .md-hist2-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(195px,1fr)); gap:0.75rem; margin:0.4rem 0 1.3rem 0; }
+        .md-hist2-tile  { background:#fff; border:1px solid var(--md-border); border-radius:14px; padding:0.9rem 1rem; display:flex; align-items:center; gap:0.85rem; box-shadow:0 1px 2px rgba(15,23,42,0.03); }
+        .md-hist2-tile-ic { width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:#f5f3ff; color:#7c3aed; }
+        .md-hist2-tile-ic .material-symbols-rounded { font-size:1.25rem; }
+        .md-hist2-tile-val { font-size:1.5rem; font-weight:750; color:var(--md-text-1); line-height:1; }
+        .md-hist2-tile-lbl { font-size:0.74rem; color:var(--md-text-2); margin-top:0.25rem; font-weight:600; letter-spacing:0.02em; }
+
+        /* Toolbar row alignment — keep input + chips + select on one
+           visual baseline.  Streamlit columns force per-cell padding so we
+           also zero the inner element-container gap. */
+        [data-testid="stMain"] [class*="st-key-hist_toolbar_row"] [data-testid="stHorizontalBlock"] { align-items:center !important; }
+        [data-testid="stMain"] .st-key-hist2_search [data-testid="stTextInputRootElement"] { min-height:40px !important; height:40px !important; }
+        [data-testid="stMain"] .st-key-hist2_search input { font-size:0.86rem !important; }
+        .st-key-hist2_filter_all .stButton > button,
+        .st-key-hist2_filter_today .stButton > button,
+        .st-key-hist2_filter_yesterday .stButton > button,
+        .st-key-hist2_filter_7d .stButton > button {
+            min-height:40px !important; height:40px !important; padding:0 0.85rem !important;
+            font-size:0.82rem !important; font-weight:600 !important;
+            border-radius:10px !important; background:#fff !important;
+            border:1px solid var(--md-border) !important; color:var(--md-text-2) !important;
+        }
+        .st-key-hist2_filter_all .stButton > button:hover,
+        .st-key-hist2_filter_today .stButton > button:hover,
+        .st-key-hist2_filter_yesterday .stButton > button:hover,
+        .st-key-hist2_filter_7d .stButton > button:hover {
+            border-color:#cdd6e8 !important; color:var(--md-text-1) !important;
+        }
+        .st-key-hist2_filter_active .stButton > button {
+            background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%) !important;
+            border:1px solid #c7d2fe !important; color:#4338ca !important;
+            box-shadow:0 1px 2px rgba(79,70,229,0.08) !important;
+        }
+        [data-testid="stMain"] .st-key-hist2_sort_box div[data-baseweb="select"] { min-height:40px !important; height:40px !important; }
+        [data-testid="stMain"] .st-key-hist2_sort_box div[data-baseweb="select"] > div { min-height:38px !important; height:38px !important; }
+
+        /* Header action buttons — Back to home polished. */
+        .st-key-hist_back .stButton > button {
+            min-height:44px !important; height:44px !important;
+            font-weight:600 !important; font-size:0.86rem !important;
+            border-radius:12px !important; background:#fff !important;
+            border:1px solid var(--md-border) !important; color:var(--md-text-1) !important;
+            box-shadow:0 1px 2px rgba(15,23,42,0.04) !important;
+            white-space:nowrap !important;
+        }
+        .st-key-hist_back .stButton > button:hover {
+            border-color:#7c3aed !important; color:#5b21b6 !important;
+            background:#faf5ff !important;
+        }
+        .st-key-hist_new_chat .stButton > button {
+            min-height:44px !important; height:44px !important;
+            font-weight:650 !important; font-size:0.88rem !important;
+            border-radius:12px !important;
+            box-shadow:0 4px 12px rgba(79,70,229,0.22) !important;
+            white-space:nowrap !important;
+        }
+
+        /* ── Chat row card — single bordered container per row.
+           We render the visual card via st.container(border=True) and
+           strip Streamlit's default border, then re-apply our own so the
+           Continue/Delete buttons sit inside the SAME card as the title
+           text (no more floating buttons between rows). */
+        [data-testid="stMain"] div[data-testid="stVerticalBlockBorderWrapper"].md-hist2-row-wrap,
+        [data-testid="stMain"] [class*="st-key-hist_row_"] {
+            background:#fff !important;
+            border:1px solid var(--md-border) !important;
+            border-radius:14px !important;
+            box-shadow:0 1px 2px rgba(15,23,42,0.03) !important;
+            margin-bottom:0.7rem !important;
+            padding:0.95rem 1.1rem !important;
+        }
+        [data-testid="stMain"] [class*="st-key-hist_row_"] [data-testid="stHorizontalBlock"] {
+            align-items:center !important;
+            gap:0.6rem !important;
+        }
+        .md-hist2-row-inner { display:grid; grid-template-columns:36px 1fr; gap:0.85rem; align-items:flex-start; }
+        .md-hist2-row-ic { width:36px; height:36px; border-radius:10px; background:#f5f3ff; color:#7c3aed; display:flex; align-items:center; justify-content:center; }
+        .md-hist2-row-ic .material-symbols-rounded { font-size:1.15rem; }
+        .md-hist2-row-title { font-weight:700; color:var(--md-text-1); font-size:0.97rem; line-height:1.3; }
+        .md-hist2-row-meta { display:flex; align-items:center; gap:0.35rem; color:var(--md-text-2); font-size:0.78rem; margin-top:0.3rem; flex-wrap:wrap; }
+        .md-hist2-row-meta .material-symbols-rounded { font-size:0.85rem; opacity:0.7; }
+        .md-hist2-row-prev { color:var(--md-text-2); font-size:0.84rem; margin-top:0.35rem; line-height:1.5; }
+
+        /* Continue chat button — outlined indigo pill, inside the row card. */
+        [class*="st-key-hist_open_"] .stButton > button {
+            min-height:40px !important; height:40px !important;
+            border-radius:10px !important;
+            background:#fff !important;
+            border:1px solid #c7d2fe !important;
+            color:#4338ca !important;
+            font-weight:600 !important; font-size:0.84rem !important;
+            box-shadow:none !important;
+        }
+        [class*="st-key-hist_open_"] .stButton > button:hover {
+            background:#eef2ff !important; border-color:#a5b4fc !important; color:#3730a3 !important;
+        }
+        /* Delete bin — square icon button, properly centered.
+           Streamlit emits an empty stMarkdownContainer sibling alongside
+           the icon span when the label is just a space; collapse it AND
+           force the button into grid-center so the icon truly sits on
+           the button's middle pixel. Multiple selectors target every
+           nested wrapper Streamlit might insert. */
+        [class*="st-key-hist_del_"] .stButton,
+        [class*="st-key-hist_del_"] [data-testid="stTooltipHoverTarget"] {
+            display:flex !important; justify-content:center !important; width:100% !important;
+        }
+        [class*="st-key-hist_del_"] .stButton > button {
+            min-height:40px !important; height:40px !important; width:40px !important; min-width:40px !important; max-width:40px !important;
+            border-radius:10px !important; padding:0 !important;
+            background:#fff !important; border:1px solid var(--md-border) !important; color:var(--md-text-2) !important;
+            display:grid !important; place-items:center !important; place-content:center !important;
+            grid-template-columns:1fr !important; gap:0 !important;
+            margin:0 auto !important;
+        }
+        /* Hide the empty markdown container so the icon has no sibling
+           competing for horizontal space. */
+        [class*="st-key-hist_del_"] .stButton > button [data-testid="stMarkdownContainer"] {
+            display:none !important; width:0 !important; height:0 !important;
+            margin:0 !important; padding:0 !important;
+        }
+        /* The Streamlit icon wrapper span — center it and reset all width
+           so the icon sits exactly mid-button. */
+        [class*="st-key-hist_del_"] .stButton > button > span:first-child,
+        [class*="st-key-hist_del_"] .stButton > button > div:first-child {
+            display:flex !important; align-items:center !important; justify-content:center !important;
+            width:auto !important; height:auto !important; margin:0 !important; padding:0 !important;
+            grid-column:1 / -1 !important;
+        }
+        [class*="st-key-hist_del_"] .stButton > button [data-testid="stIconMaterial"] {
+            margin:0 !important; padding:0 !important; font-size:1.1rem !important;
+            color:#94a3b8 !important; line-height:1 !important; display:block !important;
+        }
+        [class*="st-key-hist_del_"] .stButton > button:hover {
+            border-color:#fecaca !important; background:#fef2f2 !important;
+        }
+        [class*="st-key-hist_del_"] .stButton > button:hover [data-testid="stIconMaterial"] {
+            color:#dc2626 !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # ── Header row: title/subtitle on left, action buttons top-right ─
+    _hh1, _hh2 = st.columns([0.62, 0.38])
+    with _hh1:
+        st.markdown(
+            '<div style="margin:0.3rem 0 1rem 0;">'
+            '<div class="md-hist2-title">Your Chats</div>'
+            '<div class="md-hist2-sub">Every conversation you have had with MediChat AI. Open one to continue, or start a fresh thread anytime.</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+    with _hh2:
+        _ab1, _ab2 = st.columns([0.6, 0.4], gap="small")
+        with _ab1:
+            if st.button("Start a new chat", key="hist_new_chat", icon=":material/add:", use_container_width=True, type="primary"):
+                start_new_chat_session()
+                try: del st.query_params["mode"]
+                except Exception: pass
+                st.rerun()
+        with _ab2:
+            if st.button("Back to home", key="hist_back", icon=":material/home:", use_container_width=True):
+                st.session_state.mode = "chat"
+                try: del st.query_params["mode"]
+                except Exception: pass
+                st.rerun()
 
     if not (st.session_state.is_authenticated and st.session_state.user_email_hash):
         st.markdown(
@@ -18304,13 +19620,13 @@ elif st.session_state.mode == "history":
             unsafe_allow_html=True
         )
     else:
-        _hist = list_conversations(st.session_state.user_email_hash, limit=200)
+        _hist = list_conversations(st.session_state.user_email_hash, limit=200) or []
         if not _hist:
             st.markdown(
                 '<div class="md-hist-empty">'
                 '<div class="md-hist-empty-ic"><span class="material-symbols-rounded">chat_bubble</span></div>'
                 '<div class="md-hist-empty-title">No conversations yet</div>'
-                '<div class="md-hist-empty-sub">Start a chat from the button above and your conversations will appear here, grouped by date.</div>'
+                '<div class="md-hist-empty-sub">Start a chat from the button above and your conversations will appear here.</div>'
                 '</div>',
                 unsafe_allow_html=True
             )
@@ -18330,88 +19646,133 @@ elif st.session_state.mode == "history":
             _total = len(_hist)
             _week_count = sum(1 for _, d in _hist_dt if d and d >= _week_ago)
             _month_count = sum(1 for _, d in _hist_dt if d and d >= _month_ago)
+            _msg_totals = [int(c.get("message_count", 0) or 0) for c, _ in _hist_dt]
+            _avg_msgs = int(round(sum(_msg_totals) / len(_msg_totals))) if _msg_totals else 0
 
+            # ── 4 stat tiles (with icons) ────────────────────────────
             st.markdown(
-                '<div class="md-hist-stats">'
-                '<div class="md-hist-stat"><div class="md-hist-stat-val">' + str(_total) + '</div><div class="md-hist-stat-lbl">All chats</div></div>'
-                '<div class="md-hist-stat"><div class="md-hist-stat-val">' + str(_week_count) + '</div><div class="md-hist-stat-lbl">Past 7 days</div></div>'
-                '<div class="md-hist-stat"><div class="md-hist-stat-val">' + str(_month_count) + '</div><div class="md-hist-stat-lbl">Past 30 days</div></div>'
+                '<div class="md-hist2-tiles">'
+                '<div class="md-hist2-tile"><div class="md-hist2-tile-ic"><span class="material-symbols-rounded">forum</span></div>'
+                '<div><div class="md-hist2-tile-val">' + str(_total) + '</div><div class="md-hist2-tile-lbl">All chats</div></div></div>'
+                '<div class="md-hist2-tile"><div class="md-hist2-tile-ic" style="background:#ecfeff;color:#0891b2;"><span class="material-symbols-rounded">calendar_today</span></div>'
+                '<div><div class="md-hist2-tile-val">' + str(_week_count) + '</div><div class="md-hist2-tile-lbl">Past 7 days</div></div></div>'
+                '<div class="md-hist2-tile"><div class="md-hist2-tile-ic" style="background:#fef3c7;color:#d97706;"><span class="material-symbols-rounded">date_range</span></div>'
+                '<div><div class="md-hist2-tile-val">' + str(_month_count) + '</div><div class="md-hist2-tile-lbl">Past 30 days</div></div></div>'
+                '<div class="md-hist2-tile"><div class="md-hist2-tile-ic" style="background:#dcfce7;color:#16a34a;"><span class="material-symbols-rounded">trending_up</span></div>'
+                '<div><div class="md-hist2-tile-val">' + str(_avg_msgs) + '</div><div class="md-hist2-tile-lbl">Avg. messages per chat</div></div></div>'
                 '</div>',
                 unsafe_allow_html=True
             )
 
-            _buckets = {"today": [], "yesterday": [], "this_week": [], "earlier": []}
-            for _c, _d in _hist_dt:
+            # ── Toolbar: search + filter chips + sort ────────────────
+            _filter = st.session_state.get("_hist2_filter", "all")
+            _sort = st.session_state.get("_hist2_sort", "newest")
+            with st.container(key="hist_toolbar_row"):
+                _tb1, _tb2, _tb3, _tb4, _tb5, _tb6 = st.columns([1.5, 0.55, 0.7, 0.85, 1.0, 0.95])
+                with _tb1:
+                    _hist_search = st.text_input(" ", value=st.session_state.get("_hist2_search", ""), key="hist2_search", placeholder="Search chats…", label_visibility="collapsed")
+                    st.session_state._hist2_search = _hist_search
+                for _i, (_fkey, _flab) in enumerate([("all", "All"), ("today", "Today"), ("yesterday", "Yesterday"), ("7d", "Last 7 Days")]):
+                    _btn_col = [_tb2, _tb3, _tb4, _tb5][_i]
+                    with _btn_col:
+                        _ck = "hist2_filter_active" if _filter == _fkey else ("hist2_filter_" + _fkey)
+                        if st.button(_flab, key=_ck, use_container_width=True):
+                            st.session_state._hist2_filter = _fkey
+                            st.rerun()
+                with _tb6:
+                    _sort_label = st.selectbox(" ", options=["Newest first", "Oldest first", "Most messages"], index={"newest": 0, "oldest": 1, "most": 2}.get(_sort, 0), key="hist2_sort_box", label_visibility="collapsed")
+                    _new_sort = {"Newest first": "newest", "Oldest first": "oldest", "Most messages": "most"}.get(_sort_label, "newest")
+                    if _new_sort != _sort:
+                        st.session_state._hist2_sort = _new_sort
+                        st.rerun()
+            st.markdown('<div style="height:0.5rem;"></div>', unsafe_allow_html=True)
+
+            # ── Apply filter + sort ──────────────────────────────────
+            def _passes_filter(_d):
                 if _d is None:
-                    _buckets["earlier"].append((_c, _d))
-                elif _d >= _today_start:
-                    _buckets["today"].append((_c, _d))
-                elif _d >= _yesterday_start:
-                    _buckets["yesterday"].append((_c, _d))
-                elif _d >= _week_ago:
-                    _buckets["this_week"].append((_c, _d))
-                else:
-                    _buckets["earlier"].append((_c, _d))
+                    return _filter == "all"
+                if _filter == "all":
+                    return True
+                if _filter == "today":
+                    return _d >= _today_start
+                if _filter == "yesterday":
+                    return _yesterday_start <= _d < _today_start
+                if _filter == "7d":
+                    return _d >= _week_ago
+                return True
+            _filtered = [(_c, _d) for _c, _d in _hist_dt if _passes_filter(_d)]
+            _q = (st.session_state.get("_hist2_search", "") or "").strip().lower()
+            if _q:
+                def _matches(_c):
+                    hay = " ".join([
+                        str(_c.get("title") or ""),
+                        str(_c.get("first_user_msg") or ""),
+                        str(_c.get("last_assistant_msg") or ""),
+                    ]).lower()
+                    return _q in hay
+                _filtered = [(c, d) for c, d in _filtered if _matches(c)]
+            if _sort == "oldest":
+                _filtered.sort(key=lambda x: (x[1] or datetime.min))
+            elif _sort == "most":
+                _filtered.sort(key=lambda x: int(x[0].get("message_count", 0) or 0), reverse=True)
+            else:  # newest
+                _filtered.sort(key=lambda x: (x[1] or datetime.min), reverse=True)
 
-            _bucket_order = [
-                ("today", "Today"),
-                ("yesterday", "Yesterday"),
-                ("this_week", "This week"),
-                ("earlier", "Earlier"),
-            ]
-
-            for _bk_key, _bk_label in _bucket_order:
-                _entries = _buckets[_bk_key]
-                if not _entries:
-                    continue
+            if not _filtered:
                 st.markdown(
-                    '<div class="md-hist-section">'
-                    '<div class="md-hist-section-title">' + _bk_label + '</div>'
-                    '<div class="md-hist-section-count">' + str(len(_entries)) + '</div>'
+                    '<div class="md-hist-empty" style="margin-top:0.6rem;">'
+                    '<div class="md-hist-empty-ic"><span class="material-symbols-rounded">search_off</span></div>'
+                    '<div class="md-hist-empty-title">No matches</div>'
+                    '<div class="md-hist-empty-sub">Try clearing the search or switching filter.</div>'
                     '</div>',
                     unsafe_allow_html=True
                 )
-                for _h, _d in _entries:
-                    _hid = str(_h.get("id") or "").strip()
-                    if not _hid:
-                        continue
-                    _key = hashlib.sha1(_hid.encode("utf-8")).hexdigest()[:12]
-                    _ht = (_h.get("title") or "Chat")[:80]
-                    _hc = int(_h.get("message_count", 0) or 0)
-                    _preview = (_h.get("first_user_msg") or "")[:140]
-                    if _d is None:
-                        _time_disp = "—"
-                    else:
-                        _delta = _now - _d
-                        _delta_sec = _delta.total_seconds()
-                        if _delta_sec < 60:
-                            _time_disp = "Just now"
-                        elif _delta_sec < 3600:
-                            _time_disp = str(int(_delta_sec // 60)) + "m ago"
-                        elif _delta_sec < 86400:
-                            _time_disp = _d.strftime("%I:%M %p").lstrip("0")
-                        else:
-                            _time_disp = _d.strftime("%d %b %Y")
 
-                    _msg_word = "message" if _hc == 1 else "messages"
-                    st.markdown(
-                        '<div class="md-hist-card">'
-                        '<div class="md-hist-card-bubble material-symbols-rounded">chat_bubble</div>'
-                        '<div class="md-hist-card-mid">'
-                        '<div class="md-hist-card-title">' + ui_text(_ht, 80) + '</div>'
-                        '<div class="md-hist-card-meta">'
-                        '<span class="md-hist-card-time">' + ui_text(_time_disp, 30) + '</span>'
-                        '<span class="md-hist-card-dot">•</span>'
-                        '<span class="md-hist-card-count">' + str(_hc) + ' ' + _msg_word + '</span>'
-                        '</div>'
-                        + ('<div class="md-hist-card-preview">' + ui_text(_preview, 160) + '</div>' if _preview else '') +
-                        '</div>'
-                        '</div>',
-                        unsafe_allow_html=True
-                    )
-                    _ac1, _ac2 = st.columns([0.82, 0.18], gap="small")
-                    with _ac1:
-                        st.markdown('<div class="md-hist-open-anchor"></div>', unsafe_allow_html=True)
+            # ── Flat list of chat rows ───────────────────────────────
+            for _h, _d in _filtered:
+                _hid = str(_h.get("id") or "").strip()
+                if not _hid:
+                    continue
+                _key = hashlib.sha1(_hid.encode("utf-8")).hexdigest()[:12]
+                _ht = (_h.get("title") or "Chat")[:90]
+                _hc = int(_h.get("message_count", 0) or 0)
+                _preview = (_h.get("first_user_msg") or "")[:160]
+                # Time chip — "Today · 7:13 AM" / "Yesterday · 1:41 PM" / "25 May 2026 · 1:19 PM"
+                if _d is None:
+                    _time_disp = "—"
+                else:
+                    _t_str = _d.strftime("%I:%M %p").lstrip("0")
+                    if _d >= _today_start:
+                        _time_disp = "Today  ·  " + _t_str
+                    elif _d >= _yesterday_start:
+                        _time_disp = "Yesterday  ·  " + _t_str
+                    else:
+                        _time_disp = _d.strftime("%d %b %Y") + "  ·  " + _t_str
+                _msg_word = "message" if _hc == 1 else "messages"
+
+                # Single bordered card per row — the keyed container is
+                # styled as a card via CSS so the Continue + Delete
+                # buttons sit INSIDE the same surface as the title.
+                with st.container(key="hist_row_" + _key):
+                    _row_l, _row_open, _row_del = st.columns([0.74, 0.18, 0.08], gap="small", vertical_alignment="center")
+                    with _row_l:
+                        st.markdown(
+                            '<div class="md-hist2-row-inner">'
+                            '<div class="md-hist2-row-ic"><span class="material-symbols-rounded">chat_bubble</span></div>'
+                            '<div style="min-width:0;">'
+                            '<div class="md-hist2-row-title">' + ui_text(_ht, 90) + '</div>'
+                            '<div class="md-hist2-row-meta">'
+                            '<span class="material-symbols-rounded">schedule</span>'
+                            '<span>' + ui_text(_time_disp, 40) + '</span>'
+                            '<span>·</span>'
+                            '<span>' + str(_hc) + ' ' + _msg_word + '</span>'
+                            '</div>'
+                            + ('<div class="md-hist2-row-prev">' + ui_text(_preview, 180) + '</div>' if _preview else '') +
+                            '</div>'
+                            '</div>',
+                            unsafe_allow_html=True
+                        )
+                    with _row_open:
                         if st.button("Continue chat", key="hist_open_" + _key, icon=":material/arrow_forward:", use_container_width=True):
                             _conv = load_conversation(st.session_state.user_email_hash, _hid)
                             if _conv is not None:
@@ -18422,10 +19783,11 @@ elif st.session_state.mode == "history":
                                 st.session_state.last_sources = []
                                 st.session_state.emergency_detected = False
                                 st.session_state.mode = "chat"
+                                try: del st.query_params["mode"]
+                                except Exception: pass
                                 st.rerun()
-                    with _ac2:
-                        st.markdown('<div class="md-hist-del-anchor"></div>', unsafe_allow_html=True)
-                        if st.button(" ", key="hist_del_" + _key, icon=":material/delete:", use_container_width=True, help="Delete this chat"):
+                    with _row_del:
+                        if st.button(" ", key="hist_del_" + _key, icon=":material/delete:", help="Delete this chat"):
                             delete_conversation(st.session_state.user_email_hash, _hid)
                             st.rerun()
 
@@ -18447,21 +19809,35 @@ elif st.session_state.mode == "overview":
     steps_n = today.get("steps")
     hr_n = today.get("heart_rate_resting")
 
-    # Wearable sync placeholder (no simulated data)
+    # Wearable sync placeholder. Live wearable integration isn't built yet
+    # — show an honest "Coming soon" ribbon so users don't expect the pills
+    # below to actually connect anything.
     st.markdown(
-        '<div class="md-wearable-card">'
+        '<div class="md-wearable-card" style="position:relative;">'
+        '<div class="md-wearable-ribbon">'
+        '<span class="material-symbols-rounded" style="font-size:0.9rem;">schedule</span>'
+        'Coming soon'
+        '</div>'
         '<div class="md-wearable-icon">⌚</div>'
         '<div class="md-wearable-body">'
-        '<div class="md-wearable-title">Wearable data source: Not connected</div>'
-        '<div class="md-wearable-desc">Connect a wearable to track heart rate, steps, and activity automatically. Until then, health overview only uses your manually logged data.</div>'
+        '<div class="md-wearable-title">Wearable sync — coming soon</div>'
+        '<div class="md-wearable-desc">We\'re building direct sync with Apple Health, Google Fit, and Bluetooth wearables so your heart rate, sleep, and step data flow in automatically. For now, MediChat uses the values you log manually below.</div>'
         '<div class="md-wearable-actions">'
-        '<span class="md-wearable-pill">Bluetooth</span>'
-        '<span class="md-wearable-pill">Apple Health</span>'
-        '<span class="md-wearable-pill">Google Fit</span>'
-        '<span class="md-wearable-pill md-wearable-soon">Not connected</span>'
+        '<span class="md-wearable-pill md-wearable-disabled" title="Coming soon">Bluetooth</span>'
+        '<span class="md-wearable-pill md-wearable-disabled" title="Coming soon">Apple Health</span>'
+        '<span class="md-wearable-pill md-wearable-disabled" title="Coming soon">Google Fit</span>'
+        '<span class="md-wearable-pill md-wearable-soon">In development</span>'
         '</div>'
         '</div>'
-        '</div>',
+        '</div>'
+        '<style>'
+        '.md-wearable-ribbon{position:absolute;top:0.85rem;right:0.95rem;display:inline-flex;align-items:center;gap:0.3rem;'
+        'background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);color:#92400e;font-size:0.7rem;font-weight:700;'
+        'letter-spacing:0.04em;text-transform:uppercase;padding:0.32rem 0.7rem;border-radius:999px;'
+        'border:1px solid #fcd34d;box-shadow:0 1px 2px rgba(146,64,14,0.12);}'
+        '.md-wearable-pill.md-wearable-disabled{background:#f1f5f9 !important;color:#94a3b8 !important;'
+        'border-color:#e2e8f0 !important;cursor:not-allowed !important;pointer-events:none;}'
+        '</style>',
         unsafe_allow_html=True
     )
 
@@ -18752,42 +20128,210 @@ elif st.session_state.mode == "medications":
 
 elif st.session_state.mode == "appointments":
     # ── Appointments ────────────────────────────────────────────────
+    # Page-local CSS override: the canonical tab styling caps tab strips
+    # at 380px wide (built for the 2-tab auth screen). Our 4-tab sync
+    # selector needs the full content width or it overflows / clips.
+    st.markdown("""
+        <style>
+        [data-testid="stMain"] [data-testid="stTabs"] [data-baseweb="tab-list"] {
+            max-width: none !important;
+            justify-content: flex-start !important;
+            margin-top: 0.6rem !important;
+            margin-bottom: 0.4rem !important;
+        }
+        [data-testid="stMain"] [data-testid="stTabs"] [data-baseweb="tab-panel"] {
+            padding-bottom: 0.8rem !important;
+        }
+        [data-testid="stMain"] [data-testid="stExpander"] {
+            margin-top: 1rem !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
     st.markdown(
         '<div class="md-page-hero md-page-hero-appts">'
         '<div class="md-page-hero-ic"><span class="material-symbols-rounded">calendar_month</span></div>'
         '<div class="md-page-hero-text">'
         '<div class="md-page-hero-title">Appointments</div>'
-        '<div class="md-page-hero-sub">Upcoming visits and reminders. Stored to your profile so MediChat can reference them in chats.</div>'
+        '<div class="md-page-hero-sub">Sync your existing calendar so MediChat always knows what visits are coming up. Health-related events are imported automatically — everything else is ignored.</div>'
         '</div>'
         '</div>',
         unsafe_allow_html=True
     )
-    with st.form("add_appt_form", clear_on_submit=True):
+
+    # ── Calendar sync card (primary path) ─────────────────────────
+    cal_settings = get_calendar_settings() or {}
+    cal_url = (cal_settings.get("ics_url") or "").strip()
+    cal_auto = bool(cal_settings.get("auto_sync", True))
+    cal_last_sync = cal_settings.get("last_sync_at", "")
+    cal_last_added = cal_settings.get("last_added", 0)
+    cal_last_updated = cal_settings.get("last_updated", 0)
+    cal_last_skipped = cal_settings.get("last_skipped", 0)
+
+    # Auto-sync once per visit if URL set + auto on + last sync > 1h ago.
+    if cal_url and cal_auto and not st.session_state.get("_cal_synced_this_visit"):
+        do_sync = True
+        if cal_last_sync:
+            try:
+                _ls = datetime.fromisoformat(cal_last_sync)
+                if (datetime.now() - _ls).total_seconds() < 3600:
+                    do_sync = False
+            except Exception:
+                pass
+        if do_sync:
+            try:
+                added, updated, skipped, err = sync_calendar_appointments(ics_url=cal_url)
+                st.session_state._cal_synced_this_visit = True
+                st.session_state._cal_sync_msg = (err or ("Synced — " + str(added) + " new, " + str(updated) + " updated, " + str(skipped) + " skipped (non-health)."))
+                if not err and (added or updated):
+                    st.rerun()
+            except Exception as _e:
+                st.session_state._cal_sync_msg = "Auto-sync failed: " + str(_e)[:120]
+
+    _sync_status_html = ""
+    if cal_last_sync:
+        try:
+            _ls_disp = datetime.fromisoformat(cal_last_sync).strftime("%d %b %Y, %I:%M %p")
+        except Exception:
+            _ls_disp = cal_last_sync
+        _sync_status_html = (
+            '<div style="font-size:0.76rem;color:var(--md-text-2);margin-top:0.3rem;">'
+            'Last synced ' + ui_text(_ls_disp, 40) + ' · ' + str(cal_last_added) + ' new, ' + str(cal_last_updated) + ' updated, ' + str(cal_last_skipped) + ' non-health skipped.'
+            '</div>'
+        )
+
+    st.markdown(
+        '<div class="md-rcard" style="padding:1.1rem 1.2rem;margin-top:0.6rem;border-left:3px solid #7c3aed;">'
+        '<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.45rem;">'
+        '<span class="material-symbols-rounded" style="color:#7c3aed;font-size:1.2rem;">sync</span>'
+        '<div style="font-weight:700;color:var(--md-text-1);font-size:1rem;">Auto-sync your calendar</div>'
+        '</div>'
+        '<div style="font-size:0.84rem;color:var(--md-text-2);line-height:1.55;">'
+        'Connect your Google Calendar, Apple Calendar, or Outlook once — MediChat will pull in any health-related event automatically. '
+        'We only ingest events containing words like <em>doctor, GP, clinic, dentist, physio, specialist, blood test, scan</em>. '
+        'Everything else stays private.'
+        '</div>'
+        + _sync_status_html +
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    if st.session_state.get("_cal_sync_msg"):
+        st.info(st.session_state.pop("_cal_sync_msg"))
+
+    sync_tab1, sync_tab2, sync_tab3, sync_tab4 = st.tabs([
+        "Calendar URL", "Upload .ics", "From chat", "Add manually",
+    ])
+
+    with sync_tab1:
+        with st.form("cal_url_form"):
+            new_url = st.text_input(
+                "Paste your calendar's secret iCal/ICS URL",
+                value=cal_url,
+                placeholder="https://calendar.google.com/calendar/ical/.../basic.ics  or  webcal://...",
+                help=(
+                    "Where to find this:\n\n"
+                    "• Google Calendar — Settings → pick your calendar → Integrate calendar → 'Secret address in iCal format'.\n\n"
+                    "• Apple Calendar (iCloud) — calendar.apple.com → share icon next to the calendar → enable Public Calendar → copy URL (webcal:// works).\n\n"
+                    "• Outlook / Office 365 — Settings → Calendar → Shared calendars → Publish a calendar → copy the ICS link.\n\n"
+                    "Privacy: only the URL is saved to your profile. Events are processed in-memory on each sync."
+                )
+            )
+            new_auto = st.checkbox("Auto-sync every visit (once an hour)", value=cal_auto)
+            colA, colB, colC = st.columns([1, 1, 1])
+            with colA:
+                save_btn = st.form_submit_button("Save & sync now", use_container_width=True, type="primary", icon=":material/cloud_sync:")
+            with colB:
+                sync_btn = st.form_submit_button("Sync now", use_container_width=True, icon=":material/sync:")
+            with colC:
+                clear_btn = st.form_submit_button("Disconnect", use_container_width=True, icon=":material/link_off:")
+        if save_btn:
+            update_calendar_settings({"ics_url": new_url.strip(), "auto_sync": bool(new_auto)})
+            if new_url.strip():
+                added, updated, skipped, err = sync_calendar_appointments(ics_url=new_url.strip())
+                if err:
+                    st.error(err)
+                else:
+                    st.success("Calendar saved. " + str(added) + " new, " + str(updated) + " updated, " + str(skipped) + " non-health skipped.")
+                    st.session_state._cal_synced_this_visit = True
+                    st.rerun()
+            else:
+                st.success("Settings saved.")
+                st.rerun()
+        elif sync_btn:
+            url_to_use = (new_url.strip() or cal_url)
+            if not url_to_use:
+                st.error("Add a URL first, then click Save & sync.")
+            else:
+                added, updated, skipped, err = sync_calendar_appointments(ics_url=url_to_use)
+                if err:
+                    st.error(err)
+                else:
+                    st.success("Synced. " + str(added) + " new, " + str(updated) + " updated, " + str(skipped) + " non-health skipped.")
+                    st.session_state._cal_synced_this_visit = True
+                    st.rerun()
+        elif clear_btn:
+            update_calendar_settings({"ics_url": "", "auto_sync": False})
+            st.success("Calendar disconnected.")
+            st.rerun()
+
+    with sync_tab2:
+        ics_file = st.file_uploader("Upload an .ics file exported from your calendar app", type=["ics", "ical", "ifb"], key="cal_ics_upload")
+        if st.button("Import from file", use_container_width=True, type="primary", icon=":material/upload:"):
+            if not ics_file:
+                st.error("Pick a file first.")
+            else:
+                try:
+                    added, updated, skipped, err = sync_calendar_appointments(ics_bytes=ics_file.read())
+                    if err:
+                        st.error(err)
+                    else:
+                        st.success("Imported. " + str(added) + " new, " + str(updated) + " updated, " + str(skipped) + " non-health skipped.")
+                        st.rerun()
+                except Exception as _e:
+                    st.error("Could not read the file: " + str(_e)[:160])
+
+    with sync_tab3:
         st.markdown(
-            '<div class="md-form-intro">Add appointment</div>'
-            '<div class="md-form-sub">Save upcoming visits, reminders and notes in one place.</div>',
+            '<div style="font-size:0.88rem;color:var(--md-text-2);line-height:1.65;padding:0.4rem 0 1.2rem 0;">'
+            'Just mention an appointment in any MediChat conversation &mdash; for example:'
+            '<ul style="margin-top:0.55rem;margin-bottom:0.7rem;padding-left:1.2rem;">'
+            '<li style="margin-bottom:0.2rem;"><em>&ldquo;I have a GP follow-up next Tuesday at 3 pm with Dr Patel.&rdquo;</em></li>'
+            '<li style="margin-bottom:0.2rem;"><em>&ldquo;Blood test at Melbourne Pathology on the 12th.&rdquo;</em></li>'
+            '<li style="margin-bottom:0.2rem;"><em>&ldquo;Dentist appointment booked for 14 June, 10:30 am.&rdquo;</em></li>'
+            '</ul>'
+            '<div style="margin-top:0.6rem;">MediChat will offer an <strong>Add to appointments</strong> chip right under its reply. One click saves it here, with the same fields as the manual form below.</div>'
+            '</div>',
             unsafe_allow_html=True
         )
-        ac1, ac2 = st.columns(2)
-        with ac1:
-            a_title = st.text_input("Title", placeholder="e.g. GP follow-up")
-            a_date = st.date_input("Date", min_value=_date.today())
-            a_time = st.time_input("Time", value=datetime.now().time().replace(minute=0, second=0, microsecond=0))
-        with ac2:
-            a_doc = st.text_input("Doctor / clinician", placeholder="e.g. Dr Patel")
-            a_loc = st.text_input("Location", placeholder="e.g. Melbourne Health Centre")
-        a_notes = st.text_area("Notes (optional)", placeholder="Bring previous lab results, etc.", height=80)
-        if st.form_submit_button("Save appointment", use_container_width=True, type="primary", icon=":material/save:"):
-            iso = datetime.combine(a_date, a_time).isoformat(timespec="minutes")
-            if add_appointment(a_title, iso, a_doc, a_loc, a_notes):
-                st.success("Appointment added.")
-                st.rerun()
-            else:
-                st.error("Please enter a title and date.")
 
+    with sync_tab4:
+        with st.form("add_appt_form", clear_on_submit=True):
+            st.markdown(
+                '<div class="md-form-sub" style="margin:0 0 1.1rem 0;padding:0;display:block;">For one-off visits you don\'t want in your calendar app.</div>',
+                unsafe_allow_html=True
+            )
+            ac1, ac2 = st.columns(2)
+            with ac1:
+                a_title = st.text_input("Title", placeholder="e.g. GP follow-up")
+                a_date = st.date_input("Date", min_value=_date.today())
+                a_time = st.time_input("Time", value=datetime.now().time().replace(minute=0, second=0, microsecond=0))
+            with ac2:
+                a_doc = st.text_input("Doctor / clinician", placeholder="e.g. Dr Patel")
+                a_loc = st.text_input("Location", placeholder="e.g. Melbourne Health Centre")
+            a_notes = st.text_area("Notes (optional)", placeholder="Bring previous lab results, etc.", height=80)
+            if st.form_submit_button("Save appointment", use_container_width=True, type="primary", icon=":material/save:"):
+                iso = datetime.combine(a_date, a_time).isoformat(timespec="minutes")
+                if add_appointment(a_title, iso, a_doc, a_loc, a_notes, source="manual"):
+                    st.success("Appointment added.")
+                    st.rerun()
+                else:
+                    st.error("Please enter a title and date.")
+
+    # ── List ──────────────────────────────────────────────────────
     appts = list_appointments()
+    st.markdown('<div style="margin-top:1.3rem;font-size:0.78rem;font-weight:700;color:var(--md-text-1);text-transform:uppercase;letter-spacing:0.07em;">Your appointments</div>', unsafe_allow_html=True)
     if not appts:
-        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.6rem;">No appointments scheduled yet.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.6rem;margin-top:0.4rem;">No appointments yet. Connect your calendar above, upload an .ics file, or add one manually.</div>', unsafe_allow_html=True)
     else:
         # Sort by date ascending
         try:
@@ -18799,6 +20343,12 @@ elif st.session_state.mode == "appointments":
             past = a.get("date", "") < now_iso
             status_cls = "md-status-warn" if past else "md-status-info"
             status_lbl = "Past" if past else "Upcoming"
+            src = (a.get("source") or "manual").lower()
+            src_badge = ""
+            if src == "calendar":
+                src_badge = '<span class="md-metric-status md-status-info" style="background:#ede9fe;border-color:#ddd6fe;color:#6d28d9;">Synced</span>'
+            elif src == "chat":
+                src_badge = '<span class="md-metric-status md-status-info" style="background:#dcfce7;border-color:#bbf7d0;color:#15803d;">From chat</span>'
             try:
                 _dt = datetime.fromisoformat(a.get("date"))
                 date_disp = _dt.strftime("%a %d %b %Y · %I:%M %p")
@@ -18808,7 +20358,7 @@ elif st.session_state.mode == "appointments":
             ah += '<div class="md-metric-icon md-hp-blue" style="flex-shrink:0;">📅</div>'
             ah += '<div style="flex:1;min-width:0;">'
             ah += '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;"><div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + ui_text(a.get("title", ""), 90) + '</div>'
-            ah += '<span class="md-metric-status ' + status_cls + '">' + status_lbl + '</span></div>'
+            ah += '<span class="md-metric-status ' + status_cls + '">' + status_lbl + '</span>' + src_badge + '</div>'
             ah += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.15rem;">' + ui_text(date_disp, 60) + '</div>'
             details = []
             if a.get("doctor"):
@@ -18840,7 +20390,7 @@ elif st.session_state.mode == "records":
     with st.form("rec_upload_form", clear_on_submit=True):
         rec_file = st.file_uploader("Drop a medical record here", type=["pdf", "jpg", "jpeg", "png"], key="hr_upload")
         rec_label = st.text_input("Label this record", placeholder="e.g. Blood test - April 2026")
-        rec_keep_summary = st.checkbox("Generate and save an Ai summary (recommended)", value=True)
+        st.caption("An AI summary is automatically generated for every record so MediChat can reference it in future chats.")
         if st.form_submit_button("Save record", use_container_width=True, type="primary", icon=":material/save:"):
             if not rec_file:
                 st.error("Please pick a file.")
@@ -18850,7 +20400,10 @@ elif st.session_state.mode == "records":
                 size = len(rec_file.getbuffer())
                 summary = ""
                 raw_text_for_record = ""
-                if rec_keep_summary:
+                # AI summary generation is mandatory — drops the previous
+                # opt-in checkbox so every uploaded record is searchable /
+                # citable by the assistant.
+                if True:
                     try:
                         if rec_file.name.lower().endswith(".pdf"):
                             txt = extract_pdf_text(rec_file)
@@ -18933,25 +20486,98 @@ elif st.session_state.mode == "rx_reader":
 
     rx_result = st.session_state.get("rx_reader_result")
     if rx_result:
-        conf = (rx_result.get("overall_confidence") or "unknown").upper()
-        model_used = rx_result.get("model_used", "unknown")
+        conf_raw = (rx_result.get("overall_confidence") or "medium").lower()
+        conf_label = conf_raw.upper()
+        # Pill color reflects actual confidence (was always green before).
+        conf_class = "md-status-good" if conf_raw == "high" else ("md-status-warn" if conf_raw == "medium" else "md-status-alert")
+        parsed = rx_result.get("parsed") or parse_prescription_reading(rx_result.get("reading", ""))
+
+        # One-time auto-save to Health Records (idempotent per result instance).
+        try:
+            if not st.session_state.get("rx_reader_saved_id") or st.session_state.get("rx_reader_saved_id") != id(rx_result):
+                _rx_text = rx_result.get("reading", "") or ""
+                _rx_name = "Prescription"
+                _rx_pn = (parsed.get("patient_name") or "").strip()
+                if _rx_pn:
+                    _rx_name = "Prescription: " + _rx_pn
+                add_health_record(
+                    _rx_name,
+                    "image/jpeg",
+                    0,
+                    _rx_text,
+                    raw_text=_rx_text,
+                    patient_name=_rx_pn,
+                    record_type="prescription",
+                )
+                st.session_state.rx_reader_saved_id = id(rx_result)
+        except Exception as _e:
+            print("Prescription Reader auto-save failed:", _e)
+
+        # Confidence pill row (model name removed per spec).
         st.markdown(
-            '<div class="md-rcard" style="margin-top:0.55rem;">'
-            '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;">'
-            '<span class="md-metric-status md-status-info">Model: ' + ui_text(model_used, 40) + '</span>'
-            '<span class="md-metric-status md-status-good">Overall confidence: ' + ui_text(conf, 10) + '</span>'
-            '</div>'
+            '<div style="margin-top:0.55rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">'
+            '<span class="md-metric-status ' + conf_class + '">Overall confidence: ' + ui_text(conf_label, 10) + '</span>'
             '</div>',
             unsafe_allow_html=True
         )
-        st.markdown('<div class="md-rcard" style="margin-top:0.65rem;">' + markdown_to_html(rx_result.get("reading", "")) + '</div>', unsafe_allow_html=True)
+
+        # ── Clean prescription card ─────────────────────────────────
+        def _row(label, value, sub="", conf=""):
+            if not value:
+                return ""
+            conf_html = ""
+            if conf:
+                cclass = "md-status-good" if conf == "high" else ("md-status-warn" if conf == "medium" else "md-status-alert")
+                conf_html = ' <span class="md-metric-status ' + cclass + '" style="font-size:0.62rem;margin-left:0.4rem;">' + conf + '</span>'
+            sub_html = ('<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.18rem;">' + ui_text(sub, 200) + '</div>') if sub else ""
+            return (
+                '<div style="display:grid;grid-template-columns:140px 1fr;gap:0.6rem;padding:0.6rem 0;border-bottom:1px solid var(--md-border);">'
+                '<div style="font-size:0.74rem;font-weight:600;color:var(--md-text-2);text-transform:uppercase;letter-spacing:0.04em;">' + label + '</div>'
+                '<div style="font-size:0.96rem;font-weight:600;color:var(--md-text-1);">' + ui_text(value, 200) + conf_html + sub_html + '</div>'
+                '</div>'
+            )
+
+        pres_line = ""
+        if parsed.get("prescriber_name") or parsed.get("prescriber_date"):
+            pres_line = " ".join([x for x in [parsed.get("prescriber_name", ""), ("· " + parsed.get("prescriber_date", "")) if parsed.get("prescriber_date") else ""] if x]).strip()
+
+        rows_html = "".join([
+            _row("Patient", parsed.get("patient_name", "")),
+            _row("Medication", parsed.get("medication", ""), sub=parsed.get("medication_match", ""), conf=parsed.get("medication_conf", "")),
+            _row("Strength", parsed.get("strength", ""), conf=parsed.get("strength_conf", "")),
+            _row("Directions", parsed.get("frequency", ""), sub=parsed.get("frequency_plain", ""), conf=parsed.get("frequency_conf", "")),
+            _row("Route", parsed.get("route", "")),
+            _row("Quantity", parsed.get("quantity", "")),
+            _row("Refills", parsed.get("refills", "")),
+            _row("Prescriber", pres_line),
+            _row("Drug check", parsed.get("drug_check", "")),
+            _row("Illegible", parsed.get("illegible", "")),
+        ])
+
+        if rows_html.strip():
+            st.markdown(
+                '<div class="md-rcard" style="margin-top:0.65rem;padding:0.4rem 1rem 0.6rem 1rem;">'
+                '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.55rem 0 0.4rem 0;border-bottom:1px solid var(--md-border);margin-bottom:0.1rem;">'
+                '<span class="md-rx-glyph" style="font-size:1.15rem;color:#f59e0b;">&#8478;</span>'
+                '<div style="font-weight:700;color:var(--md-text-1);">Transcribed prescription</div>'
+                '</div>'
+                + rows_html +
+                '</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            # Fallback: render the raw markdown if parsing yielded nothing usable.
+            st.markdown('<div class="md-rcard" style="margin-top:0.65rem;">' + markdown_to_html(rx_result.get("reading", "")) + '</div>', unsafe_allow_html=True)
+
+        # Safety note — visually separated from the action button below.
         st.markdown(
-            '<div class="md-inline-note" style="margin-top:0.65rem;">'
-            'Safety guardrail: this feature is transcription only. It does not prescribe therapy or confirm diagnosis. '
+            '<div class="md-inline-note" style="margin-top:0.75rem;margin-bottom:1.2rem;padding:0.75rem 1rem;font-size:0.82rem;line-height:1.5;color:var(--md-text-2);">'
+            '<strong style="color:var(--md-text-1);">Safety guardrail:</strong> this is transcription only. MediChat does not prescribe therapy or confirm diagnosis. '
             'Always confirm the script with a pharmacist or the prescriber.'
             '</div>',
             unsafe_allow_html=True
         )
+        st.markdown('<div style="height:0.25rem;"></div>', unsafe_allow_html=True)
         if st.button("Upload a new prescription", key="rx_reader_reset_after_result", use_container_width=True):
             reset_prescription_reader_state()
 
@@ -19389,36 +21015,61 @@ elif st.session_state.mode == "privacy":
 
 elif st.session_state.mode == "insights":
     # ── Ai Insights ─────────────────────────────────────────────────
+    # Build a rich, *grounded* insights page: real numbers, real trends,
+    # real care gaps — not generic nags. Layout:
+    #   1. Snapshot strip (4 tiles)
+    #   2. Health trends (data-driven from 7-day metrics history)
+    #   3. Care gaps (profile completeness, stale records, med adherence)
+    #   4. Risk reminders (family history, age, allergy ↔ med checks)
+    #   5. AI observations (Claude reads structured profile, returns 3
+    #      grounded observations — actual numbers passed in, no
+    #      hallucination room)
     st.markdown(
         '<div class="md-page-hero md-page-hero-insights">'
         '<div class="md-page-hero-ic"><span class="material-symbols-rounded">auto_awesome</span></div>'
         '<div class="md-page-hero-text">'
-        '<div class="md-page-hero-title">Ai Insights</div>'
-        '<div class="md-page-hero-sub">Personalised observations generated from what you have logged. Refreshes each time you visit.</div>'
+        '<div class="md-page-hero-title">AI Insights</div>'
+        '<div class="md-page-hero-sub">Personalised observations generated from what you have logged, with trend detection and care-gap analysis. Refreshes each time you visit.</div>'
         '</div>'
         '</div>',
         unsafe_allow_html=True
     )
-    insights = []
+
     mem = st.session_state.patient_memory or {}
-    meds = list_medications()
-    appts = list_appointments()
-    records = list_health_records()
+    meds = list_medications() or []
+    appts = list_appointments() or []
+    records = list_health_records() or []
+    allergies = list_allergies() or []
+    fh_list = list_family_history() or []
+    surg_list = list_surgical_history() or []
     saved_conversations = []
     if st.session_state.is_authenticated and st.session_state.user_email_hash:
-        saved_conversations = list_conversations(st.session_state.user_email_hash, limit=20)
-    history = get_metrics_history(7)
-    today_m = get_daily_metrics()
+        try:
+            saved_conversations = list_conversations(st.session_state.user_email_hash, limit=20) or []
+        except Exception:
+            saved_conversations = []
+    history = get_metrics_history(7) or []
+    today_m = get_daily_metrics() or {}
 
-    # Hydration
+    # ── Core derived numbers (used everywhere below) ──────────────
     water_today = int(today_m.get("water_glasses", 0) or 0)
-    sleeps = [m.get("sleep_hours") for _, m in history if m.get("sleep_hours") is not None]
-    has_profile_data = bool(mem.get("symptoms") or mem.get("conditions") or mem.get("medications"))
-    has_logged_metrics = (water_today > 0 or len(sleeps) > 0)
+    sleep_today = today_m.get("sleep_hours")
+    steps_today = today_m.get("steps")
+    hr_today    = today_m.get("heart_rate_resting")
+    mood_today  = today_m.get("mood")
+
+    sleeps   = [m.get("sleep_hours") for _, m in history if isinstance(m.get("sleep_hours"), (int, float))]
+    waters   = [int(m.get("water_glasses") or 0) for _, m in history]
+    stepss   = [m.get("steps") for _, m in history if isinstance(m.get("steps"), (int, float)) and m.get("steps") > 0]
+    hrs      = [m.get("heart_rate_resting") for _, m in history if isinstance(m.get("heart_rate_resting"), (int, float)) and m.get("heart_rate_resting") > 0]
+    moods    = [m.get("mood") for _, m in history if m.get("mood")]
+
+    has_profile_data = bool(mem.get("symptoms") or mem.get("conditions") or meds)
+    has_logged_metrics = (water_today > 0 or len(sleeps) > 0 or len(stepss) > 0 or len(hrs) > 0)
     has_records = bool(records)
     has_chat_history = bool(saved_conversations)
 
-    if not (has_profile_data or has_logged_metrics or has_records or has_chat_history or meds or appts):
+    if not (has_profile_data or has_logged_metrics or has_records or has_chat_history or meds or appts or allergies or fh_list):
         st.markdown(
             '<div class="md-empty-card">'
             '<div class="md-empty-icon"><span class="material-symbols-rounded">lightbulb</span></div>'
@@ -19429,105 +21080,404 @@ elif st.session_state.mode == "insights":
         )
         st.stop()
 
-    if water_today < 4:
-        insights.append(("💧", "Hydration is low today",
-            "You have logged " + str(water_today) + " glasses today. Aim for at least 6-8 glasses across the day, more if active.",
-            "warn"))
-    elif water_today >= 6:
-        insights.append(("💧", "Great hydration today",
-            "You are at " + str(water_today) + " glasses. Keep it steady through the evening.", "good"))
+    # ── 1. Snapshot strip ─────────────────────────────────────────
+    # Profile completeness score (8 fields, each present = 1 point).
+    _slots = [
+        bool(meds),
+        bool(mem.get("conditions")),
+        bool(allergies),
+        bool(fh_list),
+        bool(records),
+        bool(today_m.get("sleep_hours") is not None or len(sleeps) >= 3),
+        bool(today_m.get("water_glasses") and today_m.get("water_glasses") > 0),
+        bool(appts),
+    ]
+    completeness = int(round(100 * sum(1 for x in _slots if x) / len(_slots)))
 
-    # Sleep
+    days_with_metrics = sum(1 for _, m in history if any(m.get(k) not in (None, 0) for k in ("sleep_hours", "water_glasses", "steps", "heart_rate_resting", "mood")))
+
+    # Next appointment countdown
+    now_iso = datetime.now().isoformat(timespec="minutes")
+    upcoming = sorted([a for a in appts if a.get("date", "") >= now_iso], key=lambda a: a.get("date", ""))
+    next_appt_label = "None scheduled"
+    next_appt_sub = "Add one on Appointments"
+    if upcoming:
+        try:
+            _ad = datetime.fromisoformat(upcoming[0].get("date"))
+            in_days = (_ad.date() - _date.today()).days
+            next_appt_label = "Today" if in_days == 0 else ("Tomorrow" if in_days == 1 else "In " + str(in_days) + " days")
+            next_appt_sub = (upcoming[0].get("title") or "Appointment")[:40]
+        except Exception:
+            next_appt_label = "Soon"
+            next_appt_sub = (upcoming[0].get("title") or "Appointment")[:40]
+
+    snap_tiles = [
+        ("Profile complete", str(completeness) + "%", ("Strong" if completeness >= 75 else ("Building" if completeness >= 40 else "Add more")), "#7c3aed"),
+        ("Active medications", str(len(meds)), (str(len([m for m in meds if m.get("time_of_day")])) + " with schedule" if meds else "None recorded"), "#0ea5e9"),
+        ("Days logged (7d)", str(days_with_metrics) + "/7", ("Consistent" if days_with_metrics >= 5 else ("Patchy" if days_with_metrics >= 2 else "Just starting")), "#10b981"),
+        ("Next appointment", next_appt_label, next_appt_sub, "#f59e0b"),
+    ]
+    tiles_html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.7rem;margin-top:0.6rem;margin-bottom:1.4rem;">'
+    for label, val, sub, color in snap_tiles:
+        # Auto-shrink the value font when the text is long so it never
+        # truncates (e.g. "None scheduled" → smaller; "75%" → big).
+        val_len = len(str(val))
+        if val_len <= 4:
+            val_font = "1.55rem"
+        elif val_len <= 9:
+            val_font = "1.15rem"
+        else:
+            val_font = "0.95rem"
+        tiles_html += (
+            '<div class="md-rcard" style="padding:0.85rem 1rem;min-width:0;">'
+            '<div style="font-size:0.7rem;font-weight:600;color:var(--md-text-2);text-transform:uppercase;letter-spacing:0.04em;">' + label + '</div>'
+            '<div style="font-size:' + val_font + ';font-weight:750;color:' + color + ';margin-top:0.2rem;line-height:1.15;word-break:break-word;overflow-wrap:anywhere;">' + ui_text(val, 24) + '</div>'
+            '<div style="font-size:0.78rem;color:var(--md-text-3);margin-top:0.25rem;line-height:1.4;">' + ui_text(sub, 50) + '</div>'
+            '</div>'
+        )
+    tiles_html += '</div>'
+    st.markdown(tiles_html, unsafe_allow_html=True)
+
+    # ── Helpers ───────────────────────────────────────────────────
+    insights = []   # list of (category, icon, title, body, kind, action_label, action_target)
+
+    def _trend_slope(values):
+        """Return +/- slope sign for a short series via mean-of-halves."""
+        if len(values) < 4:
+            return 0
+        half = len(values) // 2
+        first = values[:half]
+        last = values[-half:]
+        if not first or not last:
+            return 0
+        d = (sum(last)/len(last)) - (sum(first)/len(first))
+        if abs(d) < 0.3:
+            return 0
+        return 1 if d > 0 else -1
+
+    # ── 2. Health trends ──────────────────────────────────────────
+    # Sleep — trend + average
     if len(sleeps) >= 3:
         avg_sleep = round(sum(sleeps) / len(sleeps), 1)
+        slope = _trend_slope(sleeps)
         if avg_sleep < 6:
-            insights.append(("😴", "Sleep is running short",
-                "Your last " + str(len(sleeps)) + " logged nights average " + str(avg_sleep) + " hours. Most adults need 7-9.", "warn"))
-        elif avg_sleep > 9:
-            insights.append(("😴", "Long sleep pattern",
-                "Average " + str(avg_sleep) + " hours. Long sleep can sometimes signal infection or low mood, worth mentioning to a GP if it persists.", "info"))
+            insights.append(("Health trends", "😴", "Sleep is running short",
+                "Your last " + str(len(sleeps)) + " logged nights average " + str(avg_sleep) + " hours — most adults need 7-9. " +
+                ("It's trending down further this week." if slope < 0 else ("It's starting to recover." if slope > 0 else "It's been steady at that level.")),
+                "warn", "Log tonight's sleep", "overview"))
+        elif avg_sleep > 9.5:
+            insights.append(("Health trends", "😴", "Long sleep pattern",
+                "Averaging " + str(avg_sleep) + " h over " + str(len(sleeps)) + " nights. Persistent long sleep can sometimes signal infection or low mood — worth a mention if you also feel tired.",
+                "info", "", ""))
         else:
-            insights.append(("😴", "Sleep looks healthy",
-                "Averaging " + str(avg_sleep) + " hours over your last " + str(len(sleeps)) + " logged nights.", "good"))
+            trend_note = " and trending up" if slope > 0 else (" though trending down" if slope < 0 else "")
+            insights.append(("Health trends", "😴", "Sleep looks healthy",
+                "Averaging " + str(avg_sleep) + " h over " + str(len(sleeps)) + " nights" + trend_note + ". Keep your wind-down routine going.",
+                "good", "", ""))
 
-    # Medications & conditions cross-check
-    if meds and mem.get("conditions"):
-        insights.append(("💊", "Profile is well-populated",
-            "You have " + str(len(meds)) + " medication(s) and " + str(len(mem.get("conditions"))) + " condition(s) recorded. MediChat will use these in every chat.", "info"))
-    elif meds and not mem.get("conditions"):
-        insights.append(("💊", "Add the conditions these medications treat",
-            "You have " + str(len(meds)) + " medication(s) recorded but no conditions yet. Telling MediChat why you take each one will improve its advice.", "warn"))
-    elif not meds and mem.get("conditions"):
-        insights.append(("💊", "Any medications to add?",
-            "You have conditions recorded (" + ", ".join(mem.get("conditions", [])[:3]) + ") but no medications yet. Add them so MediChat can flag interactions.", "info"))
+    # Hydration — today vs 7d
+    if water_today > 0 or any(w > 0 for w in waters):
+        avg_water = round(sum(waters) / max(len(waters), 1), 1) if waters else 0
+        if water_today < 4 and water_today < avg_water:
+            insights.append(("Health trends", "💧", "Hydration is lower than usual",
+                "You're at " + str(water_today) + " glass" + ("" if water_today == 1 else "es") + " today vs your 7-day average of " + str(avg_water) + ". Aim for 6-8 across the day.",
+                "warn", "Log water", "overview"))
+        elif water_today < 4:
+            insights.append(("Health trends", "💧", "Hydration is low today",
+                "You've logged " + str(water_today) + " glass" + ("" if water_today == 1 else "es") + ". Try a glass with each meal to catch up.",
+                "warn", "Log water", "overview"))
+        elif water_today >= 6:
+            insights.append(("Health trends", "💧", "Hydration is on track",
+                "You're at " + str(water_today) + "/8 glasses today. Nice — finish strong this evening.",
+                "good", "", ""))
 
-    # Upcoming appointment
-    now_iso = datetime.now().isoformat(timespec="minutes")
-    upcoming = [a for a in appts if a.get("date", "") >= now_iso]
-    if upcoming:
-        upcoming.sort(key=lambda a: a.get("date", ""))
-        nx = upcoming[0]
+    # Steps — trend
+    if len(stepss) >= 3:
+        avg_steps = int(sum(stepss) / len(stepss))
+        slope = _trend_slope(stepss)
+        if avg_steps < 4000:
+            insights.append(("Health trends", "👟", "Activity is light",
+                "Average " + f"{avg_steps:,}" + " steps over " + str(len(stepss)) + " logged days. A 15-min walk would lift this meaningfully.",
+                "warn", "", ""))
+        elif slope < 0 and avg_steps < 8000:
+            insights.append(("Health trends", "👟", "Steps trending down",
+                "Your activity dropped this week (avg " + f"{avg_steps:,}" + " steps). Try a short walk after meals to reverse it.",
+                "info", "", ""))
+        elif avg_steps >= 8000:
+            insights.append(("Health trends", "👟", "Solid activity level",
+                "Averaging " + f"{avg_steps:,}" + " steps — consistent with general fitness guidelines.",
+                "good", "", ""))
+
+    # Resting heart rate
+    if len(hrs) >= 3:
+        avg_hr = int(round(sum(hrs) / len(hrs)))
+        if avg_hr > 90:
+            insights.append(("Health trends", "❤️", "Resting heart rate is elevated",
+                "Average " + str(avg_hr) + " bpm over " + str(len(hrs)) + " readings. Persistent values above 90 can be worth raising with your GP.",
+                "warn", "", ""))
+        elif avg_hr < 50 and not any("athlete" in str(c).lower() for c in (mem.get("conditions") or [])):
+            insights.append(("Health trends", "❤️", "Low resting heart rate",
+                "Average " + str(avg_hr) + " bpm. If you're not an endurance athlete, mention this at your next check-up.",
+                "info", "", ""))
+        else:
+            insights.append(("Health trends", "❤️", "Heart rate is in a healthy range",
+                "Resting average " + str(avg_hr) + " bpm across " + str(len(hrs)) + " readings.",
+                "good", "", ""))
+
+    # Mood pattern
+    if len(moods) >= 3:
+        low_moods = sum(1 for m in moods if str(m).lower() in {"sad", "low", "down", "anxious", "stressed", "😟", "😞", "😢"})
+        if low_moods >= max(2, len(moods) // 2):
+            insights.append(("Health trends", "🧠", "Several low-mood days",
+                str(low_moods) + " of your last " + str(len(moods)) + " logged days were low or stressed. Talking to a GP or a counsellor helps when this persists.",
+                "warn", "", ""))
+
+    # ── 3. Care gaps ──────────────────────────────────────────────
+    if meds and not mem.get("conditions"):
+        insights.append(("Care gaps", "💊", "Tell MediChat why you take each medication",
+            "You have " + str(len(meds)) + " medication" + ("s" if len(meds) != 1 else "") + " recorded but no conditions yet. Adding the conditions they treat lets MediChat give safer, more relevant guidance.",
+            "warn", "Update profile", "records"))
+    if not meds and mem.get("conditions"):
+        insights.append(("Care gaps", "💊", "Any medications to add?",
+            "You have conditions recorded (" + ", ".join(list(mem.get("conditions", []))[:3]) + ") but no medications yet. Add them so MediChat can flag interactions.",
+            "info", "Add medications", "medications"))
+
+    # Medication adherence — meds without scheduled time
+    meds_no_time = [m for m in meds if not (m.get("time_of_day") or "").strip()]
+    if meds_no_time and len(meds_no_time) >= max(1, len(meds) // 2):
+        insights.append(("Care gaps", "⏰", "Some medications have no schedule",
+            str(len(meds_no_time)) + " of your " + str(len(meds)) + " meds don't have a time-of-day set. Adding one helps with adherence and lets MediChat remind you.",
+            "info", "Add schedules", "medications"))
+
+    # Stale health records
+    if records:
         try:
-            _dt = datetime.fromisoformat(nx.get("date"))
-            in_days = (_dt.date() - _date.today()).days
-            when = "today" if in_days == 0 else ("tomorrow" if in_days == 1 else "in " + str(in_days) + " days")
+            latest = max((r.get("uploaded_at") or "") for r in records)
+            if latest:
+                _ldt = datetime.fromisoformat(latest)
+                days_since = (datetime.now() - _ldt).days
+                if days_since > 180:
+                    insights.append(("Care gaps", "📄", "Health records are getting stale",
+                        "Your most recent upload was " + str(days_since) + " days ago. If you've had a new test or report, uploading it keeps MediChat's analysis current.",
+                        "info", "Upload record", "records"))
         except Exception:
-            when = "soon"
-        insights.append(("📅", "Upcoming appointment " + when,
-            (nx.get("title") or "Appointment") + (" with " + nx.get("doctor", "") if nx.get("doctor") else "") + ". Want a Doctor Visit Summary PDF before then?", "info"))
+            pass
+    elif meds or mem.get("conditions"):
+        insights.append(("Care gaps", "📄", "No health records yet",
+            "Uploading a recent blood test, scan, or specialist letter lets MediChat compare values over time and reference real findings in your chats.",
+            "info", "Upload record", "records"))
+
+    # Allergies missing
+    if meds and not allergies:
+        insights.append(("Care gaps", "⚠️", "No allergies recorded",
+            "If you have any known drug or food allergies, adding them lets MediChat warn you about ingredients and cross-reactive meds.",
+            "info", "Add allergies", "records"))
 
     # Symptom load
     sym_n = len(mem.get("symptoms", []) or [])
     if sym_n >= 5:
-        insights.append(("📌", "Several active symptoms",
-            "MediChat has " + str(sym_n) + " symptoms on file from your chats. Consider a Symptoms Checker run to see if a pattern emerges.", "warn"))
+        insights.append(("Care gaps", "📌", "Several active symptoms on file",
+            "MediChat is tracking " + str(sym_n) + " symptoms from your recent chats. A Symptoms Checker run can group them and suggest next steps.",
+            "warn", "Run Symptoms Checker", "assessment"))
 
-    if records:
-        insights.append(("📄", "Health records available",
-            "You have " + str(len(records)) + " uploaded record(s). MediChat can use these to improve context during chat and summaries.", "info"))
+    # ── 4. Risk reminders ─────────────────────────────────────────
+    # Family history → screening prompts (simple keyword matching).
+    fh_keywords = " ".join([(f.get("condition") or "") for f in fh_list]).lower()
+    if "diabetes" in fh_keywords:
+        insights.append(("Risk reminders", "🩸", "Family history of diabetes",
+            "Family history doubles your baseline risk. Most GPs recommend a fasting glucose or HbA1c every 1-3 years from your 30s onward.",
+            "info", "", ""))
+    if "heart" in fh_keywords or "cardiac" in fh_keywords or "stroke" in fh_keywords:
+        insights.append(("Risk reminders", "🫀", "Family cardiovascular history",
+            "Consider asking your GP about a lipid panel and blood pressure check on a regular cadence — typically every 1-2 years.",
+            "info", "", ""))
+    if "cancer" in fh_keywords:
+        insights.append(("Risk reminders", "🧬", "Family history of cancer",
+            "Age-appropriate screening (skin, bowel, breast, cervical, prostate depending on family pattern) is worth discussing with your GP.",
+            "info", "", ""))
 
-    if saved_conversations:
-        insights.append(("💬", "Conversation history linked",
-            str(len(saved_conversations)) + " saved conversation(s) are available for continuity of care context.", "info"))
+    # Allergy ↔ medication name overlap (simple substring check)
+    if allergies and meds:
+        flagged = []
+        for a in allergies:
+            a_name = (a.get("name") or "").strip().lower()
+            if not a_name or len(a_name) < 3:
+                continue
+            for m in meds:
+                m_name = (m.get("name") or "").strip().lower()
+                if m_name and (a_name in m_name or m_name in a_name):
+                    flagged.append((a.get("name"), m.get("name")))
+        if flagged:
+            pairs = ", ".join([(p[1] + " ↔ " + p[0]) for p in flagged[:3]])
+            insights.append(("Risk reminders", "🚨", "Possible allergy/medication overlap",
+                "MediChat noticed: " + pairs + ". Please double-check with your pharmacist — this is a name match, not a confirmed reaction.",
+                "warn", "", ""))
 
-    # AI-generated overall insight (one Claude call) if logged in and has data
-    if CLAUDE_ACTIVE and (meds or mem.get("conditions") or len(sleeps) >= 2 or records or saved_conversations):
+    # ── 5. Reminders ──────────────────────────────────────────────
+    if upcoming:
         try:
-            data_lines = []
-            if mem.get("conditions"):
-                data_lines.append("Conditions: " + ", ".join(mem["conditions"][:6]))
-            if meds:
-                data_lines.append("Medications: " + ", ".join([m["name"] + " " + m.get("dose", "") for m in meds[:6]]))
-            if sleeps:
-                data_lines.append("Recent sleep avg: " + str(round(sum(sleeps)/len(sleeps), 1)) + " h over " + str(len(sleeps)) + " nights")
-            data_lines.append("Hydration today: " + str(water_today) + "/8 glasses")
-            blob = "\n".join(data_lines)
-            resp = anthropic_client.messages.create(
-                model=CLAUDE_MODEL, max_tokens=200, temperature=0.4,
-                system="You are a careful AI health companion. Read the patient's logged data and give ONE clear, kind, evidence-aware insight in 2 short sentences. Avoid alarming language. End with a concrete suggestion. No disclaimer.",
-                messages=[{"role": "user", "content": blob}],
-            )
-            ai_text = (resp.content[0].text or "").strip()
-            if ai_text:
-                insights.append(("✨", "Personalised observation", ai_text, "info"))
-        except Exception as _e:
-            print("AI insights failed:", _e)
+            _ad = datetime.fromisoformat(upcoming[0].get("date"))
+            in_days = (_ad.date() - _date.today()).days
+            if in_days <= 3:
+                when = "today" if in_days == 0 else ("tomorrow" if in_days == 1 else "in " + str(in_days) + " days")
+                title = (upcoming[0].get("title") or "Appointment")
+                doc = (" with " + upcoming[0].get("doctor", "")) if upcoming[0].get("doctor") else ""
+                insights.append(("Reminders", "📅", "Appointment " + when,
+                    title + doc + ". Generate a Doctor Visit Summary PDF so you arrive prepared with everything MediChat knows.",
+                    "info", "Open chat", "chat"))
+        except Exception:
+            pass
 
+    # ── 6. AI personalised observations ───────────────────────────
+    # Pass GROUNDED numbers and structured profile so the model can't
+    # invent data. Ask for 3 short observations, each with a concrete
+    # next step, separated by ---.
+    ai_observations = []
+    if (CLAUDE_ACTIVE or OPENAI_ACTIVE) and (meds or mem.get("conditions") or len(sleeps) >= 2 or records or saved_conversations or allergies or fh_list):
+        try:
+            facts = []
+            if mem.get("conditions"):
+                facts.append("- Conditions: " + ", ".join(list(mem["conditions"])[:6]))
+            if meds:
+                facts.append("- Medications: " + "; ".join([(m.get("name", "") + " " + (m.get("dose", "") or "") + " " + (m.get("frequency", "") or "")).strip() for m in meds[:6]]))
+            if allergies:
+                facts.append("- Allergies: " + ", ".join([a.get("name", "") for a in allergies[:6]]))
+            if fh_list:
+                facts.append("- Family history: " + ", ".join([((f.get("condition", "") or "") + ((" (" + f.get("relationship", "") + ")") if f.get("relationship") else "")) for f in fh_list[:4]]))
+            if surg_list:
+                facts.append("- Surgical history: " + ", ".join([s.get("procedure", "") for s in surg_list[:4]]))
+            if sleeps:
+                facts.append("- Sleep last " + str(len(sleeps)) + " nights: avg " + str(round(sum(sleeps)/len(sleeps), 1)) + " h (values: " + ", ".join([str(x) for x in sleeps]) + ")")
+            if waters:
+                facts.append("- Water glasses last 7 days: " + ", ".join([str(x) for x in waters]) + " (today: " + str(water_today) + ")")
+            if stepss:
+                facts.append("- Steps last " + str(len(stepss)) + " days: avg " + f"{int(sum(stepss)/len(stepss)):,}")
+            if hrs:
+                facts.append("- Resting HR last " + str(len(hrs)) + " readings: avg " + str(int(sum(hrs)/len(hrs))) + " bpm")
+            if mood_today:
+                facts.append("- Mood today: " + str(mood_today))
+            if records:
+                facts.append("- Health records on file: " + str(len(records)) + " (most recent: " + (max((r.get("uploaded_at") or "") for r in records)[:10] or "unknown") + ")")
+            if sym_n:
+                facts.append("- Active symptoms on file: " + str(sym_n))
+            if upcoming:
+                facts.append("- Next appointment: " + (upcoming[0].get("title") or "Appointment") + " in " + str((datetime.fromisoformat(upcoming[0].get("date")).date() - _date.today()).days) + " days")
+
+            blob = "\n".join(facts)
+            sys_prompt = (
+                "You are a careful AI health companion writing the patient's personal insights page. "
+                "Use ONLY the facts provided — do not invent numbers, conditions, medications, or trends not present in the data. "
+                "Produce exactly 3 short observations. Each observation MUST follow this format:\n"
+                "TITLE: <5-9 word title>\n"
+                "BODY: <2 short sentences grounded in the actual numbers above, ending with a concrete next step>\n"
+                "---\n"
+                "Be kind, evidence-aware, and specific. Avoid alarming language. No disclaimers."
+            )
+            ai_text = ""
+            if OPENAI_ACTIVE:
+                try:
+                    r = openai_client.chat.completions.create(
+                        model=OPENAI_MODEL, temperature=0.4, max_tokens=520,
+                        messages=[{"role": "system", "content": sys_prompt}, {"role": "user", "content": blob}],
+                    )
+                    ai_text = (r.choices[0].message.content or "").strip()
+                except Exception as _e:
+                    print("AI insights OpenAI failed:", _e)
+            if not ai_text and CLAUDE_ACTIVE:
+                try:
+                    resp = anthropic_client.messages.create(
+                        model=CLAUDE_MODEL, max_tokens=520, temperature=0.4,
+                        system=sys_prompt,
+                        messages=[{"role": "user", "content": blob}],
+                    )
+                    ai_text = (resp.content[0].text or "").strip()
+                except Exception as _e:
+                    print("AI insights Claude failed:", _e)
+
+            if ai_text:
+                # Models often skip the "---" separator and just emit
+                # back-to-back TITLE/BODY blocks. Split on every TITLE:
+                # boundary so each observation becomes its own card.
+                cleaned = re.sub(r"\n\s*-{3,}\s*\n", "\n", ai_text)
+                # Insert a sentinel before every "TITLE:" (except a leading one).
+                cleaned = re.sub(r"(?:\n|^)\s*TITLE\s*:", "\n@@SPLIT@@TITLE:", cleaned, flags=re.IGNORECASE)
+                blocks = [b.strip() for b in cleaned.split("@@SPLIT@@") if b.strip()]
+                for b in blocks[:3]:
+                    _t = re.search(r"TITLE\s*:\s*(.+)", b, flags=re.IGNORECASE)
+                    _bd = re.search(r"BODY\s*:\s*([\s\S]+?)(?:\n\s*TITLE\s*:|\Z)", b, flags=re.IGNORECASE)
+                    title_raw = (_t.group(1).strip() if _t else "Personalised observation")
+                    # Strip any trailing markdown / colons.
+                    title = re.sub(r"^[*\s\"'`]+|[*\s\"'`:]+$", "", title_raw)[:90]
+                    body_raw = (_bd.group(1).strip() if _bd else re.sub(r"^TITLE\s*:.*?\n", "", b, flags=re.IGNORECASE).strip())
+                    body = re.sub(r"\s+", " ", body_raw)[:480]
+                    if title and body:
+                        ai_observations.append((title, body))
+        except Exception as _e:
+            print("AI insights pipeline failed:", _e)
+
+    for title, body in ai_observations:
+        insights.append(("MediChat observations", "✨", title, body, "info", "", ""))
+
+    # ── 7. Personal patterns (deterministic, cross-time correlations) ─
+    try:
+        _patterns = detect_personal_patterns() or []
+    except Exception:
+        _patterns = []
+    for _p in _patterns[:4]:
+        insights.append(("Personal patterns", "🧩", "Pattern detected", _p, "info", "", ""))
+
+    # ── Render ────────────────────────────────────────────────────
     if not insights:
-        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);padding:1.6rem;">'
+        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);padding:1.6rem;margin-top:0.9rem;">'
                     'Add more health information to generate insights.</div>',
                     unsafe_allow_html=True)
     else:
-        for icon, title, body, kind in insights:
-            badge_cls = {"good": "md-status-good", "warn": "md-status-warn", "info": "md-status-info"}.get(kind, "md-status-info")
-            ih = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
-            ih += '<div class="md-metric-icon md-hp-violet" style="width:42px;height:42px;flex-shrink:0;font-size:1.2rem;">' + icon + '</div>'
-            ih += '<div style="flex:1;min-width:0;">'
-            ih += '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;"><div style="font-weight:700;color:var(--md-text-1);font-size:0.95rem;">' + ui_text(title, 100) + '</div>'
-            ih += '<span class="md-metric-status ' + badge_cls + '">' + ui_text(kind.upper(), 12) + '</span></div>'
-            ih += '<div style="font-size:0.85rem;color:var(--md-text-2);margin-top:0.3rem;line-height:1.5;">' + ui_lines(body) + '</div>'
-            ih += '</div></div></div>'
-            st.markdown(ih, unsafe_allow_html=True)
+        # Group by category, preserving insertion order within each.
+        from collections import OrderedDict
+        groups = OrderedDict()
+        for tup in insights:
+            cat = tup[0]
+            groups.setdefault(cat, []).append(tup)
+
+        cat_meta = {
+            "Health trends":         ("trending_up",  "#0ea5e9"),
+            "Care gaps":             ("checklist",    "#f59e0b"),
+            "Risk reminders":        ("shield",       "#ef4444"),
+            "Reminders":             ("event",        "#10b981"),
+            "Personal patterns":     ("psychology",   "#06b6d4"),
+            "MediChat observations": ("auto_awesome", "#7c3aed"),
+        }
+        for cat, items in groups.items():
+            icon_name, accent = cat_meta.get(cat, ("info", "#6b7280"))
+            st.markdown(
+                '<div style="display:flex;align-items:center;gap:0.55rem;margin:2rem 0 0.95rem 0;padding-top:0.4rem;">'
+                '<span class="material-symbols-rounded" style="font-size:1.1rem;color:' + accent + ';">' + icon_name + '</span>'
+                '<div style="font-size:0.78rem;font-weight:700;color:var(--md-text-1);text-transform:uppercase;letter-spacing:0.07em;">' + cat + '</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+            for _cat, icon, title, body, kind, action_label, action_target in items:
+                badge_cls = {"good": "md-status-good", "warn": "md-status-warn", "info": "md-status-info"}.get(kind, "md-status-info")
+                action_html = ""
+                if action_label and action_target:
+                    action_html = ('<div style="margin-top:0.65rem;"><a href="?mode=' + action_target + '" target="_self" '
+                                   'style="font-size:0.78rem;font-weight:600;color:var(--md-brand-2);text-decoration:none;">' + ui_text(action_label, 32) + ' →</a></div>')
+                ih = '<div class="md-rcard" style="margin-bottom:0.85rem;padding:1rem 1.1rem;"><div style="display:flex;align-items:flex-start;gap:0.9rem;">'
+                ih += '<div class="md-metric-icon md-hp-violet" style="width:42px;height:42px;flex-shrink:0;font-size:1.2rem;">' + icon + '</div>'
+                ih += '<div style="flex:1;min-width:0;">'
+                ih += '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;"><div style="font-weight:700;color:var(--md-text-1);font-size:0.95rem;">' + ui_text(title, 110) + '</div>'
+                ih += '<span class="md-metric-status ' + badge_cls + '">' + ui_text(kind.upper(), 12) + '</span></div>'
+                ih += '<div style="font-size:0.86rem;color:var(--md-text-2);margin-top:0.4rem;line-height:1.6;">' + ui_lines(body) + '</div>'
+                ih += action_html
+                ih += '</div></div></div>'
+                st.markdown(ih, unsafe_allow_html=True)
+
+        st.markdown(
+            '<div style="font-size:0.74rem;color:var(--md-text-3);margin-top:2rem;margin-bottom:1rem;text-align:center;">'
+            'Insights are generated from your logged data. They are general guidance — not a diagnosis or a replacement for clinical advice.'
+            '</div>',
+            unsafe_allow_html=True
+        )
 
 else:
     if st.session_state.assessment_complete and st.session_state.assessment_parsed:
