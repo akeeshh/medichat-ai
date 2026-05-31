@@ -9630,6 +9630,153 @@ st.markdown("""
     border-color: #fecaca !important;
     color: #dc2626 !important;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   MOBILE / PHONE LAYOUT (≤ 768px)
+   ──────────────────────────────────────────────────────────────────
+   Pure additive @media block — desktop view (≥ 769px) is untouched.
+   Fixes:
+     - Sidebar was opening as a fixed-width drawer that swallowed the
+       whole viewport, leaving the main content area off-screen
+     - Hero cards, chat composer, tiles, and grids were sized for
+       desktop and overflowed / wrapped awkwardly on phones
+     - Page padding was eating mobile horizontal space
+   ══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    /* ── Sidebar: behave as an overlay drawer, not a layout column ── */
+    [data-testid="stSidebar"] {
+        width: 88vw !important;
+        min-width: 88vw !important;
+        max-width: 360px !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        height: 100vh !important;
+        z-index: 999 !important;
+        box-shadow: 0 8px 30px rgba(15, 23, 42, 0.18) !important;
+    }
+    /* Main content fills the viewport — sidebar floats over it on open */
+    [data-testid="stAppViewContainer"] > section.stMain {
+        width: 100vw !important;
+        min-width: 0 !important;
+        margin-left: 0 !important;
+    }
+    [data-testid="stMainBlockContainer"] {
+        padding: 0.6rem 0.9rem 1.2rem !important;
+        max-width: 100% !important;
+    }
+    /* Make sure Streamlit's sidebar-collapse arrow stays visible + tappable */
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="collapsedControl"] {
+        top: 0.5rem !important;
+        z-index: 1000 !important;
+    }
+
+    /* ── Page heroes: trim padding + font on small screens ─────── */
+    .md-page-hero,
+    .md-hero,
+    .md-hero-card {
+        padding: 0.85rem 0.95rem !important;
+        gap: 0.7rem !important;
+    }
+    .md-page-hero-title,
+    .md-hero-title,
+    .md-hero h1,
+    .md-hero h2 {
+        font-size: 1.25rem !important;
+        line-height: 1.2 !important;
+    }
+    .md-page-hero-sub,
+    .md-hero-sub {
+        font-size: 0.82rem !important;
+        line-height: 1.45 !important;
+    }
+    .md-page-hero-ic {
+        width: 44px !important;
+        height: 44px !important;
+    }
+
+    /* ── Chat composer: pin to bottom + give it phone-friendly sizing ── */
+    [data-testid="stForm"]:has(.st-key-home_send_btn),
+    [data-testid="stForm"]:has(.st-key-chat_send_btn) {
+        padding: 0.7rem 0.8rem !important;
+        border-radius: 18px !important;
+    }
+    [data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextArea"] textarea,
+    [data-testid="stForm"]:has(.st-key-chat_send_btn) [data-testid="stTextArea"] textarea {
+        min-height: 60px !important;
+        height: 60px !important;
+        font-size: 0.95rem !important;
+    }
+    /* Upload / Voice / Clear ghost pills — shrink + wrap so they don't
+       push the send button off-screen on narrow viewports. */
+    .st-key-home_upload_btn .stButton > button,
+    .st-key-home_voice_btn  .stButton > button,
+    .st-key-chat_upload_btn .stButton > button,
+    .st-key-chat_voice_btn  .stButton > button,
+    .st-key-chat_clear_btn  .stButton > button,
+    .st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button,
+    .st-key-home_voice_btn  [data-testid="stFormSubmitButton"] > button,
+    .st-key-chat_upload_btn [data-testid="stFormSubmitButton"] > button,
+    .st-key-chat_voice_btn  [data-testid="stFormSubmitButton"] > button,
+    .st-key-chat_clear_btn  [data-testid="stFormSubmitButton"] > button {
+        min-height: 38px !important;
+        height: 38px !important;
+        padding: 0 0.7rem !important;
+        font-size: 0.78rem !important;
+    }
+
+    /* ── Smart Action grid + tiles: 2 columns max on phone ─────── */
+    .md-smart-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 0.55rem !important; }
+    .md-smart-grid > * { font-size: 0.82rem !important; }
+
+    /* ── User profile / sidebar lower card: fit phone width ───── */
+    [data-testid="stSidebar"] .stMarkdown { font-size: 0.88rem !important; }
+    [data-testid="stSidebar"] div[class*="st-key-nav_"] .stButton > button {
+        padding: 0.55rem 0.8rem !important;
+        font-size: 0.88rem !important;
+    }
+
+    /* ── Chat message bubbles: narrower padding + smaller avatar ─ */
+    .bot-wrap, .user-wrap { gap: 0.5rem !important; }
+    .av, .av-user, .av-bot { width: 32px !important; height: 32px !important; min-width: 32px !important; }
+    .bot-bubble, .user-bubble {
+        padding: 0.65rem 0.85rem !important;
+        font-size: 0.92rem !important;
+        line-height: 1.5 !important;
+    }
+
+    /* ── Download / action button row under chat: stack on mobile ─ */
+    [data-testid="stMain"] [data-testid="stHorizontalBlock"]:has([data-testid="stButton"]) {
+        flex-direction: column !important;
+        gap: 0.45rem !important;
+    }
+    [data-testid="stMain"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+        min-width: 0 !important;
+    }
+
+    /* ── Health Overview tiles + AI Insights tiles ──────────────── */
+    .md-snap-card, .md-wearable-card, .md-rcard {
+        padding: 0.8rem 0.9rem !important;
+    }
+    .md-snap-card-val, .md-hist2-tile-val { font-size: 1.25rem !important; }
+    .md-snap-card-lbl, .md-hist2-tile-lbl { font-size: 0.7rem !important; }
+
+    /* ── Tables / wide content scroll horizontally instead of cramping */
+    [data-testid="stTable"],
+    [data-testid="stDataFrame"] {
+        overflow-x: auto !important;
+    }
+}
+
+/* Extra-tight phones (≤ 420px) — iPhone SE / older Androids */
+@media (max-width: 420px) {
+    [data-testid="stMainBlockContainer"] { padding: 0.5rem 0.6rem 1rem !important; }
+    .md-page-hero-title, .md-hero-title { font-size: 1.1rem !important; }
+    .md-smart-grid { grid-template-columns: 1fr !important; }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -18271,17 +18418,6 @@ if st.session_state.mode == "chat":
 
                 if msg_ts:
                     st.markdown('<div class="bot-ts">' + ui_escape(msg_ts) + '</div>', unsafe_allow_html=True)
-
-                # ── DEMO-PERIOD DIAGNOSTIC ─────────────────────────
-                # Show why Verify is missing on the LAST assistant
-                # message so we can debug from the UI alone (Streamlit
-                # Cloud doesn't surface print() output). Renders only
-                # when _verify_debug is set AND this message has no
-                # verify_text — i.e. Verify was attempted but produced
-                # nothing. Remove this block after the demo.
-                _is_last_msg = (msg is st.session_state.messages[-1])
-                if _is_last_msg and not (msg.get("verify_text") or "").strip() and st.session_state.get("_verify_debug"):
-                    st.caption("🔧 Verify diagnostic: " + str(st.session_state.get("_verify_debug"))[:200])
 
                 # MediChat Verify — render as its own dedicated block
                 # from msg["verify_text"]. This bypasses the inline
