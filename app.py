@@ -12247,6 +12247,16 @@ def strip_excessive_disclaimers(text):
     if not text:
         return text
 
+    # Protect the MediChat Verify block from the whitespace collapse below
+    # (the \s{2,} rule was eating the surrounding \n\n separators which
+    # broke the marker-swap renderer downstream \u2014 Verify never appeared
+    # because its block ended up inline with the primary answer).
+    verify_block = ""
+    m = re.search(r"\[\[VERIFY_START\]\][\s\S]*?\[\[VERIFY_END\]\]", text)
+    if m:
+        verify_block = m.group(0)
+        text = text[:m.start()] + "@@VERIFY_PLACEHOLDER@@" + text[m.end():]
+
     patterns = [
         r"\*?\*?Disclaimer:[^\n]*\*?\*?\s*",
         r"\*?\*?Please note:[^\n]*not a doctor[^\n]*\*?\*?\s*",
@@ -12270,6 +12280,13 @@ def strip_excessive_disclaimers(text):
     cleaned = re.sub(r"\s{2,}", " ", cleaned)
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     cleaned = cleaned.strip()
+
+    # Restore the Verify block with its required blank-line separators so
+    # markdown wraps the markers as their own paragraph and the
+    # marker-swap in markdown_to_html renders the styled block correctly.
+    if verify_block:
+        cleaned = cleaned.replace("@@VERIFY_PLACEHOLDER@@", "\n\n" + verify_block + "\n")
+
     return cleaned
 
 def is_casual_message(text):
