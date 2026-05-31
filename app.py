@@ -186,14 +186,27 @@ _mobile_components.html("""
             if (viewport >= 768) return true;  // desktop — leave alone
             const sidebar = doc.querySelector('[data-testid="stSidebar"]');
             if (!sidebar) return false;
-            // Already collapsed? aria-expanded === 'false' on the sidebar
-            // or the collapsedControl is visible.
+            // Already collapsed? Streamlit sets aria-expanded="false" or
+            // adjusts width to 0 when collapsed.
             if (sidebar.getAttribute('aria-expanded') === 'false') return true;
-            // Find Streamlit's collapse button and click it
-            const btn = doc.querySelector('[data-testid="stSidebarCollapseButton"] button')
-                     || doc.querySelector('[data-testid="stSidebarCollapsedControl"]')
-                     || doc.querySelector('button[kind="header"][aria-label*="sidebar" i]');
-            if (btn) { btn.click(); return true; }
+            const sw = sidebar.getBoundingClientRect().width;
+            if (sw < 20) return true;  // already collapsed visually
+            // Streamlit 1.50: [data-testid="stSidebarCollapseButton"] IS
+            // the button (not a wrapper). Try direct + several fallbacks
+            // across Streamlit versions / collapse-button locations.
+            const candidates = [
+                '[data-testid="stSidebarCollapseButton"]',
+                '[data-testid="stSidebarCollapsedControl"]',
+                '[data-testid="stSidebar"] button[kind="headerNoPadding"]',
+                '[data-testid="stSidebar"] button[aria-label*="sidebar" i]',
+                '[data-testid="stSidebar"] button[aria-label*="collapse" i]',
+                'button[aria-label*="Close sidebar" i]',
+                'button[aria-label*="collapse" i]',
+            ];
+            for (const sel of candidates) {
+                const el = doc.querySelector(sel);
+                if (el) { el.click(); return true; }
+            }
             return false;
         } catch (e) { return false; }
     }
