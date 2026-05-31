@@ -12364,9 +12364,14 @@ def dual_model_review(question, primary_answer, history=None, primary_engine="op
         if CLAUDE_ACTIVE and anthropic_client is not None: reviewer = "claude"
         elif OPENAI_ACTIVE and openai_client is not None:  reviewer = "openai"
     if not reviewer:
-        print("[dual_model_review] no reviewer available — primary=" + str(primary_engine) +
-              " claude=" + str(CLAUDE_ACTIVE) + " openai=" + str(OPENAI_ACTIVE) +
-              " groq=" + str(GROQ_ACTIVE))
+        # Use logging.warning instead of print() — Streamlit Cloud
+        # captures warnings but suppresses stdout. Same goes for all the
+        # other diagnostics in this function.
+        import logging as _lg
+        _lg.warning("[dual_model_review] no reviewer available — primary=" + str(primary_engine) +
+                    " claude=" + str(CLAUDE_ACTIVE) + " openai=" + str(OPENAI_ACTIVE) +
+                    " groq=" + str(GROQ_ACTIVE))
+        st.session_state._verify_debug = "no reviewer available (primary=" + str(primary_engine) + ", claude=" + str(CLAUDE_ACTIVE) + ", openai=" + str(OPENAI_ACTIVE) + ", groq=" + str(GROQ_ACTIVE) + ")"
         return ""
     try:
         # Build a short context block from the last ~3 exchanges so Claude
@@ -12456,8 +12461,11 @@ def dual_model_review(question, primary_answer, history=None, primary_engine="op
             )
             raw = (resp.choices[0].message.content or "")
         raw = raw.strip()
-        # Diagnostic: visible in the preview server's stderr for tuning.
-        print("[dual_model_review] reviewer=" + reviewer + " raw:", repr(raw[:200]))
+        # Diagnostic: logged at WARNING level so it appears in Streamlit
+        # Cloud's log panel (stdout from print() is silently dropped).
+        import logging as _lg
+        _lg.warning("[dual_model_review] reviewer=" + reviewer + " raw=" + repr(raw[:200]))
+        st.session_state._verify_debug = "reviewer=" + reviewer + ", len=" + str(len(raw)) + " chars"
         if not raw:
             return ""
         # Strip any accidental "Second opinion:" / "Note:" preamble.
@@ -12471,7 +12479,9 @@ def dual_model_review(question, primary_answer, history=None, primary_engine="op
             raw = raw[:600].rstrip() + "…"
         return raw
     except Exception as e:
-        print("Second-opinion review failed (continuing without review):", e)
+        import logging as _lg
+        _lg.warning("[dual_model_review] reviewer=" + reviewer + " call FAILED: " + str(e)[:300])
+        st.session_state._verify_debug = "reviewer=" + reviewer + " call failed: " + str(e)[:120]
         return ""
 
 
@@ -18261,6 +18271,17 @@ if st.session_state.mode == "chat":
 
                 if msg_ts:
                     st.markdown('<div class="bot-ts">' + ui_escape(msg_ts) + '</div>', unsafe_allow_html=True)
+
+                # ── DEMO-PERIOD DIAGNOSTIC ─────────────────────────
+                # Show why Verify is missing on the LAST assistant
+                # message so we can debug from the UI alone (Streamlit
+                # Cloud doesn't surface print() output). Renders only
+                # when _verify_debug is set AND this message has no
+                # verify_text — i.e. Verify was attempted but produced
+                # nothing. Remove this block after the demo.
+                _is_last_msg = (msg is st.session_state.messages[-1])
+                if _is_last_msg and not (msg.get("verify_text") or "").strip() and st.session_state.get("_verify_debug"):
+                    st.caption("🔧 Verify diagnostic: " + str(st.session_state.get("_verify_debug"))[:200])
 
                 # MediChat Verify — render as its own dedicated block
                 # from msg["verify_text"]. This bypasses the inline
