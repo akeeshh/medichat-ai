@@ -167,22 +167,36 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
-# ── Mobile sidebar handling: pure CSS, no JS ───────────────────────
-# Three previous attempts to JS-click Streamlit's sidebar collapse
-# button silently failed because streamlit.components.v1.html() runs
-# inside a sandboxed iframe without allow-same-origin — accessing
-# window.parent.document throws a SecurityError that the try/catch
-# swallowed. The same wall hit earlier in this project's history
-# (URL-based session persistence had to replace JS-based navigation
-# for the same reason).
+# ── Mobile sidebar: pure-CSS toggle drawer ──────────────────────────
+# All four previous attempts to control the sidebar via JS failed
+# because Streamlit's components.v1.html() runs in a sandboxed iframe
+# that can't reach window.parent.document (SecurityError). Plain
+# display:none on the sidebar was either overridden by later CSS or
+# blocked by Streamlit's own layout.
 #
-# Pure-CSS solution: hide the sidebar entirely on phones. Mobile
-# users navigate via the Smart Action cards on the home page (which
-# already cover every section the sidebar links to). Desktop is
-# untouched — the rule only fires below 768px.
+# This is the user-asked-for solution: a small floating ☰ button at
+# top-left on mobile that toggles the sidebar via a hidden checkbox +
+# the :has() CSS selector (supported on all modern browsers including
+# iOS Safari 15.4+). The sidebar:
+#   - Stays hidden by default on mobile (display:none)
+#   - Slides in as a fixed-position overlay drawer when ☰ is tapped
+#   - Closes when the ☰ is tapped again, or when the user taps the
+#     dimmed area outside the drawer
+# Desktop (≥ 769px) hides the toggle button and shows the sidebar
+# normally — byte-identical behaviour.
 st.markdown("""
+<input type="checkbox" id="md-mobile-sb-toggle" style="display:none;position:absolute;left:-9999px;">
+<label for="md-mobile-sb-toggle" class="md-mobile-sb-burger" aria-label="Toggle menu">
+    <span class="md-burger-icon"></span>
+</label>
+<label for="md-mobile-sb-toggle" class="md-mobile-sb-scrim" aria-label="Close menu"></label>
 <style>
+/* Hide toggle button entirely on desktop */
+.md-mobile-sb-burger, .md-mobile-sb-scrim { display: none; }
+
 @media (max-width: 768px) {
+    /* Hide Streamlit's own sidebar entirely by default on mobile.
+       The toggle below brings it back when needed. */
     [data-testid="stSidebar"],
     [data-testid="stSidebarCollapsedControl"],
     [data-testid="stSidebarCollapseButton"],
@@ -191,8 +205,9 @@ st.markdown("""
         width: 0 !important;
         min-width: 0 !important;
         max-width: 0 !important;
-        visibility: hidden !important;
+        transform: translateX(-100%) !important;
     }
+    /* Main content fills the viewport on mobile */
     [data-testid="stAppViewContainer"] > section.stMain,
     [data-testid="stMain"] {
         margin-left: 0 !important;
@@ -200,8 +215,78 @@ st.markdown("""
         max-width: 100vw !important;
     }
     [data-testid="stMainBlockContainer"] {
-        padding: 0.7rem 0.9rem 1.2rem !important;
+        padding: 3.5rem 0.9rem 1.2rem !important;
         max-width: 100% !important;
+    }
+    /* Floating ☰ button — top-left, always visible on mobile */
+    .md-mobile-sb-burger {
+        display: flex !important;
+        position: fixed;
+        top: 0.6rem;
+        left: 0.6rem;
+        z-index: 99999;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: #ffffff;
+        border: 1px solid #e6ecf6;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12);
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+    .md-mobile-sb-burger:active { background: #f5f3ff; }
+    /* The hamburger glyph — three horizontal bars drawn from a single span */
+    .md-burger-icon {
+        position: relative;
+        display: block;
+        width: 20px;
+        height: 2px;
+        background: #4f46e5;
+        border-radius: 2px;
+    }
+    .md-burger-icon::before, .md-burger-icon::after {
+        content: ""; position: absolute; left: 0; width: 20px; height: 2px;
+        background: #4f46e5; border-radius: 2px;
+    }
+    .md-burger-icon::before { top: -7px; }
+    .md-burger-icon::after  { top:  7px; }
+
+    /* When toggle is checked → show sidebar as overlay drawer */
+    body:has(#md-mobile-sb-toggle:checked) [data-testid="stSidebar"] {
+        display: block !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 86vw !important;
+        max-width: 360px !important;
+        height: 100vh !important;
+        min-width: 0 !important;
+        transform: translateX(0) !important;
+        z-index: 99998 !important;
+        box-shadow: 0 8px 30px rgba(15, 23, 42, 0.25) !important;
+        overflow-y: auto !important;
+    }
+    /* Dimmed scrim behind the drawer — tap to close */
+    body:has(#md-mobile-sb-toggle:checked) .md-mobile-sb-scrim {
+        display: block !important;
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        background: rgba(15, 23, 42, 0.35);
+        z-index: 99997;
+        cursor: pointer;
+    }
+    /* When open, morph the ☰ into a ✕ */
+    body:has(#md-mobile-sb-toggle:checked) .md-burger-icon {
+        background: transparent;
+    }
+    body:has(#md-mobile-sb-toggle:checked) .md-burger-icon::before {
+        top: 0; transform: rotate(45deg);
+    }
+    body:has(#md-mobile-sb-toggle:checked) .md-burger-icon::after {
+        top: 0; transform: rotate(-45deg);
     }
 }
 </style>
