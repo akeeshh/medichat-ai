@@ -13189,7 +13189,7 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
                 yield ("chunk", appended, full_response)
 
             engine_label = "openai+claude_review" if review_text else "openai"
-            yield ("done", full_response, {"memory": memory, "sources": sources, "confidence": confidence_level, "confidence_pct": confidence_pct, "engine": engine_label})
+            yield ("done", full_response, {"memory": memory, "sources": sources, "confidence": confidence_level, "confidence_pct": confidence_pct, "engine": engine_label, "verify_text": review_text})
             return
         except Exception as e:
             print("OpenAI stream failed, falling back to Claude/Groq:", e)
@@ -13240,7 +13240,7 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
                 full_response += appended
                 yield ("chunk", appended, full_response)
             engine_label = "claude+openai_review" if review_text else "claude"
-            yield ("done", full_response, {"memory": memory, "sources": sources, "confidence": confidence_level, "confidence_pct": confidence_pct, "engine": engine_label})
+            yield ("done", full_response, {"memory": memory, "sources": sources, "confidence": confidence_level, "confidence_pct": confidence_pct, "engine": engine_label, "verify_text": review_text})
             return
         except Exception as e:
             print("Claude stream failed, falling back to Groq:", e)
@@ -18262,6 +18262,33 @@ if st.session_state.mode == "chat":
                 if msg_ts:
                     st.markdown('<div class="bot-ts">' + ui_escape(msg_ts) + '</div>', unsafe_allow_html=True)
 
+                # MediChat Verify — render as its own dedicated block
+                # from msg["verify_text"]. This bypasses the inline
+                # [[VERIFY_START]] marker pipeline entirely (which
+                # previously got eaten by strip_excessive_disclaimers or
+                # collapsed by markdown_to_html, producing invisible
+                # output). If verify_text is present we render here, no
+                # marker rendering needed.
+                _verify_text = (msg.get("verify_text") or "").strip()
+                if _verify_text:
+                    st.markdown(
+                        '<div style="margin-top:1.1rem;padding:0.9rem 1.1rem;background:#fbfcff;'
+                        'border:1px solid #e6ecf6;border-left:3px solid #7c3aed;border-radius:12px;'
+                        'box-shadow:0 1px 2px rgba(15,23,42,0.03);">'
+                        '<div style="display:flex;align-items:center;gap:0.45rem;font-weight:700;'
+                        'color:#334155;font-size:0.86rem;margin-bottom:0.4rem;">'
+                        '<span style="font-size:1.05rem;">🩺</span>'
+                        'MediChat Verify '
+                        '<span style="font-weight:500;font-style:italic;color:#64748b;font-size:0.78rem;">'
+                        '— second medical AI perspective</span>'
+                        '</div>'
+                        '<div style="color:#475569;font-style:italic;line-height:1.6;font-size:0.92rem;">'
+                        + ui_lines(_verify_text) +
+                        '</div>'
+                        '</div>',
+                        unsafe_allow_html=True
+                    )
+
                 # Adaptive-memory: render a tiny "MediChat noticed" chip
                 # showing what was silently saved to the profile from the
                 # preceding user message (allergies, meds, conditions,
@@ -19093,6 +19120,22 @@ if st.session_state.mode == "chat":
             conf_level = stream_metadata["confidence"]
             conf_pct = stream_metadata["confidence_pct"]
             engine_used = stream_metadata.get("engine", "unknown")
+            # Pull MediChat Verify text from the stream metadata BEFORE we
+            # run strip_excessive_disclaimers / drug-alert appends on
+            # final_text. We also strip the inline [[VERIFY_START]]...
+            # [[VERIFY_END]] markers from the visible content so the
+            # rendered bubble doesn't show raw markers, and so we can
+            # render Verify as its own styled block from the dedicated
+            # field below — independent of any markdown / disclaimer
+            # transform that previously ate the markers.
+            verify_text = (stream_metadata.get("verify_text") or "").strip()
+            if "[[VERIFY_START]]" in final_text:
+                import re as _re_strip
+                final_text = _re_strip.sub(
+                    r"\n*\[\[VERIFY_START\]\][\s\S]*?\[\[VERIFY_END\]\]\n*",
+                    "",
+                    final_text,
+                ).rstrip()
             # Merge fresh extraction with existing profile memory so facts
             # from past chats persist into new ones.
             existing_mem = st.session_state.patient_memory or {}
@@ -19139,6 +19182,8 @@ if st.session_state.mode == "chat":
             _noticed_for_msg = st.session_state.pop("_adaptive_noticed", None)
             if _noticed_for_msg:
                 _assistant_msg["noticed_facts"] = _noticed_for_msg
+            if verify_text:
+                _assistant_msg["verify_text"] = verify_text
             st.session_state.messages.append(_assistant_msg)
 
         if st.session_state.is_authenticated and st.session_state.user_email_hash:
