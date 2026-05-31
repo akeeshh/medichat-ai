@@ -167,60 +167,45 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
-# ── Mobile-only sidebar force-collapse ─────────────────────────────
-# Streamlit's "auto" sidebar-state setting relies on its own viewport
-# detection, which sometimes mis-fires on iOS Safari (especially when
-# `layout="wide"` is set) — the sidebar opens at desktop width even on
-# a 400px-wide phone, blocking the whole main content. This JS runs on
-# every page load: if window.innerWidth < 768 AND the sidebar is open,
-# it programmatically clicks Streamlit's collapse button. Desktop is
-# untouched (the early-return guards on width).
-import streamlit.components.v1 as _mobile_components
-_mobile_components.html("""
-<script>
-(function() {
-    function collapseSidebarOnMobile() {
-        try {
-            const doc = window.parent.document;
-            const viewport = window.parent.innerWidth || doc.documentElement.clientWidth;
-            if (viewport >= 768) return true;  // desktop — leave alone
-            const sidebar = doc.querySelector('[data-testid="stSidebar"]');
-            if (!sidebar) return false;
-            // Already collapsed? Streamlit sets aria-expanded="false" or
-            // adjusts width to 0 when collapsed.
-            if (sidebar.getAttribute('aria-expanded') === 'false') return true;
-            const sw = sidebar.getBoundingClientRect().width;
-            if (sw < 20) return true;  // already collapsed visually
-            // Streamlit 1.50: [data-testid="stSidebarCollapseButton"] IS
-            // the button (not a wrapper). Try direct + several fallbacks
-            // across Streamlit versions / collapse-button locations.
-            const candidates = [
-                '[data-testid="stSidebarCollapseButton"]',
-                '[data-testid="stSidebarCollapsedControl"]',
-                '[data-testid="stSidebar"] button[kind="headerNoPadding"]',
-                '[data-testid="stSidebar"] button[aria-label*="sidebar" i]',
-                '[data-testid="stSidebar"] button[aria-label*="collapse" i]',
-                'button[aria-label*="Close sidebar" i]',
-                'button[aria-label*="collapse" i]',
-            ];
-            for (const sel of candidates) {
-                const el = doc.querySelector(sel);
-                if (el) { el.click(); return true; }
-            }
-            return false;
-        } catch (e) { return false; }
+# ── Mobile sidebar handling: pure CSS, no JS ───────────────────────
+# Three previous attempts to JS-click Streamlit's sidebar collapse
+# button silently failed because streamlit.components.v1.html() runs
+# inside a sandboxed iframe without allow-same-origin — accessing
+# window.parent.document throws a SecurityError that the try/catch
+# swallowed. The same wall hit earlier in this project's history
+# (URL-based session persistence had to replace JS-based navigation
+# for the same reason).
+#
+# Pure-CSS solution: hide the sidebar entirely on phones. Mobile
+# users navigate via the Smart Action cards on the home page (which
+# already cover every section the sidebar links to). Desktop is
+# untouched — the rule only fires below 768px.
+st.markdown("""
+<style>
+@media (max-width: 768px) {
+    [data-testid="stSidebar"],
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="collapsedControl"] {
+        display: none !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        visibility: hidden !important;
     }
-    // Try a few times — Streamlit's DOM may not be ready immediately.
-    let attempts = 0;
-    const interval = setInterval(function() {
-        attempts += 1;
-        if (collapseSidebarOnMobile() || attempts > 10) {
-            clearInterval(interval);
-        }
-    }, 250);
-})();
-</script>
-""", height=0)
+    [data-testid="stAppViewContainer"] > section.stMain,
+    [data-testid="stMain"] {
+        margin-left: 0 !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+    }
+    [data-testid="stMainBlockContainer"] {
+        padding: 0.7rem 0.9rem 1.2rem !important;
+        max-width: 100% !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ── Firebase Initialization (cross-session analytics) ────────────────
 @st.cache_resource
