@@ -12349,15 +12349,24 @@ def dual_model_review(question, primary_answer, history=None, primary_engine="op
     if not primary_answer or not primary_answer.strip():
         return ""
     # Decide reviewer = first available backend that isn't the primary.
+    # Three-way fallback so Verify works whatever combination of keys is
+    # configured on the deployment (Streamlit Cloud often has only 1-2
+    # of the three providers set). Order tries the most clinically-tuned
+    # reviewer first, then falls back to whatever's available.
     reviewer = ""
     if primary_engine == "openai":
         if CLAUDE_ACTIVE and anthropic_client is not None: reviewer = "claude"
+        elif GROQ_ACTIVE and groq_client is not None:      reviewer = "groq"
     elif primary_engine == "claude":
-        if OPENAI_ACTIVE and openai_client is not None: reviewer = "openai"
+        if OPENAI_ACTIVE and openai_client is not None:    reviewer = "openai"
+        elif GROQ_ACTIVE and groq_client is not None:      reviewer = "groq"
     else:  # groq or unknown
         if CLAUDE_ACTIVE and anthropic_client is not None: reviewer = "claude"
-        elif OPENAI_ACTIVE and openai_client is not None: reviewer = "openai"
+        elif OPENAI_ACTIVE and openai_client is not None:  reviewer = "openai"
     if not reviewer:
+        print("[dual_model_review] no reviewer available — primary=" + str(primary_engine) +
+              " claude=" + str(CLAUDE_ACTIVE) + " openai=" + str(OPENAI_ACTIVE) +
+              " groq=" + str(GROQ_ACTIVE))
         return ""
     try:
         # Build a short context block from the last ~3 exchanges so Claude
@@ -12431,6 +12440,15 @@ def dual_model_review(question, primary_answer, history=None, primary_engine="op
         elif reviewer == "openai":
             resp = openai_client.chat.completions.create(
                 model=OPENAI_MODEL,
+                max_tokens=220,
+                temperature=0.25,
+                messages=[{"role": "system", "content": _sys},
+                          {"role": "user", "content": review_prompt}],
+            )
+            raw = (resp.choices[0].message.content or "")
+        elif reviewer == "groq":
+            resp = groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
                 max_tokens=220,
                 temperature=0.25,
                 messages=[{"role": "system", "content": _sys},
