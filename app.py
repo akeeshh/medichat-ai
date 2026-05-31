@@ -12281,11 +12281,26 @@ def strip_excessive_disclaimers(text):
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     cleaned = cleaned.strip()
 
-    # Restore the Verify block with its required blank-line separators so
-    # markdown wraps the markers as their own paragraph and the
-    # marker-swap in markdown_to_html renders the styled block correctly.
+    # Restore the Verify block with double blank lines around it AND
+    # between the markers and the body, so markdown produces a
+    # standalone <p>[[VERIFY_START]]</p>, then a <p>body</p>, then a
+    # <p>[[VERIFY_END]]</p>. The marker-swap in markdown_to_html
+    # matches each of those paragraphs and replaces them with the
+    # styled block. Single-newline separators left the markers glued
+    # to the body, which broke the swap and rendered the block as
+    # invisible inline text.
     if verify_block:
-        cleaned = cleaned.replace("@@VERIFY_PLACEHOLDER@@", "\n\n" + verify_block + "\n")
+        # Normalise internal separators of the recovered block too —
+        # whatever single \n the dispatcher emitted gets bumped to \n\n.
+        verify_block = verify_block.replace(
+            "[[VERIFY_START]]\n", "[[VERIFY_START]]\n\n"
+        ).replace(
+            "\n[[VERIFY_END]]", "\n\n[[VERIFY_END]]"
+        )
+        cleaned = cleaned.replace(
+            "@@VERIFY_PLACEHOLDER@@",
+            "\n\n" + verify_block + "\n\n"
+        )
 
     return cleaned
 
@@ -13142,10 +13157,15 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
                 # AFTER the markdown pass — guaranteeing a visible separator,
                 # bold heading on its own line, and an italic body block
                 # that's clearly distinct from the primary answer above.
+                # Double blank lines on every side so markdown wraps each
+                # marker in its OWN <p>, which the swap then turns into
+                # the styled block. Single \n separators (the original)
+                # left markers glued to the verify body, breaking the
+                # swap and rendering the block as invisible inline text.
                 appended = (
-                    "\n\n[[VERIFY_START]]\n"
-                    f"{review_text}\n"
-                    "[[VERIFY_END]]"
+                    "\n\n[[VERIFY_START]]\n\n"
+                    f"{review_text}\n\n"
+                    "[[VERIFY_END]]\n\n"
                 )
                 full_response += appended
                 yield ("chunk", appended, full_response)
@@ -13189,10 +13209,15 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
             # the second opinion.
             review_text = dual_model_review(question, full_response, history=history, primary_engine="claude")
             if review_text:
+                # Double blank lines on every side so markdown wraps each
+                # marker in its OWN <p>, which the swap then turns into
+                # the styled block. Single \n separators (the original)
+                # left markers glued to the verify body, breaking the
+                # swap and rendering the block as invisible inline text.
                 appended = (
-                    "\n\n[[VERIFY_START]]\n"
-                    f"{review_text}\n"
-                    "[[VERIFY_END]]"
+                    "\n\n[[VERIFY_START]]\n\n"
+                    f"{review_text}\n\n"
+                    "[[VERIFY_END]]\n\n"
                 )
                 full_response += appended
                 yield ("chunk", appended, full_response)
