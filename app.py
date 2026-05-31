@@ -160,7 +160,11 @@ st.set_page_config(
     page_title=APP_VERSION_LABEL,
     page_icon="🏥",
     layout="wide",
-    initial_sidebar_state="expanded",
+    # "auto" = Streamlit decides per viewport: expanded on desktop,
+    # collapsed on mobile. Hardcoding "expanded" forced the sidebar open
+    # on phones, which blocked the entire main content behind a 88vw
+    # drawer on every page load. Desktop behavior is unchanged.
+    initial_sidebar_state="auto",
 )
 
 # ── Firebase Initialization (cross-session analytics) ────────────────
