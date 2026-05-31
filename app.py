@@ -167,6 +167,48 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
+# ── Mobile-only sidebar force-collapse ─────────────────────────────
+# Streamlit's "auto" sidebar-state setting relies on its own viewport
+# detection, which sometimes mis-fires on iOS Safari (especially when
+# `layout="wide"` is set) — the sidebar opens at desktop width even on
+# a 400px-wide phone, blocking the whole main content. This JS runs on
+# every page load: if window.innerWidth < 768 AND the sidebar is open,
+# it programmatically clicks Streamlit's collapse button. Desktop is
+# untouched (the early-return guards on width).
+import streamlit.components.v1 as _mobile_components
+_mobile_components.html("""
+<script>
+(function() {
+    function collapseSidebarOnMobile() {
+        try {
+            const doc = window.parent.document;
+            const viewport = window.parent.innerWidth || doc.documentElement.clientWidth;
+            if (viewport >= 768) return true;  // desktop — leave alone
+            const sidebar = doc.querySelector('[data-testid="stSidebar"]');
+            if (!sidebar) return false;
+            // Already collapsed? aria-expanded === 'false' on the sidebar
+            // or the collapsedControl is visible.
+            if (sidebar.getAttribute('aria-expanded') === 'false') return true;
+            // Find Streamlit's collapse button and click it
+            const btn = doc.querySelector('[data-testid="stSidebarCollapseButton"] button')
+                     || doc.querySelector('[data-testid="stSidebarCollapsedControl"]')
+                     || doc.querySelector('button[kind="header"][aria-label*="sidebar" i]');
+            if (btn) { btn.click(); return true; }
+            return false;
+        } catch (e) { return false; }
+    }
+    // Try a few times — Streamlit's DOM may not be ready immediately.
+    let attempts = 0;
+    const interval = setInterval(function() {
+        attempts += 1;
+        if (collapseSidebarOnMobile() || attempts > 10) {
+            clearInterval(interval);
+        }
+    }, 250);
+})();
+</script>
+""", height=0)
+
 # ── Firebase Initialization (cross-session analytics) ────────────────
 @st.cache_resource
 def init_firebase():
