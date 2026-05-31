@@ -12291,31 +12291,41 @@ def is_casual_message(text):
         return True
     return False
 
-def dual_model_review(question, primary_answer, history=None):
-    """Always-visible second opinion from Claude Haiku on the OpenAI primary
-    answer. Returns Claude's brief perspective (1-3 sentences) as a plain
-    string. Returns empty string only when disabled, Claude isn't configured,
-    primary is empty, or the API call fails — caller appends the result
-    verbatim when truthy.
+def dual_model_review(question, primary_answer, history=None, primary_engine="openai"):
+    """Always-visible second opinion from a different model than the
+    primary. Returns the reviewer's brief perspective (1-3 sentences) as
+    a plain string. Returns empty string only when disabled, no other
+    backend is available, primary is empty, or the API call fails —
+    caller appends the result verbatim when truthy.
 
-    history: optional list of prior {role, content} messages so Claude can
-    correctly review follow-up questions ("Are you sure?", "Why?", "What
-    about X?") that only make sense in context of earlier turns. Without
-    history, Claude saw a bare question + a long answer and got confused
-    about whether the answer matched the question.
+    Reviewer selection:
+      • primary_engine = "openai"  → Claude reviews
+      • primary_engine = "claude"  → OpenAI reviews
+      • primary_engine = "groq"    → Claude > OpenAI (whichever is up)
 
-    Design notes:
-    - "Always show" variant: Claude adds ONE useful piece of nuance, context,
-      alternative, or correction on every response.
-    - Prompt forbids rephrasing the primary answer — must add or flag, not repeat.
-    - Output capped (max_tokens=220, 600-char defensive trim).
-    - Errors swallowed: broken reviewer must never break the primary answer.
+    This means MediChat Verify works no matter which backend served the
+    primary answer — previously it only fired when OpenAI was primary,
+    which left a silent gap whenever OpenAI failed and Claude streamed
+    instead.
+
+    history: optional list of prior {role, content} messages so the
+    reviewer can correctly handle follow-up questions ("Are you sure?",
+    "Why?") that only make sense in context.
     """
     if not ENABLE_DUAL_REVIEW:
         return ""
-    if not CLAUDE_ACTIVE or anthropic_client is None:
-        return ""
     if not primary_answer or not primary_answer.strip():
+        return ""
+    # Decide reviewer = first available backend that isn't the primary.
+    reviewer = ""
+    if primary_engine == "openai":
+        if CLAUDE_ACTIVE and anthropic_client is not None: reviewer = "claude"
+    elif primary_engine == "claude":
+        if OPENAI_ACTIVE and openai_client is not None: reviewer = "openai"
+    else:  # groq or unknown
+        if CLAUDE_ACTIVE and anthropic_client is not None: reviewer = "claude"
+        elif OPENAI_ACTIVE and openai_client is not None: reviewer = "openai"
+    if not reviewer:
         return ""
     try:
         # Build a short context block from the last ~3 exchanges so Claude
@@ -12370,21 +12380,34 @@ def dual_model_review(question, primary_answer, history=None):
             "- No preamble. Start with the substance.\n\n"
             "Your second-opinion note (1-3 sentences):"
         )
-        resp = anthropic_client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=220,
-            system="You are a careful, concise second medical AI giving a brief value-add second opinion to a patient. Be direct and useful, not redundant.",
-            messages=[{"role": "user", "content": review_prompt}],
-            temperature=0.25,
-        )
+        _sys = ("You are a careful, concise second medical AI giving a brief "
+                "value-add second opinion to a patient. Be direct and useful, "
+                "not redundant.")
         raw = ""
-        if getattr(resp, "content", None):
-            for block in resp.content:
-                if hasattr(block, "text"):
-                    raw += block.text
+        if reviewer == "claude":
+            resp = anthropic_client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=220,
+                system=_sys,
+                messages=[{"role": "user", "content": review_prompt}],
+                temperature=0.25,
+            )
+            if getattr(resp, "content", None):
+                for block in resp.content:
+                    if hasattr(block, "text"):
+                        raw += block.text
+        elif reviewer == "openai":
+            resp = openai_client.chat.completions.create(
+                model=OPENAI_MODEL,
+                max_tokens=220,
+                temperature=0.25,
+                messages=[{"role": "system", "content": _sys},
+                          {"role": "user", "content": review_prompt}],
+            )
+            raw = (resp.choices[0].message.content or "")
         raw = raw.strip()
         # Diagnostic: visible in the preview server's stderr for tuning.
-        print("[dual_model_review] Claude raw:", repr(raw[:200]))
+        print("[dual_model_review] reviewer=" + reviewer + " raw:", repr(raw[:200]))
         if not raw:
             return ""
         # Strip any accidental "Second opinion:" / "Note:" preamble.
@@ -13093,7 +13116,7 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
             # this appends a brief value-add perspective from MediChat Verify
             # below, clearly separated as its own paragraph block. Silent only
             # if Claude is disabled, not configured, or the call fails.
-            review_text = dual_model_review(question, full_response, history=history)
+            review_text = dual_model_review(question, full_response, history=history, primary_engine="openai")
             if review_text:
                 # Use marker-pattern that survives markdown's smart-typography
                 # and the chat bubble's CSS paragraph collapsing. Markers are
@@ -13144,7 +13167,20 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
                     if text:
                         full_response += text
                         yield ("chunk", text, full_response)
-            yield ("done", full_response, {"memory": memory, "sources": sources, "confidence": confidence_level, "confidence_pct": confidence_pct, "engine": "claude"})
+            # Verify also fires when Claude is the primary — reviewer
+            # switches to OpenAI so it's still a different model giving
+            # the second opinion.
+            review_text = dual_model_review(question, full_response, history=history, primary_engine="claude")
+            if review_text:
+                appended = (
+                    "\n\n[[VERIFY_START]]\n"
+                    f"{review_text}\n"
+                    "[[VERIFY_END]]"
+                )
+                full_response += appended
+                yield ("chunk", appended, full_response)
+            engine_label = "claude+openai_review" if review_text else "claude"
+            yield ("done", full_response, {"memory": memory, "sources": sources, "confidence": confidence_level, "confidence_pct": confidence_pct, "engine": engine_label})
             return
         except Exception as e:
             print("Claude stream failed, falling back to Groq:", e)
