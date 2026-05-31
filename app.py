@@ -18471,8 +18471,12 @@ if st.session_state.mode == "chat":
                 # marker rendering needed.
                 _verify_text = (msg.get("verify_text") or "").strip()
                 if _verify_text:
+                    # margin-bottom prevents the next user message bubble
+                    # from sitting flush against the Verify block's lower
+                    # edge — without it, the user avatar overlapped the
+                    # purple border visually.
                     st.markdown(
-                        '<div style="margin-top:1.1rem;padding:0.9rem 1.1rem;background:#fbfcff;'
+                        '<div style="margin-top:1.1rem;margin-bottom:1.5rem;padding:0.9rem 1.1rem;background:#fbfcff;'
                         'border:1px solid #e6ecf6;border-left:3px solid #7c3aed;border-radius:12px;'
                         'box-shadow:0 1px 2px rgba(15,23,42,0.03);">'
                         '<div style="display:flex;align-items:center;gap:0.45rem;font-weight:700;'
