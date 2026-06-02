@@ -18534,6 +18534,15 @@ if st.session_state.mode == "chat":
                         unsafe_allow_html=True
                     )
 
+    # Stream-placement anchor: when a streaming response is pending
+    # (user just submitted), this empty() reserves a slot ABOVE the
+    # composer/download buttons so the streamed reply appears right
+    # below the user's message in the chat flow — not at the very
+    # bottom of the page under the input box.
+    _pre_composer_stream_placeholder = None
+    if st.session_state.get("_defer_streaming") and st.session_state.messages:
+        _pre_composer_stream_placeholder = st.empty()
+
     if st.session_state.messages:
         # Feedback row removed per user request.
         st.markdown("---")
@@ -19189,13 +19198,17 @@ if st.session_state.mode == "chat":
             # if so, append + stash + rerun so the home grid is replaced by
             # the chat view BEFORE the spinner shows.
             if not _defer_streaming:
-                _was_home_view = (len(st.session_state.messages) == 0)
                 user_msg = {"role": "user", "type": "text", "content": effective_user_input.strip(), "ts": _msg_now_ts()}
                 st.session_state.messages.append(user_msg)
-                if _was_home_view:
-                    st.session_state._defer_streaming = True
-                    st.session_state._deferred_input = effective_user_input
-                    st.rerun()
+                # ALWAYS defer streaming (not just on home view). The
+                # rerun causes the page to redraw with the user's new
+                # message in the chat history area, and the streaming
+                # placeholder created above the composer renders the
+                # streamed reply right below it — instead of at the
+                # bottom of the page under the composer.
+                st.session_state._defer_streaming = True
+                st.session_state._deferred_input = effective_user_input
+                st.rerun()
             _t0 = time.time()
 
             name_for_rag = "" if st.session_state.patient_name == "Guest" else st.session_state.patient_name
@@ -19276,7 +19289,13 @@ if st.session_state.mode == "chat":
                 )
 
             with st.spinner("MediChat is analysing"):
-                stream_placeholder = st.empty()
+                # Use the pre-composer placeholder (created above the
+                # composer in the chat-message area) so the streamed
+                # response appears RIGHT BELOW the user message rather
+                # than at the bottom of the page under the composer.
+                # Falls back to a local st.empty() if the placeholder
+                # wasn't created (e.g. fresh page with no messages).
+                stream_placeholder = _pre_composer_stream_placeholder if _pre_composer_stream_placeholder is not None else st.empty()
                 final_text = ""
                 stream_metadata = None
                 
