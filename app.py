@@ -18072,11 +18072,16 @@ if st.session_state.mode == "chat":
                             st.rerun()
 
             with st.form("home_chat_form", clear_on_submit=True):
-                home_user_input = st.text_area(
+                # st.text_input (not text_area) natively submits the form on
+                # Enter — no JS hack needed. The Enter-to-send JS we tried
+                # to inject via components.v1.html() runs in a sandboxed
+                # iframe and silently fails (SecurityError on
+                # window.parent.document). Single-line input is fine for a
+                # chat composer; long messages wrap automatically.
+                home_user_input = st.text_input(
                     "Start a chat",
                     placeholder="Ask anything about your health...",
                     label_visibility="collapsed",
-                    height=100,
                     key="home_chat_input_" + str(st.session_state.chat_input_key),
                 )
                 ac1, ac2, ac_spacer, ac3 = st.columns([0.56, 0.56, 4.0, 0.56], vertical_alignment="center")
@@ -18766,11 +18771,12 @@ if st.session_state.mode == "chat":
         chat_voice_clicked = False
         chat_clear_clicked = False
         with st.form("chat_form", clear_on_submit=True):
-            user_input = st.text_area(
+            # st.text_input (not text_area) so Enter natively submits the
+            # form. See note in home_chat_form above.
+            user_input = st.text_input(
                 "Your message",
                 placeholder="Ask anything about your health...",
                 label_visibility="collapsed",
-                height=100,
                 key="chat_input_" + str(st.session_state.chat_input_key),
             )
             # Action row: Upload + Voice + Clear pills on the left, big spacer,
