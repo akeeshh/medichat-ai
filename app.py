@@ -18100,11 +18100,19 @@ if st.session_state.mode == "chat":
                 with ac2:
                     home_voice_clicked = st.form_submit_button("Voice", key="home_voice_btn", icon=":material/mic:", use_container_width=True)
             st.markdown('<div class="md-composer-glow"></div>', unsafe_allow_html=True)
-            if home_upload_clicked:
+            # When Enter is pressed in the text_input, Streamlit returns
+            # True for EVERY form_submit_button in the form (not just
+            # one). Without guarding, the Upload handler below fires
+            # and opens the Vision AI panel even though the user just
+            # wanted to send a message. Skip Upload/Voice when Send
+            # was also triggered (= Enter key path) AND there's actual
+            # text to send.
+            _enter_send_path = bool(home_submit and (home_user_input or "").strip())
+            if home_upload_clicked and not _enter_send_path:
                 st.session_state.home_show_vision_upload = True
                 st.session_state.home_show_voice = False
                 st.rerun()
-            if home_voice_clicked:
+            if home_voice_clicked and not _enter_send_path:
                 st.session_state.home_show_voice = True
                 st.session_state.home_show_vision_upload = False
                 st.rerun()
@@ -18802,16 +18810,22 @@ if st.session_state.mode == "chat":
                 chat_voice_clicked = st.form_submit_button("Voice", key="chat_voice_btn", icon=":material/mic:", use_container_width=True)
             with fc3:
                 chat_clear_clicked = st.form_submit_button("Clear", key="chat_clear_btn", icon=":material/delete:", use_container_width=True)
+        # Streamlit returns True for every form_submit_button when Enter
+        # is pressed in the text_input, so guard the Upload/Voice/Clear
+        # handlers against the Enter-send code path (Send is the user's
+        # intent when they hit Enter on a typed message).
+        _chat_enter_send_path = bool(submit and (user_input or "").strip())
+
         # If user hit Clear inside the chat form, wire it to the same clear
         # action as the standalone button used by vision/voice panels.
-        if chat_clear_clicked:
+        if chat_clear_clicked and not _chat_enter_send_path:
             clear = True
 
-        if chat_upload_clicked:
+        if chat_upload_clicked and not _chat_enter_send_path:
             st.session_state.home_show_vision_upload = True
             st.session_state.home_show_voice = False
             st.rerun()
-        if chat_voice_clicked:
+        if chat_voice_clicked and not _chat_enter_send_path:
             st.session_state.home_show_voice = True
             st.session_state.home_show_vision_upload = False
             st.rerun()
