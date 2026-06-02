@@ -9696,24 +9696,54 @@ st.markdown("""
     color: #dc2626 !important;
 }
 
-/* ── Anti-flash for history-page tile markup during navigation ──────
-   The .md-hist2-* CSS is defined inside `elif mode == "history":` so
-   it only loads when the user is on the Recent Chats page. When the
-   user navigates AWAY (e.g. clicks Home), Streamlit reruns the script
-   with the new mode, that page-scoped CSS no longer injects, but old
-   DOM elements may linger briefly during React's reconciliation —
-   showing as raw text with bare icon names (`forum`, `calendar_today`)
-   and unstyled "1 / All chats" labels at the bottom of the new page.
-   This rule hides those elements by default everywhere; the history
-   page's own CSS overrides with display:grid/flex when actually on
-   that page. Result: lingering elements stay invisible during the
-   navigation flash. */
+/* ── Anti-flash for cross-page DOM lingering during navigation ──────
+   When the user clicks between sidebar nav items, Streamlit reruns
+   the script with the new `mode`, but React's reconciler keeps DOM
+   from the previous page visible briefly. For native Streamlit
+   widgets (st.form, st.text_input, st.selectbox) this shows up as
+   faded form fields appearing at the bottom of the new page — e.g.
+   the Medications page's Allergies / Family-history / Surgical
+   forms briefly visible under the AI Insights page.
+
+   Pattern: hide page-specific markup by default everywhere, then
+   let each page's own elif block (which loads its CSS / renders the
+   matching hero) override the hide when actually on that page. Uses
+   `body:has(.md-page-hero-X)` so the rule only relaxes when the
+   page's identifying hero is currently in the DOM.
+   ───────────────────────────────────────────────────────────────── */
+
+/* Recent Chats (history) tile markup */
 .md-hist2-tiles, .md-hist2-tile, .md-hist2-row-inner,
 .md-hist2-title, .md-hist2-sub, .md-hist2-tile-ic,
 .md-hist2-tile-val, .md-hist2-tile-lbl,
 .md-hist2-row-title, .md-hist2-row-meta, .md-hist2-row-prev,
 .md-hist2-row-ic {
     display: none;
+}
+
+/* Medications page forms (Add Medication, Allergy, Family History,
+   Surgical History) — only show on Medications page itself. */
+body:not(:has(.md-page-hero-meds)) [class*="st-key-add_med_form"],
+body:not(:has(.md-page-hero-meds)) [class*="st-key-add_allergy_form"],
+body:not(:has(.md-page-hero-meds)) [class*="st-key-add_family_history_form"],
+body:not(:has(.md-page-hero-meds)) [class*="st-key-add_surgical_form"] {
+    display: none !important;
+}
+
+/* Health Records upload form — only on Records page */
+body:not(:has(.md-page-hero-records)) [class*="st-key-rec_upload_form"] {
+    display: none !important;
+}
+
+/* Appointments page form — only on Appointments page */
+body:not(:has(.md-page-hero-appts)) [class*="st-key-add_appt_form"],
+body:not(:has(.md-page-hero-appts)) [class*="st-key-cal_url_form"] {
+    display: none !important;
+}
+
+/* Prescription Reader upload form — only on Rx reader page */
+body:not(:has(.md-page-hero-rx)) [class*="st-key-rx_reader_form"] {
+    display: none !important;
 }
 
 /* ══════════════════════════════════════════════════════════════════
