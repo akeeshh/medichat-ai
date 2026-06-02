@@ -53,7 +53,7 @@ def _persist_browser_session(email_hash, email_display, patient_name=""):
 
     URLs survive page refreshes natively, which is exactly what we need
     to keep users signed in. Encoded as urlsafe-base64 of the JSON blob
-    with padding stripped — produces a clean URL like
+    with padding stripped, produces a clean URL like
         http://.../?s=eyJlaCI6IjlibGFiYS4uLn0
     that's ~120 chars for a typical user.
 
@@ -63,8 +63,7 @@ def _persist_browser_session(email_hash, email_display, patient_name=""):
     `allow-top-navigation`, so the redirect was blocked. Storing the
     session in the URL itself bypasses the sandbox entirely.
 
-    Security note: the blob contains only email_hash + display + name —
-    no PIN, no secret token. Same trust model as the existing cookie /
+    Security note: the blob contains only email_hash + display + name, no PIN, no secret token. Same trust model as the existing cookie /
     localStorage approach: anyone with the URL has the same access as
     anyone with the browser. If you bookmark or share the live URL,
     they share access. For a future hardening pass, swap email_hash for
@@ -129,7 +128,7 @@ def _resolve_asset_path(filename):
 @st.cache_data(show_spinner=False)
 def _load_asset_data_uri_cached(path, mtime):
     """Cache key is (path, mtime) so the cache invalidates automatically when
-    the file changes on disk — no stale None after a missing-asset boot."""
+    the file changes on disk, no stale None after a missing-asset boot."""
     with open(path, "rb") as f:
         b64 = base64.b64encode(f.read()).decode("ascii")
     ext = os.path.splitext(path)[1].lstrip(".").lower() or "png"
@@ -172,7 +171,7 @@ st.set_page_config(
 # inside an st.markdown block to drive a :has()-based toggle. That
 # triggered Streamlit's HTML sanitizer to strip the <input> and dump
 # the entire <style> block as visible text on every page (visible in
-# the user's screenshot — raw CSS code appearing at the top of every
+# the user's screenshot, raw CSS code appearing at the top of every
 # page). Reverting to the safe CSS-only approach.
 #
 # Mobile users navigate via the home page's Smart Action cards (which
@@ -554,14 +553,14 @@ def list_appointments():
 
 def add_appointment(title, date_iso, doctor, location, notes="", source="manual", external_uid=""):
     """Save an appointment. `source` is "manual" | "calendar" | "chat".
-    `external_uid` is the iCalendar UID for synced events — used to dedupe
+    `external_uid` is the iCalendar UID for synced events, used to dedupe
     on re-sync so the same event isn't added twice when the calendar
     refreshes.
     """
     title = (title or "").strip()
     if not title or not date_iso:
         return False
-    # Dedupe by external_uid on calendar imports — update existing instead
+    # Dedupe by external_uid on calendar imports, update existing instead
     # of creating a duplicate when the source event changes time/location.
     if external_uid:
         current = list_appointments()
@@ -605,7 +604,7 @@ def delete_appointment(appt_id):
     return True
 
 # ── Calendar sync (ICS) ──────────────────────────────────────────────
-# Patients don't want to retype appointments — they already book them in
+# Patients don't want to retype appointments, they already book them in
 # Google / Apple / Outlook calendar. This block lets them subscribe to a
 # calendar feed (URL or .ics file) and have MediChat keep its
 # appointments list in sync automatically, filtering for health-related
@@ -654,7 +653,7 @@ def _ics_unescape(s):
 
 def _ics_parse_dt(value, params):
     """Parse an ICS DTSTART/DTEND value into a timezone-naive ISO string
-    suitable for our `date` field. Best-effort — supports:
+    suitable for our `date` field. Best-effort, supports:
       20260530T143000Z  (UTC)
       20260530T143000   (floating local)
       20260530          (all-day)
@@ -690,7 +689,7 @@ def _ics_parse_dt(value, params):
 
 def parse_ics_bytes(b):
     """Minimal ICS → list of event dicts. Skips RRULE expansion (only the
-    first occurrence of a recurring event is captured) — acceptable for an
+    first occurrence of a recurring event is captured), acceptable for an
     appointment view, since most clinical bookings aren't recurring."""
     try:
         text = (b.decode("utf-8", errors="replace") if isinstance(b, (bytes, bytearray)) else str(b or ""))
@@ -920,7 +919,7 @@ def delete_surgical_history(surg_id):
         store["surgical_history"] = [s for s in store["surgical_history"] if s.get("id") != surg_id]
     return True
 
-# ── Health Records (file metadata only — file content not stored to keep doc <1MB) ──
+# ── Health Records (file metadata only, file content not stored to keep doc <1MB) ──
 def list_health_records():
     if st.session_state.get("is_authenticated"):
         return (get_user_doc() or {}).get("health_records", []) or []
@@ -933,13 +932,13 @@ def add_health_record(name, file_type, size_bytes, summary="", raw_text="", pati
     `summary` is the patient-friendly AI explanation shown in the UI and
     surfaced to future chat as a quick narrative.
     `raw_text` is the actual extracted text from a PDF or the AI's visual
-    findings on an image — this is what lets MediChat compare lab values
+    findings on an image, this is what lets MediChat compare lab values
     across time ("your HbA1c was 6.4% in February and is 5.9% now"),
     because the summary alone often paraphrases the values away.
     `patient_name` (optional) is the name printed on a prescription script
     so the AI can later confirm the script actually belongs to this user
     before incorporating it into analysis.
-    `record_type` (optional) e.g. "prescription" — lets the analysis layer
+    `record_type` (optional) e.g. "prescription", lets the analysis layer
     apply name-matching rules only to prescription records.
     """
     name = (name or "").strip()
@@ -994,7 +993,7 @@ def get_daily_metrics(date_key=None):
 
 def get_all_daily_metrics():
     """Return the full daily_metrics map (dict keyed by ISO date) for the
-    current user. One DB fetch — for callers that need history across many
+    current user. One DB fetch, for callers that need history across many
     days (e.g. sparklines on the home page) instead of just one day."""
     if st.session_state.get("is_authenticated"):
         return (get_user_doc() or {}).get("daily_metrics", {}) or {}
@@ -1034,7 +1033,7 @@ def render_sparkline_path(values, view_w=96, view_h=28, padding=2):
 
     Normalization is per-metric (each call uses its own min/max), so a
     series of values like [60, 72, 65] renders the same visual amplitude
-    as [8000, 12000, 9500] — the shape encodes the *trend* faithfully.
+    as [8000, 12000, 9500], the shape encodes the *trend* faithfully.
 
     Y is inverted to match how charts read: higher values draw higher
     on the page. SVG natively has y=0 at top, so we flip the
@@ -1048,7 +1047,7 @@ def render_sparkline_path(values, view_w=96, view_h=28, padding=2):
     avail_w = view_w - 2 * padding
     avail_h = view_h - 2 * padding
     if max_v == min_v:
-        # All values identical — draw a flat centerline so the user
+        # All values identical, draw a flat centerline so the user
         # sees "no change" rather than a misleading slope or empty SVG.
         y_mid = round(view_h / 2, 1)
         return ("M" + str(padding) + "," + str(y_mid) +
@@ -1444,7 +1443,7 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(42, 143, 197, 0.15) !important;
     }
 
-    /* ── Primary Send button (chat form only — uses type="primary") ── */
+    /* ── Primary Send button (chat form only, uses type="primary") ── */
     .stForm [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
     .stForm [data-testid="stFormSubmitButton"] > button[kind="primary"] {
         background: linear-gradient(135deg, var(--clinical-600), var(--clinical-800)) !important;
@@ -1464,7 +1463,7 @@ st.markdown("""
         transform: translateY(-1px);
     }
 
-    /* Secondary form buttons (Save / Skip / Next / Cancel) — visible dark text */
+    /* Secondary form buttons (Save / Skip / Next / Cancel), visible dark text */
     .stForm [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"],
     .stForm [data-testid="stFormSubmitButton"] > button[kind="secondary"] {
         background: white !important;
@@ -2366,7 +2365,7 @@ st.markdown("""
 }
 * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
 
-/* Text-selection highlight removed entirely — Chrome's default dark purple
+/* Text-selection highlight removed entirely, Chrome's default dark purple
    looked harsh on UI chrome. Two-layer fix: (1) transparent selection so
    any accidental selection is invisible, (2) user-select:none on the
    non-content UI chrome (labels, buttons, headings, sidebar, nav) so the
@@ -2755,18 +2754,18 @@ a.md-conv-row-link:hover .md-conv-bubble { background: var(--md-brand-2); color:
 }
 
 /* ================================================================
-   UI POLISH PASS — alignment, overflow, typography, premium feel
+   UI POLISH PASS, alignment, overflow, typography, premium feel
    ================================================================ */
 
 /* Container hygiene: prevent cross-element overflow */
 .md-rcard, .md-tip, .md-snap-card, .md-wearable-card {
     overflow: hidden;
 }
-.md-rcard * , .md-tip *, .md-greet, .md-subgreet {
+.md-rcard *, .md-tip *, .md-greet, .md-subgreet {
     min-width: 0;
 }
 
-/* Section header (md-greet) — guarantee no truncation/overlap */
+/* Section header (md-greet), guarantee no truncation/overlap */
 .md-greet-wrap {
     margin-bottom: 1.4rem;
     padding-right: 0.5rem;
@@ -2789,7 +2788,7 @@ a.md-conv-row-link:hover .md-conv-bubble { background: var(--md-brand-2); color:
     max-width: 60ch;
 }
 
-/* Standard icon container — uniform shape, never clip text */
+/* Standard icon container, uniform shape, never clip text */
 .md-metric-icon, .md-snap-icon, .md-conv-bubble {
     overflow: hidden;
     text-align: center;
@@ -2802,7 +2801,7 @@ a.md-conv-row-link:hover .md-conv-bubble { background: var(--md-brand-2); color:
     font-size: 1rem !important;
 }
 
-/* Status badge — never clipped, always rounded uniform */
+/* Status badge, never clipped, always rounded uniform */
 .md-metric-status {
     white-space: nowrap;
     overflow: visible;
@@ -2936,9 +2935,8 @@ a.md-conv-row-link:hover .md-conv-bubble { background: var(--md-brand-2); color:
     border-color: var(--md-brand-1) !important;
 }
 
-/* ── Sidebar past chats — clean uniform list ── */
-/* Past-chats list styling now lives in the compact-mode @media block —
-   that's the single source of truth. */
+/* ── Sidebar past chats, clean uniform list ── */
+/* Past-chats list styling now lives in the compact-mode @media block, that's the single source of truth. */
 
 /* ── Wearable sync card (replaces simulated HR/Steps) ── */
 .md-wearable-card {
@@ -3006,13 +3004,13 @@ a.md-conv-row-link:hover .md-conv-bubble { background: var(--md-brand-2); color:
     color: #92400e;
 }
 
-/* ── Your Chats page — redesigned (May 2026).
+/* ── Your Chats page, redesigned (May 2026).
    Hero header (icon + title + sub) matches every other page hero.
    Below: top action bar (Start new chat + Back to home), KPI strip,
    date-grouped sections (Today / Yesterday / This week / Earlier),
    refined conversation cards with inline Continue/Delete actions. */
 
-/* Hero icon tile — fuchsia/violet to match the "Recent Chats" nav tile. */
+/* Hero icon tile, fuchsia/violet to match the "Recent Chats" nav tile. */
 .md-page-hero-history .md-page-hero-ic {
     background: linear-gradient(135deg, rgba(168, 85, 247, 0.14) 0%, rgba(217, 70, 239, 0.12) 100%) !important;
 }
@@ -3030,7 +3028,7 @@ a.md-conv-row-link:hover .md-conv-bubble { background: var(--md-brand-2); color:
     display: none !important;
 }
 
-/* Top action bar — Start new chat (primary, gradient) + Back (subtle). */
+/* Top action bar, Start new chat (primary, gradient) + Back (subtle). */
 div.st-key-hist_new_chat .stButton > button {
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
     color: #ffffff !important;
@@ -3069,7 +3067,7 @@ div.st-key-hist_back .stButton > button:hover {
     border-color: var(--md-border-strong) !important;
 }
 
-/* KPI strip — 3 compact tiles. */
+/* KPI strip, 3 compact tiles. */
 .md-hist-stats {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3124,7 +3122,7 @@ div.st-key-hist_back .stButton > button:hover {
     line-height: 1.3;
 }
 
-/* Conversation card — top half (no bottom radius so the action row
+/* Conversation card, top half (no bottom radius so the action row
    sits flush below). */
 .md-hist-card {
     display: flex;
@@ -3190,7 +3188,7 @@ div.st-key-hist_back .stButton > button:hover {
     -webkit-box-orient: vertical;
 }
 
-/* Card action row — Continue + Delete — sits flush under the card,
+/* Card action row, Continue + Delete, sits flush under the card,
    shares the same border so it visually reads as one unit. */
 div[data-testid="stHorizontalBlock"]:has(.md-hist-open-anchor) {
     background: var(--md-surface);
@@ -3203,7 +3201,7 @@ div[data-testid="stHorizontalBlock"]:has(.md-hist-open-anchor) {
     box-shadow: 0 2px 4px rgba(15, 23, 42, 0.025);
 }
 
-/* Continue button — soft indigo. */
+/* Continue button, soft indigo. */
 div[class*="st-key-hist_open_"] .stButton > button {
     background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%) !important;
     color: #4338ca !important;
@@ -3226,7 +3224,7 @@ div[class*="st-key-hist_open_"] button [data-testid="stIconMaterial"] {
     -webkit-text-fill-color: currentColor !important;
 }
 
-/* Delete — subtle icon-only, rose hover. */
+/* Delete, subtle icon-only, rose hover. */
 div[class*="st-key-hist_del_"] .stButton > button {
     background: #f8fafc !important;
     color: #94a3b8 !important;
@@ -3550,7 +3548,7 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
     background: rgba(255,255,255,0.92) !important;
 }
 
-/* Guest profile tile — clickable affordance.
+/* Guest profile tile, clickable affordance.
    When the guest tile is rendered as an <a> (so the whole card routes to the
    auth screen), give it a clear hover state, a subtle right-arrow chevron,
    and remove the default anchor styling (color, underline) so it looks
@@ -3616,7 +3614,7 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
     margin-top: 0.35rem !important;
 }
 
-/* ── Voice & Vision panels — premium redesign (May 2026) ─────────────
+/* ── Voice & Vision panels, premium redesign (May 2026) ─────────────
    Upgrades the header card with subtle radial-gradient texture, swaps
    the icon to the same gradient palette as the welcome shield, restyles
    the mic_recorder iframe wrapper + file-uploader dropzone to look like
@@ -3654,7 +3652,7 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
     font-size: 1.4rem !important;
 }
 
-/* mic_recorder iframe wrapper — style as a "recording zone" tile. The
+/* mic_recorder iframe wrapper, style as a "recording zone" tile. The
    inner button is rendered inside an iframe (we can't reach it from
    parent CSS), so we dress up the surrounding container instead. */
 div[class*="st-key-mic_recorder"] {
@@ -3672,7 +3670,7 @@ div[class*="st-key-mic_recorder"]:hover {
         linear-gradient(135deg, rgba(99, 102, 241, 0.09) 0%, rgba(139, 92, 246, 0.11) 100%) !important;
 }
 
-/* File uploader inside vision panel — styled drop zone with gradient
+/* File uploader inside vision panel, styled drop zone with gradient
    border, accent-coloured icon, and friendlier hover state. */
 div[class*="st-key-home_vision_uploader"] [data-testid="stFileUploaderDropzone"],
 div[class*="st-key-chat_vision_uploader"] [data-testid="stFileUploaderDropzone"] {
@@ -3701,8 +3699,7 @@ div[class*="st-key-chat_vision_uploader"] [data-testid="stFileUploaderDropzoneIn
     color: #1e293b !important;
 }
 
-/* Primary action buttons — Transcribe voice, Analyze with Vision Ai —
-   gradient fill matching the panel icon, lifts on hover. */
+/* Primary action buttons, Transcribe voice, Analyze with Vision Ai, gradient fill matching the panel icon, lifts on hover. */
 div[class*="st-key-voice_transcribe"] button,
 div[class*="st-key-home_vision_analyze"] button,
 div[class*="st-key-chat_vision_analyze"] button {
@@ -3769,7 +3766,7 @@ div[class*="st-key-chat_vision_analyze"] button span[data-testid="stIconMaterial
     color: #ffffff !important;
 }
 
-/* Cancel / dismiss buttons — subtle ghost treatment so the primary CTA
+/* Cancel / dismiss buttons, subtle ghost treatment so the primary CTA
    remains the obvious next step. */
 div[class*="st-key-voice_cancel"] button,
 div[class*="st-key-home_vision_cancel"] button,
@@ -3794,7 +3791,7 @@ div[class*="st-key-chat_vision_cancel"] button p {
     color: #475569 !important;
 }
 
-/* Recording / file-ready confirmation caption — subtle success tint. */
+/* Recording / file-ready confirmation caption, subtle success tint. */
 .md-voice-panel + div + div + div + div .stCaptionContainer,
 .md-vision-panel + div + div + div + div .stCaptionContainer {
     color: #166534 !important;
@@ -5540,7 +5537,7 @@ st.markdown("""
 <style>
 /* Force one continuous canvas. Sidebar uses the same base tone as the app
    (no white panel, no hairline shadow), so there is no visible edge between
-   sidebar and main — the mockup's seamless feel. */
+   sidebar and main, the mockup's seamless feel. */
 [data-testid="stAppViewContainer"] {
     background: #f7f9fe !important;
 }
@@ -5560,7 +5557,7 @@ section[data-testid="stSidebar"]::before,
     content: none !important;
     background: none !important;
 }
-/* Streamlit also draws a separator on the sidebar resize handle — kill it. */
+/* Streamlit also draws a separator on the sidebar resize handle, kill it. */
 [data-testid="stSidebarCollapseButton"],
 [data-testid="stSidebarResizeHandle"] {
     display: none !important;
@@ -5583,7 +5580,7 @@ section[data-testid="stSidebar"]::before,
    cache wrapper child were missed by the original list. They both default to
    width=270px (the FULL sidebar width) and sit shifted ~11px right inside
    the sidebarContent's 13.6px padding, so the whole sidebar bottom (cards,
-   buttons, conv-list rows) renders ~25px past the visible right edge — where
+   buttons, conv-list rows) renders ~25px past the visible right edge, where
    overflow-x: hidden on stSidebarContent crops the trailing edge of every
    row (e.g. the "go" of "1w ago" timestamps). Force them to inherit the
    actual padded content width. */
@@ -5772,7 +5769,7 @@ st.markdown("""
        down to the bottom edge.
 
        On SHORTER laptop screens (~800-900px), the content stack is taller
-       than the viewport — so we deliberately do NOT cap max-height. The
+       than the viewport, so we deliberately do NOT cap max-height. The
        column grows to its natural content height and the sidebarContent's
        `overflow-y: auto` (below) gives the user a thin scrollbar to reach
        the footer instead of clipping it. */
@@ -6033,11 +6030,11 @@ st.markdown("""
     text-align: center !important;
 }
 
-/* Sidebar scroll behavior — locked, no scroll possible:
+/* Sidebar scroll behavior, locked, no scroll possible:
    - overflow-x stays HIDDEN to crop any horizontal bleed (the earlier
      stSidebarUserContent clipping fix relies on this).
    - overflow-y is HIDDEN so scrolling is completely disabled. Mouse wheel,
-     trackpad, keyboard arrow keys — none produce sidebar scroll. Content
+     trackpad, keyboard arrow keys, none produce sidebar scroll. Content
      sits truly fixed in place. The Approach-A tightening pass made the
      content fit cleanly inside the viewport at 900px in both auth and
      unauth states, so nothing visible gets cut off.
@@ -6080,7 +6077,7 @@ st.markdown("""
    but that was clipping the wrapped 2nd line of the footer copyright
    ("All rights reserved." was being cut off vertically). The overflow: clip
    on stSidebar wrappers already locks scroll, so the per-element-container
-   clipping below is only needed for the phantom — and it doesn't need to
+   clipping below is only needed for the phantom, and it doesn't need to
    extend to inner markdown wrappers that legitimately host wrapped text. */
 [data-testid="stSidebar"] [data-testid="stElementContainer"] {
     overflow: hidden !important;
@@ -6225,14 +6222,14 @@ st.markdown("""
 /* Streamlit injects multiple zero-height stElementContainer wrappers (from
    <style> markdowns and the position:fixed top icons div). The default
    stVerticalBlock gap (1rem) compounds these into ~80px of phantom space
-   above the first visible element. Tighten — but not to zero, or real
+   above the first visible element. Tighten, but not to zero, or real
    sibling elements (greeting → chips) collide. */
 .stMainBlockContainer > [data-testid="stVerticalBlock"] {
     gap: 0.6rem !important;
     row-gap: 0.6rem !important;
 }
 
-/* Fix 3: Chat composer textarea — kill the dark border. Streamlit doesn't
+/* Fix 3: Chat composer textarea, kill the dark border. Streamlit doesn't
    render id="home_chat_form" on the DOM form, so we scope via the home send
    button key using :has(). The composer wrap keeps its outer border; only
    the inner textarea loses its line. */
@@ -6280,7 +6277,7 @@ st.markdown("""
     border-radius: 999px;
 }
 
-/* Fix 4b: Send button — circular gradient with paper-plane icon. Scoped via
+/* Fix 4b: Send button, circular gradient with paper-plane icon. Scoped via
    the unique button key. */
 .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button,
 .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
@@ -6383,7 +6380,7 @@ st.markdown("""
     filter: drop-shadow(0 4px 16px rgba(15, 23, 42, 0.13)) drop-shadow(0 1px 4px rgba(15, 23, 42, 0.07)) !important;
 }
 /* Removed: the dividing line under the logo wrap (it conflicts with the new
-   self-contained app-icon style — the logo tile reads as a single element
+   self-contained app-icon style, the logo tile reads as a single element
    without needing an underline). */
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap::after {
     content: none !important;
@@ -6399,7 +6396,7 @@ st.markdown("""
     filter: drop-shadow(0 4px 16px rgba(15, 23, 42, 0.13)) drop-shadow(0 1px 4px rgba(15, 23, 42, 0.07)) !important;
 }
 
-/* Sidebar selectbox styling — kept subtle, matches surrounding nav. */
+/* Sidebar selectbox styling, kept subtle, matches surrounding nav. */
 [data-testid="stSidebar"] [data-testid="stSelectbox"] {
     margin: 1.48rem 0.25rem 0.9rem 0 !important;
     width: 242px !important;
@@ -6412,7 +6409,7 @@ st.markdown("""
     font-size: 0.86rem !important;
 }
 
-/* Daily Health Tip carousel — 4 live-data slides auto-rotating every 3s.
+/* Daily Health Tip carousel, 4 live-data slides auto-rotating every 3s.
    Pure CSS animation, no JS, no Streamlit re-runs. */
 .md-tip-carousel {
     position: relative;
@@ -6470,7 +6467,7 @@ st.markdown("""
     color: #475569;
     line-height: 1.45;
     margin-bottom: 0.7rem;
-    /* Use full available width — illustration is absolute-positioned now. */
+    /* Use full available width, illustration is absolute-positioned now. */
     max-width: none;
 }
 .md-tip-metric {
@@ -6489,7 +6486,7 @@ st.markdown("""
     font-size: 16px !important;
     color: #3b82f6;
 }
-/* Illustration is now a soft corner accent — absolute-positioned in the
+/* Illustration is now a soft corner accent, absolute-positioned in the
    top-right of the slide so the text below uses the full tile width.
    Smaller circle + faded opacity keeps it as decoration, not competition. */
 .md-tip-illust {
@@ -6582,19 +6579,19 @@ st.markdown("""
 }
 
 /* ────────────────────────────────────────────────────────────────────────
-   Sidebar "posh" polish — final pass. Darker nav labels for stronger
+   Sidebar "posh" polish, final pass. Darker nav labels for stronger
    readability, refined hover lift, gradient divider under the logo, softer
    profile + selectbox cards, polished bottom finish with hairline divider
    above Privacy & Consent.
    ──────────────────────────────────────────────────────────────────────── */
 
-/* Refined sidebar surface — softer vertical gradient, cleaner right edge. */
+/* Refined sidebar surface, softer vertical gradient, cleaner right edge. */
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #fbfcff 0%, #f4f7fd 100%) !important;
     border-right: 1px solid #e6ecf6 !important;
 }
 
-/* Nav labels — darker for contrast, subtle hover lift + shadow. */
+/* Nav labels, darker for contrast, subtle hover lift + shadow. */
 [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button {
     color: #1f2a3d !important;
     transition: background-color 0.18s ease, border-color 0.18s ease,
@@ -6619,7 +6616,7 @@ st.markdown("""
     color: #0f172a !important;
 }
 
-/* Logo divider — gradient hairline that fades at both ends. */
+/* Logo divider, gradient hairline that fades at both ends. */
 [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap::after {
     left: 8% !important;
     right: 8% !important;
@@ -6640,7 +6637,7 @@ st.markdown("""
     padding: 0.78rem 0.86rem !important;
 }
 
-/* Language selectbox — tracker-style label, match profile card visual weight. */
+/* Language selectbox, tracker-style label, match profile card visual weight. */
 [data-testid="stSidebar"] [data-testid="stSelectbox"] {
     margin: 0.95rem 0 0.6rem 0 !important;
 }
@@ -6669,7 +6666,7 @@ st.markdown("""
     font-weight: 600 !important;
 }
 
-/* Polished bottom finish — hairline divider, refined typography. */
+/* Polished bottom finish, hairline divider, refined typography. */
 [data-testid="stSidebar"] .md-sidebar-bottom {
     padding-top: 0.85rem !important;
     margin-top: 0.6rem !important;
@@ -6697,14 +6694,14 @@ st.markdown("""
 }
 
 /* ────────────────────────────────────────────────────────────────────────
-   Canonical component styling — applies at every viewport width and height.
+   Canonical component styling, applies at every viewport width and height.
 
    HISTORICAL NOTE (May 2026): this block used to be wrapped in
    `@media (max-height: 900px), (max-width: 1500px) { ... }` so it only
    matched on laptop-sized viewports. Over many design iterations the
    "compact" rules became the canonical look, and on wide+tall monitors
    (>1500px AND >900px) the gate stopped matching, falling back to plainer
-   baseline rules from earlier iterations — which made the entire app
+   baseline rules from earlier iterations, which made the entire app
    "collapse to plain fallback" at low zoom levels on big screens.
    The media wrapper has been removed so the modern look applies always.
    Legitimate responsive media queries elsewhere in the file are kept.
@@ -6717,7 +6714,7 @@ st.markdown("""
         gap: 0.55rem !important;
     }
 
-    /* Greeting + hero headings — pull the eye in faster. */
+    /* Greeting + hero headings, pull the eye in faster. */
     .md-home-greet-wrap { margin: -0.6rem 0 0.5rem 0 !important; }
     .md-home-greet-wrap .md-greet { font-size: 1.95rem !important; line-height: 1.1 !important; }
     .md-home-greet-wrap .md-subgreet { font-size: 0.86rem !important; margin-top: 0.25rem !important; }
@@ -6733,7 +6730,7 @@ st.markdown("""
         line-height: 1.35 !important;
     }
 
-    /* Forms (sign-in, composer) — tighter internal padding. */
+    /* Forms (sign-in, composer), tighter internal padding. */
     [data-testid="stForm"],
     [data-testid="stForm"]:has(.st-key-si_email),
     [data-testid="stForm"]:has(.st-key-su_email) {
@@ -6744,7 +6741,7 @@ st.markdown("""
         gap: 0.3rem !important;
     }
 
-    /* Auth welcome card — balanced proportions, fills the tile cleanly.
+    /* Auth welcome card, balanced proportions, fills the tile cleanly.
        margin-bottom gives the tabs/columns row below clear separation. */
     .md-auth-welcome-card {
         padding: 1rem 1.6rem 1.1rem 1.3rem !important;
@@ -6789,7 +6786,7 @@ st.markdown("""
     }
     .md-auth-deco-dots { display: none !important; }
 
-    /* "Why sign in?" right-column feature list — aggressively compact.
+    /* "Why sign in?" right-column feature list, aggressively compact.
        margin-top pushes the card down to match the sign-in tile's top edge:
        the left column has a tab-strip (~36px) + its margin (~6px) above the
        form, so we offset by ~3.2rem to visually align both card tops. */
@@ -6821,7 +6818,7 @@ st.markdown("""
     }
     .md-auth-side-bottom .material-symbols-rounded { font-size: 0.9rem !important; }
 
-    /* Sign-in form fields — tighter row heights. */
+    /* Sign-in form fields, tighter row heights. */
     [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInput"],
     [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInput"] {
         margin-bottom: 0.3rem !important;
@@ -6844,14 +6841,14 @@ st.markdown("""
         font-size: 0.92rem !important;
     }
 
-    /* Main column outer gap — keep cards close together. */
+    /* Main column outer gap, keep cards close together. */
     [data-testid="stMain"] [data-testid="stVerticalBlock"] {
         gap: 0.25rem !important;
     }
     [data-testid="stMainBlockContainer"] {
         padding: 0.3rem 2rem 0.4rem !important;
     }
-    /* Tabs pill bar — compact sizing. Keeps the centered pill design but
+    /* Tabs pill bar, compact sizing. Keeps the centered pill design but
        trims paddings, font, and gap. The generous margin-top is intentional:
        it gives the welcome card above (with its soft glow ::after) enough
        breathing room so the pill doesn't visually collide. */
@@ -6909,7 +6906,7 @@ st.markdown("""
         min-height: 70px !important;
     }
     /* Compact-mode preserved for truly short viewports (laptops with
-       small vertical resolution) — the originally-intended target of
+       small vertical resolution), the originally-intended target of
        the smaller sizing. */
     @media (max-height: 720px) {
         [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
@@ -6957,7 +6954,7 @@ st.markdown("""
         height: 32px !important;
         font-size: 0.82rem !important;
     }
-    /* Language picker — minimal text-link style. Sits as a subtle inline
+    /* Language picker, minimal text-link style. Sits as a subtle inline
        row at the very bottom of the sidebar (above Privacy & Consent),
        reading as: "🌐  English  ▾" with no chip background by default. On
        hover it picks up the lightest indigo wash so it still reads as
@@ -7013,7 +7010,7 @@ st.markdown("""
         box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06) !important;
         transform: translateY(-1px) !important;
     }
-    /* Inner wrapper — transparent, resets default padding */
+    /* Inner wrapper, transparent, resets default padding */
     [data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
         min-height: 38px !important;
         height: 38px !important;
@@ -7064,8 +7061,7 @@ st.markdown("""
     [data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] div[value="Malayalam"]::before { content: "Malayalam" !important; }
 
     /* Hairline divider between the language picker and the (removed)
-       Privacy & Consent button. Margins zeroed to reclaim vertical space —
-       the language pill and the footer are visually distinct enough without
+       Privacy & Consent button. Margins zeroed to reclaim vertical space, the language pill and the footer are visually distinct enough without
        an explicit hairline between them. */
     [data-testid="stSidebar"] .md-sidebar-bottom-divider {
         height: 0 !important;
@@ -7118,7 +7114,7 @@ st.markdown("""
         color: #94a3b8 !important;
         -webkit-text-fill-color: #94a3b8 !important;
     }
-    /* Sign-out anchor — a 28px circle pinned to the top-right of the profile
+    /* Sign-out anchor, a 28px circle pinned to the top-right of the profile
        chip. Because it's a TRUE child of the chip (not a Streamlit sibling
        with negative margins), there are no layout side-effects on the
        Recent Chats card below. Triggers ?signout=1 URL handler. */
@@ -7176,7 +7172,7 @@ st.markdown("""
         box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02) !important;
         box-sizing: border-box !important;
     }
-    /* "+ New chat" pill — premium card-style button inside the card. */
+    /* "+ New chat" pill, premium card-style button inside the card. */
     [data-testid="stSidebar"] .md-new-chat-pill {
         display: flex !important;
         align-items: center !important;
@@ -7240,7 +7236,7 @@ st.markdown("""
         text-decoration: underline !important;
     }
 
-    /* + New chat button inside the Recent Chats card — soft indigo fill. */
+    /* + New chat button inside the Recent Chats card, soft indigo fill. */
     [data-testid="stSidebar"] div.st-key-new_chat_btn button,
     [data-testid="stSidebar"] div.st-key-new_chat_btn .stButton > button {
         box-sizing: border-box !important;
@@ -7280,7 +7276,7 @@ st.markdown("""
         font-size: 0.95rem !important;
     }
 
-    /* Conversation rows — anchor links with flex layout (icon | title | time).
+    /* Conversation rows, anchor links with flex layout (icon | title | time).
        Title flex-grows + ellipsis on overflow; time stays pinned right. */
     [data-testid="stSidebar"] .md-conv-list {
         display: flex !important;
@@ -7348,7 +7344,7 @@ st.markdown("""
         color: #0f172a !important;
         text-decoration: none !important;
     }
-    /* Active conversation row — styled plain just like other rows per user request */
+    /* Active conversation row, styled plain just like other rows per user request */
     [data-testid="stSidebar"] .md-conv-row-active {
         background: transparent !important;
         border-left: 3px solid transparent !important;
@@ -7407,7 +7403,7 @@ st.markdown("""
         width: calc(100% - 1.6rem) !important;
         max-width: none !important;
     }
-    /* Profile chip — comfortable padding so 3-line content (name + email +
+    /* Profile chip, comfortable padding so 3-line content (name + email +
        sync status) doesn't pinch. The chevron was removed, so the right
        padding is also lighter (1.1 instead of 1.2). */
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
@@ -7458,12 +7454,12 @@ st.markdown("""
     [data-testid="stSidebar"] .md-side-chevron {
         display: none !important;
     }
-    /* Sign out — icon-only 28px circle overlaid on the profile chip's
+    /* Sign out, icon-only 28px circle overlaid on the profile chip's
        top-right corner. The negative margins pull the button visually up
        onto the chip AND shrink the column contribution from +29px to -20px
        (49px reclaimed) so the column can comfortably fit Recent Chats + 3
        rows + language + footer at 900px viewport without scrolling. */
-    /* HIDE the legacy Streamlit sign-out button entirely — the visible
+    /* HIDE the legacy Streamlit sign-out button entirely, the visible
        affordance is now the inline anchor (.md-side-signout-inline)
        rendered as a true child of the profile chip. The st.button is
        kept in the Python tree as a Python-callable fallback. */
@@ -7474,7 +7470,7 @@ st.markdown("""
         padding: 0 !important;
         overflow: hidden !important;
     }
-    /* Inline sign-out icon — true child of .md-side-profile-top, positioned
+    /* Inline sign-out icon, true child of .md-side-profile-top, positioned
        in the chip's top-right corner. Tiny 26px circle, slate by default,
        red on hover. Clicking it triggers ?signout=1 which the Python URL
        handler picks up to clear session and rerun. */
@@ -7544,7 +7540,7 @@ st.markdown("""
     [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(> [data-testid="stMarkdown"] .md-side-signout-anchor) {
         display: none !important;
     }
-    /* Profile chip becomes the positioning context — required so the
+    /* Profile chip becomes the positioning context, required so the
        absolute z-index stack of the sign-out button renders cleanly above
        it on hover (no clipping by the chip's own padding). */
     [data-testid="stSidebar"] .md-side-profile.md-side-profile-top {
@@ -7552,14 +7548,14 @@ st.markdown("""
     }
 
     /* ────────────────────────────────────────────────────────────────────
-       Apple-style polish — home dashboard at 1366×768.
+       Apple-style polish, home dashboard at 1366×768.
        Goals: nothing wraps mid-word, vertical rhythm reads cleanly, every
        tile fits its content on one line where possible, icons sit in
        softly tinted square containers (consistent across chips + cards),
        send button matches the brand indigo without dominating.
        ──────────────────────────────────────────────────────────────────── */
 
-    /* Greeting — slightly tighter, brand black. */
+    /* Greeting, slightly tighter, brand black. */
     .md-home-greet-wrap .md-greet {
         font-size: 1.7rem !important;
         line-height: 1.08 !important;
@@ -7616,7 +7612,7 @@ st.markdown("""
         letter-spacing: -0.005em !important;
         margin: 0 !important;
     }
-    /* Force a single, on-theme indigo for every quick-chip icon — even
+    /* Force a single, on-theme indigo for every quick-chip icon, even
        emoji-style material symbols. */
     .st-key-qa_headache .stButton > button [data-testid="stIconMaterial"],
     .st-key-qa_tired .stButton > button [data-testid="stIconMaterial"],
@@ -7669,7 +7665,7 @@ st.markdown("""
             0 1px 0 rgba(255, 255, 255, 0.9) inset,
             0 8px 24px rgba(15, 23, 42, 0.05) !important;
     }
-    /* Textarea + baseweb wrappers — strip all background + borders so the
+    /* Textarea + baseweb wrappers, strip all background + borders so the
        form's white surface flows through. */
     [data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextAreaRootElement"],
     [data-testid="stForm"]:has(.st-key-home_send_btn) [data-testid="stTextAreaRootElement"] [data-baseweb="base-input"] {
@@ -7698,7 +7694,7 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    /* Upload + Voice — small clean pills with paperclip/mic icon + text
+    /* Upload + Voice, small clean pills with paperclip/mic icon + text
        label. Both fill 100% of their column so they have identical width
        and align perfectly along their left edges; content is centered
        inside each pill. Override the original 112×56 pill rules so they
@@ -7756,7 +7752,7 @@ st.markdown("""
         font-size: 1rem !important;
     }
 
-    /* Send button — round indigo gradient ball, the primary action. */
+    /* Send button, round indigo gradient ball, the primary action. */
     .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button,
     .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
     .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button[kind="primary"] {
@@ -7807,7 +7803,7 @@ st.markdown("""
     .st-key-home_send_btn [data-testid="stFormSubmitButton"] > button > span:first-child {
         margin: 0 !important;
     }
-    /* Glow under composer — softer in compact mode. */
+    /* Glow under composer, softer in compact mode. */
     .md-composer-glow {
         height: 18px !important;
         opacity: 0.35 !important;
@@ -7858,7 +7854,7 @@ st.markdown("""
         border: none !important;
         box-shadow: none !important;
     }
-    /* Upload + Voice + Clear — same pill style as home. */
+    /* Upload + Voice + Clear, same pill style as home. */
     .st-key-chat_upload_btn [data-testid="stFormSubmitButton"] > button,
     .st-key-chat_voice_btn [data-testid="stFormSubmitButton"] > button,
     .st-key-chat_clear_btn [data-testid="stFormSubmitButton"] > button,
@@ -7929,7 +7925,7 @@ st.markdown("""
         -webkit-text-fill-color: #1f2a3d !important;
         font-size: 1rem !important;
     }
-    /* Chat Send — same round indigo ball as home Send. Selector chain
+    /* Chat Send, same round indigo ball as home Send. Selector chain
        matches the older :has() override at line ~7087 so this wins. */
     [data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button,
     [data-testid="stForm"]:has(.st-key-chat_upload_btn) [data-testid="stHorizontalBlock"]:has(.st-key-chat_upload_btn) [data-testid="stColumn"]:nth-child(4) [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"],
@@ -8028,7 +8024,7 @@ st.markdown("""
         overflow: visible !important;
     }
 
-    /* Bot bubble: chat-bubble feel matching the user side — clean white
+    /* Bot bubble: chat-bubble feel matching the user side, clean white
        surface, soft border, mirrored corner truncation (top-left is the
        "tail" closest to the avatar). No left accent stripe (the avatar +
        header inside the bubble already signal the speaker). */
@@ -8044,7 +8040,7 @@ st.markdown("""
         line-height: 1.6 !important;
         max-width: 100% !important;
     }
-    /* Kill the legacy purple accent stripe — it wasn't aligning cleanly
+    /* Kill the legacy purple accent stripe, it wasn't aligning cleanly
        with the new in-bubble header + caused a visual seam at the top. */
     .bot-bubble::before {
         display: none !important;
@@ -8068,7 +8064,7 @@ st.markdown("""
         border: 1px solid #c7d2fe !important;
         box-shadow: 0 4px 14px rgba(99, 102, 241, 0.05) !important;
     }
-    /* User stack should NOT cap width — let the bubble grow naturally up
+    /* User stack should NOT cap width, let the bubble grow naturally up
        to its container so short messages stay on one line. */
     .user-stack {
         max-width: 70% !important;
@@ -8122,7 +8118,7 @@ st.markdown("""
         align-items: center !important;
         gap: 0.5rem !important;
     }
-    /* Shield is now an inline SVG (not a Material Symbols glyph) — renders
+    /* Shield is now an inline SVG (not a Material Symbols glyph), renders
        as a proper filled shield silhouette with a soft check inside,
        identical across all browsers regardless of icon font loading. */
     .md-chat-hero-shield {
@@ -8255,7 +8251,7 @@ st.markdown("""
         color: #475569 !important;
     }
 
-    /* Meta label pills (Sources / Confidence) — highlighted indigo chips
+    /* Meta label pills (Sources / Confidence), highlighted indigo chips
        so the section headers pop visually instead of fading into the row. */
     .meta-label {
         display: inline-flex !important;
@@ -8289,7 +8285,7 @@ st.markdown("""
         -webkit-text-fill-color: #047857 !important;
     }
 
-    /* Unified meta row — source tags + confidence pill + bar + RAG text
+    /* Unified meta row, source tags + confidence pill + bar + RAG text
        all on ONE line, aligned to the bot bubble's left edge. Scrolls
        horizontally if the screen is too narrow so nothing wraps awkwardly. */
     .meta-row {
@@ -8620,7 +8616,7 @@ st.markdown("""
     .st-key-sa_appt .stButton > button:active {
         transform: translateY(0) !important;
     }
-    /* Markdown container — centered, full width so wrap is symmetric. */
+    /* Markdown container, centered, full width so wrap is symmetric. */
     .st-key-sa_sym .stButton > button > div[data-testid="stMarkdownContainer"],
     .st-key-sa_rec .stButton > button > div[data-testid="stMarkdownContainer"],
     .st-key-sa_ins .stButton > button > div[data-testid="stMarkdownContainer"],
@@ -8630,7 +8626,7 @@ st.markdown("""
         max-width: 100% !important;
         text-align: center !important;
     }
-    /* Icon span — centered at top. */
+    /* Icon span, centered at top. */
     .st-key-sa_sym .stButton > button > span:first-child,
     .st-key-sa_rec .stButton > button > span:first-child,
     .st-key-sa_ins .stButton > button > span:first-child,
@@ -8648,7 +8644,7 @@ st.markdown("""
         border-color: #d6e2f6 !important;
         box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06) !important;
     }
-    /* Icon tile — premium gradient background derived from the card's
+    /* Icon tile, premium gradient background derived from the card's
        --accent. Inset highlight on top + soft drop shadow tinted with the
        accent give the iOS app-icon depth. */
     .st-key-sa_sym .stButton > button [data-testid="stIconMaterial"],
@@ -8702,7 +8698,7 @@ st.markdown("""
         word-break: normal !important;
         white-space: normal !important;
     }
-    /* Inner markdown container — full width minus icon. */
+    /* Inner markdown container, full width minus icon. */
     .st-key-sa_sym .stButton > button > div[data-testid="stMarkdownContainer"],
     .st-key-sa_rec .stButton > button > div[data-testid="stMarkdownContainer"],
     .st-key-sa_ins .stButton > button > div[data-testid="stMarkdownContainer"],
@@ -8713,7 +8709,7 @@ st.markdown("""
         max-width: 100% !important;
         overflow: visible !important;
     }
-    /* Tighten the outer icon span — kill any baseweb margin/padding so it
+    /* Tighten the outer icon span, kill any baseweb margin/padding so it
        sits flush at the icon's content size (~32px) instead of inflating to
        ~48px and starving the text column. */
     .st-key-sa_sym .stButton > button > span:first-child,
@@ -8725,7 +8721,7 @@ st.markdown("""
         width: auto !important;
         min-width: 0 !important;
     }
-    /* Bold title — refined SF Pro-style weight + tight tracking. */
+    /* Bold title, refined SF Pro-style weight + tight tracking. */
     .st-key-sa_sym .stButton > button p strong,
     .st-key-sa_rec .stButton > button p strong,
     .st-key-sa_ins .stButton > button p strong,
@@ -8737,7 +8733,7 @@ st.markdown("""
         letter-spacing: -0.015em !important;
         display: inline !important;
     }
-    /* Arrow chip — ghost circle bottom-right, picks up the card's accent
+    /* Arrow chip, ghost circle bottom-right, picks up the card's accent
        on hover and slides forward like an iOS disclosure indicator. */
     .st-key-sa_sym .stButton > button::after,
     .st-key-sa_rec .stButton > button::after,
@@ -8781,7 +8777,7 @@ st.markdown("""
     }
 
     /* ────────────────────────────────────────────────────────────────────
-       Apple-style polish — page hero (Prescription Reader, etc.)
+       Apple-style polish, page hero (Prescription Reader, etc.)
        Replaces the heavy bold dark-navy heading with a refined two-column
        layout: tinted icon square + title + muted subtitle. Sits as a soft
        card at the top of the page so the form below feels intentional. */
@@ -8925,7 +8921,7 @@ st.markdown("""
         border-color: rgba(99, 102, 241, 0.42) !important;
         background: #eef0ff !important;
     }
-    /* Checkbox inside the records/rx form — refined indigo accent. */
+    /* Checkbox inside the records/rx form, refined indigo accent. */
     [data-testid="stForm"]:has([data-testid="stFileUploader"]):not(:has(.st-key-home_send_btn)) [data-testid="stCheckbox"] {
         margin: 0.2rem 0 0.6rem 0 !important;
     }
@@ -8945,7 +8941,7 @@ st.markdown("""
         background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
         border-color: #4f46e5 !important;
     }
-    /* "No records uploaded yet." empty state — softer, less italic-heavy. */
+    /* "No records uploaded yet." empty state, softer, less italic-heavy. */
     [data-testid="stMain"] .md-rcard[style*="No records"],
     [data-testid="stMain"] .md-rcard[style*="text-align:center"]:has-text("No records") {
         background: linear-gradient(180deg, #f7f9ff 0%, #eef1ff 100%) !important;
@@ -8956,7 +8952,7 @@ st.markdown("""
     }
 
     /* ────────────────────────────────────────────────────────────────────
-       Apple-style polish — Symptom Assessment page.
+       Apple-style polish, Symptom Assessment page.
        Refines the bespoke .assessment-card / .question-bubble / progress
        bar to use the brand indigo palette and Inter (not DM Serif). Quick
        select buttons become clean indigo-tinted chips, and the Next/Cancel
@@ -8972,7 +8968,7 @@ st.markdown("""
             0 1px 0 rgba(255, 255, 255, 0.9) inset,
             0 6px 18px rgba(15, 23, 42, 0.04) !important;
     }
-    /* Assessment card head — icon + title/subtitle column, matching the
+    /* Assessment card head, icon + title/subtitle column, matching the
        page-hero pattern used on Health Overview, Medications, etc. */
     .assessment-card-head {
         display: grid !important;
@@ -9021,7 +9017,7 @@ st.markdown("""
         border-radius: 999px !important;
     }
 
-    /* Question bubble — indigo accent border on the left, soft tinted bg. */
+    /* Question bubble, indigo accent border on the left, soft tinted bg. */
     .question-bubble {
         background: linear-gradient(180deg, #f7f9ff 0%, #eef1ff 100%) !important;
         border: 1px solid #e3e8fb !important;
@@ -9035,7 +9031,7 @@ st.markdown("""
         line-height: 1.45 !important;
     }
 
-    /* Quick-select option buttons — clean white chips with indigo on hover/active. */
+    /* Quick-select option buttons, clean white chips with indigo on hover/active. */
     [data-testid="stMain"] .stButton > button[data-testid="stBaseButton-secondary"][class*="opt_"],
     [data-testid="stMain"] div[class*="st-key-opt_"] .stButton > button {
         min-height: 44px !important;
@@ -9092,7 +9088,7 @@ st.markdown("""
         box-shadow: none !important;
         font-size: 0.9rem !important;
     }
-    /* Next button — primary indigo gradient. */
+    /* Next button, primary indigo gradient. */
     [data-testid="stForm"][class*="assessment_form_"] [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"] {
         min-height: 44px !important;
         height: 44px !important;
@@ -9113,7 +9109,7 @@ st.markdown("""
             0 1px 0 rgba(255, 255, 255, 0.26) inset,
             0 12px 24px rgba(79, 70, 229, 0.36) !important;
     }
-    /* Cancel button — ghost. */
+    /* Cancel button, ghost. */
     [data-testid="stForm"][class*="assessment_form_"] [data-testid="stFormSubmitButton"] > button[kind="secondaryFormSubmit"] {
         min-height: 44px !important;
         height: 44px !important;
@@ -9130,7 +9126,7 @@ st.markdown("""
     }
 
     /* ────────────────────────────────────────────────────────────────────
-       Apple-style polish — Health Overview page.
+       Apple-style polish, Health Overview page.
        Wearable card uses our soft white shell; metric tiles get cleaner
        padding; Save buttons (sleep/steps/heart rate) and the +1 glass /
        Reset buttons all pick up the indigo primary / ghost hierarchy.
@@ -9175,7 +9171,7 @@ st.markdown("""
         border-color: #e2e8f0 !important;
     }
 
-    /* Metric tile cards — softer surface, refined typography. */
+    /* Metric tile cards, softer surface, refined typography. */
     [data-testid="stMain"] .md-rcard:has(.md-metric-row) {
         background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%) !important;
         border: 1px solid #e6ecf6 !important;
@@ -9195,7 +9191,7 @@ st.markdown("""
         color: #0f172a !important;
     }
 
-    /* Save sleep / Save steps / Save heart rate buttons — indigo primary. */
+    /* Save sleep / Save steps / Save heart rate buttons, indigo primary. */
     [data-testid="stForm"][class*="sleep_form_today"] [data-testid="stFormSubmitButton"] > button,
     [data-testid="stForm"][class*="steps_form_today"] [data-testid="stFormSubmitButton"] > button,
     [data-testid="stForm"][class*="hr_form_today"] [data-testid="stFormSubmitButton"] > button {
@@ -9221,7 +9217,7 @@ st.markdown("""
             0 1px 0 rgba(255, 255, 255, 0.26) inset,
             0 10px 20px rgba(79, 70, 229, 0.32) !important;
     }
-    /* Number-input arrows inside the save forms — keep them tidy. */
+    /* Number-input arrows inside the save forms, keep them tidy. */
     [data-testid="stForm"][class*="sleep_form_today"] [data-testid="stNumberInput"],
     [data-testid="stForm"][class*="steps_form_today"] [data-testid="stNumberInput"],
     [data-testid="stForm"][class*="hr_form_today"] [data-testid="stNumberInput"] {
@@ -9256,7 +9252,7 @@ st.markdown("""
         color: #1f2a3d !important;
     }
 
-    /* "+1 glass" / "Reset" buttons — ghost pills, paired symmetrically. */
+    /* "+1 glass" / "Reset" buttons, ghost pills, paired symmetrically. */
     div[class*="st-key-water_inc"] .stButton > button,
     div[class*="st-key-water_reset"] .stButton > button {
         min-height: 42px !important;
@@ -9282,7 +9278,7 @@ st.markdown("""
     }
 
     /* ────────────────────────────────────────────────────────────────────
-       Apple-style polish — Medications + Appointments forms.
+       Apple-style polish, Medications + Appointments forms.
        Both forms share the same structure: intro header + 2-col text inputs
        + select/textarea + full-width primary save button. The intro is now
        moved inside the form (in Python) so the whole thing reads as one
@@ -9310,14 +9306,14 @@ st.markdown("""
         line-height: 1.45 !important;
         margin-bottom: 0.95rem !important;
     }
-    /* Text inputs + select + textarea labels — small, muted tracker style. */
+    /* Text inputs + select + textarea labels, small, muted tracker style. */
     [data-testid="stForm"]:has(.md-form-intro) label[data-testid="stWidgetLabel"] {
         font-size: 0.78rem !important;
         color: #64748b !important;
         font-weight: 600 !important;
         margin-bottom: 0.3rem !important;
     }
-    /* Text input fields — clean white, indigo focus. */
+    /* Text input fields, clean white, indigo focus. */
     [data-testid="stForm"]:has(.md-form-intro) [data-testid="stTextInputRootElement"] {
         background: #ffffff !important;
         border: 1px solid #e6ecf6 !important;
@@ -9340,7 +9336,7 @@ st.markdown("""
         box-shadow: none !important;
         font-size: 0.9rem !important;
     }
-    /* Selectbox (Frequency) — match the text-input shell. */
+    /* Selectbox (Frequency), match the text-input shell. */
     [data-testid="stForm"]:has(.md-form-intro) [data-testid="stSelectbox"] div[data-baseweb="select"] {
         background: #ffffff !important;
         border: 1px solid #e6ecf6 !important;
@@ -9362,7 +9358,7 @@ st.markdown("""
         font-size: 0.9rem !important;
         font-weight: 600 !important;
     }
-    /* Textarea (Notes) — same shell as text inputs but taller. */
+    /* Textarea (Notes), same shell as text inputs but taller. */
     [data-testid="stForm"]:has(.md-form-intro) [data-testid="stTextAreaRootElement"] {
         background: #ffffff !important;
         border: 1px solid #e6ecf6 !important;
@@ -9384,7 +9380,7 @@ st.markdown("""
         font-size: 0.9rem !important;
         padding: 0.55rem 0.7rem !important;
     }
-    /* Save medication / Save appointment — primary indigo gradient. */
+    /* Save medication / Save appointment, primary indigo gradient. */
     [data-testid="stForm"]:has(.md-form-intro) [data-testid="stFormSubmitButton"] > button[kind="primaryFormSubmit"] {
         min-height: 44px !important;
         height: 44px !important;
@@ -9453,7 +9449,7 @@ st.markdown("""
     }
 
     /* ────────────────────────────────────────────────────────────────────
-       Classic ℞ (Rx) prescription symbol — used on the Prescription Reader
+       Classic ℞ (Rx) prescription symbol, used on the Prescription Reader
        page hero, the sidebar nav, and the Smart Action card. Material
        Symbols has no Rx glyph, so we render the Unicode U+211E
        "PRESCRIPTION TAKE" character in a serif face for the authentic
@@ -9473,9 +9469,9 @@ st.markdown("""
     /* Nav menu + Smart Action card Prescription Reader use Material
        Symbols `prescriptions` (paper with Rx). Streamlit's icon param
        rejects non-emoji Unicode (so we can't pass ℞ directly there). The
-       page hero — which we render via raw HTML — still uses the real ℞
+       page hero, which we render via raw HTML, still uses the real ℞
        serif glyph for the authentic pharmacy-pad look. */
-/* (End of canonical-styling block — was previously the @media closing brace.) */
+/* (End of canonical-styling block, was previously the @media closing brace.) */
 
 /* ────────────────────────────────────────────────────────────────────────
    MediChat unified input theme.
@@ -9528,7 +9524,7 @@ st.markdown("""
     background: #ffffff !important;
 }
 /* Streamlit applies an error/invalid red border on number_input when the
-   value is at the min/max edge or being typed — neutralise it so the
+   value is at the min/max edge or being typed, neutralise it so the
    indigo theme stays consistent. Also kill the BaseWeb "focused" class
    default which sometimes renders as a coral outline. */
 [data-testid="stMain"] [data-testid="stNumberInput"] [aria-invalid="true"],
@@ -9586,7 +9582,7 @@ st.markdown("""
     margin-bottom: 0.32rem !important;
     letter-spacing: 0.01em !important;
 }
-/* Textarea grows naturally — don't force 42px height. */
+/* Textarea grows naturally, don't force 42px height. */
 [data-testid="stMain"] [data-testid="stTextArea"] [data-testid="stTextAreaRootElement"] {
     min-height: 88px !important;
     padding: 0 !important;
@@ -9595,7 +9591,7 @@ st.markdown("""
     padding: 0.55rem 0.85rem !important;
     line-height: 1.5 !important;
 }
-/* Date/time/select inner combobox — match input height + clear grey fill. */
+/* Date/time/select inner combobox, match input height + clear grey fill. */
 [data-testid="stMain"] [data-testid="stDateInput"] input,
 [data-testid="stMain"] [data-testid="stTimeInput"] input {
     padding: 0 0.85rem !important;
@@ -9610,7 +9606,7 @@ st.markdown("""
     font-weight: 500 !important;
     background: transparent !important;
 }
-/* File uploader drop-zone — clean indigo dashed border, white shell. */
+/* File uploader drop-zone, clean indigo dashed border, white shell. */
 [data-testid="stMain"] [data-testid="stFileUploaderDropzone"] {
     background: #ffffff !important;
     border: 1px dashed #cdd6e8 !important;
@@ -9629,7 +9625,7 @@ st.markdown("""
 }
 
 /* ──────────────────────────────────────────────────────────────
-   Composer override — applies to BOTH the home composer and the
+   Composer override, applies to BOTH the home composer and the
    in-chat composer.  The unified input theme above paints a 1px
    border on every textarea root which produced a faint grey shade
    around the chat box.  Composers already sit inside their own
@@ -9670,7 +9666,7 @@ st.markdown("""
     box-shadow: none !important;
     outline: none !important;
 }
-/* Upload + Voice + Clear — plain ghost pills, no grey outline.
+/* Upload + Voice + Clear, plain ghost pills, no grey outline.
    Applies to both home composer and in-chat composer buttons. */
 .st-key-home_upload_btn [data-testid="stFormSubmitButton"] > button,
 .st-key-home_voice_btn  [data-testid="stFormSubmitButton"] > button,
@@ -9701,7 +9697,7 @@ st.markdown("""
    the script with the new `mode`, but React's reconciler keeps DOM
    from the previous page visible briefly. For native Streamlit
    widgets (st.form, st.text_input, st.selectbox) this shows up as
-   faded form fields appearing at the bottom of the new page — e.g.
+   faded form fields appearing at the bottom of the new page, e.g.
    the Medications page's Allergies / Family-history / Surgical
    forms briefly visible under the AI Insights page.
 
@@ -9722,8 +9718,8 @@ st.markdown("""
 }
 
 /* Medications page forms (Add Medication, Allergy, Family History,
-   Surgical History) — only show on Medications page itself.
-   NOTE: Streamlit form keys are short — `add_fh_form` not
+   Surgical History), only show on Medications page itself.
+   NOTE: Streamlit form keys are short, `add_fh_form` not
    `add_family_history_form`, `add_surg_form` not `add_surgical_form`.
    Earlier rule had the wrong selectors, so leakage continued. */
 body:not(:has(.md-page-hero-meds)) [class*="st-key-add_med_form"],
@@ -9733,24 +9729,23 @@ body:not(:has(.md-page-hero-meds)) [class*="st-key-add_surg_form"] {
     display: none !important;
 }
 
-/* Health Records upload form — only on Records page */
+/* Health Records upload form, only on Records page */
 body:not(:has(.md-page-hero-records)) [class*="st-key-rec_upload_form"] {
     display: none !important;
 }
 
-/* Appointments page form — only on Appointments page */
+/* Appointments page form, only on Appointments page */
 body:not(:has(.md-page-hero-appts)) [class*="st-key-add_appt_form"],
 body:not(:has(.md-page-hero-appts)) [class*="st-key-cal_url_form"] {
     display: none !important;
 }
 
-/* Prescription Reader upload form — only on Rx reader page */
+/* Prescription Reader upload form, only on Rx reader page */
 body:not(:has(.md-page-hero-rx)) [class*="st-key-rx_reader_form"] {
     display: none !important;
 }
 
-/* Health Overview quick-log forms (water/sleep/steps/heart rate) —
-   only on Overview page. These were leaking onto AI Insights and
+/* Health Overview quick-log forms (water/sleep/steps/heart rate), only on Overview page. These were leaking onto AI Insights and
    Home before. */
 body:not(:has(.md-page-hero-overview)) [class*="st-key-hr_form_today"],
 body:not(:has(.md-page-hero-overview)) [class*="st-key-sleep_form_today"],
@@ -9758,7 +9753,7 @@ body:not(:has(.md-page-hero-overview)) [class*="st-key-steps_form_today"] {
     display: none !important;
 }
 
-/* Auth forms (sign in / sign up) — only on the gated auth screen.
+/* Auth forms (sign in / sign up), only on the gated auth screen.
    These shouldn't leak onto regular pages, but if Streamlit's DOM
    reconciler keeps them around after sign-in, this hides them. */
 body:has(.md-page-hero) [class*="st-key-signin_form"],
@@ -9783,7 +9778,7 @@ body:has(.md-page-hero) [class*="st-key-signup_form"] {
 /* ══════════════════════════════════════════════════════════════════
    MOBILE / PHONE LAYOUT (≤ 768px)
    ──────────────────────────────────────────────────────────────────
-   Pure additive @media block — desktop view (≥ 769px) is untouched.
+   Pure additive @media block, desktop view (≥ 769px) is untouched.
    Fixes:
      - Sidebar was opening as a fixed-width drawer that swallowed the
        whole viewport, leaving the main content area off-screen
@@ -9804,7 +9799,7 @@ body:has(.md-page-hero) [class*="st-key-signup_form"] {
         z-index: 999 !important;
         box-shadow: 0 8px 30px rgba(15, 23, 42, 0.18) !important;
     }
-    /* Main content fills the viewport — sidebar floats over it on open */
+    /* Main content fills the viewport, sidebar floats over it on open */
     [data-testid="stAppViewContainer"] > section.stMain {
         width: 100vw !important;
         min-width: 0 !important;
@@ -9857,7 +9852,7 @@ body:has(.md-page-hero) [class*="st-key-signup_form"] {
         height: 60px !important;
         font-size: 0.95rem !important;
     }
-    /* Upload / Voice / Clear ghost pills — shrink + wrap so they don't
+    /* Upload / Voice / Clear ghost pills, shrink + wrap so they don't
        push the send button off-screen on narrow viewports. */
     .st-key-home_upload_btn .stButton > button,
     .st-key-home_voice_btn  .stButton > button,
@@ -9920,7 +9915,7 @@ body:has(.md-page-hero) [class*="st-key-signup_form"] {
     }
 }
 
-/* Extra-tight phones (≤ 420px) — iPhone SE / older Androids */
+/* Extra-tight phones (≤ 420px), iPhone SE / older Androids */
 @media (max-width: 420px) {
     [data-testid="stMainBlockContainer"] { padding: 0.5rem 0.6rem 1rem !important; }
     .md-page-hero-title, .md-hero-title { font-size: 1.1rem !important; }
@@ -10513,7 +10508,7 @@ st.markdown("""
         height: 136px !important;
         border-radius: 16px !important;
     }
-    /* Tip carousel in compact mode — text now spans the full tile width.
+    /* Tip carousel in compact mode, text now spans the full tile width.
        The illustration is absolute-positioned in the top-right corner as
        a soft decorative accent; not part of any grid track. */
     .md-tip-slide {
@@ -10574,7 +10569,7 @@ st.markdown("""
        layout to save vertical space. The selector is buggy: :nth-of-type
        counts among ALL <div> siblings, and the passport's first three
        siblings (.md-passport-head, .md-passport-sub, .md-passport-progress)
-       are already divs — so the first check row was the 4th div-of-type,
+       are already divs, so the first check row was the 4th div-of-type,
        and the rule hid every single check row instead of just rows 4-6.
        Removed; the passport shows all 6 rows consistently across viewports. */
     .st-key-home_passport_records .stButton > button,
@@ -10622,7 +10617,7 @@ st.markdown("""
     line-height: 1.14 !important;
 }
 
-/* Quick action tiles — vertical-stack layout (May 2026).
+/* Quick action tiles, vertical-stack layout (May 2026).
    Earlier horizontal layout left only ~58px for the label inside a 129px
    tile, clipping "Check symptoms" mid-word. Switching to column flex puts
    the icon centered on top + label centered below, so the full text fits
@@ -10641,7 +10636,7 @@ st.markdown("""
     text-align: center !important;
 }
 /* Move the colored tile from the inner glyph to the OUTER icon wrapper.
-   The outer span is what flex centers — sizing it to 34x34 keeps the icon
+   The outer span is what flex centers, sizing it to 34x34 keeps the icon
    visually centered above the text. The inner glyph becomes just the
    colored letter, no background, no width. */
 [data-testid="stMain"] .st-key-qa_headache .stButton > button > span:first-child,
@@ -10725,7 +10720,7 @@ st.markdown("""
     font-size: 0.84rem !important;
     font-weight: 660 !important;
 }
-/* Inner span between button and stIconMaterial — collapse padding so the
+/* Inner span between button and stIconMaterial, collapse padding so the
    gap rule on the button is the only inter-element spacing. */
 [data-testid="stMain"] .st-key-qa_headache .stButton > button > span:first-child,
 [data-testid="stMain"] .st-key-qa_tired .stButton > button > span:first-child,
@@ -10792,10 +10787,10 @@ st.markdown("""
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-   FINAL NUKE — Past-chats sidebar list (chat history).
+   FINAL NUKE, Past-chats sidebar list (chat history).
    Always-applied (no media query), maximum specificity. Streamlit renders
    each chat title button TWICE (one wrapped in stTooltipHoverTarget, one
-   inline) — we target ALL of them by widget-key wildcard, so it doesn't
+   inline), we target ALL of them by widget-key wildcard, so it doesn't
    matter how Streamlit nests the actual <button>.
    ──────────────────────────────────────────────────────────────────────── */
 
@@ -10894,7 +10889,7 @@ st.markdown("""
     overflow: hidden !important;
 }
 
-/* Active chat row — indigo wash + bolder indigo text. */
+/* Active chat row, indigo wash + bolder indigo text. */
 [data-testid="stSidebar"] .md-past-active [class*="st-key-conv_open_"] button {
     background: linear-gradient(180deg, #eef0ff 0%, #e0e7ff 100%) !important;
     color: #3730a3 !important;
@@ -10988,15 +10983,15 @@ def transcribe_voice_note(audio_file):
     """Transcribe a browser-recorded or uploaded audio note.
 
     Backend order:
-      1. Groq Whisper (`whisper-large-v3-turbo`) — when configured.
-      2. OpenAI Whisper (`whisper-1`) — fallback when Groq isn't configured.
+      1. Groq Whisper (`whisper-large-v3-turbo`), when configured.
+      2. OpenAI Whisper (`whisper-1`), fallback when Groq isn't configured.
 
     Writes the audio to a real temporary file on disk (rather than passing a
-    BytesIO buffer) — both SDKs are more reliable with a genuine file handle
+    BytesIO buffer), both SDKs are more reliable with a genuine file handle
     that has a real path and extension.
 
     Logs to stderr (via sys.stderr.write) so output is captured by Streamlit's
-    log pipeline reliably — print() statements were being swallowed.
+    log pipeline reliably, print() statements were being swallowed.
     """
     import sys as _sys
     import tempfile as _tempfile
@@ -11075,10 +11070,10 @@ def transcribe_voice_note(audio_file):
         ext = _ext_map.get(mime_type.lower(), ".wav")
     _log("chosen extension =", ext)
 
-    _log("backends — GROQ_ACTIVE =", GROQ_ACTIVE, " OPENAI_ACTIVE =", OPENAI_ACTIVE)
+    _log("backends, GROQ_ACTIVE =", GROQ_ACTIVE, " OPENAI_ACTIVE =", OPENAI_ACTIVE)
 
     # Persist the audio to a real temp file. Both Groq and OpenAI SDKs accept
-    # a file handle opened in "rb" mode — this is the most reliable form.
+    # a file handle opened in "rb" mode, this is the most reliable form.
     tmp_path = None
     try:
         with _tempfile.NamedTemporaryFile(suffix=ext, delete=False) as _tf:
@@ -11086,7 +11081,7 @@ def transcribe_voice_note(audio_file):
             tmp_path = _tf.name
         _log("wrote temp file:", tmp_path)
 
-        # Tier 1 — Groq Whisper.
+        # Tier 1, Groq Whisper.
         if GROQ_ACTIVE and groq_client is not None:
             try:
                 _log("trying Groq Whisper...")
@@ -11105,7 +11100,7 @@ def transcribe_voice_note(audio_file):
                 _log("Groq voice transcription failed:", repr(e))
                 _tb.print_exc(file=_sys.stderr)
 
-        # Tier 2 — OpenAI Whisper.
+        # Tier 2, OpenAI Whisper.
         if OPENAI_ACTIVE and openai_client is not None:
             try:
                 _log("trying OpenAI Whisper (model =",
@@ -11584,7 +11579,7 @@ def read_prescription(image_bytes, user_note="", lang_instruction=""):
 def parse_prescription_reading(text):
     """Break the structured **SECTION** transcription into a dict the UI can
     render as a clean, aligned prescription card. Missing sections degrade
-    gracefully to empty strings — the renderer hides empty rows.
+    gracefully to empty strings, the renderer hides empty rows.
     """
     out = {
         "patient_name": "",
@@ -11625,7 +11620,7 @@ def parse_prescription_reading(text):
     # Clean "not specified" / "unclear" / "none" → empty so the row hides
     for k, v in list(out.items()):
         vl = (v or "").strip().lower()
-        if vl in {"not specified", "unclear", "none", "n/a", "na", "-", "—"}:
+        if vl in {"not specified", "unclear", "none", "n/a", "na", "-", ","}:
             out[k] = ""
     return out
 
@@ -11708,7 +11703,7 @@ def medichat_pdf_analysis(question, pdf_text, all_messages, lang_instruction="")
     profile_context = build_user_profile_context()
     if profile_context:
         system += (
-            "PATIENT'S SAVED MEDICHAT PROFILE (authoritative — reference when relevant "
+            "PATIENT'S SAVED MEDICHAT PROFILE (authoritative, reference when relevant "
             "to interpreting the report below):\n" + profile_context + "\n\n"
         )
     if memory_context:
@@ -11783,23 +11778,22 @@ def build_memory_context(memory):
 
 def build_user_profile_context():
     """Build a structured context block of the patient's explicitly-saved
-    profile data — medications, appointments, uploaded health records and
+    profile data, medications, appointments, uploaded health records and
     their summaries, plus today's vitals. This is the missing piece that
     lets the assistant give personalised answers grounded in what the user
     actually saved, rather than asking them to re-state everything.
 
     All four sources (medications, appointments, health records, daily
-    metrics) work for both authenticated AND guest users — the underlying
+    metrics) work for both authenticated AND guest users, the underlying
     list_* helpers transparently swap between Firebase (signed-in) and the
     in-session guest store.
 
-    Returns an empty string if the patient has not saved anything yet —
-    callers should check before injecting into a system prompt so we don't
+    Returns an empty string if the patient has not saved anything yet, callers should check before injecting into a system prompt so we don't
     waste tokens on a blank block.
     """
     parts = []
 
-    # MEDICATIONS — most frequently referenced. Sort newest first so the
+    # MEDICATIONS, most frequently referenced. Sort newest first so the
     # most recent additions appear at the top.
     try:
         meds = list_medications() or []
@@ -11808,7 +11802,7 @@ def build_user_profile_context():
     if meds:
         lines = [
             "MEDICATIONS ON FILE (this patient has explicitly saved these to "
-            "their MediChat profile — treat as authoritative):"
+            "their MediChat profile, treat as authoritative):"
         ]
         for m in meds[:25]:
             head = (m.get("name") or "(unnamed)").strip()
@@ -11825,11 +11819,11 @@ def build_user_profile_context():
                 line += " (" + spec + ")"
             notes = (m.get("notes") or "").strip()
             if notes:
-                line += " — Note: " + notes[:200]
+                line += ", Note: " + notes[:200]
             lines.append(line)
         parts.append("\n".join(lines))
 
-    # APPOINTMENTS — past + upcoming. Most useful for context like
+    # APPOINTMENTS, past + upcoming. Most useful for context like
     # "remember my follow-up next week" or "what did we plan to discuss".
     try:
         appts = list_appointments() or []
@@ -11853,16 +11847,16 @@ def build_user_profile_context():
                 tail_bits.append("Dr " + str(a["doctor"]).strip())
             if a.get("location"):
                 tail_bits.append("at " + str(a["location"]).strip())
-            line = "  - " + " — ".join([b for b in head_bits if b])
+            line = "  - " + ", ".join([b for b in head_bits if b])
             if tail_bits:
                 line += " (" + ", ".join(tail_bits) + ")"
             notes = (a.get("notes") or "").strip()
             if notes:
-                line += " — Note: " + notes[:200]
+                line += ", Note: " + notes[:200]
             lines.append(line)
         parts.append("\n".join(lines))
 
-    # HEALTH RECORDS — uploaded reports/scans. The `summary` field captures
+    # HEALTH RECORDS, uploaded reports/scans. The `summary` field captures
     # extracted text from PDFs and Vision-AI summaries from images, so the
     # assistant CAN actually reason about previously-uploaded content even
     # when those files aren't in the current chat.
@@ -11876,7 +11870,7 @@ def build_user_profile_context():
         except Exception:
             records_sorted = records
         # Prescription records are only safe to use if the name on the
-        # script matches the profile owner — otherwise the assistant might
+        # script matches the profile owner, otherwise the assistant might
         # discuss someone else's medications as if they were the user's.
         _profile_name = ""
         try:
@@ -11898,7 +11892,7 @@ def build_user_profile_context():
         records_sorted = [r for r in records_sorted if _rx_name_matches(r)]
         lines = [
             "UPLOADED HEALTH RECORDS (file metadata + AI summary + actual "
-            "extracted text — use the 'Key values' field to compare numeric "
+            "extracted text, use the 'Key values' field to compare numeric "
             "results across multiple uploads of the same kind):"
         ]
         for r in records_sorted[:8]:
@@ -11923,7 +11917,7 @@ def build_user_profile_context():
                 lines.append("    Key values / extracted text: " + raw_clean[:900])
         parts.append("\n".join(lines))
 
-    # TODAY'S VITALS — heart rate, sleep, steps, water, mood.
+    # TODAY'S VITALS, heart rate, sleep, steps, water, mood.
     try:
         dm = get_daily_metrics() or {}
     except Exception:
@@ -11946,14 +11940,14 @@ def build_user_profile_context():
             "MediChat Health Overview):\n" + "\n".join(vital_lines)
         )
 
-    # ALLERGIES — clinically critical, surface prominently.
+    # ALLERGIES, clinically critical, surface prominently.
     try:
         allergies = list_allergies() or []
     except Exception:
         allergies = []
     if allergies:
         lines = [
-            "KNOWN ALLERGIES (clinically critical — ALWAYS check any drug or "
+            "KNOWN ALLERGIES (clinically critical, ALWAYS check any drug or "
             "treatment suggestion against this list before recommending):"
         ]
         for a in allergies[:25]:
@@ -11969,18 +11963,18 @@ def build_user_profile_context():
             if details:
                 line += " (" + "; ".join(details) + ")"
             if a.get("notes"):
-                line += " — " + a["notes"][:120]
+                line += ", " + a["notes"][:120]
             lines.append(line)
         parts.append("\n".join(lines))
 
-    # FAMILY HISTORY — affects risk modeling for genetic/familial conditions.
+    # FAMILY HISTORY, affects risk modeling for genetic/familial conditions.
     try:
         fh = list_family_history() or []
     except Exception:
         fh = []
     if fh:
         lines = [
-            "FAMILY MEDICAL HISTORY (genetic / risk context — use when "
+            "FAMILY MEDICAL HISTORY (genetic / risk context, use when "
             "assessing the patient's likelihood of related conditions):"
         ]
         for f in fh[:20]:
@@ -11990,13 +11984,13 @@ def build_user_profile_context():
             if rel:
                 line += " (" + rel + ")"
             if f.get("age_at_diagnosis"):
-                line += " — diagnosed at " + str(f["age_at_diagnosis"])
+                line += ", diagnosed at " + str(f["age_at_diagnosis"])
             if f.get("notes"):
                 line += "; " + f["notes"][:120]
             lines.append(line)
         parts.append("\n".join(lines))
 
-    # SURGICAL HISTORY — affects anatomy / drug clearance / future risk.
+    # SURGICAL HISTORY, affects anatomy / drug clearance / future risk.
     try:
         surg = list_surgical_history() or []
     except Exception:
@@ -12007,7 +12001,7 @@ def build_user_profile_context():
         except Exception:
             surg_sorted = surg
         lines = [
-            "SURGICAL HISTORY (past procedures — relevant for anatomy, "
+            "SURGICAL HISTORY (past procedures, relevant for anatomy, "
             "post-op risks, and drug-clearance assumptions):"
         ]
         for s in surg_sorted[:15]:
@@ -12020,7 +12014,7 @@ def build_user_profile_context():
             if hosp:
                 line += " at " + hosp
             if s.get("notes"):
-                line += " — " + s["notes"][:120]
+                line += ", " + s["notes"][:120]
             lines.append(line)
         parts.append("\n".join(lines))
 
@@ -12068,7 +12062,7 @@ def build_symptom_timeline(current_messages, current_conversation_id=""):
             if kw in low:
                 occurrences.setdefault(kw, []).append(date_str or "unknown date")
 
-    # Current chat — user messages only.
+    # Current chat, user messages only.
     if current_messages:
         try:
             today = datetime.now().strftime("%Y-%m-%d")
@@ -12078,7 +12072,7 @@ def build_symptom_timeline(current_messages, current_conversation_id=""):
         except Exception:
             pass
 
-    # Past conversations — authenticated users only.
+    # Past conversations, authenticated users only.
     if st.session_state.get("is_authenticated") and st.session_state.get("user_email_hash"):
         try:
             convs = list_conversations(st.session_state.user_email_hash, limit=20) or []
@@ -12091,7 +12085,7 @@ def build_symptom_timeline(current_messages, current_conversation_id=""):
                     continue  # already scanned via current_messages
                 date_str = (c.get("updated_at") or c.get("created_at") or "")[:10] or "earlier chat"
                 # Use the cheaper summary fields rather than loading the
-                # full conversation — keeps profile-context build fast.
+                # full conversation, keeps profile-context build fast.
                 snippet = " ".join([
                     str(c.get("first_user_msg") or ""),
                     str(c.get("title") or ""),
@@ -12106,7 +12100,7 @@ def build_symptom_timeline(current_messages, current_conversation_id=""):
 
     lines = [
         "SYMPTOM TIMELINE (mentions of symptoms across this patient's past "
-        "and current chats — useful for spotting recurrence or patterns):"
+        "and current chats, useful for spotting recurrence or patterns):"
     ]
     # Sort by frequency descending so the most-reported issues appear first.
     for kw, dates in sorted(occurrences.items(), key=lambda kv: -len(kv[1])):
@@ -12114,7 +12108,7 @@ def build_symptom_timeline(current_messages, current_conversation_id=""):
         date_str = ", ".join(unique_dates[:5])
         if len(unique_dates) > 5:
             date_str += ", …"
-        lines.append("  - " + kw + " — mentioned " + str(len(dates)) + "× (" + date_str + ")")
+        lines.append("  - " + kw + ", mentioned " + str(len(dates)) + "× (" + date_str + ")")
     return "\n".join(lines)
 
 EMERGENCY_KEYWORDS = [
@@ -12402,7 +12396,7 @@ def calculate_confidence(distances):
 
     The previous formula (1.8-floor curve) bottomed out at 5% for any normal
     conversational query against a PubMed-style corpus where distances
-    typically run 1.4-2.2 — making the UI look pessimistic on perfectly
+    typically run 1.4-2.2, making the UI look pessimistic on perfectly
     reasonable questions. This curve is more generous: a typical query
     (avg_dist ~1.5) now lands around 50% rather than 5%.
 
@@ -12521,7 +12515,7 @@ def markdown_to_html(text):
         "margin-bottom:0.5rem;font-size:0.97em;'>"
         "🩺 MediChat Verify "
         "<span style='font-weight:400;font-style:italic;color:#64748b;font-size:0.92em;'>"
-        "— second medical AI perspective</span>"
+        ", second medical AI perspective</span>"
         "</div>"
         "<div class='md-verify-body' style='"
         "color:#475569;font-style:italic;line-height:1.55;'>"
@@ -12586,8 +12580,7 @@ def strip_excessive_disclaimers(text):
     # to the body, which broke the swap and rendered the block as
     # invisible inline text.
     if verify_block:
-        # Normalise internal separators of the recovered block too —
-        # whatever single \n the dispatcher emitted gets bumped to \n\n.
+        # Normalise internal separators of the recovered block too, # whatever single \n the dispatcher emitted gets bumped to \n\n.
         verify_block = verify_block.replace(
             "[[VERIFY_START]]\n", "[[VERIFY_START]]\n\n"
         ).replace(
@@ -12623,8 +12616,7 @@ def dual_model_review(question, primary_answer, history=None, primary_engine="op
     """Always-visible second opinion from a different model than the
     primary. Returns the reviewer's brief perspective (1-3 sentences) as
     a plain string. Returns empty string only when disabled, no other
-    backend is available, primary is empty, or the API call fails —
-    caller appends the result verbatim when truthy.
+    backend is available, primary is empty, or the API call fails, caller appends the result verbatim when truthy.
 
     Reviewer selection:
       • primary_engine = "openai"  → Claude reviews
@@ -12632,7 +12624,7 @@ def dual_model_review(question, primary_answer, history=None, primary_engine="op
       • primary_engine = "groq"    → Claude > OpenAI (whichever is up)
 
     This means MediChat Verify works no matter which backend served the
-    primary answer — previously it only fired when OpenAI was primary,
+    primary answer, previously it only fired when OpenAI was primary,
     which left a silent gap whenever OpenAI failed and Claude streamed
     instead.
 
@@ -12660,11 +12652,11 @@ def dual_model_review(question, primary_answer, history=None, primary_engine="op
         if CLAUDE_ACTIVE and anthropic_client is not None: reviewer = "claude"
         elif OPENAI_ACTIVE and openai_client is not None:  reviewer = "openai"
     if not reviewer:
-        # Use logging.warning instead of print() — Streamlit Cloud
+        # Use logging.warning instead of print(), Streamlit Cloud
         # captures warnings but suppresses stdout. Same goes for all the
         # other diagnostics in this function.
         import logging as _lg
-        _lg.warning("[dual_model_review] no reviewer available — primary=" + str(primary_engine) +
+        _lg.warning("[dual_model_review] no reviewer available, primary=" + str(primary_engine) +
                     " claude=" + str(CLAUDE_ACTIVE) + " openai=" + str(OPENAI_ACTIVE) +
                     " groq=" + str(GROQ_ACTIVE))
         st.session_state._verify_debug = "no reviewer available (primary=" + str(primary_engine) + ", claude=" + str(CLAUDE_ACTIVE) + ", openai=" + str(OPENAI_ACTIVE) + ", groq=" + str(GROQ_ACTIVE) + ")"
@@ -12716,8 +12708,8 @@ def dual_model_review(question, primary_answer, history=None, primary_engine="op
             "Hard rules:\n"
             "- Do NOT rephrase or repeat what the primary answer covered.\n"
             "- Do NOT speculate or invent facts.\n"
-            "- Do NOT say things like 'I can't review without knowing the question' — use the prior conversation above to understand context.\n"
-            "- Do NOT include phrases like 'The primary answer is correct' or 'I agree' — go straight to the value.\n"
+            "- Do NOT say things like 'I can't review without knowing the question', use the prior conversation above to understand context.\n"
+            "- Do NOT include phrases like 'The primary answer is correct' or 'I agree', go straight to the value.\n"
             "- Write directly to the patient (use 'you' / 'your').\n"
             "- No preamble. Start with the substance.\n\n"
             "Your second-opinion note (1-3 sentences):"
@@ -12782,10 +12774,10 @@ def dual_model_review(question, primary_answer, history=None, primary_engine="op
 
 
 # ════════════════════════════════════════════════════════════════════
-# Adaptive Memory Layer — MediChat's "self-learning" per-user system.
+# Adaptive Memory Layer, MediChat's "self-learning" per-user system.
 #
 # This is an HONEST self-learning implementation: we never re-train the
-# underlying LLMs (Claude/OpenAI/Groq) — those weights are frozen and
+# underlying LLMs (Claude/OpenAI/Groq), those weights are frozen and
 # fine-tuning them on raw medical conversations would be unsafe + breach
 # patient privacy across users. What we DO is build a private,
 # per-patient adaptive layer that:
@@ -12799,7 +12791,7 @@ def dual_model_review(question, primary_answer, history=None, primary_engine="op
 #   3. Learns the user's preferred answer style from thumbs-up/down
 #      feedback and message-length patterns.
 #   4. Surfaces cross-time correlations between metrics (sleep, HR,
-#      steps) and symptom mentions — patterns the user might miss.
+#      steps) and symptom mentions, patterns the user might miss.
 #
 # All four layers feed back into the system prompt of the next chat
 # turn, so MediChat genuinely *adapts* over time without ever touching
@@ -12839,7 +12831,7 @@ def update_style_preferences(patch):
 def adapt_style_from_message(user_msg, feedback=None):
     """Incremental style learning. Called after every user message.
 
-    Heuristics (cheap, deterministic — no LLM call needed):
+    Heuristics (cheap, deterministic, no LLM call needed):
       • Short user messages (< 12 words) → user prefers concise answers.
       • Long detailed user messages → user wants depth, mirror their level.
       • Frequent thumbs-up on long answers → prefers detailed.
@@ -12856,14 +12848,14 @@ def adapt_style_from_message(user_msg, feedback=None):
     new_avg = (prefs.get("avg_user_msg_len", 0.0) * min(n, 20) + wlen) / (min(n, 20) + 1)
     prefs["avg_user_msg_len"] = round(new_avg, 1)
     prefs["msg_count_sampled"] = min(n + 1, 100)
-    # Depth — based on rolling average length.
+    # Depth, based on rolling average length.
     if prefs["avg_user_msg_len"] < 8:
         prefs["depth"] = "concise"
     elif prefs["avg_user_msg_len"] > 35:
         prefs["depth"] = "detailed"
     else:
         prefs["depth"] = "balanced"
-    # Technical level — jargon detector.
+    # Technical level, jargon detector.
     jargon = ["hba1c", "bp", "gfr", "ldl", "hdl", "tsh", "egfr", "wbc", "rbc", "mri", "ct scan",
               "ecg", "ekg", "echo", "ssri", "snri", "beta blocker", "ace inhibitor", "statin",
               "metformin", "warfarin", "anticoagulant", "thyroid"]
@@ -12894,23 +12886,23 @@ def build_style_directive():
     t = prefs.get("technical_level", "plain")
     tone = prefs.get("tone", "warm")
     depth_phrase = {
-        "concise":   "Keep answers tight — 3–5 sentences max unless the user asks for detail.",
+        "concise":   "Keep answers tight, 3,5 sentences max unless the user asks for detail.",
         "balanced":  "Match the user's typical message length; explain key things but don't pad.",
-        "detailed":  "The user welcomes depth — feel free to go into mechanism + practical detail.",
+        "detailed":  "The user welcomes depth, feel free to go into mechanism + practical detail.",
     }.get(d, "Match the user's typical message length.")
     tech_phrase = {
         "plain":     "Use plain English, define any clinical term you introduce.",
         "mixed":     "Use clinical terms where useful but always with a short plain-English gloss.",
-        "technical": "The user is comfortable with clinical terminology — you can use it freely.",
+        "technical": "The user is comfortable with clinical terminology, you can use it freely.",
     }.get(t, "Use plain English.")
-    return "Adaptive style — Depth: " + d + "; Tone: " + tone + "; Technical: " + t + ". " + depth_phrase + " " + tech_phrase
+    return "Adaptive style, Depth: " + d + "; Tone: " + tone + "; Technical: " + t + ". " + depth_phrase + " " + tech_phrase
 
 # ── 1. Auto-extract facts from chat ─────────────────────────────────
 _FACT_EXTRACT_SYSTEM = (
     "You are a careful clinical NLP extractor. Read the user's chat message and return ONLY a strict JSON "
     "object with these keys (each is a list of short strings; empty list if none): "
     "allergies, medications, conditions, symptoms. Plus appointment (object with title, date_iso, doctor, "
-    "location — or null). Plus confidence (high|medium|low). Rules:\n"
+    "location, or null). Plus confidence (high|medium|low). Rules:\n"
     "- Only extract facts the USER says about THEMSELVES (first person).\n"
     "- Skip negations (e.g. 'I'm NOT allergic to peanuts' → don't extract).\n"
     "- Skip past-only mentions ('I used to take X' → skip).\n"
@@ -12927,7 +12919,7 @@ def adaptive_extract_facts(user_msg, recent_assistant_msg=""):
     """Run a lightweight LLM extraction over the user's latest message.
 
     Returns a dict with keys allergies/medications/conditions/symptoms/
-    appointment/confidence — or None if extraction failed or the message
+    appointment/confidence, or None if extraction failed or the message
     is clearly chit-chat.
     """
     if not user_msg or len(user_msg.strip()) < 8:
@@ -13155,7 +13147,7 @@ def retrieve_relevant_past_chats(query, k=3):
         top_idx = scores.argsort()[::-1][:max(1, int(k))]
         out = []
         for i in top_idx:
-            if scores[i] < 0.35:  # too dissimilar — skip
+            if scores[i] < 0.35:  # too dissimilar, skip
                 continue
             out.append({"text": pairs[i][0], "meta": pairs[i][1], "score": float(scores[i])})
         return out
@@ -13168,7 +13160,7 @@ def build_past_chat_retrieval_context(query, k=3):
     hits = retrieve_relevant_past_chats(query, k=k)
     if not hits:
         return ""
-    lines = ["RELEVANT PRIOR CONVERSATIONS (this patient's own past Q&A — use only if directly relevant):"]
+    lines = ["RELEVANT PRIOR CONVERSATIONS (this patient's own past Q&A, use only if directly relevant):"]
     for h in hits:
         ts = (h.get("meta", {}).get("ts") or "")[:10]
         title = h.get("meta", {}).get("title") or ""
@@ -13227,11 +13219,11 @@ def detect_personal_patterns():
                 if prev in step_map and step_map[prev] < 3500:
                     triggers += 1
             if triggers >= 2:
-                out.append("Low-mood days often follow days under 3,500 steps — light movement looks protective for you.")
+                out.append("Low-mood days often follow days under 3,500 steps, light movement looks protective for you.")
     # Pattern C: hydration consistency
     waters = [int(m.get("water_glasses") or 0) for _, m in hist]
     if waters and (sum(1 for w in waters if w < 3) >= 4):
-        out.append("Hydration has been under 3 glasses on 4+ of the last 7 days — this often shows up later as headaches or fatigue.")
+        out.append("Hydration has been under 3 glasses on 4+ of the last 7 days, this often shows up later as headaches or fatigue.")
     return out
 
 def medichat_rag_stream(question, all_messages, lang_instruction="", patient_name="", pdf_context="", image_context="", past_chats_summary=""):
@@ -13266,38 +13258,38 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
     tone_complaint = any(w in last_user_message for w in ["rude", "cold", "robotic", "unfriendly"])
 
     system = (
-        "You are MediChat — a warm, thoughtful AI health companion. "
+        "You are MediChat, a warm, thoughtful AI health companion. "
         "You care about the person in front of you. You speak like a caring GP who happens to also be a good friend: "
         "kind, genuinely interested, never robotic, never preachy.\n\n"
 
         "HARD RULES (NEVER BREAK THESE)\n\n"
 
-        "RULE 1 — YOU ARE THIS PATIENT'S PERSONAL VIRTUAL GP:\n"
+        "RULE 1, YOU ARE THIS PATIENT'S PERSONAL VIRTUAL GP:\n"
         "You have READ-ACCESS to their MediChat chart. Three blocks below describe THIS "
         "specific patient and are AUTHORITATIVE:\n"
-        "  • <patient_profile> — data the patient explicitly SAVED to their MediChat profile "
+        "  • <patient_profile>, data the patient explicitly SAVED to their MediChat profile "
         "(medications, appointments, uploaded health records with extracted summaries, today's "
-        "vitals). These records ARE PRE-LOADED into your context every turn — you do not need "
+        "vitals). These records ARE PRE-LOADED into your context every turn, you do not need "
         "to ask the patient to re-share them. Reference specific entries by name when relevant. "
         "If asked 'what meds do I take' you MUST list the medications from <patient_profile> "
         "rather than asking them. If asked 'have you looked at my blood report' and a relevant "
         "record summary is in <patient_profile>, you MUST refer to it directly (e.g. 'Yes, "
         "looking at your blood report from 2026-05-15, your HbA1c was…').\n"
-        "  • <patient_history> — symptoms / conditions / medications extracted from this and "
+        "  • <patient_history>, symptoms / conditions / medications extracted from this and "
         "previous conversations with you.\n"
         "  • The conversation turns themselves.\n"
         "The <reference_knowledge> block is generic medical information and does NOT describe "
         "this patient.\n\n"
-        "FORBIDDEN PHRASES — never use these when <patient_profile> contains the answer:\n"
+        "FORBIDDEN PHRASES, never use these when <patient_profile> contains the answer:\n"
         "  • 'I don't have access to your records'\n"
         "  • 'I can't check your records in real time'\n"
         "  • 'I won't be able to analyze them directly'\n"
         "  • 'You can share relevant details from those reports'\n"
-        "  • 'If you save your reports I can reference them' (you ALREADY can — they're above)\n"
+        "  • 'If you save your reports I can reference them' (you ALREADY can, they're above)\n"
         "These phrases break trust. If the profile is empty for a topic, just say what you "
         "see ('your profile doesn't have any blood reports saved yet') and offer to look "
         "when they upload one.\n\n"
-        "CONVERSELY — you must NEVER fabricate. Do not say 'you mentioned', 'you said', "
+        "CONVERSELY, you must NEVER fabricate. Do not say 'you mentioned', 'you said', "
         "'you told me', or 'you're taking' unless the thing referenced appears LITERALLY in "
         "<patient_profile>, <patient_history>, or in the conversation turns.\n\n"
 
@@ -13309,47 +13301,47 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
         "the same kind (two blood tests, three scans, repeat lipid panels, etc.), "
         "you MUST compare them directly and cite both dates. Pull specific numbers "
         "from the 'Key values' field on each record. Example: 'Comparing your blood "
-        "report from 2026-02-15 to today's, your HbA1c dropped from 6.4% to 5.9% — "
+        "report from 2026-02-15 to today's, your HbA1c dropped from 6.4% to 5.9%, "
         "that is a meaningful improvement consistent with the Metformin you started "
-        "in March.' Be honest when a value got worse too — patients deserve the truth.\n"
+        "in March.' Be honest when a value got worse too, patients deserve the truth.\n"
         "This applies to ANY medical record: blood reports, urine tests, "
         "X-rays, MRIs, CTs, ultrasounds, ECGs, skin photos, allergy results, "
         "spirometry, vaccination records, discharge summaries, doctor letters. "
         "Identify pairs / series of the same type and walk the patient through "
         "what changed.\n\n"
 
-        "RULE 2 — RED FLAG SCREENING FIRST:\n"
+        "RULE 2, RED FLAG SCREENING FIRST:\n"
         "For these presentations, screen for danger signs BEFORE general advice:\n"
         "Sudden/severe headache, chest pain, sudden SOB, severe abdominal pain, neuro symptoms.\n"
         "If red flags present: advise emergency care clearly and without hedging.\n\n"
 
-        "RULE 3 — NO REPETITION:\n"
+        "RULE 3, NO REPETITION:\n"
         "Look at your own previous messages in this conversation. Never repeat the same advice twice. "
         "Each response must add something new.\n\n"
 
-        "RULE 4 — ONE DISCLAIMER MAX:\n"
+        "RULE 4, ONE DISCLAIMER MAX:\n"
         "The app already shows a disclaimer. Only add 'consult a doctor' phrasing when it's genuinely the most important thing to say. "
         "Do NOT end every response with a disclaimer.\n\n"
 
-        "RULE 5 — NO EM-DASHES OR EN-DASHES:\n"
+        "RULE 5, NO EM-DASHES OR EN-DASHES:\n"
         "Never use em-dashes (\u2014) or en-dashes (\u2013) in your responses. Use commas, semicolons, colons, periods.\n\n"
 
-        "RULE 6 — NO MARKDOWN HEADINGS:\n"
+        "RULE 6, NO MARKDOWN HEADINGS:\n"
         "Never use # ## ### markdown headings. If you need a section label, write it as a short bold line: **Section label:** then continue on a new line.\n\n"
 
-        "RULE 7 — NO REPEATED GREETINGS OR RESTATEMENTS:\n"
+        "RULE 7, NO REPEATED GREETINGS OR RESTATEMENTS:\n"
         "ONLY greet the patient in your VERY FIRST message. On every subsequent turn, jump straight into your answer.\n"
         "NEVER start with 'Hi there', 'Hi [name]', 'Hello', or any greeting after the first turn.\n"
         "NEVER start responses with 'I can see you've uploaded...', 'Looking at your blood work...', 'Based on your report...', 'Thanks for sharing...'\n\n"
 
-        "RULE 8 — MATCH RESPONSE LENGTH TO QUESTION:\n"
+        "RULE 8, MATCH RESPONSE LENGTH TO QUESTION:\n"
         "Short casual questions get short conversational answers (1-3 sentences). "
         "Long detailed questions get structured answers with bold labels.\n\n"
 
-        "RULE 9 — REMEMBER THE CONVERSATION:\n"
+        "RULE 9, REMEMBER THE CONVERSATION:\n"
         "If the patient already shared something, DO NOT ask them to repeat it.\n\n"
 
-        "RULE 10 — CLINICAL GUARDRAILS:\n"
+        "RULE 10, CLINICAL GUARDRAILS:\n"
         "Do not give a final diagnosis. Do not prescribe medicine. Do not provide exact dosage calculations or dose changes. "
         "Use risk-aware language, safety-net advice, and escalation triggers.\n\n"
     )
@@ -13478,7 +13470,7 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
                 # and the chat bubble's CSS paragraph collapsing. Markers are
                 # plain ASCII strings that markdown leaves untouched, then
                 # markdown_to_html() swaps them for explicit styled <div>s
-                # AFTER the markdown pass — guaranteeing a visible separator,
+                # AFTER the markdown pass, guaranteeing a visible separator,
                 # bold heading on its own line, and an italic body block
                 # that's clearly distinct from the primary answer above.
                 # Double blank lines on every side so markdown wraps each
@@ -13528,7 +13520,7 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
                     if text:
                         full_response += text
                         yield ("chunk", text, full_response)
-            # Verify also fires when Claude is the primary — reviewer
+            # Verify also fires when Claude is the primary, reviewer
             # switches to OpenAI so it's still a different model giving
             # the second opinion.
             review_text = dual_model_review(question, full_response, history=history, primary_engine="claude")
@@ -13583,13 +13575,13 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
 def medichat_vision(question, b64, all_messages, lang_instruction=""):
     memory = extract_patient_memory(all_messages)
     memory_context = build_memory_context(memory)
-    # Saved profile data informs image analysis too — e.g. a patient on
+    # Saved profile data informs image analysis too, e.g. a patient on
     # Foracort has asthma, which changes how a chest X-ray reads.
     profile_context = build_user_profile_context()
     prompt = question.strip() if question.strip() else "Please analyse this medical image."
     memory_note = ("\n\nPatient context (from earlier conversations): " + memory_context) if memory_context else ""
     profile_note = (
-        "\n\nPATIENT'S SAVED MEDICHAT PROFILE (authoritative — reference when "
+        "\n\nPATIENT'S SAVED MEDICHAT PROFILE (authoritative, reference when "
         "relevant to interpreting the image):\n" + profile_context
     ) if profile_context else ""
     lang_note = ("\n\n" + lang_instruction) if lang_instruction else ""
@@ -14017,7 +14009,7 @@ def generate_full_medical_record_pdf(patient_name=""):
         pdf.ln(3)
 
         # FPDF2 doesn't reliably reset the x-cursor to the left margin
-        # after multi_cell() — calling another multi_cell can then crash
+        # after multi_cell(), calling another multi_cell can then crash
         # with "Not enough horizontal space to render a single character"
         # because the available width has shrunk to zero. Wrapping each
         # multi_cell in this helper guarantees a clean left-margin start
@@ -14037,7 +14029,7 @@ def generate_full_medical_record_pdf(patient_name=""):
                     pdf.multi_cell(
                         170, line_h,
                         clean_text(text[:400]) +
-                        "  [truncated — content not renderable]"
+                        "  [truncated, content not renderable]"
                     )
                 except Exception:
                     # Give up on this block entirely, keep the PDF alive.
@@ -14286,7 +14278,7 @@ def generate_assessment_report(assessment_data, lang_instruction=""):
         "SUMMARY: [2-3 warm, clear sentences summarising the assessment]\n"
         "SAFETY: [one line with emergency fallback if symptoms worsen]\n"
     )
-    # Backend dispatch — mirrors medichat_rag_stream's order
+    # Backend dispatch, mirrors medichat_rag_stream's order
     # (OpenAI primary, Claude backup, Groq last resort) so the assessment
     # works regardless of which keys the user has configured. Previously
     # this function was Groq-only and crashed with AttributeError on any
@@ -14356,8 +14348,7 @@ def parse_report(report_text):
         elif line.startswith("SAFETY:"):
             parsed["safety"] = line.replace("SAFETY:", "").strip()
     # Sensible defaults so the result UI never renders an empty page even
-    # if the LLM omitted a field. Conditions / next_steps can stay empty —
-    # the UI just hides those sections.
+    # if the LLM omitted a field. Conditions / next_steps can stay empty, # the UI just hides those sections.
     if not parsed["urgency"]:
         parsed["urgency"] = "See a doctor soon"
     if not parsed["summary"]:
@@ -14424,7 +14415,7 @@ if "session_started" not in st.session_state:
 # that immediately calls getSelection().removeAllRanges() whenever the
 # selection lands inside non-content UI chrome (labels, buttons, checkboxes,
 # headings, sidebar nav, page hero text). Content areas (chat bubbles, AI
-# summaries, report text) are NOT cleared — copy still works there.
+# summaries, report text) are NOT cleared, copy still works there.
 try:
     import streamlit.components.v1 as _selclr_components
     _selclr_components.html(
@@ -14549,7 +14540,7 @@ with st.sidebar:
             unsafe_allow_html=True
         )
     else:
-        # Fallback if the asset is missing — keep the Material Symbol mark + text.
+        # Fallback if the asset is missing, keep the Material Symbol mark + text.
         _logo_block = '<div class="md-logo-mark"><span class="material-symbols-rounded">medical_services</span></div>'
         st.markdown(
             '<div class="md-logo-wrap">'
@@ -14571,7 +14562,7 @@ with st.sidebar:
 
     @st.dialog("Members only", width="small")
     def _show_auth_required_dialog(feature_label):
-        # Scoped styling — uses the same blue→indigo→purple palette as the
+        # Scoped styling, uses the same blue→indigo→purple palette as the
         # welcome card so the dialog feels native to MediChat rather than
         # like a generic Streamlit modal.
         st.markdown(
@@ -14747,7 +14738,7 @@ with st.sidebar:
               </div>
               <div class="md-auth-dlg-perk">
                 <span class="material-symbols-rounded">devices</span>
-                <span><strong>Sync across devices</strong> — phone, tablet, and laptop.</span>
+                <span><strong>Sync across devices</strong>, phone, tablet, and laptop.</span>
               </div>
               <div class="md-auth-dlg-perk">
                 <span class="material-symbols-rounded">encrypted</span>
@@ -14801,7 +14792,7 @@ with st.sidebar:
     for nav_key, nav_label, target_mode, nav_icon in nav_items:
         # Home and New Chat both target chat mode; differentiate by message presence
         # so exactly one is active at a time. Both also gated on nav_clicked so that
-        # nothing is highlighted on a fresh load — the active state appears only
+        # nothing is highlighted on a fresh load, the active state appears only
         # after the user explicitly navigates.
         if nav_key == "home":
             is_active = _nav_clicked and (_mode == "chat") and not st.session_state.messages
@@ -14823,7 +14814,7 @@ with st.sidebar:
                 _show_auth_required_dialog(nav_label)
             else:
                 # Clear stale URL params from the previous view (conv/etc.)
-                # but PRESERVE the session token `s` — otherwise nav clicks
+                # but PRESERVE the session token `s`, otherwise nav clicks
                 # destroy the persisted session and a refresh on the new
                 # page would log the user out.
                 _preserved_s = st.query_params.get("s") if "s" in st.query_params else None
@@ -14839,7 +14830,7 @@ with st.sidebar:
                 st.session_state.nav_clicked = True
                 if nav_key == "home" or nav_key == "new":
                     start_new_chat_session()
-                    # No ?mode= for home — absence of the param IS the
+                    # No ?mode= for home, absence of the param IS the
                     # home/chat default, so refresh just lands on home.
                 else:
                     st.session_state.mode = target_mode
@@ -14855,7 +14846,7 @@ with st.sidebar:
     # Divider sits between Appointments (last nav item) and the profile chip.
     st.markdown("---")
 
-    # ── Profile chip — sits where the Premium card used to. Live-updates with auth state. ──
+    # ── Profile chip, sits where the Premium card used to. Live-updates with auth state. ──
     if st.session_state.is_authenticated:
         _profile_em = st.session_state.user_email_display or ""
         _saved_name = (st.session_state.patient_name or "").strip()
@@ -14902,7 +14893,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.md-recent-card-inside) [dat
     gap: 0.25rem !important;
 }
 
-/* Sign out — compact left-aligned row directly under the profile chip
+/* Sign out, compact left-aligned row directly under the profile chip
    (matches the mockup). Logout icon on the left, button takes full
    container width. Removed the previous absolute-overlay positioning
    because Streamlit's nested layout wrappers were misaligning it. */
@@ -15360,7 +15351,7 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
 }
 /* "English" descender ('g') was being clipped. The VISIBLE selected
    value text isn't the value div's text node (that's font-size:0 to
-   hide it) — it's rendered via a `::before` pseudo with content:attr.
+   hide it), it's rendered via a `::before` pseudo with content:attr.
    That pseudo defaults to line-height: 12.8px (exactly cap height = no
    descender room). Override the pseudo's line-height + add a parent
    row that has enough vertical breathing space. */
@@ -15372,13 +15363,13 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     padding-bottom: 2px !important;
     overflow: visible !important;
 }
-/* Parent row of the value div has overflow:hidden — bump its line-height
+/* Parent row of the value div has overflow:hidden, bump its line-height
    too so the value-div box doesn't get clipped from above. */
 div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-testid="stElementContainer"] [data-testid="stSelectbox"] [data-baseweb="select"] [role="combobox"] {
     line-height: 1.5 !important;
 }
 
-/* Footer Section Styling — centered within the sidebar's visible content
+/* Footer Section Styling, centered within the sidebar's visible content
    area (not the parent stVerticalBlock, which extends 14px past the
    sidebar's right edge per the earlier stSidebarUserContent fix). Width
    capped to 220px + auto margins for true visual centering. */
@@ -15386,7 +15377,7 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     text-align: center !important;
     /* Match the language selector's exact width + position. The parent
        stVerticalBlock starts at the sidebar's left padding (x=14) and is
-       270px wide — using `auto` margins centers within that 270px box,
+       270px wide, using `auto` margins centers within that 270px box,
        which is shifted right of the actual sidebar center. Setting
        margin-left: 0 flushes the footer to the parent's left edge (= the
        sidebar's content-area left), and the 242px width matches the
@@ -15432,10 +15423,10 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     word-wrap: break-word !important;
 }
 
-/* ── Profile card v2 — redesigned (May 2026). ─────────────────────
+/* ── Profile card v2, redesigned (May 2026). ─────────────────────
    Layout: [44px gradient avatar] [name + email + status pill] [⏻ icon].
    Sign-out icon is a real <a> with href="?signout=1" so the existing
-   URL handler clears session state and reruns — works live.
+   URL handler clears session state and reruns, works live.
    New class names (md-side-pc-*) avoid conflicts with the duplicated
    legacy .md-side-profile rules scattered through the file. */
 [data-testid="stSidebar"] .md-side-pc {
@@ -15458,7 +15449,7 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     overflow: visible !important;
     transition: box-shadow 0.18s ease !important;
 }
-/* Authenticated state: 3 columns — body fills the middle, sign-out
+/* Authenticated state: 3 columns, body fills the middle, sign-out
    icon button anchors to the right edge. */
 [data-testid="stSidebar"] .md-side-pc:has(.md-side-pc-signout) {
     grid-template-columns: 44px 1fr 34px !important;
@@ -15534,7 +15525,7 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     width: fit-content !important;
     line-height: 1.3 !important;
     letter-spacing: 0.01em !important;
-    /* Status pill is inline-flex with width: fit-content — already
+    /* Status pill is inline-flex with width: fit-content, already
        centers via the body's align-items: center, no extra rule needed. */
 }
 [data-testid="stSidebar"] .md-side-pc-status-on {
@@ -15580,7 +15571,7 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     -webkit-text-fill-color: currentColor !important;
 }
 
-/* Defuse legacy .md-side-* visual rules on this card — the v2 layout uses
+/* Defuse legacy .md-side-* visual rules on this card, the v2 layout uses
    its own classes (md-side-pc-*), so the old avatar/text/status rules
    that ALSO target .md-side-profile would otherwise paint conflicting
    sizes onto our new children. The container class is kept on the v2
@@ -15607,7 +15598,7 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     color: #6366f1 !important;
     -webkit-text-fill-color: #6366f1 !important;
 }
-/* Help Center hero — teal/cyan to distinguish from privacy's indigo. */
+/* Help Center hero, teal/cyan to distinguish from privacy's indigo. */
 .md-page-hero-help .md-page-hero-ic {
     background: linear-gradient(135deg, rgba(14, 165, 233, 0.16) 0%, rgba(20, 184, 166, 0.14) 100%) !important;
 }
@@ -15617,7 +15608,7 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
 }
 
 
-/* At-a-glance summary — gradient card with checkmark list. */
+/* At-a-glance summary, gradient card with checkmark list. */
 .md-privacy-summary {
     background: linear-gradient(180deg, #f8fbff 0%, #f3f6ff 100%);
     border: 1px solid #d9e2f7;
@@ -15673,7 +15664,7 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     font-weight: 720;
 }
 
-/* Compliance badge row — horizontal flex of pill chips. */
+/* Compliance badge row, horizontal flex of pill chips. */
 .md-privacy-badges {
     display: flex;
     flex-wrap: wrap;
@@ -15702,7 +15693,7 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     font-size: 1rem !important;
 }
 
-/* Section card — icon header + body. */
+/* Section card, icon header + body. */
 .md-privacy-section {
     background: #ffffff;
     border: 1px solid #e6ecf6;
@@ -15817,7 +15808,7 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     font-style: italic;
 }
 
-/* Action button row — Export, Delete, Read full policy. */
+/* Action button row, Export, Delete, Read full policy. */
 .md-privacy-actions-anchor { display: none; }
 
 div.st-key-privacy_export_data .stButton > button {
@@ -15896,7 +15887,7 @@ div.st-key-privacy_delete_account button [data-testid="stIconMaterial"] {
     -webkit-text-fill-color: #ffffff !important;
 }
 
-/* Footer meta — last updated, jurisdiction. */
+/* Footer meta, last updated, jurisdiction. */
 .md-privacy-meta {
     margin-top: 1.2rem;
     padding: 1rem 1.2rem;
@@ -15945,14 +15936,14 @@ div.st-key-privacy_delete_account button [data-testid="stIconMaterial"] {
         )
 
     # Guest tile is a real <a> that routes to the auth screen via the existing
-    # ?force_auth=1 URL handler — this is the only way to upgrade from guest
+    # ?force_auth=1 URL handler, this is the only way to upgrade from guest
     # mode without forcing a manual browser refresh. Authenticated users get
     # the same tile as a plain <div> (their sign-out lives inline as a
     # separate <a> rendered above).
     #
     # IMPORTANT: this block uses `st.html` rather than `st.markdown`. The
     # markdown parser destroys block-level <div> children inside an <a>
-    # wrapper — it re-wraps each text node in its own <a>, exploding the
+    # wrapper, it re-wraps each text node in its own <a>, exploding the
     # layout. `st.html` bypasses the parser and renders the HTML verbatim.
     if st.session_state.is_authenticated:
         _tile_open = '<div class="md-side-pc md-side-profile md-side-profile-top">'
@@ -15986,12 +15977,11 @@ div.st-key-privacy_delete_account button [data-testid="stIconMaterial"] {
     if hasattr(st, "html"):
         st.html(_tile_html)
     else:
-        # Streamlit < 1.32 fallback — older versions don't have st.html,
+        # Streamlit < 1.32 fallback, older versions don't have st.html,
         # so we have to live with the markdown parser quirks.
         st.markdown(_tile_html, unsafe_allow_html=True)
 
-    # Keep the legacy hidden st.button as a fallback Python click target —
-    # it's now invisible (CSS hides it) but its handler still runs if any
+    # Keep the legacy hidden st.button as a fallback Python click target, # it's now invisible (CSS hides it) but its handler still runs if any
     # automated test or stale URL keeps triggering it. The visible affordance
     # is the inline anchor above (?signout=1).
     if st.session_state.is_authenticated:
@@ -16066,8 +16056,7 @@ div.st-key-privacy_delete_account button [data-testid="stIconMaterial"] {
         st.session_state.selected_language = st.session_state.lang_selector
         st.rerun()
 
-    # Footer: Privacy & Terms + copyright. (Help Center link removed —
-    # the dedicated Help Center card on the auth right rail is the
+    # Footer: Privacy & Terms + copyright. (Help Center link removed, # the dedicated Help Center card on the auth right rail is the
     # canonical entry point now, and the in-app help is reachable via
     # the help mode directly if needed.)
     st.markdown(
@@ -16430,7 +16419,7 @@ if _signout_from_url:
 # ?del_conv=<id> → delete a saved conversation. Powers the small × icon on
 # each Recent Chats row (a true HTML child of the row's anchor structure,
 # not a separate Streamlit widget). Uses the existing delete_conversation()
-# function — no data-logic change, just a new UI invocation path.
+# function, no data-logic change, just a new UI invocation path.
 _del_conv_from_url = str(_query_params.get("del_conv", "") or "").strip()
 if _del_conv_from_url and st.session_state.is_authenticated and st.session_state.user_email_hash:
     delete_conversation(st.session_state.user_email_hash, _del_conv_from_url)
@@ -16486,7 +16475,7 @@ _is_admin = st.session_state.admin_authenticated
 
 # ── Session restore from browser localStorage ────────────────────────
 # Streamlit's session_state lives in memory and is wiped whenever the
-# browser tab reloads — that's why refreshing logs you out. To keep
+# browser tab reloads, that's why refreshing logs you out. To keep
 # users signed in across refreshes, the sign-in handlers below persist
 # the user's email_hash + display + name to browser localStorage via
 # components.html. On every fresh render where the user isn't yet
@@ -16498,7 +16487,7 @@ _is_admin = st.session_state.admin_authenticated
 # Streamlit's components.html iframes are sandboxed without
 # `allow-top-navigation`, so the previous localStorage→navigate approach
 # was blocked by the browser. URLs, however, survive refreshes natively
-# — so we encode the session into ?s=<base64-json> and read it back at
+#, so we encode the session into ?s=<base64-json> and read it back at
 # the top of every script run. The URL persists across refreshes and
 # even across bookmarks of the live URL, which is exactly what we want.
 _session_param = str(_query_params.get("s", "") or "").strip()
@@ -16691,7 +16680,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         font-size: 1rem !important;
     }
 
-    /* Tabs — centered glass pill bar (Apple-style frosted rail). The rail
+    /* Tabs, centered glass pill bar (Apple-style frosted rail). The rail
        is a translucent white wash with a subtle backdrop blur so it picks
        up the page tone behind it; a hairline border + soft inner highlight
        sell the "glass" depth. The active tab fills with the brand indigo
@@ -16753,7 +16742,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
             linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 55%),
             linear-gradient(108deg, #4338ca 0%, #5b54e8 55%, #7466f3 100%) !important;
     }
-    /* Streamlit's underline indicator — superseded by the pill fill. */
+    /* Streamlit's underline indicator, superseded by the pill fill. */
     [data-baseweb="tab-highlight"] {
         display: none !important;
     }
@@ -16835,7 +16824,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         border: none !important;
         box-shadow: none !important;
     }
-    /* Icon column — transparent, but with a subtle hairline divider on its
+    /* Icon column, transparent, but with a subtle hairline divider on its
        right edge so the user can read at a glance where the click target
        (typing area) begins. */
     [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] > div:has([data-testid="stTextInputIcon"]),
@@ -16870,7 +16859,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         padding: 0 !important;
         font-size: 1.16rem !important;
     }
-    /* Show/hide password "eye" button on PIN field — strip baseweb's grey. */
+    /* Show/hide password "eye" button on PIN field, strip baseweb's grey. */
     [data-testid="stForm"]:has(.st-key-si_email) [data-testid="stTextInputRootElement"] button,
     [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] button {
         background: transparent !important;
@@ -16882,7 +16871,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
     [data-testid="stForm"]:has(.st-key-su_email) [data-testid="stTextInputRootElement"] button:hover {
         background: rgba(99, 102, 241, 0.08) !important;
     }
-    /* Primary submit button — premium glossy indigo gradient with a top
+    /* Primary submit button, premium glossy indigo gradient with a top
        highlight (inner 1px), a colored drop shadow, and an arrow that
        glides to the right on hover. The hover state lifts the button
        slightly and deepens the shadow for an alive, tactile feel. */
@@ -16979,7 +16968,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         font-size: 0.95rem;
         font-weight: 560;
     }
-    /* "Continue as Guest" — ghost button companion to the primary Sign in.
+    /* "Continue as Guest", ghost button companion to the primary Sign in.
        Indigo-tinted surface and border so it visually belongs to the same
        family without competing for the eye. Hover fills with a slightly
        deeper indigo wash and lifts subtly to match the primary's motion. */
@@ -17025,7 +17014,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         box-shadow: 0 2px 6px rgba(79, 70, 229, 0.1) !important;
     }
 
-    /* ── "Continue as Guest" — redesigned (May 2026). ──
+    /* ── "Continue as Guest", redesigned (May 2026). ──
        Two-tone CTA: indigo-violet gradient icon tile + slate-900 label.
        White surface, soft slate border that warms to indigo on hover with
        a subtle lift + colored glow. Targets both occurrences of the
@@ -17081,7 +17070,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         box-shadow: 0 2px 6px rgba(99, 102, 241, 0.12) !important;
     }
     /* Promote the BaseWeb outer span (the icon's flex wrapper) to a
-       proper 32×32 gradient tile — matches the profile card avatar
+       proper 32×32 gradient tile, matches the profile card avatar
        styling, gives the icon visual weight without bulk. */
     div.st-key-go_guest_btn .stButton > button > span:first-child,
     div.st-key-go_guest_btn_signin .stButton > button > span:first-child {
@@ -17170,7 +17159,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         color: #4338ca !important;
         text-decoration: none !important;
     }
-    /* Inline row directly below the PIN field — right-aligned link, the
+    /* Inline row directly below the PIN field, right-aligned link, the
        conventional place auth-aware users look for "Forgot PIN?". */
     .md-auth-forgot-row {
         display: flex;
@@ -17188,12 +17177,12 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         justify-content: center;
     }
 
-    /* Guest tab — soft card explaining the no-account experience, with the
+    /* Guest tab, soft card explaining the no-account experience, with the
        Continue as Guest button spaced clearly below. The card uses a
        subtle indigo wash (matching the welcome chips) so the tab content
        feels framed without competing with the white form area on the
        neighbouring tabs. */
-    /* Guest intro card — compact, centered, matches the trust card style. */
+    /* Guest intro card, compact, centered, matches the trust card style. */
     .md-auth-guest-intro {
         margin: 0.6rem 0 1rem 0;
         padding: 0.95rem 1.1rem 0.95rem 1.1rem;
@@ -17286,7 +17275,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         font-weight: 620;
     }
 
-    /* Welcome hero v2 — ultra-compact. */
+    /* Welcome hero v2, ultra-compact. */
     .md-auth-welcome-v2 {
         padding: 0.7rem 1.1rem 0.65rem 1.1rem !important;
         grid-template-columns: 148px minmax(0, 1fr) 148px !important;
@@ -17300,7 +17289,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
             0 5px 16px rgba(15, 23, 42, 0.045) !important;
     }
     /* Suppress the decorative bottom-left rotated ellipse and bottom glow
-       overlay on the v2 card — they were producing a visible horizontal
+       overlay on the v2 card, they were producing a visible horizontal
        seam across the middle of the card. v2 wants a single clean wash. */
     .md-auth-welcome-v2::before,
     .md-auth-welcome-v2::after {
@@ -17362,7 +17351,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         font-size: 0.72rem !important;
     }
 
-    /* Trust strip — single line, divider-separated. */
+    /* Trust strip, single line, divider-separated. */
     .md-auth-welcome-trust-strip {
         margin-top: 0.5rem;
         padding-top: 0.5rem;
@@ -17402,7 +17391,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         .md-auth-welcome-trust-divider { display: none; }
     }
 
-    /* Trust card — compact (May 2026). Smaller padding, tighter type,
+    /* Trust card, compact (May 2026). Smaller padding, tighter type,
        smaller icon and badges. Same vertical-centered layout. */
     .md-auth-trust-card {
         margin-top: 1rem;
@@ -17454,7 +17443,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         line-height: 1.45;
     }
 
-    /* Compliance badge row — centered, tightened. */
+    /* Compliance badge row, centered, tightened. */
     .md-auth-trust-badges {
         display: flex;
         flex-wrap: wrap;
@@ -17483,7 +17472,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         font-size: 0.85rem !important;
     }
 
-    /* Privacy Policy CTA — compact link button, centered content. */
+    /* Privacy Policy CTA, compact link button, centered content. */
     .md-auth-trust-cta {
         display: flex !important;
         align-items: center !important;
@@ -17559,7 +17548,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         font-size: 1.5rem !important;
         background: linear-gradient(145deg, #eef4ff, #e8f0ff);
     }
-    /* Tonal variation within a single blue→indigo family — keeps the card
+    /* Tonal variation within a single blue→indigo family, keeps the card
        cohesive while still giving each row a subtle distinct accent. */
     .md-auth-benefit:nth-of-type(2) .md-auth-benefit-ic { color: #4f46e5; background: linear-gradient(145deg, #eef2ff, #e7ecff); }
     .md-auth-benefit:nth-of-type(3) .md-auth-benefit-ic { color: #6366f1; background: linear-gradient(145deg, #f0f1ff, #e8eaff); }
@@ -17592,7 +17581,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         margin-top: 0.05rem;
     }
 
-    /* Help Center card on the auth right rail — same shell as
+    /* Help Center card on the auth right rail, same shell as
        .md-auth-side-card, just spaced below "Why sign in?". The CTA at
        the bottom is a gradient anchor button that opens ?mode=help (the
        auth gate bypasses for that mode so the page renders). */
@@ -17698,7 +17687,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
             '</div>'
         )
 
-    # Right-side companion icon — stethoscope signals the medical/clinical
+    # Right-side companion icon, stethoscope signals the medical/clinical
     # focus while the left shield signals privacy. Purely decorative.
     _auth_stethoscope_html = (
         '<div class="md-auth-shield md-auth-shield-alt material-symbols-rounded" aria-hidden="true">'
@@ -17778,7 +17767,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
-                # Inline trust line removed — the redesigned trust card
+                # Inline trust line removed, the redesigned trust card
                 # at the bottom of the auth area carries this signal.
 
                 if si_btn:
@@ -17874,7 +17863,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
-        # Redesigned trust card — combines the prior small "secure auth"
+        # Redesigned trust card, combines the prior small "secure auth"
         # note + the long disclaimer + Privacy Policy link into a single
         # polished card. Shield icon on the left, headline + body in the
         # middle, three compliance badges below, and a refined link
@@ -17927,7 +17916,7 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
             unsafe_allow_html=True
         )
 
-        # Help Center card — sits right below "Why sign in?". Mirrors the
+        # Help Center card, sits right below "Why sign in?". Mirrors the
         # same .md-auth-side-card visual so the right rail reads as one
         # consistent column. The "Open Help Center" CTA is an anchor to
         # ?mode=help (works on the auth screen because the auth gate now
@@ -18130,7 +18119,7 @@ if st.session_state.mode == "chat":
                         key="mic_recorder_" + str(st.session_state.voice_audio_key),
                     )
                     if voice_audio and isinstance(voice_audio, dict):
-                        st.caption(f"✓ Recorded {len(voice_audio.get('bytes', b''))//1024} KB — click Transcribe voice below.")
+                        st.caption(f"✓ Recorded {len(voice_audio.get('bytes', b''))//1024} KB, click Transcribe voice below.")
                 elif hasattr(st, "audio_input"):
                     voice_audio = st.audio_input("Record your question", key="voice_audio_" + str(st.session_state.voice_audio_key))
                 else:
@@ -18225,7 +18214,7 @@ if st.session_state.mode == "chat":
                 '<div>'
                 '<div class="md-tip-eyebrow">Sleep insight</div>'
                 '<div class="md-tip-title">Wind down earlier</div>'
-                '<div class="md-tip-desc">Quality sleep boosts recovery, mood, and immunity. Aim for 7–9 hours every night.</div>'
+                '<div class="md-tip-desc">Quality sleep boosts recovery, mood, and immunity. Aim for 7,9 hours every night.</div>'
                 '<div class="md-tip-metric"><span class="material-symbols-rounded">bedtime</span>' + _tip_sleep_metric + '</div>'
                 '</div>'
                 '<div class="md-tip-illust"><span class="material-symbols-rounded">bedtime</span></div>'
@@ -18243,7 +18232,7 @@ if st.session_state.mode == "chat":
                 '<div>'
                 '<div class="md-tip-eyebrow">Vitals check</div>'
                 '<div class="md-tip-title">Heart in good rhythm</div>'
-                '<div class="md-tip-desc">A resting heart rate of 60–100 BPM is typical for healthy adults. Keep moving and resting well.</div>'
+                '<div class="md-tip-desc">A resting heart rate of 60,100 BPM is typical for healthy adults. Keep moving and resting well.</div>'
                 '<div class="md-tip-metric"><span class="material-symbols-rounded">favorite</span>' + _tip_hr_metric + '</div>'
                 '</div>'
                 '<div class="md-tip-illust"><span class="material-symbols-rounded">favorite</span></div>'
@@ -18280,7 +18269,7 @@ if st.session_state.mode == "chat":
 
                 _snap_title = "Health Overview"
                 _daily = get_daily_metrics()
-                # Real values only — no fake fallbacks. Missing → "-" with no status pill.
+                # Real values only, no fake fallbacks. Missing → "-" with no status pill.
                 _hr = _daily.get("heart_rate_resting")
                 _steps_val = _daily.get("steps")
                 _sleep_hours = _daily.get("sleep_hours")
@@ -18305,7 +18294,7 @@ if st.session_state.mode == "chat":
                 # sparklines. Each metric pulls its own series from this dict
                 # so we don't hit Firebase four times per render.
                 _all_dm = get_all_daily_metrics()
-                # Find the most recent day with ANY logged metric — surfaced
+                # Find the most recent day with ANY logged metric, surfaced
                 # as a "Last synced: …" label in the card head so the user
                 # sees at a glance how fresh the snapshot is.
                 _last_sync_label = "No data yet"
@@ -18344,13 +18333,13 @@ if st.session_state.mode == "chat":
                     # Build a REAL sparkline from the last 7 days of this
                     # metric. If fewer than 2 days of values exist we draw
                     # a faint dashed centerline marker rather than a fake
-                    # trend — keeps the tile layout consistent but never
+                    # trend, keeps the tile layout consistent but never
                     # lies about a trend that isn't there.
                     _series_vals = get_metric_series(_all_dm, _metric_key, days=7)
                     _spark_path = render_sparkline_path(_series_vals)
                     if _spark_path:
                         _spark_title = (
-                            _lbl + " — last " + str(len(_series_vals)) +
+                            _lbl + ", last " + str(len(_series_vals)) +
                             " day" + ("s" if len(_series_vals) != 1 else "") +
                             ": " + ", ".join(
                                 (str(int(v)) if float(v).is_integer() else str(round(v, 1)))
@@ -18438,14 +18427,14 @@ if st.session_state.mode == "chat":
                 st.markdown(_passport_html, unsafe_allow_html=True)
 
                 # Action buttons (Open Records / Update Vitals / Sync Medications)
-                # removed — they overflowed the right rail and wrapped text
+                # removed, they overflowed the right rail and wrapped text
                 # ("Open Recor", "Upda te"). The sidebar nav already routes to
                 # every destination they covered.
                 # Daily Health Tip carousel is rendered below Smart Actions in home_main.
 
 
 
-    # Chat conversation view — only renders when there are actual messages.
+    # Chat conversation view, only renders when there are actual messages.
     # The empty-chat home view (greeting + quick actions + dashboard cards)
     # was already rendered above by the `if not st.session_state.messages`
     # block; the hero + message log below must NOT leak onto that home view.
@@ -18461,7 +18450,7 @@ if st.session_state.mode == "chat":
             '<div class="md-chat-hero">'
             '<div class="md-chat-hero-text">'
             '<div class="md-chat-hero-title">AI Health Conversation '
-            # Inline SVG shield — zero font dependency, renders identically
+            # Inline SVG shield, zero font dependency, renders identically
             # across all browsers as a proper filled shield silhouette with
             # a soft check mark inside. Replaces the Material Symbols
             # `shield` glyph which was rendering ambiguously at small sizes.
@@ -18510,7 +18499,7 @@ if st.session_state.mode == "chat":
                         unsafe_allow_html=True
                     )
             else:
-                # Bot message — logo avatar + bubble with inline "MediChat AI"
+                # Bot message, logo avatar + bubble with inline "MediChat AI"
                 # header (with sparkle), the response text, and a right-aligned
                 # timestamp under the bubble.
                 st.markdown(
@@ -18559,8 +18548,7 @@ if st.session_state.mode == "chat":
                         '<span class="rag-text">' + str(conf_pct) + '% match</span>'
                     )
 
-                # Sources + Confidence meta-row removed per user request —
-                # the row added visual noise after each reply. The
+                # Sources + Confidence meta-row removed per user request, # the row added visual noise after each reply. The
                 # underlying signals (msg["sources"], msg["confidence"])
                 # are still tracked in session state for analytics, just
                 # no longer rendered to the user.
@@ -18568,7 +18556,7 @@ if st.session_state.mode == "chat":
                 if msg_ts:
                     st.markdown('<div class="bot-ts">' + ui_escape(msg_ts) + '</div>', unsafe_allow_html=True)
 
-                # MediChat Verify — render as its own dedicated block
+                # MediChat Verify, render as its own dedicated block
                 # from msg["verify_text"]. This bypasses the inline
                 # [[VERIFY_START]] marker pipeline entirely (which
                 # previously got eaten by strip_excessive_disclaimers or
@@ -18579,7 +18567,7 @@ if st.session_state.mode == "chat":
                 if _verify_text:
                     # margin-bottom prevents the next user message bubble
                     # from sitting flush against the Verify block's lower
-                    # edge — without it, the user avatar overlapped the
+                    # edge, without it, the user avatar overlapped the
                     # purple border visually.
                     st.markdown(
                         '<div style="margin-top:1.1rem;margin-bottom:1.5rem;padding:0.9rem 1.1rem;background:#fbfcff;'
@@ -18590,7 +18578,7 @@ if st.session_state.mode == "chat":
                         '<span style="font-size:1.05rem;">🩺</span>'
                         'MediChat Verify '
                         '<span style="font-weight:500;font-style:italic;color:#64748b;font-size:0.78rem;">'
-                        '— second medical AI perspective</span>'
+                        ', second medical AI perspective</span>'
                         '</div>'
                         '<div style="color:#475569;font-style:italic;line-height:1.6;font-size:0.92rem;">'
                         + ui_lines(_verify_text) +
@@ -18603,7 +18591,7 @@ if st.session_state.mode == "chat":
                 # showing what was silently saved to the profile from the
                 # preceding user message (allergies, meds, conditions,
                 # symptoms, appointment). Makes the self-learning visible
-                # and editable — user can always remove these on Medications
+                # and editable, user can always remove these on Medications
                 # / Records / Appointments pages.
                 _noticed = msg.get("noticed_facts") or []
                 if _noticed:
@@ -18643,7 +18631,7 @@ if st.session_state.mode == "chat":
     # Stream-placement anchor: when a streaming response is pending
     # (user just submitted), this empty() reserves a slot ABOVE the
     # composer/download buttons so the streamed reply appears right
-    # below the user's message in the chat flow — not at the very
+    # below the user's message in the chat flow, not at the very
     # bottom of the page under the input box.
     _pre_composer_stream_placeholder = None
     if st.session_state.get("_defer_streaming") and st.session_state.messages:
@@ -18706,7 +18694,7 @@ if st.session_state.mode == "chat":
                 elif _full_err:
                     # Show the actual exception so we can fix it instead of
                     # the generic "try again" message that hid the root cause.
-                    st.error("PDF generation hit an error. Details below — please paste these to fix:")
+                    st.error("PDF generation hit an error. Details below, please paste these to fix:")
                     st.code(_full_err, language="text")
                 else:
                     st.error("Could not generate full medical record (no exception, but no PDF returned). Try again, or ensure you have something saved to your profile first.")
@@ -18836,7 +18824,7 @@ if st.session_state.mode == "chat":
                     key="mic_recorder_chat_" + str(st.session_state.voice_audio_key),
                 )
                 if voice_audio and isinstance(voice_audio, dict):
-                    st.caption(f"✓ Recorded {len(voice_audio.get('bytes', b''))//1024} KB — click Transcribe voice below.")
+                    st.caption(f"✓ Recorded {len(voice_audio.get('bytes', b''))//1024} KB, click Transcribe voice below.")
             elif hasattr(st, "audio_input"):
                 voice_audio = st.audio_input("Record your question", key="voice_audio_chat_" + str(st.session_state.voice_audio_key))
             else:
@@ -18865,7 +18853,7 @@ if st.session_state.mode == "chat":
             with vc3:
                 clear = st.button("Clear chat", use_container_width=True, key="main_clear_btn_voice", icon=":material/delete:")
 
-        # Plain-state Clear button removed — it's now an inline chip inside
+        # Plain-state Clear button removed, it's now an inline chip inside
         # the chat composer form (chat_clear_btn). Vision/voice panels still
         # have their own Clear next to Cancel above.
 
@@ -18913,13 +18901,13 @@ if st.session_state.mode == "chat":
             // V9: V8's keydown-only approach was blocked by browser extensions
             // (notably Grammarly) that intercept keydown on textareas before
             // any user listener can fire. V9 adds a `beforeinput` fallback
-            // — that event fires with `inputType: "insertLineBreak"` BEFORE
+            //, that event fires with `inputType: "insertLineBreak"` BEFORE
             // the newline is inserted into the textarea, at a layer below
             // most extension interception. preventing it stops the newline
             // and lets us submit instead. Shift+Enter is still distinguished
-            // by tracking the most recent Enter keydown — if that listener
+            // by tracking the most recent Enter keydown, if that listener
             // is also blocked, all Enter presses submit (Shift+Enter loses
-            // its newline behavior on this site for those users — fine for
+            // its newline behavior on this site for those users, fine for
             // a chat composer where short messages dominate).
             if (win.__medichatEnterSendBoundV9) return;
             win.__medichatEnterSendBoundV9 = true;
@@ -18942,7 +18930,7 @@ if st.session_state.mode == "chat":
                         return false;
                     }
                     console.log('[MediChat V9]', source, '- submitting via', btn);
-                    // Tier 1: native form.requestSubmit(btn) — fires the
+                    // Tier 1: native form.requestSubmit(btn), fires the
                     // submit event with `submitter` set. Streamlit's form
                     // handler listens for this and processes the submission.
                     try {
@@ -19163,7 +19151,7 @@ if st.session_state.mode == "chat":
         if effective_user_input.strip():
             conv_text = " ".join([m.get("content", "") for m in st.session_state.messages if m.get("type") == "text"])
             if is_meta_text(effective_user_input):
-                # Pasted docs / test plans / app-feedback — not a symptom report.
+                # Pasted docs / test plans / app-feedback, not a symptom report.
                 st.session_state.emergency_detected = False
                 st.session_state.emergency_reason = ""
                 st.session_state.triage_assessment = None
@@ -19193,7 +19181,7 @@ if st.session_state.mode == "chat":
                 # Auto-persist the analyzed PDF to the patient's Health Records
                 # so it shows up in <patient_profile> on future chats. Without
                 # this, the report only lives in session state and vanishes
-                # the moment the conversation ends — defeating the "virtual GP
+                # the moment the conversation ends, defeating the "virtual GP
                 # who remembers your chart" promise.
                 try:
                     if pdf_text:
@@ -19211,7 +19199,7 @@ if st.session_state.mode == "chat":
                             uploaded_image.type or "application/pdf",
                             _size_bytes,
                             reply,  # the AI's analysis becomes the saved summary
-                            raw_text=pdf_text,  # actual extracted PDF — enables cross-report comparison
+                            raw_text=pdf_text,  # actual extracted PDF, enables cross-report comparison
                         )
                 except Exception as _e:
                     print("Auto-save PDF to health records failed:", _e)
@@ -19299,7 +19287,7 @@ if st.session_state.mode == "chat":
                 st.session_state.home_show_vision_upload = False
         else:
             # When this is a deferred-from-home submission, the user message
-            # was already appended in the previous render — skip the re-append.
+            # was already appended in the previous render, skip the re-append.
             # Otherwise: check if we were on the home view (no prior messages);
             # if so, append + stash + rerun so the home grid is replaced by
             # the chat view BEFORE the spinner shows.
@@ -19310,7 +19298,7 @@ if st.session_state.mode == "chat":
                 # rerun causes the page to redraw with the user's new
                 # message in the chat history area, and the streaming
                 # placeholder created above the composer renders the
-                # streamed reply right below it — instead of at the
+                # streamed reply right below it, instead of at the
                 # bottom of the page under the composer.
                 st.session_state._defer_streaming = True
                 st.session_state._deferred_input = effective_user_input
@@ -19455,7 +19443,7 @@ if st.session_state.mode == "chat":
             # [[VERIFY_END]] markers from the visible content so the
             # rendered bubble doesn't show raw markers, and so we can
             # render Verify as its own styled block from the dedicated
-            # field below — independent of any markdown / disclaimer
+            # field below, independent of any markdown / disclaimer
             # transform that previously ate the markers.
             verify_text = (stream_metadata.get("verify_text") or "").strip()
             if "[[VERIFY_START]]" in final_text:
@@ -19902,7 +19890,7 @@ elif st.session_state.mode == "eval":
                 st.rerun()
 
 elif st.session_state.mode == "history":
-    # ── Your Chats — compact library view (redesign, late May 2026) ──
+    # ── Your Chats, compact library view (redesign, late May 2026) ──
     # Tighter than before: inline header + action buttons, 4 stat tiles,
     # search + filter chips + sort toolbar, flat list (no date-group
     # headers). All buttons still drive the same st.session_state +
@@ -19921,7 +19909,7 @@ elif st.session_state.mode == "history":
         .md-hist2-tile-val { font-size:1.5rem; font-weight:750; color:var(--md-text-1); line-height:1; }
         .md-hist2-tile-lbl { font-size:0.74rem; color:var(--md-text-2); margin-top:0.25rem; font-weight:600; letter-spacing:0.02em; }
 
-        /* Toolbar row alignment — keep input + chips + select on one
+        /* Toolbar row alignment, keep input + chips + select on one
            visual baseline.  Streamlit columns force per-cell padding so we
            also zero the inner element-container gap. */
         [data-testid="stMain"] [class*="st-key-hist_toolbar_row"] [data-testid="stHorizontalBlock"] { align-items:center !important; }
@@ -19950,7 +19938,7 @@ elif st.session_state.mode == "history":
         [data-testid="stMain"] .st-key-hist2_sort_box div[data-baseweb="select"] { min-height:40px !important; height:40px !important; }
         [data-testid="stMain"] .st-key-hist2_sort_box div[data-baseweb="select"] > div { min-height:38px !important; height:38px !important; }
 
-        /* Header action buttons — Back to home polished. */
+        /* Header action buttons, Back to home polished. */
         .st-key-hist_back .stButton > button {
             min-height:44px !important; height:44px !important;
             font-weight:600 !important; font-size:0.86rem !important;
@@ -19971,7 +19959,7 @@ elif st.session_state.mode == "history":
             white-space:nowrap !important;
         }
 
-        /* ── Chat row card — single bordered container per row.
+        /* ── Chat row card, single bordered container per row.
            We render the visual card via st.container(border=True) and
            strip Streamlit's default border, then re-apply our own so the
            Continue/Delete buttons sit inside the SAME card as the title
@@ -19997,7 +19985,7 @@ elif st.session_state.mode == "history":
         .md-hist2-row-meta .material-symbols-rounded { font-size:0.85rem; opacity:0.7; }
         .md-hist2-row-prev { color:var(--md-text-2); font-size:0.84rem; margin-top:0.35rem; line-height:1.5; }
 
-        /* Continue chat button — outlined indigo pill, inside the row card. */
+        /* Continue chat button, outlined indigo pill, inside the row card. */
         [class*="st-key-hist_open_"] .stButton > button {
             min-height:40px !important; height:40px !important;
             border-radius:10px !important;
@@ -20010,7 +19998,7 @@ elif st.session_state.mode == "history":
         [class*="st-key-hist_open_"] .stButton > button:hover {
             background:#eef2ff !important; border-color:#a5b4fc !important; color:#3730a3 !important;
         }
-        /* Delete bin — square icon button, properly centered.
+        /* Delete bin, square icon button, properly centered.
            Streamlit emits an empty stMarkdownContainer sibling alongside
            the icon span when the label is just a space; collapse it AND
            force the button into grid-center so the icon truly sits on
@@ -20034,7 +20022,7 @@ elif st.session_state.mode == "history":
             display:none !important; width:0 !important; height:0 !important;
             margin:0 !important; padding:0 !important;
         }
-        /* The Streamlit icon wrapper span — center it and reset all width
+        /* The Streamlit icon wrapper span, center it and reset all width
            so the icon sits exactly mid-button. */
         [class*="st-key-hist_del_"] .stButton > button > span:first-child,
         [class*="st-key-hist_del_"] .stButton > button > div:first-child {
@@ -20207,9 +20195,9 @@ elif st.session_state.mode == "history":
                 _ht = (_h.get("title") or "Chat")[:90]
                 _hc = int(_h.get("message_count", 0) or 0)
                 _preview = (_h.get("first_user_msg") or "")[:160]
-                # Time chip — "Today · 7:13 AM" / "Yesterday · 1:41 PM" / "25 May 2026 · 1:19 PM"
+                # Time chip, "Today · 7:13 AM" / "Yesterday · 1:41 PM" / "25 May 2026 · 1:19 PM"
                 if _d is None:
-                    _time_disp = "—"
+                    _time_disp = ","
                 else:
                     _t_str = _d.strftime("%I:%M %p").lstrip("0")
                     if _d >= _today_start:
@@ -20220,7 +20208,7 @@ elif st.session_state.mode == "history":
                         _time_disp = _d.strftime("%d %b %Y") + "  ·  " + _t_str
                 _msg_word = "message" if _hc == 1 else "messages"
 
-                # Single bordered card per row — the keyed container is
+                # Single bordered card per row, the keyed container is
                 # styled as a card via CSS so the Continue + Delete
                 # buttons sit INSIDE the same surface as the title.
                 with st.container(key="hist_row_" + _key):
@@ -20280,7 +20268,7 @@ elif st.session_state.mode == "overview":
     hr_n = today.get("heart_rate_resting")
 
     # Wearable sync placeholder. Live wearable integration isn't built yet
-    # — show an honest "Coming soon" ribbon so users don't expect the pills
+    #, show an honest "Coming soon" ribbon so users don't expect the pills
     # below to actually connect anything.
     st.markdown(
         '<div class="md-wearable-card" style="position:relative;">'
@@ -20290,7 +20278,7 @@ elif st.session_state.mode == "overview":
         '</div>'
         '<div class="md-wearable-icon">⌚</div>'
         '<div class="md-wearable-body">'
-        '<div class="md-wearable-title">Wearable sync — coming soon</div>'
+        '<div class="md-wearable-title">Wearable sync, coming soon</div>'
         '<div class="md-wearable-desc">We\'re building direct sync with Apple Health, Google Fit, and Bluetooth wearables so your heart rate, sleep, and step data flow in automatically. For now, MediChat uses the values you log manually below.</div>'
         '<div class="md-wearable-actions">'
         '<span class="md-wearable-pill md-wearable-disabled" title="Coming soon">Bluetooth</span>'
@@ -20499,7 +20487,7 @@ elif st.session_state.mode == "medications":
     st.markdown(
         '<div style="margin-top:2rem;"></div>'
         '<div class="md-form-intro">Family medical history</div>'
-        '<div class="md-form-sub">Conditions in close blood relatives — helps MediChat assess genetic and familial risk.</div>',
+        '<div class="md-form-sub">Conditions in close blood relatives, helps MediChat assess genetic and familial risk.</div>',
         unsafe_allow_html=True
     )
     with st.form("add_fh_form", clear_on_submit=True):
@@ -20550,7 +20538,7 @@ elif st.session_state.mode == "medications":
     st.markdown(
         '<div style="margin-top:2rem;"></div>'
         '<div class="md-form-intro">Surgical history</div>'
-        '<div class="md-form-sub">Past surgeries — changes anatomy, drug clearance, and post-op risk profile.</div>',
+        '<div class="md-form-sub">Past surgeries, changes anatomy, drug clearance, and post-op risk profile.</div>',
         unsafe_allow_html=True
     )
     with st.form("add_surg_form", clear_on_submit=True):
@@ -20622,7 +20610,7 @@ elif st.session_state.mode == "appointments":
         '<div class="md-page-hero-ic"><span class="material-symbols-rounded">calendar_month</span></div>'
         '<div class="md-page-hero-text">'
         '<div class="md-page-hero-title">Appointments</div>'
-        '<div class="md-page-hero-sub">Sync your existing calendar so MediChat always knows what visits are coming up. Health-related events are imported automatically — everything else is ignored.</div>'
+        '<div class="md-page-hero-sub">Sync your existing calendar so MediChat always knows what visits are coming up. Health-related events are imported automatically, everything else is ignored.</div>'
         '</div>'
         '</div>',
         unsafe_allow_html=True
@@ -20651,7 +20639,7 @@ elif st.session_state.mode == "appointments":
             try:
                 added, updated, skipped, err = sync_calendar_appointments(ics_url=cal_url)
                 st.session_state._cal_synced_this_visit = True
-                st.session_state._cal_sync_msg = (err or ("Synced — " + str(added) + " new, " + str(updated) + " updated, " + str(skipped) + " skipped (non-health)."))
+                st.session_state._cal_sync_msg = (err or ("Synced, " + str(added) + " new, " + str(updated) + " updated, " + str(skipped) + " skipped (non-health)."))
                 if not err and (added or updated):
                     st.rerun()
             except Exception as _e:
@@ -20676,7 +20664,7 @@ elif st.session_state.mode == "appointments":
         '<div style="font-weight:700;color:var(--md-text-1);font-size:1rem;">Auto-sync your calendar</div>'
         '</div>'
         '<div style="font-size:0.84rem;color:var(--md-text-2);line-height:1.55;">'
-        'Connect your Google Calendar, Apple Calendar, or Outlook once — MediChat will pull in any health-related event automatically. '
+        'Connect your Google Calendar, Apple Calendar, or Outlook once, MediChat will pull in any health-related event automatically. '
         'We only ingest events containing words like <em>doctor, GP, clinic, dentist, physio, specialist, blood test, scan</em>. '
         'Everything else stays private.'
         '</div>'
@@ -20700,9 +20688,9 @@ elif st.session_state.mode == "appointments":
                 placeholder="https://calendar.google.com/calendar/ical/.../basic.ics  or  webcal://...",
                 help=(
                     "Where to find this:\n\n"
-                    "• Google Calendar — Settings → pick your calendar → Integrate calendar → 'Secret address in iCal format'.\n\n"
-                    "• Apple Calendar (iCloud) — calendar.apple.com → share icon next to the calendar → enable Public Calendar → copy URL (webcal:// works).\n\n"
-                    "• Outlook / Office 365 — Settings → Calendar → Shared calendars → Publish a calendar → copy the ICS link.\n\n"
+                    "• Google Calendar, Settings → pick your calendar → Integrate calendar → 'Secret address in iCal format'.\n\n"
+                    "• Apple Calendar (iCloud), calendar.apple.com → share icon next to the calendar → enable Public Calendar → copy URL (webcal:// works).\n\n"
+                    "• Outlook / Office 365, Settings → Calendar → Shared calendars → Publish a calendar → copy the ICS link.\n\n"
                     "Privacy: only the URL is saved to your profile. Events are processed in-memory on each sync."
                 )
             )
@@ -20870,7 +20858,7 @@ elif st.session_state.mode == "records":
                 size = len(rec_file.getbuffer())
                 summary = ""
                 raw_text_for_record = ""
-                # AI summary generation is mandatory — drops the previous
+                # AI summary generation is mandatory, drops the previous
                 # opt-in checkbox so every uploaded record is searchable /
                 # citable by the assistant.
                 if True:
@@ -21039,7 +21027,7 @@ elif st.session_state.mode == "rx_reader":
             # Fallback: render the raw markdown if parsing yielded nothing usable.
             st.markdown('<div class="md-rcard" style="margin-top:0.65rem;">' + markdown_to_html(rx_result.get("reading", "")) + '</div>', unsafe_allow_html=True)
 
-        # Safety note — visually separated from the action button below.
+        # Safety note, visually separated from the action button below.
         st.markdown(
             '<div class="md-inline-note" style="margin-top:0.75rem;margin-bottom:1.2rem;padding:0.75rem 1rem;font-size:0.82rem;line-height:1.5;color:var(--md-text-2);">'
             '<strong style="color:var(--md-text-1);">Safety guardrail:</strong> this is transcription only. MediChat does not prescribe therapy or confirm diagnosis. '
@@ -21231,7 +21219,7 @@ elif st.session_state.mode == "privacy":
     # Goal: protect both users and the platform with clear, accurate info
     # so consent is genuinely informed and there are no future disputes.
 
-    # Page hero — matches every other page hero (icon + title + sub).
+    # Page hero, matches every other page hero (icon + title + sub).
     st.markdown(
         '<div class="md-page-hero md-page-hero-privacy">'
         '<div class="md-page-hero-ic"><span class="material-symbols-rounded">shield_person</span></div>'
@@ -21243,7 +21231,7 @@ elif st.session_state.mode == "privacy":
         unsafe_allow_html=True
     )
 
-    # At-a-glance summary card — the TL;DR users should read first.
+    # At-a-glance summary card, the TL;DR users should read first.
     st.markdown(
         '<div class="md-privacy-summary">'
         '<div class="md-privacy-summary-head">'
@@ -21450,7 +21438,7 @@ elif st.session_state.mode == "privacy":
             unsafe_allow_html=True
         )
 
-    # Action row — request data, delete account, full policy link.
+    # Action row, request data, delete account, full policy link.
     st.markdown('<div class="md-privacy-actions-anchor"></div>', unsafe_allow_html=True)
     _act1, _act2, _act3 = st.columns(3, gap="small")
     with _act1:
@@ -21473,7 +21461,7 @@ elif st.session_state.mode == "privacy":
             unsafe_allow_html=True
         )
 
-    # Footer meta — last updated, jurisdiction.
+    # Footer meta, last updated, jurisdiction.
     st.markdown(
         '<div class="md-privacy-meta">'
         '<div><strong>Last updated:</strong> 27 May 2026</div>'
@@ -21486,13 +21474,13 @@ elif st.session_state.mode == "privacy":
 elif st.session_state.mode == "insights":
     # ── Ai Insights ─────────────────────────────────────────────────
     # Build a rich, *grounded* insights page: real numbers, real trends,
-    # real care gaps — not generic nags. Layout:
+    # real care gaps, not generic nags. Layout:
     #   1. Snapshot strip (4 tiles)
     #   2. Health trends (data-driven from 7-day metrics history)
     #   3. Care gaps (profile completeness, stale records, med adherence)
     #   4. Risk reminders (family history, age, allergy ↔ med checks)
     #   5. AI observations (Claude reads structured profile, returns 3
-    #      grounded observations — actual numbers passed in, no
+    #      grounded observations, actual numbers passed in, no
     #      hallucination room)
     st.markdown(
         '<div class="md-page-hero md-page-hero-insights">'
@@ -21626,18 +21614,18 @@ elif st.session_state.mode == "insights":
         return 1 if d > 0 else -1
 
     # ── 2. Health trends ──────────────────────────────────────────
-    # Sleep — trend + average
+    # Sleep, trend + average
     if len(sleeps) >= 3:
         avg_sleep = round(sum(sleeps) / len(sleeps), 1)
         slope = _trend_slope(sleeps)
         if avg_sleep < 6:
             insights.append(("Health trends", "😴", "Sleep is running short",
-                "Your last " + str(len(sleeps)) + " logged nights average " + str(avg_sleep) + " hours — most adults need 7-9. " +
+                "Your last " + str(len(sleeps)) + " logged nights average " + str(avg_sleep) + " hours, most adults need 7-9. " +
                 ("It's trending down further this week." if slope < 0 else ("It's starting to recover." if slope > 0 else "It's been steady at that level.")),
                 "warn", "Log tonight's sleep", "overview"))
         elif avg_sleep > 9.5:
             insights.append(("Health trends", "😴", "Long sleep pattern",
-                "Averaging " + str(avg_sleep) + " h over " + str(len(sleeps)) + " nights. Persistent long sleep can sometimes signal infection or low mood — worth a mention if you also feel tired.",
+                "Averaging " + str(avg_sleep) + " h over " + str(len(sleeps)) + " nights. Persistent long sleep can sometimes signal infection or low mood, worth a mention if you also feel tired.",
                 "info", "", ""))
         else:
             trend_note = " and trending up" if slope > 0 else (" though trending down" if slope < 0 else "")
@@ -21645,7 +21633,7 @@ elif st.session_state.mode == "insights":
                 "Averaging " + str(avg_sleep) + " h over " + str(len(sleeps)) + " nights" + trend_note + ". Keep your wind-down routine going.",
                 "good", "", ""))
 
-    # Hydration — today vs 7d
+    # Hydration, today vs 7d
     if water_today > 0 or any(w > 0 for w in waters):
         avg_water = round(sum(waters) / max(len(waters), 1), 1) if waters else 0
         if water_today < 4 and water_today < avg_water:
@@ -21658,10 +21646,10 @@ elif st.session_state.mode == "insights":
                 "warn", "Log water", "overview"))
         elif water_today >= 6:
             insights.append(("Health trends", "💧", "Hydration is on track",
-                "You're at " + str(water_today) + "/8 glasses today. Nice — finish strong this evening.",
+                "You're at " + str(water_today) + "/8 glasses today. Nice, finish strong this evening.",
                 "good", "", ""))
 
-    # Steps — trend
+    # Steps, trend
     if len(stepss) >= 3:
         avg_steps = int(sum(stepss) / len(stepss))
         slope = _trend_slope(stepss)
@@ -21675,7 +21663,7 @@ elif st.session_state.mode == "insights":
                 "info", "", ""))
         elif avg_steps >= 8000:
             insights.append(("Health trends", "👟", "Solid activity level",
-                "Averaging " + f"{avg_steps:,}" + " steps — consistent with general fitness guidelines.",
+                "Averaging " + f"{avg_steps:,}" + " steps, consistent with general fitness guidelines.",
                 "good", "", ""))
 
     # Resting heart rate
@@ -21712,7 +21700,7 @@ elif st.session_state.mode == "insights":
             "You have conditions recorded (" + ", ".join(list(mem.get("conditions", []))[:3]) + ") but no medications yet. Add them so MediChat can flag interactions.",
             "info", "Add medications", "medications"))
 
-    # Medication adherence — meds without scheduled time
+    # Medication adherence, meds without scheduled time
     meds_no_time = [m for m in meds if not (m.get("time_of_day") or "").strip()]
     if meds_no_time and len(meds_no_time) >= max(1, len(meds) // 2):
         insights.append(("Care gaps", "⏰", "Some medications have no schedule",
@@ -21759,7 +21747,7 @@ elif st.session_state.mode == "insights":
             "info", "", ""))
     if "heart" in fh_keywords or "cardiac" in fh_keywords or "stroke" in fh_keywords:
         insights.append(("Risk reminders", "🫀", "Family cardiovascular history",
-            "Consider asking your GP about a lipid panel and blood pressure check on a regular cadence — typically every 1-2 years.",
+            "Consider asking your GP about a lipid panel and blood pressure check on a regular cadence, typically every 1-2 years.",
             "info", "", ""))
     if "cancer" in fh_keywords:
         insights.append(("Risk reminders", "🧬", "Family history of cancer",
@@ -21780,7 +21768,7 @@ elif st.session_state.mode == "insights":
         if flagged:
             pairs = ", ".join([(p[1] + " ↔ " + p[0]) for p in flagged[:3]])
             insights.append(("Risk reminders", "🚨", "Possible allergy/medication overlap",
-                "MediChat noticed: " + pairs + ". Please double-check with your pharmacist — this is a name match, not a confirmed reaction.",
+                "MediChat noticed: " + pairs + ". Please double-check with your pharmacist, this is a name match, not a confirmed reaction.",
                 "warn", "", ""))
 
     # ── 5. Reminders ──────────────────────────────────────────────
@@ -21836,7 +21824,7 @@ elif st.session_state.mode == "insights":
             blob = "\n".join(facts)
             sys_prompt = (
                 "You are a careful AI health companion writing the patient's personal insights page. "
-                "Use ONLY the facts provided — do not invent numbers, conditions, medications, or trends not present in the data. "
+                "Use ONLY the facts provided, do not invent numbers, conditions, medications, or trends not present in the data. "
                 "Produce exactly 3 short observations. Each observation MUST follow this format:\n"
                 "TITLE: <5-9 word title>\n"
                 "BODY: <2 short sentences grounded in the actual numbers above, ending with a concrete next step>\n"
@@ -21944,7 +21932,7 @@ elif st.session_state.mode == "insights":
 
         st.markdown(
             '<div style="font-size:0.74rem;color:var(--md-text-3);margin-top:2rem;margin-bottom:1rem;text-align:center;">'
-            'Insights are generated from your logged data. They are general guidance — not a diagnosis or a replacement for clinical advice.'
+            'Insights are generated from your logged data. They are general guidance, not a diagnosis or a replacement for clinical advice.'
             '</div>',
             unsafe_allow_html=True
         )
