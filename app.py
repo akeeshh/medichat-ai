@@ -9722,11 +9722,14 @@ st.markdown("""
 }
 
 /* Medications page forms (Add Medication, Allergy, Family History,
-   Surgical History) — only show on Medications page itself. */
+   Surgical History) — only show on Medications page itself.
+   NOTE: Streamlit form keys are short — `add_fh_form` not
+   `add_family_history_form`, `add_surg_form` not `add_surgical_form`.
+   Earlier rule had the wrong selectors, so leakage continued. */
 body:not(:has(.md-page-hero-meds)) [class*="st-key-add_med_form"],
 body:not(:has(.md-page-hero-meds)) [class*="st-key-add_allergy_form"],
-body:not(:has(.md-page-hero-meds)) [class*="st-key-add_family_history_form"],
-body:not(:has(.md-page-hero-meds)) [class*="st-key-add_surgical_form"] {
+body:not(:has(.md-page-hero-meds)) [class*="st-key-add_fh_form"],
+body:not(:has(.md-page-hero-meds)) [class*="st-key-add_surg_form"] {
     display: none !important;
 }
 
@@ -9744,6 +9747,37 @@ body:not(:has(.md-page-hero-appts)) [class*="st-key-cal_url_form"] {
 /* Prescription Reader upload form — only on Rx reader page */
 body:not(:has(.md-page-hero-rx)) [class*="st-key-rx_reader_form"] {
     display: none !important;
+}
+
+/* Health Overview quick-log forms (water/sleep/steps/heart rate) —
+   only on Overview page. These were leaking onto AI Insights and
+   Home before. */
+body:not(:has(.md-page-hero-overview)) [class*="st-key-hr_form_today"],
+body:not(:has(.md-page-hero-overview)) [class*="st-key-sleep_form_today"],
+body:not(:has(.md-page-hero-overview)) [class*="st-key-steps_form_today"] {
+    display: none !important;
+}
+
+/* Auth forms (sign in / sign up) — only on the gated auth screen.
+   These shouldn't leak onto regular pages, but if Streamlit's DOM
+   reconciler keeps them around after sign-in, this hides them. */
+body:has(.md-page-hero) [class*="st-key-signin_form"],
+body:has(.md-page-hero) [class*="st-key-signup_form"] {
+    display: none !important;
+}
+
+/* ── Page-transition fade-in ────────────────────────────────────────
+   Smooth 180ms fade for the main page hero when a new page loads.
+   Subtle enough to not feel sluggish, prominent enough to mask any
+   residual reconciliation flash. Animation is on the hero (the first
+   element of every page) so the rest of the page slides up under it
+   naturally without each block animating separately. */
+@keyframes mdPageFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+[data-testid="stMain"] .md-page-hero {
+    animation: mdPageFadeIn 180ms ease-out;
 }
 
 /* ══════════════════════════════════════════════════════════════════
