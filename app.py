@@ -9761,6 +9761,32 @@ body:has(.md-page-hero) [class*="st-key-signup_form"] {
     display: none !important;
 }
 
+/* AGGRESSIVE fallback: AI Insights / History / Help / Privacy pages
+   don't render any st.form widgets of their own. So when one of those
+   pages is active, hide ALL forms — catches anything the per-key
+   rules above missed when Streamlit's DOM reconciler keeps two
+   pages' markup alive simultaneously during a navigation flash. */
+body:has(.md-page-hero-insights) [data-testid="stForm"],
+body:has(.md-page-hero-history)  [data-testid="stForm"],
+body:has(.md-page-hero-help)     [data-testid="stForm"],
+body:has(.md-page-hero-privacy)  [data-testid="stForm"] {
+    display: none !important;
+}
+
+/* Hide section intros (Allergies / Family medical history / Surgical
+   history labels) and Remove buttons from the Medications page when
+   on AI Insights. AI Insights builds its own .md-rcard sections with
+   icons; it never uses .md-form-intro / .md-form-sub. */
+body:has(.md-page-hero-insights) .md-form-intro,
+body:has(.md-page-hero-insights) .md-form-sub,
+body:has(.md-page-hero-insights) [class*="st-key-del_med_"],
+body:has(.md-page-hero-insights) [class*="st-key-del_allergy_"],
+body:has(.md-page-hero-insights) [class*="st-key-del_fh_"],
+body:has(.md-page-hero-insights) [class*="st-key-del_surg_"],
+body:has(.md-page-hero-insights) [class*="st-key-del_appt_"] {
+    display: none !important;
+}
+
 /* ── Page-transition fade-in ────────────────────────────────────────
    Smooth 180ms fade for the main page hero when a new page loads.
    Subtle enough to not feel sluggish, prominent enough to mask any
