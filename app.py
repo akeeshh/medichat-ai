@@ -9769,7 +9769,27 @@ body:has(.md-page-hero) [class*="st-key-signup_form"] {
 body:has(.md-page-hero-insights) [data-testid="stForm"],
 body:has(.md-page-hero-history)  [data-testid="stForm"],
 body:has(.md-page-hero-help)     [data-testid="stForm"],
-body:has(.md-page-hero-privacy)  [data-testid="stForm"] {
+body:has(.md-page-hero-privacy)  [data-testid="stForm"],
+/* Also hide the parent stElementContainer wrapping any form, so the
+   surrounding row collapses and doesn't leave an empty white gap. */
+body:has(.md-page-hero-insights) [data-testid="stElementContainer"]:has([data-testid="stForm"]),
+body:has(.md-page-hero-history)  [data-testid="stElementContainer"]:has([data-testid="stForm"]),
+body:has(.md-page-hero-help)     [data-testid="stElementContainer"]:has([data-testid="stForm"]),
+body:has(.md-page-hero-privacy)  [data-testid="stElementContainer"]:has([data-testid="stForm"]) {
+    display: none !important;
+}
+
+/* Hide the stMarkdown / stElementContainer wrappers that hold the
+   data-entry section intros (.md-form-intro / .md-form-sub) on AI
+   Insights — otherwise the heading text leaks ("Allergies", "Family
+   medical history") even though the form inputs below are hidden.
+   Also covers the surrounding card containers and "No X recorded
+   yet" empty-state markdown cards by hiding any stElementContainer
+   that contains a .md-form-intro heading. */
+body:has(.md-page-hero-insights) [data-testid="stMarkdown"]:has(.md-form-intro),
+body:has(.md-page-hero-insights) [data-testid="stMarkdown"]:has(.md-form-sub),
+body:has(.md-page-hero-insights) [data-testid="stElementContainer"]:has(.md-form-intro),
+body:has(.md-page-hero-insights) [data-testid="stElementContainer"]:has(.md-form-sub) {
     display: none !important;
 }
 
