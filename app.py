@@ -9696,6 +9696,26 @@ st.markdown("""
     color: #dc2626 !important;
 }
 
+/* ── Anti-flash for history-page tile markup during navigation ──────
+   The .md-hist2-* CSS is defined inside `elif mode == "history":` so
+   it only loads when the user is on the Recent Chats page. When the
+   user navigates AWAY (e.g. clicks Home), Streamlit reruns the script
+   with the new mode, that page-scoped CSS no longer injects, but old
+   DOM elements may linger briefly during React's reconciliation —
+   showing as raw text with bare icon names (`forum`, `calendar_today`)
+   and unstyled "1 / All chats" labels at the bottom of the new page.
+   This rule hides those elements by default everywhere; the history
+   page's own CSS overrides with display:grid/flex when actually on
+   that page. Result: lingering elements stay invisible during the
+   navigation flash. */
+.md-hist2-tiles, .md-hist2-tile, .md-hist2-row-inner,
+.md-hist2-title, .md-hist2-sub, .md-hist2-tile-ic,
+.md-hist2-tile-val, .md-hist2-tile-lbl,
+.md-hist2-row-title, .md-hist2-row-meta, .md-hist2-row-prev,
+.md-hist2-row-ic {
+    display: none;
+}
+
 /* ══════════════════════════════════════════════════════════════════
    MOBILE / PHONE LAYOUT (≤ 768px)
    ──────────────────────────────────────────────────────────────────
