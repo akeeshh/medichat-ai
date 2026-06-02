@@ -6884,13 +6884,21 @@ st.markdown("""
     [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
         padding: 0.55rem 1rem 0.8rem 1rem !important;
     }
+    /* Logo sized for normal browser windows. Previously this rule used
+       130px / 48px (an aggressive compact-mode meant only for very
+       short viewports), which made the logo appear cramped or
+       partially hidden on any non-maximised window. The larger sizing
+       below matches the @media (min-width: 1200px) values so the logo
+       renders consistently across normal screen widths. The compact
+       sub-rule (under @media max-height: 720px) keeps the tighter
+       sizing for truly short viewports where it was originally needed. */
     [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
-        max-width: 130px !important;
-        width: min(130px, 100%) !important;
+        max-width: 155px !important;
+        width: min(155px, 100%) !important;
     }
     [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
-        padding: 0.5rem 0 0.4rem 0 !important;
-        margin-bottom: 0.3rem !important;
+        padding: 0.4rem 0 0.4rem 0 !important;
+        margin-bottom: 0.75rem !important;
         max-width: 242px !important;
         background: transparent !important;
         border: none !important;
@@ -6898,7 +6906,21 @@ st.markdown("""
         border-radius: 0 !important;
         position: relative !important;
         z-index: 10 !important;
-        min-height: 48px !important;
+        min-height: 70px !important;
+    }
+    /* Compact-mode preserved for truly short viewports (laptops with
+       small vertical resolution) — the originally-intended target of
+       the smaller sizing. */
+    @media (max-height: 720px) {
+        [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap > .md-logo-image {
+            max-width: 130px !important;
+            width: min(130px, 100%) !important;
+        }
+        [data-testid="stSidebar"] .md-logo-wrap.md-logo-image-wrap {
+            padding: 0.5rem 0 0.4rem 0 !important;
+            margin-bottom: 0.3rem !important;
+            min-height: 48px !important;
+        }
     }
     [data-testid="stSidebar"] div[class*="st-key-nav_"]:not(.st-key-nav_privacy_bottom) .stButton > button {
         min-height: 32px !important;
