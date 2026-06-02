@@ -18085,12 +18085,20 @@ if st.session_state.mode == "chat":
                     key="home_chat_input_" + str(st.session_state.chat_input_key),
                 )
                 ac1, ac2, ac_spacer, ac3 = st.columns([0.56, 0.56, 4.0, 0.56], vertical_alignment="center")
+                # Send button is declared FIRST so Streamlit treats it as
+                # the default form-submit action when Enter is pressed in
+                # the text_input. Without this, Enter triggered whichever
+                # form_submit_button was declared first (previously
+                # Upload), which incorrectly opened the Vision AI panel
+                # instead of sending the chat. Visual position unchanged:
+                # the `with ac3:` places Send in its original right-side
+                # column regardless of declaration order.
+                with ac3:
+                    home_submit = st.form_submit_button(" ", key="home_send_btn", icon=":material/send:", use_container_width=True, type="primary")
                 with ac1:
                     home_upload_clicked = st.form_submit_button("Upload", key="home_upload_btn", icon=":material/attach_file:", use_container_width=True)
                 with ac2:
                     home_voice_clicked = st.form_submit_button("Voice", key="home_voice_btn", icon=":material/mic:", use_container_width=True)
-                with ac3:
-                    home_submit = st.form_submit_button(" ", key="home_send_btn", icon=":material/send:", use_container_width=True, type="primary")
             st.markdown('<div class="md-composer-glow"></div>', unsafe_allow_html=True)
             if home_upload_clicked:
                 st.session_state.home_show_vision_upload = True
@@ -18782,15 +18790,18 @@ if st.session_state.mode == "chat":
             # Action row: Upload + Voice + Clear pills on the left, big spacer,
             # round Send ball on the right. Clear lives inside the form so
             # it's visually grouped with the chat box (no orphan button below).
+            # Send is declared FIRST so Enter in the text_input defaults to
+            # sending the chat instead of triggering Upload (Streamlit treats
+            # the first form_submit_button as the default Enter action).
             fc1, fc2, fc3, fc_spacer, fc4 = st.columns([0.56, 0.56, 0.56, 5.2, 0.56], vertical_alignment="center")
+            with fc4:
+                submit = st.form_submit_button(" ", key="chat_send_btn", icon=":material/send:", use_container_width=True, type="primary")
             with fc1:
                 chat_upload_clicked = st.form_submit_button("Upload", key="chat_upload_btn", icon=":material/attach_file:", use_container_width=True)
             with fc2:
                 chat_voice_clicked = st.form_submit_button("Voice", key="chat_voice_btn", icon=":material/mic:", use_container_width=True)
             with fc3:
                 chat_clear_clicked = st.form_submit_button("Clear", key="chat_clear_btn", icon=":material/delete:", use_container_width=True)
-            with fc4:
-                submit = st.form_submit_button(" ", key="chat_send_btn", icon=":material/send:", use_container_width=True, type="primary")
         # If user hit Clear inside the chat form, wire it to the same clear
         # action as the standalone button used by vision/voice panels.
         if chat_clear_clicked:
