@@ -20576,45 +20576,145 @@ elif st.session_state.mode == "history":
            strip Streamlit's default border, then re-apply our own so the
            Continue/Delete buttons sit inside the SAME card as the title
            text (no more floating buttons between rows). */
+        /* ── Chat row card, redesigned for nicer & neater polish ──
+           Softer surface (pale gradient), slightly larger radius,
+           accent-bar on hover, more refined icon + meta layout. */
         [data-testid="stMain"] div[data-testid="stVerticalBlockBorderWrapper"].md-hist2-row-wrap,
         [data-testid="stMain"] [class*="st-key-hist_row_"] {
-            background:#fff !important;
-            border:1px solid var(--md-border) !important;
-            border-radius:14px !important;
-            box-shadow:0 1px 2px rgba(15,23,42,0.03) !important;
+            background: linear-gradient(180deg, #ffffff 0%, #fcfcff 100%) !important;
+            border:1px solid #eef0f6 !important;
+            border-radius:16px !important;
+            box-shadow:0 1px 2px rgba(15,23,42,0.025), 0 1px 1px rgba(15,23,42,0.02) !important;
             margin-bottom:0.7rem !important;
-            padding:0.95rem 1.1rem !important;
-            transition:transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease !important;
+            padding:1.05rem 1.2rem !important;
+            position:relative !important;
+            overflow:hidden !important;
+            transition:transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease !important;
+        }
+        /* Left accent stripe — invisible by default, slides in on hover. */
+        [data-testid="stMain"] [class*="st-key-hist_row_"]::before {
+            content:"";
+            position:absolute;
+            left:0; top:50%;
+            width:3px; height:0%;
+            background:linear-gradient(180deg, #7c3aed 0%, #4f46e5 100%);
+            border-radius:0 3px 3px 0;
+            transform:translateY(-50%);
+            transition:height 0.22s ease;
         }
         [data-testid="stMain"] [class*="st-key-hist_row_"]:hover {
-            transform:translateY(-1px) !important;
-            box-shadow:0 4px 14px rgba(15,23,42,0.08) !important;
-            border-color:#c7d2fe !important;
+            transform:translateY(-2px) !important;
+            box-shadow:0 8px 22px rgba(79,70,229,0.10), 0 2px 6px rgba(15,23,42,0.05) !important;
+            border-color:#dbe1ff !important;
+            background:linear-gradient(180deg, #ffffff 0%, #f7f8ff 100%) !important;
+        }
+        [data-testid="stMain"] [class*="st-key-hist_row_"]:hover::before {
+            height:62%;
         }
         [data-testid="stMain"] [class*="st-key-hist_row_"] [data-testid="stHorizontalBlock"] {
             align-items:center !important;
-            gap:0.6rem !important;
+            gap:0.65rem !important;
         }
-        .md-hist2-row-inner { display:grid; grid-template-columns:36px 1fr; gap:0.85rem; align-items:flex-start; }
-        .md-hist2-row-ic { width:36px; height:36px; border-radius:10px; background:#f5f3ff; color:#7c3aed; display:flex; align-items:center; justify-content:center; }
-        .md-hist2-row-ic .material-symbols-rounded { font-size:1.15rem; }
-        .md-hist2-row-title { font-weight:700; color:var(--md-text-1); font-size:0.97rem; line-height:1.3; }
-        .md-hist2-row-meta { display:flex; align-items:center; gap:0.35rem; color:var(--md-text-2); font-size:0.78rem; margin-top:0.3rem; flex-wrap:wrap; }
-        .md-hist2-row-meta .material-symbols-rounded { font-size:0.85rem; opacity:0.7; }
-        .md-hist2-row-prev { color:var(--md-text-2); font-size:0.84rem; margin-top:0.35rem; line-height:1.5; }
 
-        /* Continue chat button, outlined indigo pill, inside the row card. */
+        /* Row inner grid: icon | text. */
+        .md-hist2-row-inner {
+            display:grid;
+            grid-template-columns:40px 1fr;
+            gap:0.95rem;
+            align-items:flex-start;
+        }
+        /* Refined icon — bigger, rounded, soft indigo gradient with
+           a subtle outer ring and inner glow. */
+        .md-hist2-row-ic {
+            width:40px; height:40px;
+            border-radius:12px;
+            background:linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+            color:#6d28d9;
+            display:flex; align-items:center; justify-content:center;
+            box-shadow:inset 0 0 0 1px rgba(124,58,237,0.08), 0 1px 2px rgba(124,58,237,0.06);
+            transition:transform 0.2s ease, background 0.2s ease;
+        }
+        [class*="st-key-hist_row_"]:hover .md-hist2-row-ic {
+            transform:scale(1.05);
+            background:linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+        }
+        .md-hist2-row-ic .material-symbols-rounded {
+            font-size:1.25rem;
+            font-variation-settings:'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Title — slightly bigger, tighter leading. */
+        .md-hist2-row-title {
+            font-weight:700;
+            color:var(--md-text-1);
+            font-size:0.99rem;
+            line-height:1.32;
+            letter-spacing:-0.005em;
+        }
+        /* Meta row — pill-style time chip + bullet separator + count. */
+        .md-hist2-row-meta {
+            display:flex;
+            align-items:center;
+            gap:0.5rem;
+            color:#64748b;
+            font-size:0.76rem;
+            margin-top:0.45rem;
+            flex-wrap:wrap;
+            font-weight:500;
+        }
+        .md-hist2-row-meta .material-symbols-rounded {
+            font-size:0.92rem;
+            opacity:0.75;
+            color:#7c3aed;
+        }
+        .md-hist2-row-meta > span:nth-child(3) {
+            color:#cbd5e1;
+            font-weight:700;
+        }
+        .md-hist2-row-meta > span:last-child {
+            background:#f5f3ff;
+            color:#6d28d9;
+            padding:0.12rem 0.5rem;
+            border-radius:999px;
+            font-weight:600;
+            font-size:0.72rem;
+            border:1px solid #ede9fe;
+        }
+        /* Preview text — softer color, sits in its own quote-style
+           container with a left border accent for visual cue. */
+        .md-hist2-row-prev {
+            color:#64748b;
+            font-size:0.84rem;
+            margin-top:0.55rem;
+            line-height:1.55;
+            padding-left:0.7rem;
+            border-left:2px solid #ede9fe;
+            font-style:italic;
+            opacity:0.92;
+        }
+
+        /* Continue chat button, refined pill with subtle gradient
+           fill and a lift on hover that matches the row hover. */
         [class*="st-key-hist_open_"] .stButton > button {
             min-height:40px !important; height:40px !important;
-            border-radius:10px !important;
-            background:#fff !important;
+            border-radius:12px !important;
+            background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%) !important;
             border:1px solid #c7d2fe !important;
             color:#4338ca !important;
-            font-weight:600 !important; font-size:0.84rem !important;
-            box-shadow:none !important;
+            font-weight:650 !important; font-size:0.84rem !important;
+            box-shadow:0 1px 2px rgba(79,70,229,0.06) !important;
+            transition:background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease !important;
         }
         [class*="st-key-hist_open_"] .stButton > button:hover {
-            background:#eef2ff !important; border-color:#a5b4fc !important; color:#3730a3 !important;
+            background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%) !important;
+            border-color:transparent !important;
+            color:#ffffff !important;
+            transform:translateY(-1px) !important;
+            box-shadow:0 4px 12px rgba(79,70,229,0.28) !important;
+        }
+        [class*="st-key-hist_open_"] .stButton > button:hover [data-testid="stIconMaterial"] {
+            color:#ffffff !important;
+            -webkit-text-fill-color:#ffffff !important;
         }
         /* Delete bin, square icon button, properly centered.
            Streamlit emits an empty stMarkdownContainer sibling alongside
