@@ -2575,12 +2575,48 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
 }
 .md-snap-sync.md-snap-sync-today::before {
     content: "";
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background: #22c55e;
-    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.18);
     flex-shrink: 0;
+    position: relative;
+    animation: mdSyncDotBeat 1.4s ease-in-out infinite;
+}
+/* Expanding halo ring behind the dot — sits via the parent pill's
+   ::after pseudo so the dot and ring animate independently. */
+.md-snap-sync.md-snap-sync-today {
+    position: relative;
+}
+.md-snap-sync.md-snap-sync-today::after {
+    content: "";
+    position: absolute;
+    left: 0.55rem;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #22c55e;
+    transform: translate(0, -50%);
+    pointer-events: none;
+    opacity: 0.55;
+    animation: mdSyncDotPulse 1.4s ease-out infinite;
+}
+@keyframes mdSyncDotBeat {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.18); }
+    50%      { transform: scale(1.18); box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.28); }
+}
+@keyframes mdSyncDotPulse {
+    0%   { transform: translate(0, -50%) scale(1);   opacity: 0.55; }
+    80%  { transform: translate(0, -50%) scale(2.4); opacity: 0; }
+    100% { transform: translate(0, -50%) scale(2.4); opacity: 0; }
+}
+/* Respect users who've requested reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+    .md-snap-sync.md-snap-sync-today::before,
+    .md-snap-sync.md-snap-sync-today::after {
+        animation: none !important;
+    }
 }
 
 .md-rcard-link-btn {
