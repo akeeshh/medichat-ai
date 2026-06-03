@@ -6419,7 +6419,8 @@ st.markdown("""
 }
 .md-home-composer-note .md-disclaimer-shield {
     font-size: 14px !important;
-    color: var(--md-text-3) !important;
+    color: #16a34a !important;
+    -webkit-text-fill-color: #16a34a !important;
     line-height: 1 !important;
 }
 
