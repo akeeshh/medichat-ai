@@ -9708,12 +9708,16 @@ st.markdown("""
    page's identifying hero is currently in the DOM.
    ───────────────────────────────────────────────────────────────── */
 
-/* Recent Chats (history) tile markup */
-.md-hist2-tiles, .md-hist2-tile, .md-hist2-row-inner,
-.md-hist2-title, .md-hist2-sub, .md-hist2-tile-ic,
-.md-hist2-tile-val, .md-hist2-tile-lbl,
-.md-hist2-row-title, .md-hist2-row-meta, .md-hist2-row-prev,
-.md-hist2-row-ic {
+/* Recent Chats (history) tile markup. Only the OUTER containers get
+   the default-hide treatment. Hiding the inner text elements (-val,
+   -lbl, -title, -meta, -prev) here would set them to display:none
+   permanently, because the history page's own CSS only sets
+   font/color on those classes, not display, and so can't override
+   the hide. With only outer containers hidden, their children are
+   already invisible during transitions; on the history page itself
+   the page-scoped display:grid/flex overrides bring everything
+   back. */
+.md-hist2-tiles, .md-hist2-tile, .md-hist2-row-inner {
     display: none;
 }
 
@@ -19963,13 +19967,14 @@ elif st.session_state.mode == "history":
         .md-hist2-title { font-size:1.85rem; font-weight:800; color:var(--md-text-1); letter-spacing:-0.01em; line-height:1.1; }
         .md-hist2-sub   { font-size:0.88rem; color:var(--md-text-2); margin-top:0.3rem; line-height:1.45; max-width:640px; }
 
-        /* Stat tiles */
-        .md-hist2-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(195px,1fr)); gap:0.75rem; margin:0.4rem 0 1.3rem 0; }
-        .md-hist2-tile  { background:#fff; border:1px solid var(--md-border); border-radius:14px; padding:0.9rem 1rem; display:flex; align-items:center; gap:0.85rem; box-shadow:0 1px 2px rgba(15,23,42,0.03); }
-        .md-hist2-tile-ic { width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:#f5f3ff; color:#7c3aed; }
-        .md-hist2-tile-ic .material-symbols-rounded { font-size:1.25rem; }
-        .md-hist2-tile-val { font-size:1.5rem; font-weight:750; color:var(--md-text-1); line-height:1; }
-        .md-hist2-tile-lbl { font-size:0.74rem; color:var(--md-text-2); margin-top:0.25rem; font-weight:600; letter-spacing:0.02em; }
+        /* Stat tiles — slightly more polished card with hover lift */
+        .md-hist2-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:0.8rem; margin:0.5rem 0 1.5rem 0; }
+        .md-hist2-tile  { background:#fff; border:1px solid var(--md-border); border-radius:14px; padding:1rem 1.1rem; display:flex; align-items:center; gap:0.95rem; box-shadow:0 1px 2px rgba(15,23,42,0.03); transition:transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
+        .md-hist2-tile:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,0.06); border-color:#c7d2fe; }
+        .md-hist2-tile-ic { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:#f5f3ff; color:#7c3aed; }
+        .md-hist2-tile-ic .material-symbols-rounded { font-size:1.3rem; }
+        .md-hist2-tile-val { font-size:1.55rem; font-weight:750; color:var(--md-text-1); line-height:1; }
+        .md-hist2-tile-lbl { font-size:0.74rem; color:var(--md-text-2); margin-top:0.3rem; font-weight:600; letter-spacing:0.03em; text-transform:uppercase; }
 
         /* Toolbar row alignment, keep input + chips + select on one
            visual baseline.  Streamlit columns force per-cell padding so we
@@ -20034,6 +20039,12 @@ elif st.session_state.mode == "history":
             box-shadow:0 1px 2px rgba(15,23,42,0.03) !important;
             margin-bottom:0.7rem !important;
             padding:0.95rem 1.1rem !important;
+            transition:transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease !important;
+        }
+        [data-testid="stMain"] [class*="st-key-hist_row_"]:hover {
+            transform:translateY(-1px) !important;
+            box-shadow:0 4px 14px rgba(15,23,42,0.08) !important;
+            border-color:#c7d2fe !important;
         }
         [data-testid="stMain"] [class*="st-key-hist_row_"] [data-testid="stHorizontalBlock"] {
             align-items:center !important;
