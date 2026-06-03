@@ -16073,16 +16073,18 @@ div[data-testid="stHorizontalBlock"]:has(.md-conv-select-anchor):hover .md-conv-
         padding: 0.35rem 0.45rem 0.15rem !important;
     }
 
-	/* Custom styled Selectbox (Language Selector) */
+	/* Custom styled Selectbox (Language Selector). Icon is the clean
+	   Material Design "translate" glyph (A + 文 mark) - reads as
+	   "switch language" more clearly than a generic globe. */
 div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-testid="stElementContainer"] [data-testid="stSelectbox"] [data-baseweb="select"] {
     border: 1px solid #e2e8f0 !important;
     border-radius: 12px !important;
     background-color: #ffffff !important;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234f46e5' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-.778.099-1.533.284-2.253' /%3E%3C/svg%3E") !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234f46e5'%3E%3Cpath d='M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
     background-position: left 12px center !important;
-    background-size: 16px 16px !important;
-    padding-left: 24px !important;
+    background-size: 17px 17px !important;
+    padding-left: 36px !important;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
 }
 div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-testid="stElementContainer"] [data-testid="stSelectbox"] [data-baseweb="select"] > div {
