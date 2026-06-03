@@ -2583,7 +2583,7 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
     position: relative;
     animation: mdSyncDotBeat 1.4s ease-in-out infinite;
 }
-/* Expanding halo ring behind the dot — sits via the parent pill's
+/* Expanding halo ring behind the dot - sits via the parent pill's
    ::after pseudo so the dot and ring animate independently. */
 .md-snap-sync.md-snap-sync-today {
     position: relative;
@@ -3288,34 +3288,35 @@ div[class*="st-key-hist_open_"] button [data-testid="stIconMaterial"] {
     -webkit-text-fill-color: currentColor !important;
 }
 
-/* Delete button — soft red circle, redesigned. */
+/* Delete button - plain X icon, no circle. Sits flush-right
+   within its column, gets a subtle red tint on hover. */
 div[class*="st-key-hist_del_"] .stButton button {
-    background: #fef2f2 !important;
-    color: #dc2626 !important;
-    border: 1px solid #fecaca !important;
-    border-radius: 50% !important;
-    width: 38px !important;
-    min-width: 38px !important;
-    max-width: 38px !important;
-    height: 38px !important;
-    min-height: 38px !important;
-    max-height: 38px !important;
+    background: transparent !important;
+    color: #94a3b8 !important;
+    border: none !important;
+    border-radius: 6px !important;
+    width: 24px !important;
+    min-width: 24px !important;
+    max-width: 24px !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
     padding: 0 !important;
-    margin: 0 auto !important;
+    margin: 0 0 0 auto !important;
     box-shadow: none !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease !important;
+    transition: color 0.15s ease, transform 0.15s ease, background 0.15s ease !important;
 }
 div[class*="st-key-hist_del_"] .stButton button:hover {
-    background: #fee2e2 !important;
-    color: #b91c1c !important;
-    border-color: #fca5a5 !important;
-    transform: scale(1.05) !important;
+    background: transparent !important;
+    color: #dc2626 !important;
+    border: none !important;
+    transform: scale(1.18) !important;
 }
 div[class*="st-key-hist_del_"] .stButton button:active {
-    transform: scale(0.97) !important;
+    transform: scale(0.92) !important;
 }
 div[class*="st-key-hist_del_"] button [data-testid="stIconMaterial"] {
     color: inherit !important;
@@ -3324,6 +3325,18 @@ div[class*="st-key-hist_del_"] button [data-testid="stIconMaterial"] {
     margin: 0 !important;
     padding: 0 !important;
     line-height: 1 !important;
+    font-variation-settings: 'FILL' 0, 'wght' 500 !important;
+}
+div[class*="st-key-hist_del_"] .stButton button:hover [data-testid="stIconMaterial"] {
+    color: #dc2626 !important;
+    -webkit-text-fill-color: #dc2626 !important;
+}
+/* Push the delete column to flex-end so the X sits at the right
+   edge of its allotted space. */
+div[data-testid="stMain"] [class*="st-key-hist_row_"] [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:last-child {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
 }
 /* Kill the empty markdown sibling Streamlit emits for the " " label
    so the icon stays exactly centered. */
@@ -8213,46 +8226,232 @@ st.markdown("""
         color: #4338ca !important;
     }
 
-    /* ── Chat page hero (matches mockup) ──
-       Big bold title at the top-left, privacy indicator floats top-right. */
-    .md-chat-hero {
-        display: flex !important;
-        align-items: flex-start !important;
-        justify-content: space-between !important;
-        gap: 1rem !important;
-        margin: 0.2rem 0 4.5rem 0 !important;
-        flex-wrap: wrap !important;
-    }
-    .md-chat-hero-text { min-width: 0 !important; }
-    .md-chat-hero-title {
-        font-size: 1.9rem !important;
-        font-weight: 740 !important;
-        color: #0f172a !important;
-        letter-spacing: -0.022em !important;
-        line-height: 1.15 !important;
-        margin-bottom: 0.25rem !important;
+    /* ── Chat page hero (redesigned) ──────────────────────────────
+       Compact polished card with gradient background, gradient icon
+       tile, eyebrow with live pulse + session count, title, subtitle,
+       and a right-side column of trust-signal badges. */
+    .md-chat-hero.md-chat-hero-v2 {
+        position: relative !important;
         display: flex !important;
         align-items: center !important;
-        gap: 0.5rem !important;
+        justify-content: space-between !important;
+        gap: 1.4rem !important;
+        background: linear-gradient(135deg, #f8f9ff 0%, #eef2ff 55%, #f5f3ff 100%) !important;
+        border: 1px solid #e0e7ff !important;
+        border-radius: 20px !important;
+        padding: 1.2rem 1.5rem !important;
+        margin: 0.2rem 0 1.5rem 0 !important;
+        box-shadow: 0 1px 2px rgba(15,23,42,0.03), 0 6px 18px rgba(79,70,229,0.06) !important;
+        overflow: hidden !important;
+        flex-wrap: wrap !important;
     }
-    /* Shield is now an inline SVG (not a Material Symbols glyph), renders
-       as a proper filled shield silhouette with a soft check inside,
-       identical across all browsers regardless of icon font loading. */
+    /* Subtle decorative spotlight in the top-right corner. */
+    .md-chat-hero.md-chat-hero-v2::before {
+        content: "" !important;
+        position: absolute !important;
+        top: -40% !important;
+        right: -8% !important;
+        width: 280px !important;
+        height: 280px !important;
+        background: radial-gradient(circle, rgba(167,139,250,0.18) 0%, transparent 70%) !important;
+        pointer-events: none !important;
+        z-index: 0 !important;
+    }
+    .md-chat-hero-left {
+        display: flex !important;
+        align-items: center !important;
+        gap: 1.1rem !important;
+        position: relative !important;
+        z-index: 1 !important;
+        flex: 1 1 320px !important;
+        min-width: 0 !important;
+    }
+    /* Gradient icon tile with a spark dot in the corner to read
+       "AI + medical" at a glance. */
+    .md-chat-hero-ic {
+        position: relative !important;
+        width: 58px !important;
+        height: 58px !important;
+        border-radius: 16px !important;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+        color: #ffffff !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+        box-shadow: 0 6px 16px rgba(79,70,229,0.30), inset 0 0 0 1px rgba(255,255,255,0.18) !important;
+    }
+    .md-chat-hero-ic svg { width: 1.85rem !important; height: 1.85rem !important; }
+    .md-chat-hero-ic-glyph.material-symbols-rounded {
+        font-size: 1.85rem !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24 !important;
+        line-height: 1 !important;
+    }
+    .md-chat-hero-ic-spark {
+        position: absolute !important;
+        top: -3px !important; right: -3px !important;
+        width: 14px !important; height: 14px !important;
+        border-radius: 50% !important;
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+        border: 2px solid #ffffff !important;
+        box-shadow: 0 2px 4px rgba(34,197,94,0.45), 0 0 0 0 rgba(34,197,94,0.55) !important;
+        /* Same animation name + duration as the eyebrow pulse and the
+           Online badge dot so all three green pulses tick together. */
+        animation: mdChatHeroPulse 1.6s ease-in-out infinite !important;
+    }
+    .md-chat-hero-text { min-width: 0 !important; flex: 1 !important; }
+    /* Eyebrow row: live pulse dot, label, separator, session count. */
+    .md-chat-hero-eyebrow {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.45rem !important;
+        font-size: 0.68rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.08em !important;
+        text-transform: uppercase !important;
+        color: #4338ca !important;
+        background: rgba(255,255,255,0.85) !important;
+        padding: 0.28rem 0.7rem !important;
+        border-radius: 999px !important;
+        border: 1px solid #c7d2fe !important;
+        margin-bottom: 0.55rem !important;
+        box-shadow: 0 1px 2px rgba(79,70,229,0.06) !important;
+    }
+    .md-chat-hero-pulse {
+        width: 8px !important;
+        height: 8px !important;
+        border-radius: 50% !important;
+        background: #22c55e !important;
+        flex-shrink: 0 !important;
+        animation: mdChatHeroPulse 1.6s ease-in-out infinite !important;
+        box-shadow: 0 0 0 0 rgba(34,197,94,0.6) !important;
+    }
+    @keyframes mdChatHeroPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.55); }
+        50%      { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+    }
+    .md-chat-hero-eyebrow-dot { color: #cbd5e1 !important; font-weight: 800 !important; }
+    .md-chat-hero-session {
+        color: #64748b !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.02em !important;
+        text-transform: none !important;
+    }
+    .md-chat-hero-title {
+        font-size: 1.7rem !important;
+        font-weight: 800 !important;
+        color: #0f172a !important;
+        letter-spacing: -0.022em !important;
+        line-height: 1.1 !important;
+        margin: 0 0 0.3rem 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.45rem !important;
+    }
     .md-chat-hero-shield {
         display: inline-block !important;
-        width: 1.6rem !important;
-        height: 1.6rem !important;
+        width: 1.35rem !important;
+        height: 1.35rem !important;
         color: #4f46e5 !important;
         fill: currentColor !important;
         flex-shrink: 0 !important;
-        vertical-align: -0.25em !important;
-        overflow: visible !important;
+        filter: drop-shadow(0 2px 4px rgba(79,70,229,0.25)) !important;
+    }
+    .md-chat-hero-shield-green {
+        color: #16a34a !important;
+        filter: drop-shadow(0 2px 4px rgba(34,197,94,0.30)) !important;
+    }
+    /* Green verified-shield glyph variant rendered as a Material
+       Symbols span (st.html sanitiser strips inline SVG). */
+    .md-chat-hero-shield-glyph.material-symbols-rounded {
+        color: #16a34a !important;
+        -webkit-text-fill-color: #16a34a !important;
+        font-size: 1.5rem !important;
+        font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24 !important;
+        line-height: 1 !important;
+        filter: drop-shadow(0 2px 4px rgba(34,197,94,0.28)) !important;
+        flex-shrink: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
     }
     .md-chat-hero-sub {
-        font-size: 0.88rem !important;
+        font-size: 0.85rem !important;
         color: #64748b !important;
-        line-height: 1.4 !important;
+        line-height: 1.45 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 100% !important;
     }
+    /* Right-side trust badges column. */
+    .md-chat-hero-right {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.4rem !important;
+        flex-shrink: 0 !important;
+        position: relative !important;
+        z-index: 1 !important;
+    }
+    .md-chat-badge {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.4rem !important;
+        font-size: 0.72rem !important;
+        font-weight: 600 !important;
+        padding: 0.32rem 0.7rem !important;
+        border-radius: 999px !important;
+        background: #ffffff !important;
+        border: 1px solid #e0e7ff !important;
+        color: #475569 !important;
+        white-space: nowrap !important;
+        box-shadow: 0 1px 2px rgba(15,23,42,0.04) !important;
+        line-height: 1.2 !important;
+    }
+    .md-chat-badge .material-symbols-rounded {
+        font-size: 0.92rem !important;
+        flex-shrink: 0 !important;
+    }
+    .md-chat-badge-live {
+        background: rgba(34,197,94,0.08) !important;
+        border-color: rgba(34,197,94,0.28) !important;
+        color: #15803d !important;
+    }
+    .md-chat-badge-dot {
+        width: 7px !important; height: 7px !important;
+        border-radius: 50% !important;
+        background: #22c55e !important;
+        flex-shrink: 0 !important;
+        animation: mdChatHeroPulse 1.6s ease-in-out infinite !important;
+    }
+    .md-chat-badge-secure {
+        background: rgba(79,70,229,0.06) !important;
+        border-color: rgba(79,70,229,0.22) !important;
+        color: #4338ca !important;
+    }
+    .md-chat-badge-secure .material-symbols-rounded {
+        color: #4f46e5 !important;
+        -webkit-text-fill-color: #4f46e5 !important;
+    }
+    .md-chat-badge-grounded {
+        background: rgba(14,165,233,0.06) !important;
+        border-color: rgba(14,165,233,0.22) !important;
+        color: #0369a1 !important;
+    }
+    .md-chat-badge-grounded .material-symbols-rounded {
+        color: #0ea5e9 !important;
+        -webkit-text-fill-color: #0ea5e9 !important;
+    }
+    /* Responsive: badges drop below content on narrower screens. */
+    @media (max-width: 920px) {
+        .md-chat-hero-right {
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            width: 100% !important;
+        }
+    }
+    /* Legacy v1 styles kept for any stale render path. */
     .md-chat-hero-privacy {
         display: inline-flex !important;
         align-items: center !important;
@@ -8260,9 +8459,6 @@ st.markdown("""
         font-size: 0.78rem !important;
         font-weight: 600 !important;
         color: #475569 !important;
-        background: transparent !important;
-        flex-shrink: 0 !important;
-        margin-top: 0.45rem !important;
     }
     .md-chat-hero-privacy .material-symbols-rounded {
         font-size: 0.95rem !important;
@@ -8271,7 +8467,7 @@ st.markdown("""
     }
 
     /* ── Bot bubble redesigned to match mockup ──
-       Logo as avatar (circular), "MediChat AI" + sparkle header INSIDE the
+       Logo as avatar (circular), "MediChat Ai" + sparkle header INSIDE the
        bubble, timestamp right-aligned below the bubble. */
     .av-bot.av-bot-image {
         background: transparent !important;
@@ -8298,7 +8494,7 @@ st.markdown("""
         align-items: flex-end;
         max-width: 78%;
     }
-    /* Header line inside the bot bubble: "MediChat AI" name + sparkle. */
+    /* Header line inside the bot bubble: "MediChat Ai" name + sparkle. */
     .bot-bubble-head {
         display: flex;
         align-items: center;
@@ -8312,9 +8508,12 @@ st.markdown("""
         letter-spacing: -0.005em !important;
     }
     .bot-bubble-spark {
-        font-size: 0.85rem !important;
-        color: #6366f1 !important;
-        -webkit-text-fill-color: #6366f1 !important;
+        font-size: 0.95rem !important;
+        color: #16a34a !important;
+        -webkit-text-fill-color: #16a34a !important;
+        font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24 !important;
+        filter: drop-shadow(0 1px 2px rgba(34,197,94,0.28)) !important;
+        line-height: 1 !important;
     }
     /* Hide the OLD external bot-label since we now have the header inside. */
     .bot-label {
@@ -9884,7 +10083,7 @@ body:has(.md-page-hero) [class*="st-key-signup_form"] {
 
 /* AGGRESSIVE fallback: AI Insights / History / Help / Privacy pages
    don't render any st.form widgets of their own. So when one of those
-   pages is active, hide ALL forms — catches anything the per-key
+   pages is active, hide ALL forms - catches anything the per-key
    rules above missed when Streamlit's DOM reconciler keeps two
    pages' markup alive simultaneously during a navigation flash. */
 body:has(.md-page-hero-insights) [data-testid="stForm"],
@@ -9902,7 +10101,7 @@ body:has(.md-page-hero-privacy)  [data-testid="stElementContainer"]:has([data-te
 
 /* Hide the stMarkdown / stElementContainer wrappers that hold the
    data-entry section intros (.md-form-intro / .md-form-sub) on AI
-   Insights — otherwise the heading text leaks ("Allergies", "Family
+   Insights - otherwise the heading text leaks ("Allergies", "Family
    medical history") even though the form inputs below are hidden.
    Also covers the surrounding card containers and "No X recorded
    yet" empty-state markdown cards by hiding any stElementContainer
@@ -9940,7 +10139,7 @@ body:has(.md-page-hero-insights) [class*="st-key-del_appt_"] {
        -insights / -help / -privacy (existing standard heroes)
    ───────────────────────────────────────────────────────────────── */
 
-/* Recent Chats page — header action buttons (Start a new chat, Back
+/* Recent Chats page - header action buttons (Start a new chat, Back
    to home), Continue/Delete row buttons, filter chips, search input,
    sort dropdown, row containers and toolbar.  These were leaking
    onto Home (top-right header area + bottom-right) during nav clicks. */
@@ -9956,7 +10155,7 @@ body:not(:has(.md-page-marker-history)) [class*="st-key-hist2_sort_box"] {
     display: none !important;
 }
 
-/* Home dashboard — quick-action tile buttons, composer form, smart
+/* Home dashboard - quick-action tile buttons, composer form, smart
    action tiles, rail buttons.  These leak onto Recent Chats / other
    pages when the user clicks away from Home. */
 body:not(:has(.md-page-marker-home)) [class*="st-key-qa_"],
@@ -10002,7 +10201,7 @@ body:not(:has(.md-page-hero-insights)) [class*="st-key-ins_"] {
     display: none !important;
 }
 
-/* Symptoms Checker — multi-step form buttons / inputs, only that page. */
+/* Symptoms Checker - multi-step form buttons / inputs, only that page. */
 body:not(:has(.md-page-hero-symptoms)) [class*="st-key-symp_"],
 body:not(:has(.md-page-hero-symptoms)) [class*="st-key-symptoms_"],
 body:not(:has(.md-page-hero-symptoms)) [class*="st-key-sym_"] {
@@ -15721,7 +15920,7 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
 .md-sidebar-foot-links a:hover {
     color: #4f46e5 !important;
 }
-/* Privacy & Terms button — masquerade as the old text-only link.
+/* Privacy & Terms button - masquerade as the old text-only link.
    Strip every Streamlit button decoration (background, border,
    shadow, padding) and reapply only the footer-link typography so
    it visually matches the previous <a> markup byte-for-byte. */
@@ -16449,9 +16648,9 @@ div.st-key-privacy_delete_account button [data-testid="stIconMaterial"] {
 
     # Footer: Privacy & Terms + copyright.
     # The Privacy link was an <a href="?mode=privacy"> anchor which
-    # triggered a full page reload — that reload dropped the session
+    # triggered a full page reload - that reload dropped the session
     # token and logged the user out. Now a Streamlit button (in-app
-    # rerun, no reload) — styled to look exactly like the original link.
+    # rerun, no reload) - styled to look exactly like the original link.
     # Render the button first, then the copyright as a separate
     # markdown block so each is its own properly-closed DOM unit (the
     # previous "open div on one st.markdown, close on the next" trick
@@ -16829,6 +17028,26 @@ if _del_conv_from_url and st.session_state.is_authenticated and st.session_state
         st.session_state.messages = []
     try:
         del st.query_params["del_conv"]
+    except Exception:
+        pass
+    st.rerun()
+
+# ?hist_filter=<value> → legacy URL handler kept as a no-op so any
+# stale bookmark or external link still strips the param cleanly. The
+# tiles themselves now use Streamlit overlay buttons (in-app rerun, no
+# browser navigation) so this code path is rarely hit at runtime.
+_hist_filter_from_url = str(_query_params.get("hist_filter", "") or "").strip()
+if _hist_filter_from_url:
+    if _hist_filter_from_url in {"all", "today", "yesterday", "7d", "30d"}:
+        st.session_state._hist2_filter = _hist_filter_from_url
+        st.session_state._hist2_active_tile = _hist_filter_from_url
+        st.session_state.mode = "history"
+    elif _hist_filter_from_url == "sort_most":
+        st.session_state._hist2_sort = "most"
+        st.session_state._hist2_active_tile = "most"
+        st.session_state.mode = "history"
+    try:
+        del st.query_params["hist_filter"]
     except Exception:
         pass
     st.rerun()
@@ -18406,7 +18625,7 @@ if st.session_state.mode == "chat":
         )
 
         # ── Anti-flash for Home dashboard ─────────────────────────────
-        # Mirror of the Recent Chats nuclear CSS — scoped to body:has
+        # Mirror of the Recent Chats nuclear CSS - scoped to body:has
         # so rules disappear the moment React removes the home marker.
         # Inside Home, force-hide any Recent Chats / other-page markup
         # that's still being reconciled away from the previous page.
@@ -18480,7 +18699,7 @@ if st.session_state.mode == "chat":
 
             # Reverted to original text_area + 4-button layout. Enter-
             # to-send attempts (a505b80, b24e5da, 8c73185, 9942a31) all
-            # had visual or logic issues — Streamlit's form_submit_button
+            # had visual or logic issues - Streamlit's form_submit_button
             # + Enter behavior is inconsistent enough that the cleanest
             # path is to keep the original UX (click Send) and accept
             # that Enter inserts a newline instead.
@@ -18645,7 +18864,7 @@ if st.session_state.mode == "chat":
             _tip_steps_raw = _tip_daily.get("steps")
             _tip_hr_raw = _tip_daily.get("heart_rate_resting")
 
-            # Water — 8 glasses/day target
+            # Water - 8 glasses/day target
             if _tip_water_raw is None:
                 _tip_water_title = "Log your hydration"
                 _tip_water_desc = "Hydration helps energy, focus, and recovery. Tap Health Overview to start tracking your water intake."
@@ -18666,7 +18885,7 @@ if st.session_state.mode == "chat":
                     _tip_water_desc = "Great job staying hydrated today. Aim to keep this routine."
                 _tip_water_metric = str(_w) + " / 8 glasses today"
 
-            # Sleep — 7 to 9 hours target (adults)
+            # Sleep - 7 to 9 hours target (adults)
             if not _tip_sleep_raw:
                 _tip_sleep_title = "Log last night's sleep"
                 _tip_sleep_desc = "Quality sleep boosts recovery, mood, and immunity. Aim for 7 to 9 hours every night."
@@ -18684,10 +18903,10 @@ if st.session_state.mode == "chat":
                     _tip_sleep_desc = "You slept in the recommended 7 to 9 hour range. Keep this routine going."
                 else:
                     _tip_sleep_title = "Plenty of rest"
-                    _tip_sleep_desc = "Over 9 hours is generous. Make sure quality matches quantity — wake at consistent times."
+                    _tip_sleep_desc = "Over 9 hours is generous. Make sure quality matches quantity - wake at consistent times."
                 _tip_sleep_metric = "Last night: " + ("%.1f" % _s) + "h"
 
-            # Steps — 10,000/day target
+            # Steps - 10,000/day target
             if not _tip_steps_raw:
                 _tip_steps_title = "Start moving"
                 _tip_steps_desc = "Even short walks add up. Aim for 10,000 steps to support cardiovascular health."
@@ -18705,10 +18924,10 @@ if st.session_state.mode == "chat":
                     _tip_steps_desc = "One more short walk and you've hit the 10,000 step daily goal."
                 else:
                     _tip_steps_title = "Step goal hit"
-                    _tip_steps_desc = "Excellent — you crossed the 10,000 step daily target. Recovery matters too."
+                    _tip_steps_desc = "Excellent - you crossed the 10,000 step daily target. Recovery matters too."
                 _tip_steps_metric = format(_st_, ",") + " / 10,000 steps"
 
-            # Resting heart rate — 60 to 100 BPM healthy adult range
+            # Resting heart rate - 60 to 100 BPM healthy adult range
             if not _tip_hr_raw:
                 _tip_hr_title = "Log your heart rate"
                 _tip_hr_desc = "A resting heart rate of 60 to 100 BPM is typical for healthy adults."
@@ -18986,34 +19205,62 @@ if st.session_state.mode == "chat":
             user_initial = st.session_state.patient_name[0].upper()
         user_name_label = st.session_state.patient_name if st.session_state.patient_name and st.session_state.patient_name != "Guest" else "You"
 
-        # Page hero at top of every chat conversation (matches the design
-        # mockup: title + subtitle + privacy indicator).
-        st.markdown(
-            '<div class="md-chat-hero">'
+        # Page hero at top of every chat conversation - redesigned as
+        # a polished trust-building card with brand icon, live status
+        # indicator, and a row of trust-signal badges on the right.
+        # Compact enough to sit above the chat without dominating it.
+        _hero_msg_count = len(st.session_state.get("messages", []) or [])
+        _hero_session_label = (
+            "New session" if _hero_msg_count == 0 else
+            (str(_hero_msg_count) + " message" + ("" if _hero_msg_count == 1 else "s") + " so far")
+        )
+        st.html(
+            '<div class="md-chat-hero md-chat-hero-v2">'
+            '<div class="md-chat-hero-left">'
+            # Gradient icon tile with a clean stethoscope glyph + small
+            # amber spark dot (reads as "AI + medical" at a glance).
+            '<div class="md-chat-hero-ic">'
+            '<span class="material-symbols-rounded md-chat-hero-ic-glyph">stethoscope</span>'
+            '<span class="md-chat-hero-ic-spark"></span>'
+            '</div>'
             '<div class="md-chat-hero-text">'
-            '<div class="md-chat-hero-title">AI Health Conversation '
-            # Inline SVG shield, zero font dependency, renders identically
-            # across all browsers as a proper filled shield silhouette with
-            # a soft check mark inside. Replaces the Material Symbols
-            # `shield` glyph which was rendering ambiguously at small sizes.
-            '<svg class="md-chat-hero-shield" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
-            '<path d="M12 2 3.5 5.5v6c0 5.2 3.6 9.9 8.5 11 4.9-1.1 8.5-5.8 8.5-11v-6L12 2z"/>'
-            '<path d="M10.6 14.4 8 11.8l-1.1 1.1 3.7 3.7 7-7-1.1-1.1-5.9 5.9z" fill="#ffffff"/>'
-            '</svg></div>'
-            '<div class="md-chat-hero-sub">Private, supportive guidance for your symptoms</div>'
+            '<div class="md-chat-hero-eyebrow">'
+            '<span class="md-chat-hero-pulse"></span>'
+            '<span>AI HEALTH COMPANION</span>'
+            '<span class="md-chat-hero-eyebrow-dot">·</span>'
+            '<span class="md-chat-hero-session">' + ui_escape(_hero_session_label) + '</span>'
             '</div>'
-            '<div class="md-chat-hero-privacy">'
+            '<div class="md-chat-hero-title">'
+            '<span>MediChat Ai</span>'
+            # Green verified-shield (Material Symbols glyph). SVG was
+            # being stripped by st.html()'s sanitiser; using a glyph
+            # span instead so it actually renders.
+            '<span class="material-symbols-rounded md-chat-hero-shield-glyph">verified_user</span>'
+            '</div>'
+            '<div class="md-chat-hero-sub">Private, evidence-grounded health guidance you can trust.</div>'
+            '</div>'
+            '</div>'
+            '<div class="md-chat-hero-right">'
+            '<div class="md-chat-badge md-chat-badge-live">'
+            '<span class="md-chat-badge-dot"></span>'
+            '<span>Online</span>'
+            '</div>'
+            '<div class="md-chat-badge md-chat-badge-secure">'
             '<span class="material-symbols-rounded">lock</span>'
-            'Your conversation is private'
+            '<span>End-to-end private</span>'
             '</div>'
-            '</div>',
-            unsafe_allow_html=True
+            '<div class="md-chat-badge md-chat-badge-grounded">'
+            '<span class="material-symbols-rounded">verified</span>'
+            '<span>Evidence-grounded</span>'
+            '</div>'
+            '</div>'
+            '</div>'
         )
 
         # MediChat brand logo loaded once for bot avatars across the conversation.
         _bot_avatar_uri = get_brand_logo_data_uri()
         _bot_avatar_html = (
-            '<div class="av av-bot av-bot-image"><img src="' + _bot_avatar_uri + '" alt="MediChat AI"></div>'
+            '<div class="av av-bot av-bot-image"><img src="' + _bot_avatar_uri + '" alt="MediChat Ai"></div>'
             if _bot_avatar_uri
             else '<div class="av av-bot">M</div>'
         )
@@ -19041,7 +19288,7 @@ if st.session_state.mode == "chat":
                         unsafe_allow_html=True
                     )
             else:
-                # Bot message, logo avatar + bubble with inline "MediChat AI"
+                # Bot message, logo avatar + bubble with inline "MediChat Ai"
                 # header (with sparkle), the response text, and a right-aligned
                 # timestamp under the bubble.
                 st.markdown(
@@ -19050,8 +19297,8 @@ if st.session_state.mode == "chat":
                     '<div class="bot-stack">'
                     '<div class="bot-bubble">'
                     '<div class="bot-bubble-head">'
-                    '<span class="bot-bubble-name">MediChat AI</span>'
-                    '<span class="bot-bubble-spark material-symbols-rounded">auto_awesome</span>'
+                    '<span class="bot-bubble-name">MediChat Ai</span>'
+                    '<span class="bot-bubble-spark material-symbols-rounded">verified_user</span>'
                     '</div>'
                     + markdown_to_html(content) +
                     '</div>'
@@ -19924,7 +20171,7 @@ if st.session_state.mode == "chat":
             if "_bot_avatar_html" not in dir():
                 _bot_avatar_uri_fallback = get_brand_logo_data_uri()
                 _bot_avatar_html = (
-                    '<div class="av av-bot av-bot-image"><img src="' + _bot_avatar_uri_fallback + '" alt="MediChat AI"></div>'
+                    '<div class="av av-bot av-bot-image"><img src="' + _bot_avatar_uri_fallback + '" alt="MediChat Ai"></div>'
                     if _bot_avatar_uri_fallback
                     else '<div class="av av-bot">M</div>'
                 )
@@ -19949,8 +20196,8 @@ if st.session_state.mode == "chat":
                                 '<div class="bot-wrap">' + _bot_avatar_html + '<div class="bot-stack">'
                                 '<div class="bot-bubble">'
                                 '<div class="bot-bubble-head">'
-                                '<span class="bot-bubble-name">MediChat AI</span>'
-                                '<span class="bot-bubble-spark material-symbols-rounded">auto_awesome</span>'
+                                '<span class="bot-bubble-name">MediChat Ai</span>'
+                                '<span class="bot-bubble-spark material-symbols-rounded">verified_user</span>'
                                 '</div>' + markdown_to_html(final_text) + '<span class="stream-cursor"></span></div>'
                                 '</div>'
                                 '</div>', unsafe_allow_html=True
@@ -20509,17 +20756,170 @@ elif st.session_state.mode == "history":
     st.markdown("""
         <style>
         /* Heading */
-        .md-hist2-title { font-size:1.85rem; font-weight:800; color:var(--md-text-1); letter-spacing:-0.01em; line-height:1.1; }
-        .md-hist2-sub   { font-size:0.88rem; color:var(--md-text-2); margin-top:0.3rem; line-height:1.45; max-width:640px; }
+        /* Recent Chats redesigned hero - bordered card with soft
+           indigo gradient, page-identity icon tile, eyebrow tag,
+           title, and subtitle stacked on the left. */
+        .md-hist2-hero {
+            position:relative;
+            display:flex;
+            align-items:flex-start;
+            gap:1.1rem;
+            background:linear-gradient(135deg, #f8f9ff 0%, #eef2ff 60%, #f5f3ff 100%);
+            border:1px solid #e0e7ff;
+            border-radius:20px;
+            padding:1.4rem 1.6rem;
+            margin:0 0 1.2rem 0;
+            box-shadow:0 1px 2px rgba(15,23,42,0.03), 0 4px 14px rgba(79,70,229,0.05);
+            overflow:hidden;
+        }
+        .md-hist2-hero::before {
+            content:"";
+            position:absolute;
+            top:-30%;
+            right:-10%;
+            width:240px;
+            height:240px;
+            background:radial-gradient(circle, rgba(167,139,250,0.18) 0%, transparent 70%);
+            pointer-events:none;
+        }
+        .md-hist2-hero-left {
+            display:flex;
+            align-items:flex-start;
+            gap:1.1rem;
+            position:relative;
+            z-index:1;
+            min-width:0;
+            flex:1;
+        }
+        .md-hist2-hero-ic {
+            width:56px;
+            height:56px;
+            border-radius:16px;
+            background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color:#fff;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            flex-shrink:0;
+            box-shadow:0 4px 12px rgba(79,70,229,0.28), inset 0 0 0 1px rgba(255,255,255,0.18);
+        }
+        .md-hist2-hero-ic .material-symbols-rounded {
+            font-size:1.7rem;
+            font-variation-settings:'FILL' 1, 'wght' 500;
+        }
+        .md-hist2-hero-text {
+            min-width:0;
+            flex:1;
+        }
+        .md-hist2-hero-eyebrow {
+            display:inline-flex;
+            align-items:center;
+            gap:0.35rem;
+            background:#fff;
+            color:#4338ca;
+            font-size:0.7rem;
+            font-weight:650;
+            letter-spacing:0.04em;
+            text-transform:uppercase;
+            padding:0.25rem 0.65rem;
+            border-radius:999px;
+            border:1px solid #c7d2fe;
+            margin-bottom:0.55rem;
+            box-shadow:0 1px 2px rgba(79,70,229,0.06);
+        }
+        .md-hist2-hero-eyebrow-ic.material-symbols-rounded {
+            font-size:0.85rem;
+            opacity:0.9;
+        }
+        .md-hist2-title { font-size:1.95rem; font-weight:800; color:#0f172a; letter-spacing:-0.012em; line-height:1.1; margin:0; }
+        .md-hist2-sub   { font-size:0.86rem; color:var(--md-text-2); margin-top:0.35rem; line-height:1.45; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
 
-        /* Stat tiles — slightly more polished card with hover lift */
+        /* Stat tiles - clickable in-app (no page reload). Each tile is
+           visible HTML; a transparent Streamlit button overlays it to
+           capture clicks via WebSocket-driven rerun. Active state is
+           driven by _hist2_active_tile, so exactly one tile lights up. */
         .md-hist2-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:0.8rem; margin:0.5rem 0 1.5rem 0; }
-        .md-hist2-tile  { background:#fff; border:1px solid var(--md-border); border-radius:14px; padding:1rem 1.1rem; display:flex; align-items:center; gap:0.95rem; box-shadow:0 1px 2px rgba(15,23,42,0.03); transition:transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
-        .md-hist2-tile:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,0.06); border-color:#c7d2fe; }
-        .md-hist2-tile-ic { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:#f5f3ff; color:#7c3aed; }
+        [class*="st-key-hist2_stat_tiles"] [data-testid="stHorizontalBlock"] { gap:0.8rem !important; margin:0.5rem 0 1.5rem 0 !important; }
+        [class*="st-key-hist2_stat_tiles"] [data-testid="stColumn"] { position:relative !important; }
+        .md-hist2-tile  {
+            background:#fff;
+            border:1px solid var(--md-border);
+            border-radius:14px;
+            padding:1rem 1.1rem;
+            display:flex;
+            align-items:center;
+            gap:0.95rem;
+            box-shadow:0 1px 2px rgba(15,23,42,0.03);
+            transition:transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+            cursor:pointer;
+        }
+        /* Column hover drives tile hover so the user sees feedback even
+           though the click target is an invisible overlay button. */
+        [class*="st-key-hist2_stat_tiles"] [data-testid="stColumn"]:hover .md-hist2-tile {
+            transform:translateY(-2px);
+            box-shadow:0 6px 16px rgba(79,70,229,0.10);
+            border-color:#c7d2fe;
+            background:linear-gradient(180deg,#ffffff 0%,#fafbff 100%);
+        }
+        [class*="st-key-hist2_stat_tiles"] [data-testid="stColumn"]:hover .md-hist2-tile-ic {
+            transform:scale(1.06);
+        }
+        .md-hist2-tile.md-hist2-tile-active {
+            border-color:#a5b4fc !important;
+            background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%) !important;
+            box-shadow:0 4px 12px rgba(79,70,229,0.15) !important;
+        }
+        .md-hist2-tile-ic {
+            width:44px; height:44px;
+            border-radius:12px;
+            display:flex; align-items:center; justify-content:center;
+            flex-shrink:0;
+            background:#f5f3ff;
+            color:#7c3aed;
+            transition:transform 0.15s ease;
+        }
         .md-hist2-tile-ic .material-symbols-rounded { font-size:1.3rem; }
         .md-hist2-tile-val { font-size:1.55rem; font-weight:750; color:var(--md-text-1); line-height:1; }
         .md-hist2-tile-lbl { font-size:0.74rem; color:var(--md-text-2); margin-top:0.3rem; font-weight:600; letter-spacing:0.03em; text-transform:uppercase; }
+
+        /* ── Invisible overlay button covering each tile. Captures
+           clicks but renders transparent so the tile shows through. */
+        [class*="st-key-hist2_stat_btn_"] {
+            position:absolute !important;
+            inset:0 !important;
+            z-index:5 !important;
+            margin:0 !important;
+            padding:0 !important;
+        }
+        [class*="st-key-hist2_stat_btn_"] .stButton,
+        [class*="st-key-hist2_stat_btn_"] .stButton button {
+            width:100% !important;
+            height:100% !important;
+            background:transparent !important;
+            border:none !important;
+            box-shadow:none !important;
+            padding:0 !important;
+            margin:0 !important;
+            color:transparent !important;
+            -webkit-text-fill-color:transparent !important;
+            font-size:0 !important;
+            border-radius:14px !important;
+            cursor:pointer !important;
+        }
+        [class*="st-key-hist2_stat_btn_"] .stButton button:hover,
+        [class*="st-key-hist2_stat_btn_"] .stButton button:focus,
+        [class*="st-key-hist2_stat_btn_"] .stButton button:active {
+            background:transparent !important;
+            border:none !important;
+            box-shadow:none !important;
+            outline:none !important;
+        }
+        [class*="st-key-hist2_stat_btn_"] .stButton button [data-testid="stMarkdownContainer"],
+        [class*="st-key-hist2_stat_btn_"] .stButton button [data-testid="stIconMaterial"],
+        [class*="st-key-hist2_stat_btn_"] .stButton button p,
+        [class*="st-key-hist2_stat_btn_"] .stButton button span {
+            display:none !important;
+        }
 
         /* Toolbar row alignment, keep input + chips + select on one
            visual baseline.  Streamlit columns force per-cell padding so we
@@ -20549,6 +20949,17 @@ elif st.session_state.mode == "history":
         }
         [data-testid="stMain"] .st-key-hist2_sort_box div[data-baseweb="select"] { min-height:40px !important; height:40px !important; }
         [data-testid="stMain"] .st-key-hist2_sort_box div[data-baseweb="select"] > div { min-height:38px !important; height:38px !important; }
+        /* Sort selectbox behaves as a click-only dropdown (JS locks
+           the input to readonly). Force pointer cursor everywhere and
+           hide the text caret so it never looks like a text field. */
+        [data-testid="stMain"] .st-key-hist2_sort_box,
+        [data-testid="stMain"] .st-key-hist2_sort_box *,
+        [data-testid="stMain"] [class*="st-key-hist2_sort_box"] div[data-baseweb="select"],
+        [data-testid="stMain"] [class*="st-key-hist2_sort_box"] div[data-baseweb="select"] *,
+        [data-testid="stMain"] [class*="st-key-hist2_sort_box"] input {
+            cursor: pointer !important;
+            caret-color: transparent !important;
+        }
 
         /* Header action buttons, Back to home polished. */
         .st-key-hist_back .stButton > button {
@@ -20583,15 +20994,15 @@ elif st.session_state.mode == "history":
         [data-testid="stMain"] [class*="st-key-hist_row_"] {
             background: linear-gradient(180deg, #ffffff 0%, #fcfcff 100%) !important;
             border:1px solid #eef0f6 !important;
-            border-radius:16px !important;
+            border-radius:14px !important;
             box-shadow:0 1px 2px rgba(15,23,42,0.025), 0 1px 1px rgba(15,23,42,0.02) !important;
-            margin-bottom:0.7rem !important;
-            padding:1.05rem 1.2rem !important;
+            margin-bottom:0.55rem !important;
+            padding:0.7rem 0.95rem !important;
             position:relative !important;
             overflow:hidden !important;
             transition:transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease !important;
         }
-        /* Left accent stripe — invisible by default, slides in on hover. */
+        /* Left accent stripe - invisible by default, slides in on hover. */
         [data-testid="stMain"] [class*="st-key-hist_row_"]::before {
             content:"";
             position:absolute;
@@ -20616,81 +21027,100 @@ elif st.session_state.mode == "history":
             gap:0.65rem !important;
         }
 
-        /* Row inner grid: icon | text. */
+        /* Row inner grid: icon | body. Compact 32px icon, tight gap. */
         .md-hist2-row-inner {
             display:grid;
-            grid-template-columns:40px 1fr;
-            gap:0.95rem;
-            align-items:flex-start;
+            grid-template-columns:32px 1fr;
+            gap:0.7rem;
+            align-items:center;
         }
-        /* Refined icon — bigger, rounded, soft indigo gradient with
-           a subtle outer ring and inner glow. */
+        /* Body stacks title (row 1) over meta (row 2). */
+        .md-hist2-row-body {
+            min-width:0;
+            display:flex;
+            flex-direction:column;
+            gap:0.2rem;
+        }
+        /* Compact icon - soft indigo tile. */
         .md-hist2-row-ic {
-            width:40px; height:40px;
-            border-radius:12px;
+            width:32px; height:32px;
+            border-radius:9px;
             background:linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
             color:#6d28d9;
             display:flex; align-items:center; justify-content:center;
-            box-shadow:inset 0 0 0 1px rgba(124,58,237,0.08), 0 1px 2px rgba(124,58,237,0.06);
-            transition:transform 0.2s ease, background 0.2s ease;
+            box-shadow:inset 0 0 0 1px rgba(124,58,237,0.08);
+            transition:transform 0.18s ease, background 0.18s ease;
         }
         [class*="st-key-hist_row_"]:hover .md-hist2-row-ic {
             transform:scale(1.05);
             background:linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
         }
         .md-hist2-row-ic .material-symbols-rounded {
-            font-size:1.25rem;
+            font-size:1.05rem;
             font-variation-settings:'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
         }
 
-        /* Title — slightly bigger, tighter leading. */
+        /* Title - small + neat, single line with ellipsis. */
         .md-hist2-row-title {
-            font-weight:700;
+            font-weight:650;
             color:var(--md-text-1);
-            font-size:0.99rem;
-            line-height:1.32;
-            letter-spacing:-0.005em;
+            font-size:0.88rem;
+            line-height:1.3;
+            letter-spacing:-0.003em;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            min-width:0;
         }
-        /* Meta row — pill-style time chip + bullet separator + count. */
+        /* Meta row - pill-style time chip + bullet separator + count.
+           Explicit per-span classes (md-hist2-row-meta-ic / -time /
+           -dot / -count) so each child gets exact styling regardless
+           of nesting order. */
         .md-hist2-row-meta {
             display:flex;
             align-items:center;
-            gap:0.5rem;
+            gap:0.4rem;
             color:#64748b;
-            font-size:0.76rem;
-            margin-top:0.45rem;
+            font-size:0.7rem;
+            margin-top:0;
             flex-wrap:wrap;
             font-weight:500;
         }
-        .md-hist2-row-meta .material-symbols-rounded {
-            font-size:0.92rem;
-            opacity:0.75;
+        .md-hist2-row-meta-ic.material-symbols-rounded {
+            font-size:0.82rem;
+            opacity:0.85;
             color:#7c3aed;
+            display:inline-flex;
+            align-items:center;
+            line-height:1;
         }
-        .md-hist2-row-meta > span:nth-child(3) {
+        .md-hist2-row-meta-time {
+            color:#64748b;
+            font-weight:500;
+            white-space:nowrap;
+            font-size:0.7rem;
+        }
+        .md-hist2-row-meta-dot {
             color:#cbd5e1;
             font-weight:700;
+            padding:0 0.05rem;
         }
-        .md-hist2-row-meta > span:last-child {
+        .md-hist2-row-meta-count {
             background:#f5f3ff;
             color:#6d28d9;
-            padding:0.12rem 0.5rem;
+            padding:0.05rem 0.45rem;
             border-radius:999px;
             font-weight:600;
-            font-size:0.72rem;
+            font-size:0.66rem;
             border:1px solid #ede9fe;
+            white-space:nowrap;
+            line-height:1.4;
+            letter-spacing:0.01em;
         }
-        /* Preview text — softer color, sits in its own quote-style
-           container with a left border accent for visual cue. */
+        /* Preview body removed - class kept hidden in case any
+           legacy markup still emits it. */
         .md-hist2-row-prev {
-            color:#64748b;
-            font-size:0.84rem;
-            margin-top:0.55rem;
-            line-height:1.55;
-            padding-left:0.7rem;
-            border-left:2px solid #ede9fe;
-            font-style:italic;
-            opacity:0.92;
+            display:none !important;
         }
 
         /* ── Tile click link ─────────────────────────────────────
@@ -20751,33 +21181,34 @@ elif st.session_state.mode == "history":
             width:100% !important;
         }
 
-        /* The button itself: 38px circle, pale pink, red icon. */
+        /* Plain X icon - no circle, no background. */
         [class*="st-key-hist_del_"] .stButton button {
-            width:38px !important;
-            min-width:38px !important;
-            max-width:38px !important;
-            height:38px !important;
-            min-height:38px !important;
-            max-height:38px !important;
-            border-radius:50% !important;
+            width:24px !important;
+            min-width:24px !important;
+            max-width:24px !important;
+            height:24px !important;
+            min-height:24px !important;
+            max-height:24px !important;
+            border-radius:6px !important;
             padding:0 !important;
-            margin:0 !important;
-            background:#fef2f2 !important;
-            border:1px solid #fecaca !important;
-            color:#dc2626 !important;
+            margin:0 0 0 auto !important;
+            background:transparent !important;
+            border:none !important;
+            color:#94a3b8 !important;
             box-shadow:none !important;
             display:flex !important;
             align-items:center !important;
             justify-content:center !important;
-            transition:background 0.15s ease, border-color 0.15s ease, transform 0.15s ease !important;
+            transition:color 0.15s ease, transform 0.15s ease !important;
         }
         [class*="st-key-hist_del_"] .stButton button:hover {
-            background:#fee2e2 !important;
-            border-color:#fca5a5 !important;
-            transform:scale(1.05) !important;
+            background:transparent !important;
+            border:none !important;
+            color:#dc2626 !important;
+            transform:scale(1.18) !important;
         }
         [class*="st-key-hist_del_"] .stButton button:active {
-            transform:scale(0.97) !important;
+            transform:scale(0.92) !important;
         }
 
         /* Kill the empty markdown sibling (Streamlit emits one for the
@@ -20804,42 +21235,46 @@ elif st.session_state.mode == "history":
             margin:0 !important;
             padding:0 !important;
             font-size:1.05rem !important;
-            color:#dc2626 !important;
+            color:inherit !important;
+            -webkit-text-fill-color:currentColor !important;
             line-height:1 !important;
             display:block !important;
+            font-variation-settings:'FILL' 0, 'wght' 500 !important;
         }
         [class*="st-key-hist_del_"] .stButton button:hover [data-testid="stIconMaterial"] {
-            color:#b91c1c !important;
+            color:#dc2626 !important;
+            -webkit-text-fill-color:#dc2626 !important;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    # ── Header row: title/subtitle on left, action buttons top-right ─
-    _hh1, _hh2 = st.columns([0.62, 0.38])
-    with _hh1:
-        st.markdown(
-            '<div style="margin:0.3rem 0 1rem 0;">'
-            # Hidden page-identity marker for anti-flash CSS (body:has()).
-            '<div class="md-page-marker md-page-marker-history md-page-hero-history" style="display:none;"></div>'
-            '<div class="md-hist2-title">Your Chats</div>'
-            '<div class="md-hist2-sub">Every conversation you have had with MediChat AI. Open one to continue, or start a fresh thread anytime.</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
-    with _hh2:
-        _ab1, _ab2 = st.columns([0.6, 0.4], gap="small")
-        with _ab1:
-            if st.button("Start a new chat", key="hist_new_chat", icon=":material/add:", use_container_width=True, type="primary"):
-                start_new_chat_session()
-                try: del st.query_params["mode"]
-                except Exception: pass
-                st.rerun()
-        with _ab2:
-            if st.button("Back to home", key="hist_back", icon=":material/home:", use_container_width=True):
-                st.session_state.mode = "chat"
-                try: del st.query_params["mode"]
-                except Exception: pass
-                st.rerun()
+    # ── Header: hero card with icon + title-block on the left and
+    # action buttons on the right. Keeps the same hist_new_chat /
+    # hist_back keys so existing CSS hooks and click handlers still
+    # work, just wraps everything in a polished bordered card with
+    # a soft indigo gradient background and a real page-identity icon. ─
+    st.html(
+        # Hidden page-identity marker for anti-flash CSS (body:has()).
+        '<div class="md-page-marker md-page-marker-history md-page-hero-history" style="display:none;"></div>'
+        '<div class="md-hist2-hero">'
+        '<div class="md-hist2-hero-left">'
+        '<div class="md-hist2-hero-ic">'
+        '<span class="material-symbols-rounded">forum</span>'
+        '</div>'
+        '<div class="md-hist2-hero-text">'
+        '<div class="md-hist2-hero-eyebrow">'
+        '<span class="material-symbols-rounded md-hist2-hero-eyebrow-ic">history</span>'
+        '<span>Conversation history</span>'
+        '</div>'
+        '<div class="md-hist2-title">Your Chats</div>'
+        '<div class="md-hist2-sub">Every conversation with MediChat Ai. Open one to continue or start fresh.</div>'
+        '</div>'
+        '</div>'
+        '</div>'
+    )
+    # Header action buttons removed per user - Home in the sidebar
+    # handles "back to home" and a new chat is started from the home
+    # composer, so these were redundant.
 
     if not (st.session_state.is_authenticated and st.session_state.user_email_hash):
         st.markdown(
@@ -20862,7 +21297,25 @@ elif st.session_state.mode == "history":
                 unsafe_allow_html=True
             )
         else:
-            _now = datetime.utcnow()
+            # All chat timestamps are stored as UTC. Convert each one
+            # to the user's local timezone (read from st.context) so
+            # "Today / Yesterday" buckets and the displayed times match
+            # the user's clock, not the server's UTC clock.
+            try:
+                _user_tz_name = getattr(st.context, "timezone", "") or ""
+            except Exception:
+                _user_tz_name = ""
+            _user_tz = None
+            if _user_tz_name and ZoneInfo is not None:
+                try:
+                    _user_tz = ZoneInfo(_user_tz_name)
+                except Exception:
+                    _user_tz = None
+
+            if _user_tz is not None:
+                _now = datetime.now(_user_tz)
+            else:
+                _now = datetime.now()
             _today_start = _now.replace(hour=0, minute=0, second=0, microsecond=0)
             _yesterday_start = _today_start - timedelta(days=1)
             _week_ago = _now - timedelta(days=7)
@@ -20871,7 +21324,15 @@ elif st.session_state.mode == "history":
             def _norm_dt(_d):
                 if not _d or not hasattr(_d, "strftime"):
                     return None
-                return _d.replace(tzinfo=None) if _d.tzinfo else _d
+                # Naive timestamps come from Firestore as UTC; tag them
+                # then convert into the user's local zone so display
+                # and bucket comparisons all use one consistent tz.
+                from datetime import timezone as _tzmod
+                if _d.tzinfo is None:
+                    _d = _d.replace(tzinfo=_tzmod.utc)
+                if _user_tz is not None:
+                    return _d.astimezone(_user_tz)
+                return _d.astimezone()
 
             _hist_dt = [(c, _norm_dt(c.get("last_updated"))) for c in _hist]
             _total = len(_hist)
@@ -20880,20 +21341,52 @@ elif st.session_state.mode == "history":
             _msg_totals = [int(c.get("message_count", 0) or 0) for c, _ in _hist_dt]
             _avg_msgs = int(round(sum(_msg_totals) / len(_msg_totals))) if _msg_totals else 0
 
-            # ── 4 stat tiles (with icons) ────────────────────────────
-            st.markdown(
-                '<div class="md-hist2-tiles">'
-                '<div class="md-hist2-tile"><div class="md-hist2-tile-ic"><span class="material-symbols-rounded">forum</span></div>'
-                '<div><div class="md-hist2-tile-val">' + str(_total) + '</div><div class="md-hist2-tile-lbl">All chats</div></div></div>'
-                '<div class="md-hist2-tile"><div class="md-hist2-tile-ic" style="background:#ecfeff;color:#0891b2;"><span class="material-symbols-rounded">calendar_today</span></div>'
-                '<div><div class="md-hist2-tile-val">' + str(_week_count) + '</div><div class="md-hist2-tile-lbl">Past 7 days</div></div></div>'
-                '<div class="md-hist2-tile"><div class="md-hist2-tile-ic" style="background:#fef3c7;color:#d97706;"><span class="material-symbols-rounded">date_range</span></div>'
-                '<div><div class="md-hist2-tile-val">' + str(_month_count) + '</div><div class="md-hist2-tile-lbl">Past 30 days</div></div></div>'
-                '<div class="md-hist2-tile"><div class="md-hist2-tile-ic" style="background:#dcfce7;color:#16a34a;"><span class="material-symbols-rounded">trending_up</span></div>'
-                '<div><div class="md-hist2-tile-val">' + str(_avg_msgs) + '</div><div class="md-hist2-tile-lbl">Avg. messages per chat</div></div></div>'
-                '</div>',
-                unsafe_allow_html=True
-            )
+            # ── 4 stat tiles (clickable shortcuts, no page reload) ───
+            # Streamlit buttons (st.rerun via WebSocket, not a browser
+            # navigation) overlaid invisibly on top of the visible tile
+            # HTML - preserves the design but avoids the URL navigation
+            # that caused the previous full page reload.
+            # Single _hist2_active_tile tracker so exactly one tile is
+            # highlighted at a time (fixes the "both highlighted" bug
+            # caused by filter + sort being independent triggers).
+            _active_tile = st.session_state.get("_hist2_active_tile", "all")
+            def _tile_html(_tname, _ic_style, _icon, _val, _lbl):
+                _cls = "md-hist2-tile md-hist2-tile-active" if _active_tile == _tname else "md-hist2-tile"
+                return (
+                    '<div class="' + _cls + '">'
+                    '<div class="md-hist2-tile-ic"' + (' style="' + _ic_style + '"' if _ic_style else '') + '><span class="material-symbols-rounded">' + _icon + '</span></div>'
+                    '<div><div class="md-hist2-tile-val">' + str(_val) + '</div><div class="md-hist2-tile-lbl">' + _lbl + '</div></div>'
+                    '</div>'
+                )
+            with st.container(key="hist2_stat_tiles"):
+                _t1, _t2, _t3, _t4 = st.columns(4, gap="small")
+                with _t1:
+                    st.html(_tile_html("all", "", "forum", _total, "All chats"))
+                    if st.button(" ", key="hist2_stat_btn_all", use_container_width=True):
+                        st.session_state._hist2_filter = "all"
+                        st.session_state._hist2_sort = "newest"
+                        st.session_state._hist2_active_tile = "all"
+                        st.rerun()
+                with _t2:
+                    st.html(_tile_html("7d", "background:#ecfeff;color:#0891b2;", "calendar_today", _week_count, "Past 7 days"))
+                    if st.button(" ", key="hist2_stat_btn_7d", use_container_width=True):
+                        st.session_state._hist2_filter = "7d"
+                        st.session_state._hist2_sort = "newest"
+                        st.session_state._hist2_active_tile = "7d"
+                        st.rerun()
+                with _t3:
+                    st.html(_tile_html("30d", "background:#fef3c7;color:#d97706;", "date_range", _month_count, "Past 30 days"))
+                    if st.button(" ", key="hist2_stat_btn_30d", use_container_width=True):
+                        st.session_state._hist2_filter = "30d"
+                        st.session_state._hist2_sort = "newest"
+                        st.session_state._hist2_active_tile = "30d"
+                        st.rerun()
+                with _t4:
+                    st.html(_tile_html("most", "background:#dcfce7;color:#16a34a;", "trending_up", _avg_msgs, "Avg. messages per chat"))
+                    if st.button(" ", key="hist2_stat_btn_most", use_container_width=True):
+                        st.session_state._hist2_sort = "most"
+                        st.session_state._hist2_active_tile = "most"
+                        st.rerun()
 
             # ── Toolbar: search + filter chips + sort ────────────────
             _filter = st.session_state.get("_hist2_filter", "all")
@@ -20916,6 +21409,38 @@ elif st.session_state.mode == "history":
                     if _new_sort != _sort:
                         st.session_state._hist2_sort = _new_sort
                         st.rerun()
+                    # Lock the combobox input to readonly so it behaves as
+                    # a tap-to-open dropdown only (no typing / erasing the
+                    # current value). Same pattern as the sidebar language
+                    # picker. Polls because Streamlit may re-render the
+                    # input asynchronously.
+                    import streamlit.components.v1 as _components_sort
+                    _components_sort.html(
+                        """
+                        <script>
+                        (function(){
+                            function lock(){
+                                try {
+                                    var doc = window.parent.document;
+                                    var inputs = doc.querySelectorAll('[data-testid="stMain"] [class*="st-key-hist2_sort_box"] input[role="combobox"]');
+                                    inputs.forEach(function(input){
+                                        input.setAttribute('readonly', '');
+                                        input.setAttribute('tabindex', '-1');
+                                        input.setAttribute('inputmode', 'none');
+                                        input.style.caretColor = 'transparent';
+                                        input.style.cursor = 'pointer';
+                                    });
+                                } catch (e) {}
+                            }
+                            lock();
+                            setTimeout(lock, 200);
+                            setTimeout(lock, 800);
+                            setInterval(lock, 1500);
+                        })();
+                        </script>
+                        """,
+                        height=0,
+                    )
             st.markdown('<div style="height:0.5rem;"></div>', unsafe_allow_html=True)
 
             # ── Apply filter + sort ──────────────────────────────────
@@ -20930,6 +21455,8 @@ elif st.session_state.mode == "history":
                     return _yesterday_start <= _d < _today_start
                 if _filter == "7d":
                     return _d >= _week_ago
+                if _filter == "30d":
+                    return _d >= _month_ago
                 return True
             _filtered = [(_c, _d) for _c, _d in _hist_dt if _passes_filter(_d)]
             _q = (st.session_state.get("_hist2_search", "") or "").strip().lower()
@@ -20959,13 +21486,66 @@ elif st.session_state.mode == "history":
                     unsafe_allow_html=True
                 )
 
+            # ── Heading-style summary for chat titles ────────────────
+            # Many titles are the verbatim first user message (e.g.
+            # "I have a headache and would like to understand what
+            # might be causing it.") which reads as a long sentence,
+            # not a heading. Strip conversational prefixes, truncate
+            # at clause boundaries, capitalize, cap length.
+            def _summarize_chat_title(txt):
+                if not txt:
+                    return "Chat"
+                t = str(txt).strip()
+                low = t.lower()
+                _prefixes = (
+                    "i have been feeling ", "i have been ", "i have a ",
+                    "i have ", "i am feeling ", "i'm feeling ", "i am ",
+                    "i'm ", "i would like to ", "i'd like to ",
+                    "i want to ", "i need to ", "i need ",
+                    "can you please ", "could you please ",
+                    "can you ", "could you ", "would you ", "please ",
+                    "what is ", "what are ", "what's ",
+                    "how do i ", "how can i ", "how to ", "how do you ",
+                    "tell me about ", "tell me ", "explain ",
+                )
+                for p in _prefixes:
+                    if low.startswith(p):
+                        t = t[len(p):]
+                        low = t.lower()
+                        break
+                for art in ("a ", "an ", "the "):
+                    if low.startswith(art):
+                        t = t[len(art):]
+                        low = t.lower()
+                        break
+                # Cut at first clause boundary so we keep one idea.
+                _cut_markers = (
+                    " and would like", " and want", " and i ",
+                    " and could ", " and can ",
+                    ". ", "? ", "! ",
+                    ", and ", " - i ", " - i ", ", i ",
+                )
+                for m in _cut_markers:
+                    idx = low.find(m)
+                    if idx > 0:
+                        t = t[:idx]
+                        low = t.lower()
+                        break
+                t = t.rstrip(".?!,;:- ").strip()
+                if not t:
+                    return "Chat"
+                t = t[0].upper() + t[1:]
+                if len(t) > 55:
+                    t = t[:52].rstrip() + "…"
+                return t
+
             # ── Flat list of chat rows ───────────────────────────────
             for _h, _d in _filtered:
                 _hid = str(_h.get("id") or "").strip()
                 if not _hid:
                     continue
                 _key = hashlib.sha1(_hid.encode("utf-8")).hexdigest()[:12]
-                _ht = (_h.get("title") or "Chat")[:90]
+                _ht = _summarize_chat_title((_h.get("title") or "Chat")[:200])
                 _hc = int(_h.get("message_count", 0) or 0)
                 _preview = (_h.get("first_user_msg") or "")[:160]
                 # Time chip, "Today · 7:13 AM" / "Yesterday · 1:41 PM" / "25 May 2026 · 1:19 PM"
@@ -20983,13 +21563,13 @@ elif st.session_state.mode == "history":
 
                 # Single bordered card per row. Layout is now a
                 # 2-column row:
-                #   col 1 — native <a> link wrapping the icon+title+
+                #   col 1 - native <a> link wrapping the icon+title+
                 #           meta+preview. Click anywhere on this area
                 #           opens the conversation via ?conv=<id>.
                 #           ?s=<token> is preserved so the URL-driven
                 #           reload restores the session and the user
                 #           stays signed in.
-                #   col 2 — small X delete button. Click stages a
+                #   col 2 - small X delete button. Click stages a
                 #           pending_delete_hid and reruns; the modal
                 #           dialog below catches it on the next run.
                 _open_s_tok = str(st.query_params.get("s", "") or "").strip()
@@ -20997,32 +21577,35 @@ elif st.session_state.mode == "history":
                     "?conv=" + ui_escape(_hid) +
                     (("&s=" + _open_s_tok) if _open_s_tok else "")
                 )
-                with st.container(key="hist_row_" + _key):
-                    _row_l, _row_del = st.columns([0.92, 0.08], gap="small", vertical_alignment="center")
-                    with _row_l:
-                        st.markdown(
+                # Layout: outer 2-col row. Left col holds the bordered
+                # card with the link content; right col holds the X
+                # button OUTSIDE the card surface, sitting in the
+                # margin area next to it.
+                _ht_short = _ht
+                _outer_l, _outer_x = st.columns([0.96, 0.04], gap="small", vertical_alignment="center")
+                with _outer_l:
+                    with st.container(key="hist_row_" + _key):
+                        st.html(
                             '<a class="md-hist2-row-link" href="' + _open_href + '" target="_self">'
-                            '<div class="md-hist2-row-inner">'
+                            '<div class="md-hist2-row-inner md-hist2-row-compact">'
                             '<div class="md-hist2-row-ic"><span class="material-symbols-rounded">chat_bubble</span></div>'
-                            '<div style="min-width:0;">'
-                            '<div class="md-hist2-row-title">' + ui_text(_ht, 90) + '</div>'
+                            '<div class="md-hist2-row-body">'
+                            '<div class="md-hist2-row-title">' + ui_text(_ht_short, 70) + '</div>'
                             '<div class="md-hist2-row-meta">'
-                            '<span class="material-symbols-rounded">schedule</span>'
-                            '<span>' + ui_text(_time_disp, 40) + '</span>'
-                            '<span>·</span>'
-                            '<span>' + str(_hc) + ' ' + _msg_word + '</span>'
-                            '</div>'
-                            + ('<div class="md-hist2-row-prev">' + ui_text(_preview, 180) + '</div>' if _preview else '') +
+                            '<span class="material-symbols-rounded md-hist2-row-meta-ic">schedule</span>'
+                            '<span class="md-hist2-row-meta-time">' + ui_text(_time_disp, 40) + '</span>'
+                            '<span class="md-hist2-row-meta-dot">·</span>'
+                            '<span class="md-hist2-row-meta-count">' + str(_hc) + ' ' + _msg_word + '</span>'
                             '</div>'
                             '</div>'
-                            '</a>',
-                            unsafe_allow_html=True
+                            '</div>'
+                            '</a>'
                         )
-                    with _row_del:
-                        if st.button(" ", key="hist_del_" + _key, icon=":material/close:", help="Delete this chat"):
-                            st.session_state["pending_delete_hid"] = _hid
-                            st.session_state["pending_delete_title"] = _ht
-                            st.rerun()
+                with _outer_x:
+                    if st.button(" ", key="hist_del_" + _key, icon=":material/close:", help="Delete this chat"):
+                        st.session_state["pending_delete_hid"] = _hid
+                        st.session_state["pending_delete_title"] = _ht
+                        st.rerun()
 
             # ── Delete-confirmation modal ────────────────────────────
             # Shown when an X button stages a pending delete. Uses
@@ -21573,7 +22156,7 @@ elif st.session_state.mode == "appointments":
     with sync_tab3:
         st.markdown(
             '<div style="font-size:0.88rem;color:var(--md-text-2);line-height:1.65;padding:0.4rem 0 1.2rem 0;">'
-            'Just mention an appointment in any MediChat conversation &mdash; for example:'
+            'Just mention an appointment in any MediChat conversation , for example:'
             '<ul style="margin-top:0.55rem;margin-bottom:0.7rem;padding-left:1.2rem;">'
             '<li style="margin-bottom:0.2rem;"><em>&ldquo;I have a GP follow-up next Tuesday at 3 pm with Dr Patel.&rdquo;</em></li>'
             '<li style="margin-bottom:0.2rem;"><em>&ldquo;Blood test at Melbourne Pathology on the 12th.&rdquo;</em></li>'
@@ -21873,7 +22456,7 @@ elif st.session_state.mode == "help":
         '<div class="md-page-hero-ic"><span class="material-symbols-rounded">help</span></div>'
         '<div class="md-page-hero-text">'
         '<div class="md-page-hero-title">Help Center</div>'
-        '<div class="md-page-hero-sub">Quick answers to common questions about MediChat &mdash; how to use it, what it can and cannot do, and how to reach a real person if you need one.</div>'
+        '<div class="md-page-hero-sub">Quick answers to common questions about MediChat , how to use it, what it can and cannot do, and how to reach a real person if you need one.</div>'
         '</div>'
         '</div>',
         unsafe_allow_html=True
@@ -21908,31 +22491,31 @@ elif st.session_state.mode == "help":
         (
             "person_add", "Getting started",
             '<ul class="md-privacy-ul">'
-            '<li><strong>Sign up</strong> &mdash; tap <em>Create profile</em>, enter your email and a 4&ndash;8 digit PIN. We hash both irreversibly &mdash; we cannot see or recover your originals.</li>'
-            '<li><strong>Sign in</strong> &mdash; use the same email + PIN. Forgot PIN? You will need to create a new profile (see the linked privacy policy for why we cannot reset hashed PINs).</li>'
-            '<li><strong>Guest mode</strong> &mdash; tap <em>Continue as Guest</em> from the sign-in screen. Useful for one-off questions; nothing is saved after you close the tab.</li>'
-            '<li><strong>Personalise</strong> &mdash; add a first name on your profile so MediChat can greet you and tailor replies.</li>'
+            '<li><strong>Sign up</strong> , tap <em>Create profile</em>, enter your email and a 4 to 8 digit PIN. We hash both irreversibly , we cannot see or recover your originals.</li>'
+            '<li><strong>Sign in</strong> , use the same email + PIN. Forgot PIN? You will need to create a new profile (see the linked privacy policy for why we cannot reset hashed PINs).</li>'
+            '<li><strong>Guest mode</strong> , tap <em>Continue as Guest</em> from the sign-in screen. Useful for one-off questions; nothing is saved after you close the tab.</li>'
+            '<li><strong>Personalise</strong> , add a first name on your profile so MediChat can greet you and tailor replies.</li>'
             '</ul>'
         ),
         (
             "chat_bubble", "Using MediChat",
             '<ul class="md-privacy-ul">'
-            '<li><strong>Ask anything health-related</strong> in the chat composer on Home &mdash; symptoms, drug interactions, lifestyle, recovery, etc.</li>'
-            '<li><strong>Upload a prescription</strong> &mdash; use the <em>Prescription Reader</em> tile or click the upload icon in the chat composer. We extract the medication, dose, and instructions, then explain them in plain English.</li>'
-            '<li><strong>Upload a medical image or PDF</strong> &mdash; from the chat composer. MediChat summarises what it can interpret. <em>This is not a substitute for radiologist or specialist review.</em></li>'
-            '<li><strong>Symptoms Checker</strong> &mdash; a guided triage flow with structured questions, severity prompts, and recommended next steps (self-care, GP, emergency).</li>'
-            '<li><strong>Smart Action tiles</strong> &mdash; one-tap shortcuts for common concerns (Headache, Low energy, Better sleep, etc.).</li>'
+            '<li><strong>Ask anything health-related</strong> in the chat composer on Home , symptoms, drug interactions, lifestyle, recovery, etc.</li>'
+            '<li><strong>Upload a prescription</strong> , use the <em>Prescription Reader</em> tile or click the upload icon in the chat composer. We extract the medication, dose, and instructions, then explain them in plain English.</li>'
+            '<li><strong>Upload a medical image or PDF</strong> , from the chat composer. MediChat summarises what it can interpret. <em>This is not a substitute for radiologist or specialist review.</em></li>'
+            '<li><strong>Symptoms Checker</strong> , a guided triage flow with structured questions, severity prompts, and recommended next steps (self-care, GP, emergency).</li>'
+            '<li><strong>Smart Action tiles</strong> , one-tap shortcuts for common concerns (Headache, Low energy, Better sleep, etc.).</li>'
             '</ul>'
         ),
         (
             "manage_accounts", "Account & data",
             '<ul class="md-privacy-ul">'
-            '<li><strong>Sign out</strong> &mdash; click the logout icon on your profile card in the sidebar.</li>'
-            '<li><strong>View your chats</strong> &mdash; tap <em>Recent Chats</em> in the sidebar nav.</li>'
-            '<li><strong>Delete a single chat</strong> &mdash; open <em>Recent Chats</em>, hover the conversation, click the delete icon.</li>'
-            '<li><strong>Export all your data</strong> &mdash; visit <em>Privacy &amp; Consent</em> and tap <em>Export my data</em> for instructions.</li>'
-            '<li><strong>Delete your entire account</strong> &mdash; visit <em>Privacy &amp; Consent</em> and tap <em>Delete my account</em>. This is irreversible and completes within 30 days.</li>'
-            '<li><strong>Change language</strong> &mdash; use the language picker at the bottom of the sidebar.</li>'
+            '<li><strong>Sign out</strong> , click the logout icon on your profile card in the sidebar.</li>'
+            '<li><strong>View your chats</strong> , tap <em>Recent Chats</em> in the sidebar nav.</li>'
+            '<li><strong>Delete a single chat</strong> , open <em>Recent Chats</em>, hover the conversation, click the delete icon.</li>'
+            '<li><strong>Export all your data</strong> , visit <em>Privacy &amp; Consent</em> and tap <em>Export my data</em> for instructions.</li>'
+            '<li><strong>Delete your entire account</strong> , visit <em>Privacy &amp; Consent</em> and tap <em>Delete my account</em>. This is irreversible and completes within 30 days.</li>'
+            '<li><strong>Change language</strong> , use the language picker at the bottom of the sidebar.</li>'
             '</ul>'
         ),
         (
@@ -21940,7 +22523,7 @@ elif st.session_state.mode == "help":
             '<div class="md-privacy-grid">'
             '<div class="md-privacy-grid-item">'
             '<div class="md-privacy-grid-title">Health Overview</div>'
-            '<div class="md-privacy-grid-body">Daily vitals dashboard &mdash; heart rate, steps, sleep, water intake. Log values to populate the sparklines.</div>'
+            '<div class="md-privacy-grid-body">Daily vitals dashboard , heart rate, steps, sleep, water intake. Log values to populate the sparklines.</div>'
             '</div>'
             '<div class="md-privacy-grid-item">'
             '<div class="md-privacy-grid-title">Health Records</div>'
@@ -21956,7 +22539,7 @@ elif st.session_state.mode == "help":
             '</div>'
             '<div class="md-privacy-grid-item">'
             '<div class="md-privacy-grid-title">AI Insights</div>'
-            '<div class="md-privacy-grid-body">Personalised observations refreshed each visit, based on what you have logged. Never a diagnosis &mdash; always a prompt to consider.</div>'
+            '<div class="md-privacy-grid-body">Personalised observations refreshed each visit, based on what you have logged. Never a diagnosis , always a prompt to consider.</div>'
             '</div>'
             '<div class="md-privacy-grid-item">'
             '<div class="md-privacy-grid-title">Health Passport</div>'
@@ -21967,12 +22550,12 @@ elif st.session_state.mode == "help":
         (
             "build", "Troubleshooting",
             '<ul class="md-privacy-ul">'
-            '<li><strong>Chat will not respond</strong> &mdash; check your internet connection, then refresh the browser tab. If it persists, our AI provider may be temporarily down &mdash; try again in a few minutes.</li>'
-            '<li><strong>Upload failed</strong> &mdash; make sure the file is under 10 MB and is one of: PNG, JPG, JPEG, PDF.</li>'
-            '<li><strong>Sidebar collapsed</strong> &mdash; click the small chevron icon at the top of the screen to expand it again.</li>'
-            '<li><strong>Language not switching</strong> &mdash; reload the page after picking a language; some labels are cached per-session.</li>'
-            '<li><strong>"Logged out" unexpectedly</strong> &mdash; sessions reset if you open the app URL in a new tab. Use the sidebar nav links instead of typing URLs.</li>'
-            '<li><strong>Did not receive a confirmation email</strong> &mdash; we currently use email-as-identifier (no verification email). Just sign back in with your email + PIN.</li>'
+            '<li><strong>Chat will not respond</strong> , check your internet connection, then refresh the browser tab. If it persists, our AI provider may be temporarily down , try again in a few minutes.</li>'
+            '<li><strong>Upload failed</strong> , make sure the file is under 10 MB and is one of: PNG, JPG, JPEG, PDF.</li>'
+            '<li><strong>Sidebar collapsed</strong> , click the small chevron icon at the top of the screen to expand it again.</li>'
+            '<li><strong>Language not switching</strong> , reload the page after picking a language; some labels are cached per-session.</li>'
+            '<li><strong>"Logged out" unexpectedly</strong> , sessions reset if you open the app URL in a new tab. Use the sidebar nav links instead of typing URLs.</li>'
+            '<li><strong>Did not receive a confirmation email</strong> , we currently use email-as-identifier (no verification email). Just sign back in with your email + PIN.</li>'
             '</ul>'
         ),
         (
@@ -21987,10 +22570,10 @@ elif st.session_state.mode == "help":
             '<li>Severe allergic reaction (anaphylaxis), poisoning, or overdose.</li>'
             '</ul>'
             '<div class="md-privacy-grid" style="margin-top:0.5rem;">'
-            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">Australia &mdash; 000</div><div class="md-privacy-grid-body">Ambulance, police, fire. Lifeline 13 11 14 for mental health crisis.</div></div>'
-            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">US / Canada &mdash; 911</div><div class="md-privacy-grid-body">988 for Suicide &amp; Crisis Lifeline (US).</div></div>'
-            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">UK &mdash; 999 or 112</div><div class="md-privacy-grid-body">NHS 111 for non-emergency advice. Samaritans 116 123.</div></div>'
-            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">EU &mdash; 112</div><div class="md-privacy-grid-body">Pan-European emergency number, works from any phone.</div></div>'
+            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">Australia , 000</div><div class="md-privacy-grid-body">Ambulance, police, fire. Lifeline 13 11 14 for mental health crisis.</div></div>'
+            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">US / Canada , 911</div><div class="md-privacy-grid-body">988 for Suicide &amp; Crisis Lifeline (US).</div></div>'
+            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">UK , 999 or 112</div><div class="md-privacy-grid-body">NHS 111 for non-emergency advice. Samaritans 116 123.</div></div>'
+            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">EU , 112</div><div class="md-privacy-grid-body">Pan-European emergency number, works from any phone.</div></div>'
             '</div>'
         ),
         (
@@ -22004,7 +22587,7 @@ elif st.session_state.mode == "help":
             '<ul class="md-privacy-ul">'
             '<li>Email: <a class="md-privacy-link" href="mailto:support@medichat.example">support@medichat.example</a></li>'
             '<li>Response time: typically within 2 business days; complex requests may take up to 5 business days</li>'
-            '<li>For privacy-specific requests (access, correction, deletion, complaints): email <a class="md-privacy-link" href="mailto:privacy@medichat.example">privacy@medichat.example</a> &mdash; covered by our 30-day legal response window</li>'
+            '<li>For privacy-specific requests (access, correction, deletion, complaints): email <a class="md-privacy-link" href="mailto:privacy@medichat.example">privacy@medichat.example</a> , covered by our 30-day legal response window</li>'
             '</ul>'
             '<p class="md-privacy-p md-privacy-note">Please <strong>do not</strong> include sensitive health details in unencrypted email. If you need to share clinical context, mention it in-app and reference the chat date/time in your email instead.</p>'
         ),
@@ -22047,7 +22630,7 @@ elif st.session_state.mode == "privacy":
         '<div class="md-page-hero-ic"><span class="material-symbols-rounded">shield_person</span></div>'
         '<div class="md-page-hero-text">'
         '<div class="md-page-hero-title">Privacy &amp; Consent</div>'
-        '<div class="md-page-hero-sub">How MediChat collects, protects, and uses your health information &mdash; written in plain English, aligned with Australian and international privacy standards.</div>'
+        '<div class="md-page-hero-sub">How MediChat collects, protects, and uses your health information , written in plain English, aligned with Australian and international privacy standards.</div>'
         '</div>'
         '</div>',
         unsafe_allow_html=True
@@ -22062,7 +22645,7 @@ elif st.session_state.mode == "privacy":
         '</div>'
         '<ul class="md-privacy-summary-list">'
         '<li><span class="material-symbols-rounded">check_circle</span>'
-        '<span><strong>You own your data.</strong> You can view, export, correct, or delete it at any time &mdash; no questions asked.</span></li>'
+        '<span><strong>You own your data.</strong> You can view, export, correct, or delete it at any time , no questions asked.</span></li>'
         '<li><span class="material-symbols-rounded">check_circle</span>'
         '<span><strong>We never sell or trade your data.</strong> Not to advertisers, data brokers, insurers, or any third party for marketing.</span></li>'
         '<li><span class="material-symbols-rounded">check_circle</span>'
@@ -22094,17 +22677,17 @@ elif st.session_state.mode == "privacy":
             "person_check", "Your rights",
             '<p class="md-privacy-p">Under the <em>Privacy Act 1988</em> (Cth) and equivalent overseas regimes (GDPR, HIPAA), you have the following rights at all times:</p>'
             '<ul class="md-privacy-ul">'
-            '<li><strong>Access</strong> &mdash; request a copy of the personal information we hold about you.</li>'
-            '<li><strong>Correction</strong> &mdash; ask us to fix anything that is inaccurate, out of date, incomplete, or misleading.</li>'
-            '<li><strong>Erasure</strong> ("right to be forgotten") &mdash; delete your account and all associated health, profile, and chat data.</li>'
-            '<li><strong>Portability</strong> &mdash; export your data in a structured, machine-readable format (JSON or CSV).</li>'
-            '<li><strong>Withdraw consent</strong> &mdash; revoke consent for any optional processing without affecting your right to use the service in Guest mode.</li>'
-            '<li><strong>Lodge a complaint</strong> &mdash; with the Office of the Australian Information Commissioner (OAIC) or your local data protection authority.</li>'
+            '<li><strong>Access</strong> , request a copy of the personal information we hold about you.</li>'
+            '<li><strong>Correction</strong> , ask us to fix anything that is inaccurate, out of date, incomplete, or misleading.</li>'
+            '<li><strong>Erasure</strong> ("right to be forgotten") , delete your account and all associated health, profile, and chat data.</li>'
+            '<li><strong>Portability</strong> , export your data in a structured, machine-readable format (JSON or CSV).</li>'
+            '<li><strong>Withdraw consent</strong> , revoke consent for any optional processing without affecting your right to use the service in Guest mode.</li>'
+            '<li><strong>Lodge a complaint</strong> , with the Office of the Australian Information Commissioner (OAIC) or your local data protection authority.</li>'
             '</ul>'
             '<p class="md-privacy-p md-privacy-note">Requests are actioned within 30 days. There is no fee. Email <a href="mailto:privacy@medichat.example" class="md-privacy-link">privacy@medichat.example</a>.</p>'
         ),
         (
-            "database", "What we collect &mdash; and why",
+            "database", "What we collect , and why",
             '<p class="md-privacy-p">We collect the <strong>minimum data needed</strong> to give you a useful, personalised health chat. Nothing else.</p>'
             '<div class="md-privacy-grid">'
             '<div class="md-privacy-grid-item">'
@@ -22140,7 +22723,7 @@ elif st.session_state.mode == "privacy":
             '<ul class="md-privacy-ul">'
             '<li><strong>Encryption in transit:</strong> TLS 1.2+ for every request between your device and our servers.</li>'
             '<li><strong>Encryption at rest:</strong> data stored in cloud infrastructure that supports AES-256 disk encryption (Google Cloud Firestore / equivalent).</li>'
-            '<li><strong>Irreversible password storage:</strong> email and PIN are hashed with a unique salt before storage. The original values are never written to disk and cannot be recovered &mdash; even by us.</li>'
+            '<li><strong>Irreversible password storage:</strong> email and PIN are hashed with a unique salt before storage. The original values are never written to disk and cannot be recovered , even by us.</li>'
             '<li><strong>Role-aware access controls:</strong> only authorised engineers on duty can access infrastructure, with multi-factor authentication and audit logging.</li>'
             '<li><strong>Audit logs</strong> for administrative access are retained for the period required by law.</li>'
             '<li><strong>Regular security reviews</strong> of dependencies, configurations, and code paths handling personal information.</li>'
@@ -22178,12 +22761,12 @@ elif st.session_state.mode == "privacy":
             '<p class="md-privacy-p md-privacy-note">OAIC contact: <a href="https://www.oaic.gov.au/" target="_blank" rel="noopener noreferrer" class="md-privacy-link">oaic.gov.au</a> &middot; 1300 363 992</p>'
         ),
         (
-            "task_alt", "Consent &mdash; how it works",
+            "task_alt", "Consent , how it works",
             '<ul class="md-privacy-ul">'
             '<li><strong>Express opt-in:</strong> creating a profile is an explicit consent to the processing described on this page. You must tick the consent checkbox before continuing.</li>'
             '<li><strong>Guest mode:</strong> if you prefer not to consent to long-term storage, use Guest mode for a single session.</li>'
             '<li><strong>Granular consent:</strong> optional features (e.g. uploading prescription images, allowing your chats to inform AI improvements) are off by default and can be enabled / disabled in your profile.</li>'
-            '<li><strong>Withdrawal:</strong> withdraw consent any time by signing out and deleting your account &mdash; this triggers full erasure within 30 days.</li>'
+            '<li><strong>Withdrawal:</strong> withdraw consent any time by signing out and deleting your account , this triggers full erasure within 30 days.</li>'
             '</ul>'
         ),
         (
@@ -22231,10 +22814,10 @@ elif st.session_state.mode == "privacy":
             '</ul>'
             '<p class="md-privacy-p md-privacy-note">If you are not satisfied with our response, you may lodge a complaint:</p>'
             '<ul class="md-privacy-ul">'
-            '<li>Australia &mdash; <a href="https://www.oaic.gov.au/privacy/privacy-complaints" target="_blank" rel="noopener noreferrer" class="md-privacy-link">OAIC</a> (1300 363 992)</li>'
-            '<li>EU/EEA &mdash; your national data protection authority (<a href="https://edpb.europa.eu/about-edpb/board/members_en" target="_blank" rel="noopener noreferrer" class="md-privacy-link">EDPB member list</a>)</li>'
-            '<li>UK &mdash; <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener noreferrer" class="md-privacy-link">Information Commissioner&rsquo;s Office (ICO)</a></li>'
-            '<li>US &mdash; <a href="https://www.hhs.gov/hipaa/filing-a-complaint/index.html" target="_blank" rel="noopener noreferrer" class="md-privacy-link">HHS Office for Civil Rights</a> for HIPAA-related concerns</li>'
+            '<li>Australia , <a href="https://www.oaic.gov.au/privacy/privacy-complaints" target="_blank" rel="noopener noreferrer" class="md-privacy-link">OAIC</a> (1300 363 992)</li>'
+            '<li>EU/EEA , your national data protection authority (<a href="https://edpb.europa.eu/about-edpb/board/members_en" target="_blank" rel="noopener noreferrer" class="md-privacy-link">EDPB member list</a>)</li>'
+            '<li>UK , <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener noreferrer" class="md-privacy-link">Information Commissioner&rsquo;s Office (ICO)</a></li>'
+            '<li>US , <a href="https://www.hhs.gov/hipaa/filing-a-complaint/index.html" target="_blank" rel="noopener noreferrer" class="md-privacy-link">HHS Office for Civil Rights</a> for HIPAA-related concerns</li>'
             '</ul>'
         ),
         (
@@ -22287,7 +22870,7 @@ elif st.session_state.mode == "privacy":
     st.markdown(
         '<div class="md-privacy-meta">'
         '<div><strong>Last updated:</strong> 27 May 2026</div>'
-        '<div><strong>Governing law:</strong> Privacy Act 1988 (Cth), Australia &mdash; with equivalent rights extended internationally.</div>'
+        '<div><strong>Governing law:</strong> Privacy Act 1988 (Cth), Australia , with equivalent rights extended internationally.</div>'
         '<div><strong>Effective date:</strong> on first use of the service or first sign-in after this date.</div>'
         '</div>',
         unsafe_allow_html=True
