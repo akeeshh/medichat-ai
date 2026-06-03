@@ -15777,13 +15777,26 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
 }
 /* Ensure the copyright line keeps its centered styling even though
    it no longer sits inside a manually-opened .md-sidebar-footer
-   wrapper div. */
-[data-testid="stSidebar"] .md-sidebar-foot-copy {
+   wrapper div. Visibility is forced so no anti-flash, auth-screen,
+   or anti-overflow rule can collapse it. */
+[data-testid="stSidebar"] .md-sidebar-foot-copy,
+[data-testid="stSidebar"] [data-testid="stMarkdown"]:has(.md-sidebar-foot-copy),
+[data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.md-sidebar-foot-copy) {
     display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+[data-testid="stSidebar"] .md-sidebar-foot-copy {
     text-align: center !important;
     font-size: 0.64rem !important;
     color: #94a3b8 !important;
     width: 100% !important;
+    margin: 0.15rem 0 0.4rem 0 !important;
+    line-height: 1.3 !important;
+    padding: 0 0.4rem !important;
+    box-sizing: border-box !important;
 }
 .md-sidebar-foot-dot {
     color: #cbd5e1 !important;
