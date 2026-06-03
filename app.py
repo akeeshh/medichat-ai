@@ -3770,17 +3770,115 @@ form#home_chat_form [data-testid="stFormSubmitButton"] button p,
    parent CSS), so we dress up the surrounding container instead. */
 div[class*="st-key-mic_recorder"] {
     margin-top: 0.55rem !important;
-    padding: 0.65rem 0.85rem !important;
+    padding: 0.75rem 1rem !important;
     background:
-        linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.07) 100%) !important;
-    border: 1.5px dashed rgba(99, 102, 241, 0.32) !important;
+        linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.10) 100%) !important;
+    border: 1.5px dashed rgba(99, 102, 241, 0.38) !important;
     border-radius: 16px !important;
-    transition: border-color 0.2s ease, background 0.2s ease;
+    box-shadow: 0 1px 2px rgba(99, 102, 241, 0.04) !important;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.18s ease;
 }
 div[class*="st-key-mic_recorder"]:hover {
-    border-color: rgba(99, 102, 241, 0.55) !important;
+    border-color: rgba(99, 102, 241, 0.65) !important;
     background:
-        linear-gradient(135deg, rgba(99, 102, 241, 0.09) 0%, rgba(139, 92, 246, 0.11) 100%) !important;
+        linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.14) 100%) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* ── Voice panel v2 (redesigned, May 2026) ────────────────────────
+   Polished gradient card with an animated mic icon, friendly tagline,
+   and the recorder button styled into the same purple palette. Auto-
+   transcribes on stop, no separate "Transcribe voice" button. */
+.md-voice-panel-v2 {
+    display: flex !important;
+    align-items: center !important;
+    gap: 1rem !important;
+    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #e0e7ff 100%) !important;
+    border: 1px solid #ddd6fe !important;
+    border-radius: 18px !important;
+    padding: 1.05rem 1.3rem !important;
+    margin: 0.4rem 0 0.6rem 0 !important;
+    box-shadow: 0 2px 8px rgba(124,58,237,0.08), inset 0 0 0 1px rgba(255,255,255,0.4) !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+.md-voice-panel-ic {
+    position: relative !important;
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 14px !important;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    color: #ffffff !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.30), inset 0 0 0 1px rgba(255,255,255,0.20) !important;
+}
+.md-voice-panel-ic .material-symbols-rounded {
+    font-size: 1.5rem !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    font-variation-settings: 'FILL' 1, 'wght' 500 !important;
+    position: relative !important;
+    z-index: 2 !important;
+}
+/* Two expanding rings emanating from the mic icon for a live mic
+   indicator. They run on the same beat so the panel reads as
+   actively listening. */
+.md-voice-panel-ic-ring {
+    position: absolute !important;
+    inset: 0 !important;
+    border-radius: 14px !important;
+    border: 2px solid rgba(139,92,246,0.55) !important;
+    opacity: 0 !important;
+    animation: mdVoiceRing 1.8s ease-out infinite !important;
+    pointer-events: none !important;
+}
+.md-voice-panel-ic-ring-delay {
+    animation-delay: 0.9s !important;
+}
+@keyframes mdVoiceRing {
+    0%   { transform: scale(1);    opacity: 0.55; }
+    80%  { transform: scale(1.45); opacity: 0; }
+    100% { transform: scale(1.45); opacity: 0; }
+}
+.md-voice-panel-text { min-width: 0 !important; flex: 1 !important; }
+.md-voice-panel-title {
+    font-size: 1.05rem !important;
+    font-weight: 750 !important;
+    color: #0f172a !important;
+    letter-spacing: -0.01em !important;
+    line-height: 1.2 !important;
+    margin-bottom: 0.2rem !important;
+}
+.md-voice-panel-sub {
+    font-size: 0.83rem !important;
+    color: #64748b !important;
+    line-height: 1.4 !important;
+}
+/* Make the Cancel button compact and subdued (the recorder is the
+   primary action; cancel is the small escape hatch). */
+div[class*="st-key-voice_cancel"] .stButton button,
+div[class*="st-key-voice_cancel"] .stButton > button {
+    min-height: 36px !important;
+    height: 36px !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #64748b !important;
+    box-shadow: none !important;
+}
+div[class*="st-key-voice_cancel"] .stButton button:hover,
+div[class*="st-key-voice_cancel"] .stButton > button:hover {
+    background: #fef2f2 !important;
+    border-color: #fecaca !important;
+    color: #dc2626 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+    .md-voice-panel-ic-ring { animation: none !important; }
 }
 
 /* File uploader inside vision panel, styled drop zone with gradient
@@ -18912,30 +19010,38 @@ if st.session_state.mode == "chat":
                         st.rerun()
 
             if st.session_state.get("home_show_voice", False):
+                # Redesigned voice panel: compact card with branded
+                # gradient, animated mic icon, single tap-to-record
+                # control, and auto-transcribe (no manual "Transcribe
+                # voice" click). User just stops recording and the
+                # audio is sent straight to Whisper + MediChat.
                 st.markdown(
-                    '<div class="md-voice-panel">'
-                    '<div class="md-panel-icon material-symbols-rounded">mic</div>'
-                    '<div><div class="md-panel-title">Voice note</div>'
-                    '<div class="md-panel-subtitle">Record or upload a short voice question. MediChat will transcribe it before answering.</div></div>'
+                    '<div class="md-voice-panel md-voice-panel-v2">'
+                    '<div class="md-voice-panel-ic">'
+                    '<span class="material-symbols-rounded">mic</span>'
+                    '<span class="md-voice-panel-ic-ring"></span>'
+                    '<span class="md-voice-panel-ic-ring md-voice-panel-ic-ring-delay"></span>'
+                    '</div>'
+                    '<div class="md-voice-panel-text">'
+                    '<div class="md-voice-panel-title">Speak naturally</div>'
+                    '<div class="md-voice-panel-sub">Tap below to record. MediChat will transcribe and answer automatically.</div>'
+                    '</div>'
                     '</div>',
                     unsafe_allow_html=True
                 )
                 voice_audio = None
                 # Primary recorder: streamlit_mic_recorder. Reliable dedicated
                 # component with explicit Record/Stop buttons that returns a
-                # dict with the audio bytes. We fall back to st.audio_input
-                # only if the package isn't installed.
+                # dict with the audio bytes.
                 if MIC_RECORDER_AVAILABLE:
                     voice_audio = mic_recorder(
-                        start_prompt="🎤  Start recording",
-                        stop_prompt="⏹  Stop recording",
+                        start_prompt="🎤  Tap to start recording",
+                        stop_prompt="⏹  Tap to stop and send",
                         just_once=False,
                         use_container_width=True,
                         format="wav",
                         key="mic_recorder_" + str(st.session_state.voice_audio_key),
                     )
-                    if voice_audio and isinstance(voice_audio, dict):
-                        st.caption(f"✓ Recorded {len(voice_audio.get('bytes', b''))//1024} KB, click Transcribe voice below.")
                 elif hasattr(st, "audio_input"):
                     voice_audio = st.audio_input("Record your question", key="voice_audio_" + str(st.session_state.voice_audio_key))
                 else:
@@ -18945,19 +19051,32 @@ if st.session_state.mode == "chat":
                         key="voice_upload_" + str(st.session_state.voice_audio_key),
                         help="Your Streamlit version does not expose microphone recording, so upload an audio note instead.",
                     )
-                vc1, vc2 = st.columns([1, 1])
-                with vc1:
-                    if st.button("Transcribe voice", key="voice_transcribe", type="primary", use_container_width=True, icon=":material/graphic_eq:"):
+
+                # ── Auto-transcribe + auto-submit ────────────────────
+                # As soon as the user stops recording, mic_recorder
+                # returns the audio dict on the next rerun. We detect
+                # that here, transcribe with Whisper, drop the text
+                # into pending_user_input, and let the existing chat
+                # flow pick it up - no extra button click required.
+                _voice_auto_sent_key = "voice_auto_sent_" + str(st.session_state.voice_audio_key)
+                if voice_audio and isinstance(voice_audio, dict) and voice_audio.get('bytes') and not st.session_state.get(_voice_auto_sent_key, False):
+                    st.session_state[_voice_auto_sent_key] = True
+                    with st.spinner("Transcribing your voice"):
                         transcript = transcribe_voice_note(voice_audio)
-                        if transcript:
-                            st.session_state.pending_user_input = transcript
-                            st.session_state.home_show_voice = False
-                            st.session_state.voice_audio_key = st.session_state.get("voice_audio_key", 0) + 1
-                            st.rerun()
-                        else:
-                            st.error("I could not transcribe that audio. Please try a clearer recording or type the question.")
-                with vc2:
-                    if st.button("Cancel voice", key="voice_cancel", use_container_width=True, icon=":material/close:"):
+                    if transcript:
+                        st.session_state.pending_user_input = transcript
+                        st.session_state.home_show_voice = False
+                        st.session_state.voice_audio_key = st.session_state.get("voice_audio_key", 0) + 1
+                        st.rerun()
+                    else:
+                        st.error("I could not transcribe that audio. Please try a clearer recording or type the question.")
+                        st.session_state[_voice_auto_sent_key] = False
+
+                # Single small Cancel link (Transcribe voice button is
+                # gone - auto-mode handles it).
+                _vc_spacer, _vc_cancel = st.columns([0.6, 0.4])
+                with _vc_cancel:
+                    if st.button("Cancel", key="voice_cancel", use_container_width=True, icon=":material/close:"):
                         st.session_state.home_show_voice = False
                         st.session_state.voice_audio_key = st.session_state.get("voice_audio_key", 0) + 1
                         st.rerun()
