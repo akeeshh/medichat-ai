@@ -2562,6 +2562,25 @@ div[data-testid="stHorizontalBlock"] .stButton > button[kind="secondary"].md-chi
     padding: 0.15rem 0.55rem;
     border-radius: 999px;
     border: 1px solid rgba(99, 102, 241, 0.14);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+/* Synced today, fresh-data green chip variant, signals the snapshot
+   is current. Tiny dot before the text reads as a live indicator. */
+.md-snap-sync.md-snap-sync-today {
+    color: #15803d;
+    background: rgba(34, 197, 94, 0.10);
+    border-color: rgba(34, 197, 94, 0.28);
+}
+.md-snap-sync.md-snap-sync-today::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.18);
+    flex-shrink: 0;
 }
 
 .md-rcard-link-btn {
@@ -18724,7 +18743,7 @@ if st.session_state.mode == "chat":
                 ]
                 snap_html = (
                     '<div class="md-rcard md-snap-card">'
-                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><div class="md-snap-sync">' + _last_sync_label + '</div></div>'
+                    '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><div class="md-snap-sync' + (' md-snap-sync-today' if _last_sync_label == "Synced today" else '') + '">' + _last_sync_label + '</div></div>'
                     '<div class="md-snap-grid">'
                 )
                 for _cls, _icon, _lbl, _val, _status, _line_cls, _metric_key in _tiles:
