@@ -2880,27 +2880,36 @@ a.md-conv-row-link:hover .md-conv-bubble { background: var(--md-brand-2); color:
     flex: 1;
     min-width: 0;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.18rem;
+}
+.md-snap-valrow {
+    display: flex;
+    align-items: baseline;
     gap: 0.5rem;
+    min-width: 0;
 }
 .md-snap-label {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--md-text-2);
     font-weight: 500;
     line-height: 1.2;
-    flex: 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 .md-snap-value {
-    font-size: 1.05rem;
+    font-size: 1.0rem;
     font-weight: 700;
     color: var(--md-text-1);
     line-height: 1.2;
-    flex-shrink: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* ── Recent Conversations rows ── */
@@ -4315,8 +4324,11 @@ st.markdown("""
     }
     .md-snap-text {
         align-items: flex-start;
-        flex-direction: column;
         gap: 0.1rem;
+    }
+    .md-snap-valrow {
+        flex-wrap: wrap;
+        gap: 0.35rem;
     }
     .confidence-row {
         flex-wrap: wrap;
@@ -11007,7 +11019,7 @@ st.markdown("""
 .md-snap-text {
     min-width: 0 !important;
 }
-.md-snap-text > div {
+.md-snap-valrow {
     min-width: 0 !important;
 }
 .md-snap-label {
@@ -11017,12 +11029,18 @@ st.markdown("""
 }
 .md-snap-value {
     white-space: nowrap !important;
-    font-size: 0.9rem !important;
+    font-size: 0.92rem !important;
     line-height: 1.18 !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 .md-snap-status {
     white-space: nowrap !important;
+    flex: 0 0 auto !important;
     flex-shrink: 0 !important;
+    margin-left: 0 !important;
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -18747,9 +18765,11 @@ if st.session_state.mode == "chat":
                         '<div class="md-snap-tile">'
                         '<div class="md-snap-icon ' + _cls + ' material-symbols-rounded">' + ui_escape(_icon) + '</div>'
                         '<div class="md-snap-text">'
-                        '<div><div class="md-snap-label">' + ui_text(_lbl, 40) + '</div>'
-                        '<div class="md-snap-value">' + ui_text(_val, 40) + '</div></div>'
+                        '<div class="md-snap-label">' + ui_text(_lbl, 40) + '</div>'
+                        '<div class="md-snap-valrow">'
+                        '<div class="md-snap-value">' + ui_text(_val, 40) + '</div>'
                         '<div class="md-snap-status">' + ui_text(_status, 20) + '</div>'
+                        '</div>'
                         '</div>'
                         + _spark_svg +
                         '</div>'
