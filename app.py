@@ -9847,6 +9847,122 @@ body:has(.md-page-hero-insights) [class*="st-key-del_appt_"] {
     display: none !important;
 }
 
+/* ── COMPREHENSIVE per-page key scoping (June 2026) ─────────────────
+   Every page renders some buttons / inputs / forms whose keys persist
+   in the DOM during React reconciliation when the user nav-clicks to
+   another page. Each rule below: "hide these page-X keys when body
+   does NOT contain page-X's identity marker." Markers used:
+     - .md-page-marker-home    (empty-chat Home dashboard)
+     - .md-page-marker-history (Recent Chats page, injected near
+       the .md-hist2-title hero)
+     - .md-page-hero-overview / -meds / -appts / -records / -rx /
+       -insights / -help / -privacy (existing standard heroes)
+   ───────────────────────────────────────────────────────────────── */
+
+/* Recent Chats page — header action buttons (Start a new chat, Back
+   to home), Continue/Delete row buttons, filter chips, search input,
+   sort dropdown, row containers and toolbar.  These were leaking
+   onto Home (top-right header area + bottom-right) during nav clicks. */
+body:not(:has(.md-page-marker-history)) [class*="st-key-hist_new_chat"],
+body:not(:has(.md-page-marker-history)) [class*="st-key-hist_back"],
+body:not(:has(.md-page-marker-history)) [class*="st-key-hist_open_"],
+body:not(:has(.md-page-marker-history)) [class*="st-key-hist_del_"],
+body:not(:has(.md-page-marker-history)) [class*="st-key-hist_row_"],
+body:not(:has(.md-page-marker-history)) [class*="st-key-hist_toolbar_row"],
+body:not(:has(.md-page-marker-history)) [class*="st-key-hist2_search"],
+body:not(:has(.md-page-marker-history)) [class*="st-key-hist2_filter_"],
+body:not(:has(.md-page-marker-history)) [class*="st-key-hist2_sort_box"] {
+    display: none !important;
+}
+
+/* Home dashboard — quick-action tile buttons, composer form, smart
+   action tiles, rail buttons.  These leak onto Recent Chats / other
+   pages when the user clicks away from Home. */
+body:not(:has(.md-page-marker-home)) [class*="st-key-qa_"],
+body:not(:has(.md-page-marker-home)) [class*="st-key-home_chat_form"],
+body:not(:has(.md-page-marker-home)) [class*="st-key-home_chat_input"],
+body:not(:has(.md-page-marker-home)) [class*="st-key-home_upload_btn"],
+body:not(:has(.md-page-marker-home)) [class*="st-key-home_voice_btn"],
+body:not(:has(.md-page-marker-home)) [class*="st-key-home_send_btn"],
+body:not(:has(.md-page-marker-home)) [class*="st-key-home_vision_"],
+body:not(:has(.md-page-marker-home)) [class*="st-key-home_overview_see_all"],
+body:not(:has(.md-page-marker-home)) [class*="st-key-smart_"],
+body:not(:has(.md-page-marker-home)) [class*="st-key-tile_"],
+body:not(:has(.md-page-marker-home)) [class*="st-key-rail_"],
+body:not(:has(.md-page-marker-home)) [class*="st-key-home_tip_"] {
+    display: none !important;
+}
+/* Home greeting + subgreeting + composer note, so the "Good morning,
+   Akee 👋" and the disclaimer line don't flash on other pages. */
+body:not(:has(.md-page-marker-home)) .md-greet-wrap,
+body:not(:has(.md-page-marker-home)) .md-home-greet-wrap,
+body:not(:has(.md-page-marker-home)) .md-home-composer-note,
+body:not(:has(.md-page-marker-home)) .md-home-hero,
+body:not(:has(.md-page-marker-home)) .md-home-rail {
+    display: none !important;
+}
+
+/* Help page action buttons / FAQ togglers. */
+body:not(:has(.md-page-hero-help)) [class*="st-key-help_"] {
+    display: none !important;
+}
+
+/* Privacy page action buttons (export / delete / download). */
+body:not(:has(.md-page-hero-privacy)) [class*="st-key-privacy_"],
+body:not(:has(.md-page-hero-privacy)) [class*="st-key-export_data"],
+body:not(:has(.md-page-hero-privacy)) [class*="st-key-delete_account"] {
+    display: none !important;
+}
+
+/* AI Insights navigate-buttons (Go to Medications / Run Symptoms
+   Checker, etc.) shouldn't appear on other pages. */
+body:not(:has(.md-page-hero-insights)) [class*="st-key-insights_"],
+body:not(:has(.md-page-hero-insights)) [class*="st-key-ins_"] {
+    display: none !important;
+}
+
+/* Symptoms Checker — multi-step form buttons / inputs, only that page. */
+body:not(:has(.md-page-hero-symptoms)) [class*="st-key-symp_"],
+body:not(:has(.md-page-hero-symptoms)) [class*="st-key-symptoms_"],
+body:not(:has(.md-page-hero-symptoms)) [class*="st-key-sym_"] {
+    display: none !important;
+}
+
+/* Health Overview quick-stat / chart row buttons (See all data, etc.). */
+body:not(:has(.md-page-hero-overview)) [class*="st-key-overview_"],
+body:not(:has(.md-page-hero-overview)) [class*="st-key-ov_"] {
+    display: none !important;
+}
+
+/* Medications page row delete buttons + add forms (already covered
+   for forms above, this catches Remove buttons + edit toggles). */
+body:not(:has(.md-page-hero-meds)) [class*="st-key-del_med_"],
+body:not(:has(.md-page-hero-meds)) [class*="st-key-del_allergy_"],
+body:not(:has(.md-page-hero-meds)) [class*="st-key-del_fh_"],
+body:not(:has(.md-page-hero-meds)) [class*="st-key-del_surg_"],
+body:not(:has(.md-page-hero-meds)) [class*="st-key-edit_med_"],
+body:not(:has(.md-page-hero-meds)) [class*="st-key-meds_"] {
+    display: none !important;
+}
+
+/* Appointments page delete buttons + calendar-sync controls. */
+body:not(:has(.md-page-hero-appts)) [class*="st-key-del_appt_"],
+body:not(:has(.md-page-hero-appts)) [class*="st-key-appts_"],
+body:not(:has(.md-page-hero-appts)) [class*="st-key-cal_"] {
+    display: none !important;
+}
+
+/* Health Records page row buttons (View / Download / Delete). */
+body:not(:has(.md-page-hero-records)) [class*="st-key-rec_"],
+body:not(:has(.md-page-hero-records)) [class*="st-key-records_"] {
+    display: none !important;
+}
+
+/* Prescription Reader page action buttons (Analyze / Clear). */
+body:not(:has(.md-page-hero-rx)) [class*="st-key-rx_"] {
+    display: none !important;
+}
+
 /* ── Page-transition fade-in ────────────────────────────────────────
    Smooth 180ms fade for the main page hero when a new page loads.
    Subtle enough to not feel sluggish, prominent enough to mask any
@@ -18083,6 +18199,8 @@ if st.session_state.mode == "chat":
         _disp_name = (st.session_state.patient_name if st.session_state.patient_name and st.session_state.patient_name != "Guest" else "")
         _greet = "Good " + _tod + (", " + _disp_name if _disp_name else "") + " 👋"
         st.markdown(
+            # Hidden page-identity marker for anti-flash CSS (body:has()).
+            '<div class="md-page-marker md-page-marker-home" style="display:none;"></div>'
             '<div class="md-greet-wrap md-home-greet-wrap md-home-head-left">'
             '<div class="md-greet">' + ui_text(_greet, 80) + '</div>'
             '<div class="md-subgreet">How can I help you today?</div>'
@@ -20207,6 +20325,8 @@ elif st.session_state.mode == "history":
     with _hh1:
         st.markdown(
             '<div style="margin:0.3rem 0 1rem 0;">'
+            # Hidden page-identity marker for anti-flash CSS (body:has()).
+            '<div class="md-page-marker md-page-marker-history md-page-hero-history" style="display:none;"></div>'
             '<div class="md-hist2-title">Your Chats</div>'
             '<div class="md-hist2-sub">Every conversation you have had with MediChat AI. Open one to continue, or start a fresh thread anytime.</div>'
             '</div>',
