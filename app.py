@@ -20693,72 +20693,31 @@ elif st.session_state.mode == "history":
             opacity:0.92;
         }
 
-        /* ── Open-chat overlay button ─────────────────────────────
-           The whole row card IS the click target now. The Streamlit
-           button is positioned absolutely to cover the entire card
-           with transparent paint, so the visual layout (icon + title
-           + meta + preview) shows through but click events go to
-           the button. Cursor:pointer on the card hint at click. */
-        [data-testid="stMain"] [class*="st-key-hist_row_"] {
-            cursor: pointer !important;
-        }
-        [data-testid="stMain"] [class*="st-key-hist_open_"] {
-            position: absolute !important;
-            top: 0 !important; left: 0 !important;
-            width: 100% !important; height: 100% !important;
-            margin: 0 !important; padding: 0 !important;
-            z-index: 1 !important;
-        }
-        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton,
-        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button {
-            width: 100% !important; height: 100% !important;
-            min-height: 0 !important; max-height: none !important;
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            padding: 0 !important; margin: 0 !important;
-            border-radius: 16px !important;
-            color: transparent !important;
-            -webkit-text-fill-color: transparent !important;
-            font-size: 0 !important;
+        /* ── Tile click link ─────────────────────────────────────
+           The icon + title + meta + preview area is wrapped in a
+           native <a href="?conv=<id>"> so the WHOLE left column is
+           clickable. Cursor on the row card hints at click. The
+           ?s=<token> session param is preserved in the href so the
+           page reload restores the user's session cleanly. */
+        [data-testid="stMain"] .md-hist2-row-link,
+        [data-testid="stMain"] .md-hist2-row-link:link,
+        [data-testid="stMain"] .md-hist2-row-link:visited,
+        [data-testid="stMain"] .md-hist2-row-link:hover {
+            text-decoration: none !important;
+            color: inherit !important;
+            display: block !important;
             cursor: pointer !important;
             outline: none !important;
         }
-        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button:hover,
-        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button:focus,
-        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button:active {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            outline: none !important;
+        [data-testid="stMain"] .md-hist2-row-link * {
+            cursor: pointer !important;
         }
-        /* Hide the button's icon + label entirely (it's just a click
-           hit area, the visible content is the markdown above). */
-        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button [data-testid="stIconMaterial"],
-        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button [data-testid="stMarkdownContainer"],
-        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button p,
-        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button span {
-            display: none !important;
-        }
-
-        /* ── X delete button, top-right corner, stays above overlay ─ */
-        [data-testid="stMain"] [class*="st-key-hist_del_"] {
-            position: absolute !important;
-            top: 0.7rem !important;
-            right: 0.7rem !important;
-            width: auto !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            z-index: 5 !important;
-        }
-        /* Clear any prior flex/width layout that assumed the button
-           sat in a column. */
-        [data-testid="stMain"] [class*="st-key-hist_del_"] .stButton,
-        [data-testid="stMain"] [class*="st-key-hist_del_"] [data-testid="stTooltipHoverTarget"] {
-            display: inline-flex !important;
-            width: auto !important;
-            margin: 0 !important;
-            padding: 0 !important;
+        /* Make the right column where the X sits center its content
+           vertically against the multi-line markdown column. */
+        [data-testid="stMain"] [class*="st-key-hist_row_"] [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:last-child {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
         /* Delete bin, square icon button, properly centered.
            Streamlit emits an empty stMarkdownContainer sibling alongside
@@ -21022,53 +20981,48 @@ elif st.session_state.mode == "history":
                         _time_disp = _d.strftime("%d %b %Y") + "  ·  " + _t_str
                 _msg_word = "message" if _hc == 1 else "messages"
 
-                # Single bordered card per row. CSS positions the
-                # hist_open_ button as an INVISIBLE FULL-TILE overlay,
-                # so clicking anywhere on the card opens the chat.
-                # The hist_del_ X button is positioned absolutely in
-                # the top-right corner above the open overlay so it
-                # remains independently clickable.
+                # Single bordered card per row. Layout is now a
+                # 2-column row:
+                #   col 1 — native <a> link wrapping the icon+title+
+                #           meta+preview. Click anywhere on this area
+                #           opens the conversation via ?conv=<id>.
+                #           ?s=<token> is preserved so the URL-driven
+                #           reload restores the session and the user
+                #           stays signed in.
+                #   col 2 — small X delete button. Click stages a
+                #           pending_delete_hid and reruns; the modal
+                #           dialog below catches it on the next run.
+                _open_s_tok = str(st.query_params.get("s", "") or "").strip()
+                _open_href = (
+                    "?conv=" + ui_escape(_hid) +
+                    (("&s=" + _open_s_tok) if _open_s_tok else "")
+                )
                 with st.container(key="hist_row_" + _key):
-                    st.markdown(
-                        '<div class="md-hist2-row-inner">'
-                        '<div class="md-hist2-row-ic"><span class="material-symbols-rounded">chat_bubble</span></div>'
-                        '<div style="min-width:0;">'
-                        '<div class="md-hist2-row-title">' + ui_text(_ht, 90) + '</div>'
-                        '<div class="md-hist2-row-meta">'
-                        '<span class="material-symbols-rounded">schedule</span>'
-                        '<span>' + ui_text(_time_disp, 40) + '</span>'
-                        '<span>·</span>'
-                        '<span>' + str(_hc) + ' ' + _msg_word + '</span>'
-                        '</div>'
-                        + ('<div class="md-hist2-row-prev">' + ui_text(_preview, 180) + '</div>' if _preview else '') +
-                        '</div>'
-                        '</div>',
-                        unsafe_allow_html=True
-                    )
-                    # Full-tile clickable overlay (transparent button covers
-                    # the whole card via CSS). Same load-conversation logic.
-                    if st.button("Open conversation", key="hist_open_" + _key, use_container_width=True):
-                        _conv = load_conversation(st.session_state.user_email_hash, _hid)
-                        if _conv is not None:
-                            st.session_state.current_conversation_id = _hid
-                            st.session_state.messages = _conv.get("messages", []) or []
-                            st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
-                            st.session_state.feedback = {}
-                            st.session_state.last_sources = []
-                            st.session_state.emergency_detected = False
-                            st.session_state.mode = "chat"
-                            try: del st.query_params["mode"]
-                            except Exception: pass
+                    _row_l, _row_del = st.columns([0.92, 0.08], gap="small", vertical_alignment="center")
+                    with _row_l:
+                        st.markdown(
+                            '<a class="md-hist2-row-link" href="' + _open_href + '" target="_self">'
+                            '<div class="md-hist2-row-inner">'
+                            '<div class="md-hist2-row-ic"><span class="material-symbols-rounded">chat_bubble</span></div>'
+                            '<div style="min-width:0;">'
+                            '<div class="md-hist2-row-title">' + ui_text(_ht, 90) + '</div>'
+                            '<div class="md-hist2-row-meta">'
+                            '<span class="material-symbols-rounded">schedule</span>'
+                            '<span>' + ui_text(_time_disp, 40) + '</span>'
+                            '<span>·</span>'
+                            '<span>' + str(_hc) + ' ' + _msg_word + '</span>'
+                            '</div>'
+                            + ('<div class="md-hist2-row-prev">' + ui_text(_preview, 180) + '</div>' if _preview else '') +
+                            '</div>'
+                            '</div>'
+                            '</a>',
+                            unsafe_allow_html=True
+                        )
+                    with _row_del:
+                        if st.button(" ", key="hist_del_" + _key, icon=":material/close:", help="Delete this chat"):
+                            st.session_state["pending_delete_hid"] = _hid
+                            st.session_state["pending_delete_title"] = _ht
                             st.rerun()
-                    # X delete button — sits absolutely top-right above
-                    # the open overlay (z-index trick in CSS). On click
-                    # it stages a pending_delete_hid in session_state
-                    # and reruns; the dialog block below catches it on
-                    # the rerun and shows the confirm modal.
-                    if st.button(" ", key="hist_del_" + _key, icon=":material/close:", help="Delete this chat"):
-                        st.session_state["pending_delete_hid"] = _hid
-                        st.session_state["pending_delete_title"] = _ht
-                        st.rerun()
 
             # ── Delete-confirmation modal ────────────────────────────
             # Shown when an X button stages a pending delete. Uses
