@@ -9963,6 +9963,30 @@ body:not(:has(.md-page-hero-rx)) [class*="st-key-rx_"] {
     display: none !important;
 }
 
+/* ── Positive scoping for Recent Chats: when the history marker is
+   in the DOM, hide ALL home/other-page markup, even if the previous
+   page's own marker is still being reconciled away by React. This
+   catches the flash when clicking *into* Recent Chats from Home. */
+body:has(.md-page-marker-history) .md-greet-wrap,
+body:has(.md-page-marker-history) .md-home-greet-wrap,
+body:has(.md-page-marker-history) .md-home-composer-note,
+body:has(.md-page-marker-history) .md-home-hero,
+body:has(.md-page-marker-history) .md-home-rail,
+body:has(.md-page-marker-history) [class*="st-key-qa_"],
+body:has(.md-page-marker-history) [class*="st-key-home_chat_form"],
+body:has(.md-page-marker-history) [class*="st-key-home_chat_input"],
+body:has(.md-page-marker-history) [class*="st-key-home_upload_btn"],
+body:has(.md-page-marker-history) [class*="st-key-home_voice_btn"],
+body:has(.md-page-marker-history) [class*="st-key-home_send_btn"],
+body:has(.md-page-marker-history) [class*="st-key-home_vision_"],
+body:has(.md-page-marker-history) [class*="st-key-home_overview_see_all"],
+body:has(.md-page-marker-history) [class*="st-key-home_tip_"],
+body:has(.md-page-marker-history) [class*="st-key-smart_"],
+body:has(.md-page-marker-history) [class*="st-key-tile_"],
+body:has(.md-page-marker-history) [class*="st-key-rail_"] {
+    display: none !important;
+}
+
 /* ── Page-transition fade-in ────────────────────────────────────────
    Smooth 180ms fade for the main page hero when a new page loads.
    Subtle enough to not feel sluggish, prominent enough to mask any
