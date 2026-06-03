@@ -18475,15 +18475,96 @@ if st.session_state.mode == "chat":
                         st.rerun()
 
             # ── Daily Health Tip carousel (4 live-data slides, 3s rotation) ──
+            # Every slide's title / description / metric line is derived
+            # from the user's actual logged value for the day so the copy
+            # always matches reality (no more "Heart in good rhythm" when
+            # nothing has been logged).
             _tip_daily = get_daily_metrics()
             _tip_water_raw = _tip_daily.get("water_glasses")
             _tip_sleep_raw = _tip_daily.get("sleep_hours")
             _tip_steps_raw = _tip_daily.get("steps")
             _tip_hr_raw = _tip_daily.get("heart_rate_resting")
-            _tip_water_metric = (str(int(_tip_water_raw)) + " / 8 glasses today") if _tip_water_raw is not None else "Not logged today. Tap Health Overview to log"
-            _tip_sleep_metric = ("Last night: " + ("%.1f" % float(_tip_sleep_raw)) + "h") if _tip_sleep_raw else "Sleep not logged. Log it on Health Overview"
-            _tip_steps_metric = (format(int(_tip_steps_raw), ",") + " / 10,000 steps") if _tip_steps_raw else "Steps not logged. Log them on Health Overview"
-            _tip_hr_metric = ("Resting HR " + str(int(_tip_hr_raw)) + " BPM") if _tip_hr_raw else "Heart rate not logged. Log it on Health Overview"
+
+            # Water — 8 glasses/day target
+            if _tip_water_raw is None:
+                _tip_water_title = "Log your hydration"
+                _tip_water_desc = "Hydration helps energy, focus, and recovery. Tap Health Overview to start tracking your water intake."
+                _tip_water_metric = "Not logged today. Tap Health Overview to log"
+            else:
+                _w = int(_tip_water_raw)
+                if _w == 0:
+                    _tip_water_title = "Time to hydrate"
+                    _tip_water_desc = "You haven't logged any water yet. Aim for 8 glasses spaced through the day for steady energy."
+                elif _w < 4:
+                    _tip_water_title = "Keep sipping"
+                    _tip_water_desc = "Good start. " + str(8 - _w) + " more glasses to reach today's goal of 8."
+                elif _w < 8:
+                    _tip_water_title = "Almost there"
+                    _tip_water_desc = "Only " + str(8 - _w) + " glasses left to hit 8 today. You're on track."
+                else:
+                    _tip_water_title = "Hydration goal hit"
+                    _tip_water_desc = "Great job staying hydrated today. Aim to keep this routine."
+                _tip_water_metric = str(_w) + " / 8 glasses today"
+
+            # Sleep — 7 to 9 hours target (adults)
+            if not _tip_sleep_raw:
+                _tip_sleep_title = "Log last night's sleep"
+                _tip_sleep_desc = "Quality sleep boosts recovery, mood, and immunity. Aim for 7 to 9 hours every night."
+                _tip_sleep_metric = "Sleep not logged. Log it on Health Overview"
+            else:
+                _s = float(_tip_sleep_raw)
+                if _s < 6:
+                    _tip_sleep_title = "Rest up tonight"
+                    _tip_sleep_desc = "Last night was short. Aim for 7 to 9 hours tonight to support memory, mood, and immunity."
+                elif _s < 7:
+                    _tip_sleep_title = "Close to optimal"
+                    _tip_sleep_desc = "A bit more rest tonight would put you in the recommended 7 to 9 hour range."
+                elif _s <= 9:
+                    _tip_sleep_title = "Well rested"
+                    _tip_sleep_desc = "You slept in the recommended 7 to 9 hour range. Keep this routine going."
+                else:
+                    _tip_sleep_title = "Plenty of rest"
+                    _tip_sleep_desc = "Over 9 hours is generous. Make sure quality matches quantity — wake at consistent times."
+                _tip_sleep_metric = "Last night: " + ("%.1f" % _s) + "h"
+
+            # Steps — 10,000/day target
+            if not _tip_steps_raw:
+                _tip_steps_title = "Start moving"
+                _tip_steps_desc = "Even short walks add up. Aim for 10,000 steps to support cardiovascular health."
+                _tip_steps_metric = "Steps not logged. Log them on Health Overview"
+            else:
+                _st_ = int(_tip_steps_raw)
+                if _st_ < 5000:
+                    _tip_steps_title = "Add a walk"
+                    _tip_steps_desc = "You're under halfway to today's 10,000 step goal. A short walk after meals helps."
+                elif _st_ < 8000:
+                    _tip_steps_title = "Halfway there"
+                    _tip_steps_desc = "Good progress. Keep going to hit the 10,000 step daily target."
+                elif _st_ < 10000:
+                    _tip_steps_title = "Almost there"
+                    _tip_steps_desc = "One more short walk and you've hit the 10,000 step daily goal."
+                else:
+                    _tip_steps_title = "Step goal hit"
+                    _tip_steps_desc = "Excellent — you crossed the 10,000 step daily target. Recovery matters too."
+                _tip_steps_metric = format(_st_, ",") + " / 10,000 steps"
+
+            # Resting heart rate — 60 to 100 BPM healthy adult range
+            if not _tip_hr_raw:
+                _tip_hr_title = "Log your heart rate"
+                _tip_hr_desc = "A resting heart rate of 60 to 100 BPM is typical for healthy adults."
+                _tip_hr_metric = "Heart rate not logged. Log it on Health Overview"
+            else:
+                _hr = int(_tip_hr_raw)
+                if _hr < 60:
+                    _tip_hr_title = "Resting HR below normal"
+                    _tip_hr_desc = "Resting HR " + str(_hr) + " BPM sits below 60. Common in athletes; otherwise consider a check."
+                elif _hr <= 100:
+                    _tip_hr_title = "Heart in good rhythm"
+                    _tip_hr_desc = "Resting HR " + str(_hr) + " BPM is inside the typical 60 to 100 BPM range for healthy adults."
+                else:
+                    _tip_hr_title = "Resting HR elevated"
+                    _tip_hr_desc = "Resting HR " + str(_hr) + " BPM is above 100. Rest, hydrate, and watch the trend over a few days."
+                _tip_hr_metric = "Resting HR " + str(_hr) + " BPM"
             _tip_glass_svg = (
                 '<svg viewBox="0 0 86 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
                 '<defs><linearGradient id="mdGlassC" x1="0" y1="0" x2="0" y2="1">'
@@ -18503,8 +18584,8 @@ if st.session_state.mode == "chat":
                 '<div class="md-tip-slide md-tip-water">'
                 '<div>'
                 '<div class="md-tip-eyebrow">Hydration tip</div>'
-                '<div class="md-tip-title">Stay hydrated</div>'
-                '<div class="md-tip-desc">Drinking enough water helps maintain energy and supports overall health.</div>'
+                '<div class="md-tip-title">' + ui_text(_tip_water_title, 60) + '</div>'
+                '<div class="md-tip-desc">' + ui_text(_tip_water_desc, 200) + '</div>'
                 '<div class="md-tip-metric"><span class="material-symbols-rounded">water_drop</span>' + _tip_water_metric + '</div>'
                 '</div>'
                 '<div class="md-tip-illust md-tip-illust-svg">' + _tip_glass_svg + '</div>'
@@ -18512,8 +18593,8 @@ if st.session_state.mode == "chat":
                 '<div class="md-tip-slide md-tip-sleep">'
                 '<div>'
                 '<div class="md-tip-eyebrow">Sleep insight</div>'
-                '<div class="md-tip-title">Wind down earlier</div>'
-                '<div class="md-tip-desc">Quality sleep boosts recovery, mood, and immunity. Aim for 7,9 hours every night.</div>'
+                '<div class="md-tip-title">' + ui_text(_tip_sleep_title, 60) + '</div>'
+                '<div class="md-tip-desc">' + ui_text(_tip_sleep_desc, 200) + '</div>'
                 '<div class="md-tip-metric"><span class="material-symbols-rounded">bedtime</span>' + _tip_sleep_metric + '</div>'
                 '</div>'
                 '<div class="md-tip-illust"><span class="material-symbols-rounded">bedtime</span></div>'
@@ -18521,8 +18602,8 @@ if st.session_state.mode == "chat":
                 '<div class="md-tip-slide md-tip-move">'
                 '<div>'
                 '<div class="md-tip-eyebrow">Movement</div>'
-                '<div class="md-tip-title">Keep moving</div>'
-                '<div class="md-tip-desc">A short walk after meals helps regulate blood sugar and energy levels through the day.</div>'
+                '<div class="md-tip-title">' + ui_text(_tip_steps_title, 60) + '</div>'
+                '<div class="md-tip-desc">' + ui_text(_tip_steps_desc, 200) + '</div>'
                 '<div class="md-tip-metric"><span class="material-symbols-rounded">directions_walk</span>' + _tip_steps_metric + '</div>'
                 '</div>'
                 '<div class="md-tip-illust"><span class="material-symbols-rounded">directions_walk</span></div>'
@@ -18530,8 +18611,8 @@ if st.session_state.mode == "chat":
                 '<div class="md-tip-slide md-tip-vitals">'
                 '<div>'
                 '<div class="md-tip-eyebrow">Vitals check</div>'
-                '<div class="md-tip-title">Heart in good rhythm</div>'
-                '<div class="md-tip-desc">A resting heart rate of 60,100 BPM is typical for healthy adults. Keep moving and resting well.</div>'
+                '<div class="md-tip-title">' + ui_text(_tip_hr_title, 60) + '</div>'
+                '<div class="md-tip-desc">' + ui_text(_tip_hr_desc, 200) + '</div>'
                 '<div class="md-tip-metric"><span class="material-symbols-rounded">favorite</span>' + _tip_hr_metric + '</div>'
                 '</div>'
                 '<div class="md-tip-illust"><span class="material-symbols-rounded">favorite</span></div>'
