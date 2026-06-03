@@ -6285,7 +6285,7 @@ st.markdown("""
 
 /* Home greeting positioning and vertical stacking. */
 .md-home-greet-wrap {
-    margin: -4.4rem 0 0.6rem 0 !important;
+    margin: -4.4rem 0 2.4rem 0 !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: flex-start !important;
