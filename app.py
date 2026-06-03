@@ -15724,15 +15724,24 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
    Strip every Streamlit button decoration (background, border,
    shadow, padding) and reapply only the footer-link typography so
    it visually matches the previous <a> markup byte-for-byte. */
-[data-testid="stSidebar"] .st-key-footer_privacy_btn {
+[data-testid="stSidebar"] .st-key-footer_privacy_btn,
+[data-testid="stSidebar"] div[class*="st-key-footer_privacy_btn"] {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
-    margin-bottom: 0.35rem !important;
+    margin: 0 0 0.35rem 0 !important;
+    padding: 0 !important;
     background: transparent !important;
+    width: 100% !important;
+    text-align: center !important;
 }
-[data-testid="stSidebar"] .st-key-footer_privacy_btn .stButton,
-[data-testid="stSidebar"] .st-key-footer_privacy_btn .stButton > button {
+[data-testid="stSidebar"] div[class*="st-key-footer_privacy_btn"] .stButton {
+    display: flex !important;
+    justify-content: center !important;
+    width: auto !important;
+    margin: 0 auto !important;
+}
+[data-testid="stSidebar"] div[class*="st-key-footer_privacy_btn"] .stButton > button {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -15748,22 +15757,33 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     transition: color 0.15s ease !important;
     cursor: pointer !important;
 }
-[data-testid="stSidebar"] .st-key-footer_privacy_btn .stButton > button:hover,
-[data-testid="stSidebar"] .st-key-footer_privacy_btn .stButton > button:focus,
-[data-testid="stSidebar"] .st-key-footer_privacy_btn .stButton > button:active {
+[data-testid="stSidebar"] div[class*="st-key-footer_privacy_btn"] .stButton > button:hover,
+[data-testid="stSidebar"] div[class*="st-key-footer_privacy_btn"] .stButton > button:focus,
+[data-testid="stSidebar"] div[class*="st-key-footer_privacy_btn"] .stButton > button:active {
     color: #4f46e5 !important;
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
     outline: none !important;
 }
-[data-testid="stSidebar"] .st-key-footer_privacy_btn .stButton > button p {
+[data-testid="stSidebar"] div[class*="st-key-footer_privacy_btn"] .stButton > button p {
     margin: 0 !important;
     padding: 0 !important;
     color: inherit !important;
     font-size: 0.72rem !important;
     font-weight: 550 !important;
     line-height: 1.2 !important;
+    text-align: center !important;
+}
+/* Ensure the copyright line keeps its centered styling even though
+   it no longer sits inside a manually-opened .md-sidebar-footer
+   wrapper div. */
+[data-testid="stSidebar"] .md-sidebar-foot-copy {
+    display: block !important;
+    text-align: center !important;
+    font-size: 0.64rem !important;
+    color: #94a3b8 !important;
+    width: 100% !important;
 }
 .md-sidebar-foot-dot {
     color: #cbd5e1 !important;
@@ -16414,14 +16434,14 @@ div.st-key-privacy_delete_account button [data-testid="stIconMaterial"] {
         st.rerun()
 
     # Footer: Privacy & Terms + copyright.
-    # Was an <a href="?mode=privacy"> anchor which triggered a full page
-    # reload — that reload dropped the session token and logged the user
-    # out. Replaced with a Streamlit button styled to look identical to
-    # the original link (text-only, same color, hover state) so the
-    # design is byte-for-byte the same but clicking does an in-app
-    # rerun via session_state rather than a navigation that resets
-    # the auth context.
-    st.markdown('<div class="md-sidebar-footer">', unsafe_allow_html=True)
+    # The Privacy link was an <a href="?mode=privacy"> anchor which
+    # triggered a full page reload — that reload dropped the session
+    # token and logged the user out. Now a Streamlit button (in-app
+    # rerun, no reload) — styled to look exactly like the original link.
+    # Render the button first, then the copyright as a separate
+    # markdown block so each is its own properly-closed DOM unit (the
+    # previous "open div on one st.markdown, close on the next" trick
+    # got eaten by Streamlit's markdown sanitizer, killing the copy).
     if st.button("Privacy & Terms", key="footer_privacy_btn", use_container_width=False):
         st.session_state.mode = "privacy"
         try:
@@ -16430,8 +16450,7 @@ div.st-key-privacy_delete_account button [data-testid="stIconMaterial"] {
             pass
         st.rerun()
     st.markdown(
-        '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>'
-        '</div>',
+        '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>',
         unsafe_allow_html=True
     )
     st.markdown(
