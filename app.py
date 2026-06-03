@@ -20077,41 +20077,91 @@ elif st.session_state.mode == "history":
            force the button into grid-center so the icon truly sits on
            the button's middle pixel. Multiple selectors target every
            nested wrapper Streamlit might insert. */
+        /* ── Redesigned delete button ─────────────────────────────
+           Soft circular button (38px) with subtle pink tint by
+           default → deeper red on hover. Centered both inside its
+           column (column flex-align) and inside itself (the icon
+           sits on the button's middle pixel via flex centering on
+           every nested wrapper Streamlit creates). Replaces the
+           previous square white outline that read as too neutral
+           for a destructive action.
+           ────────────────────────────────────────────────────── */
+
+        /* Column wrapper: vertical-center the button against the
+           multi-line chat row content next to it. */
+        [data-testid="stMain"] [class*="st-key-hist_row_"] [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:last-child {
+            display:flex !important;
+            align-items:center !important;
+            justify-content:center !important;
+        }
+        [class*="st-key-hist_del_"],
         [class*="st-key-hist_del_"] .stButton,
         [class*="st-key-hist_del_"] [data-testid="stTooltipHoverTarget"] {
-            display:flex !important; justify-content:center !important; width:100% !important;
+            display:flex !important;
+            justify-content:center !important;
+            align-items:center !important;
+            width:100% !important;
         }
+
+        /* The button itself: 38px circle, pale pink, red icon. */
         [class*="st-key-hist_del_"] .stButton > button {
-            min-height:40px !important; height:40px !important; width:40px !important; min-width:40px !important; max-width:40px !important;
-            border-radius:10px !important; padding:0 !important;
-            background:#fff !important; border:1px solid var(--md-border) !important; color:var(--md-text-2) !important;
-            display:grid !important; place-items:center !important; place-content:center !important;
-            grid-template-columns:1fr !important; gap:0 !important;
-            margin:0 auto !important;
-        }
-        /* Hide the empty markdown container so the icon has no sibling
-           competing for horizontal space. */
-        [class*="st-key-hist_del_"] .stButton > button [data-testid="stMarkdownContainer"] {
-            display:none !important; width:0 !important; height:0 !important;
-            margin:0 !important; padding:0 !important;
-        }
-        /* The Streamlit icon wrapper span, center it and reset all width
-           so the icon sits exactly mid-button. */
-        [class*="st-key-hist_del_"] .stButton > button > span:first-child,
-        [class*="st-key-hist_del_"] .stButton > button > div:first-child {
-            display:flex !important; align-items:center !important; justify-content:center !important;
-            width:auto !important; height:auto !important; margin:0 !important; padding:0 !important;
-            grid-column:1 / -1 !important;
-        }
-        [class*="st-key-hist_del_"] .stButton > button [data-testid="stIconMaterial"] {
-            margin:0 !important; padding:0 !important; font-size:1.1rem !important;
-            color:#94a3b8 !important; line-height:1 !important; display:block !important;
+            width:38px !important;
+            min-width:38px !important;
+            max-width:38px !important;
+            height:38px !important;
+            min-height:38px !important;
+            max-height:38px !important;
+            border-radius:50% !important;
+            padding:0 !important;
+            margin:0 !important;
+            background:#fef2f2 !important;
+            border:1px solid #fecaca !important;
+            color:#dc2626 !important;
+            box-shadow:none !important;
+            display:flex !important;
+            align-items:center !important;
+            justify-content:center !important;
+            transition:background 0.15s ease, border-color 0.15s ease, transform 0.15s ease !important;
         }
         [class*="st-key-hist_del_"] .stButton > button:hover {
-            border-color:#fecaca !important; background:#fef2f2 !important;
+            background:#fee2e2 !important;
+            border-color:#fca5a5 !important;
+            transform:scale(1.05) !important;
+        }
+        [class*="st-key-hist_del_"] .stButton > button:active {
+            transform:scale(0.97) !important;
+        }
+
+        /* Kill the empty markdown sibling (Streamlit emits one for the
+           " " label) so the icon truly sits centered. */
+        [class*="st-key-hist_del_"] .stButton > button [data-testid="stMarkdownContainer"] {
+            display:none !important;
+            width:0 !important;
+            height:0 !important;
+            margin:0 !important;
+            padding:0 !important;
+        }
+        /* The icon wrapper span. */
+        [class*="st-key-hist_del_"] .stButton > button > span:first-child,
+        [class*="st-key-hist_del_"] .stButton > button > div:first-child {
+            display:flex !important;
+            align-items:center !important;
+            justify-content:center !important;
+            width:auto !important;
+            height:auto !important;
+            margin:0 !important;
+            padding:0 !important;
+        }
+        [class*="st-key-hist_del_"] .stButton > button [data-testid="stIconMaterial"] {
+            margin:0 !important;
+            padding:0 !important;
+            font-size:1.05rem !important;
+            color:#dc2626 !important;
+            line-height:1 !important;
+            display:block !important;
         }
         [class*="st-key-hist_del_"] .stButton > button:hover [data-testid="stIconMaterial"] {
-            color:#dc2626 !important;
+            color:#b91c1c !important;
         }
         </style>
     """, unsafe_allow_html=True)
