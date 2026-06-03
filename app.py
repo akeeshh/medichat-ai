@@ -7439,6 +7439,19 @@ st.markdown("""
         width: calc(100% - 1.6rem) !important;
         max-width: none !important;
     }
+    /* Language picker is a click-to-open dropdown, not a text input.
+       Force pointer cursor everywhere inside it so the I-beam never
+       appears on hover. */
+    [data-testid="stSidebar"] .st-key-lang_selector,
+    [data-testid="stSidebar"] .st-key-lang_selector *,
+    [data-testid="stSidebar"] [data-testid="stSelectbox"]:has(.st-key-lang_selector),
+    [data-testid="stSidebar"] [data-testid="stSelectbox"]:has(.st-key-lang_selector) *,
+    [data-testid="stSidebar"] [data-testid="stSelectbox"]:has(.st-key-lang_selector) div[data-baseweb="select"],
+    [data-testid="stSidebar"] [data-testid="stSelectbox"]:has(.st-key-lang_selector) div[data-baseweb="select"] *,
+    [data-testid="stSidebar"] [data-testid="stSelectbox"]:has(.st-key-lang_selector) input {
+        cursor: pointer !important;
+        caret-color: transparent !important;
+    }
     /* Profile chip, comfortable padding so 3-line content (name + email +
        sync status) doesn't pinch. The chevron was removed, so the right
        padding is also lighter (1.1 instead of 1.2). */
