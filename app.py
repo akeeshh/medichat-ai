@@ -20139,6 +20139,77 @@ elif st.session_state.mode == "history":
     # search + filter chips + sort toolbar, flat list (no date-group
     # headers). All buttons still drive the same st.session_state +
     # st.rerun flow so nothing breaks.
+
+    # ── Nuclear anti-flash for Recent Chats page ─────────────────────
+    # This style block runs FIRST inside the elif (before any other
+    # content / before any other Recent Chats CSS), so its rules apply
+    # to any DOM still being reconciled away from the previous page.
+    # Unconditional `display:none` on every other-page widget key plus
+    # an aggressive opacity fade-in on the main area so any residual
+    # transition glitch is masked by the 200ms fade instead of being
+    # visible as a content flash.
+    st.markdown("""
+        <style>
+        /* Unconditionally hide every non-Recent-Chats widget that
+           might linger in the DOM. This <style> tag only exists when
+           the Recent Chats elif runs, so it can't affect other pages. */
+        [data-testid="stMain"] .md-greet-wrap,
+        [data-testid="stMain"] .md-home-greet-wrap,
+        [data-testid="stMain"] .md-home-composer-note,
+        [data-testid="stMain"] .md-home-hero,
+        [data-testid="stMain"] .md-home-rail,
+        [data-testid="stMain"] .md-subgreet,
+        [data-testid="stMain"] .md-greet,
+        [data-testid="stMain"] [class*="st-key-qa_"],
+        [data-testid="stMain"] [class*="st-key-home_chat_form"],
+        [data-testid="stMain"] [class*="st-key-home_chat_input"],
+        [data-testid="stMain"] [class*="st-key-home_upload_btn"],
+        [data-testid="stMain"] [class*="st-key-home_voice_btn"],
+        [data-testid="stMain"] [class*="st-key-home_send_btn"],
+        [data-testid="stMain"] [class*="st-key-home_vision_"],
+        [data-testid="stMain"] [class*="st-key-home_overview_see_all"],
+        [data-testid="stMain"] [class*="st-key-home_tip_"],
+        [data-testid="stMain"] [class*="st-key-smart_"],
+        [data-testid="stMain"] [class*="st-key-tile_"],
+        [data-testid="stMain"] [class*="st-key-rail_"],
+        [data-testid="stMain"] [class*="st-key-add_med_form"],
+        [data-testid="stMain"] [class*="st-key-add_allergy_form"],
+        [data-testid="stMain"] [class*="st-key-add_fh_form"],
+        [data-testid="stMain"] [class*="st-key-add_surg_form"],
+        [data-testid="stMain"] [class*="st-key-add_appt_form"],
+        [data-testid="stMain"] [class*="st-key-cal_url_form"],
+        [data-testid="stMain"] [class*="st-key-rec_upload_form"],
+        [data-testid="stMain"] [class*="st-key-rx_reader_form"],
+        [data-testid="stMain"] [class*="st-key-hr_form_today"],
+        [data-testid="stMain"] [class*="st-key-sleep_form_today"],
+        [data-testid="stMain"] [class*="st-key-steps_form_today"],
+        [data-testid="stMain"] [class*="st-key-del_med_"],
+        [data-testid="stMain"] [class*="st-key-del_allergy_"],
+        [data-testid="stMain"] [class*="st-key-del_fh_"],
+        [data-testid="stMain"] [class*="st-key-del_surg_"],
+        [data-testid="stMain"] [class*="st-key-del_appt_"],
+        [data-testid="stMain"] .md-page-hero-overview,
+        [data-testid="stMain"] .md-page-hero-meds,
+        [data-testid="stMain"] .md-page-hero-appts,
+        [data-testid="stMain"] .md-page-hero-records,
+        [data-testid="stMain"] .md-page-hero-rx,
+        [data-testid="stMain"] .md-page-hero-help,
+        [data-testid="stMain"] .md-page-hero-privacy,
+        [data-testid="stMain"] .md-page-hero-insights {
+            display: none !important;
+        }
+        /* Fade the entire main column in to mask any residual glitch
+           from the previous page's React unmount. */
+        @keyframes mdHistFadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+        [data-testid="stMain"] .block-container {
+            animation: mdHistFadeIn 220ms ease-out;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     st.markdown("""
         <style>
         /* Heading */
