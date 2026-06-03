@@ -8466,6 +8466,113 @@ st.markdown("""
         -webkit-text-fill-color: #4f46e5 !important;
     }
 
+    /* ── "MediChat is thinking" loading indicator ─────────────────
+       Replaces Streamlit's default grey spinner with a polished
+       indigo card: branded ring spinner + animated typing-dots tail
+       after the text. Renders during medichat_rag_stream() while
+       the response is generated. */
+    [data-testid="stSpinner"] {
+        background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #e0e7ff 100%) !important;
+        border: 1px solid #ddd6fe !important;
+        border-radius: 14px !important;
+        padding: 0.75rem 1.1rem !important;
+        margin: 0.6rem 0 !important;
+        box-shadow: 0 2px 8px rgba(124,58,237,0.08), inset 0 0 0 1px rgba(255,255,255,0.4) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.7rem !important;
+        max-width: fit-content !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+    /* Subtle moving sheen across the card while loading. */
+    [data-testid="stSpinner"]::after {
+        content: "" !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: -60% !important;
+        width: 60% !important;
+        height: 100% !important;
+        background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%) !important;
+        animation: mdSpinSheen 2.2s linear infinite !important;
+        pointer-events: none !important;
+    }
+    @keyframes mdSpinSheen {
+        0%   { left: -60%; }
+        100% { left: 120%; }
+    }
+    /* Hide the default Streamlit spinner icon. */
+    [data-testid="stSpinner"] i,
+    [data-testid="stSpinner"] svg {
+        display: none !important;
+    }
+    /* Inner wrapper Streamlit emits around icon + text. */
+    [data-testid="stSpinner"] > div {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.7rem !important;
+        position: relative !important;
+        z-index: 1 !important;
+    }
+    /* Branded ring spinner injected via ::before on the inner div. */
+    [data-testid="stSpinner"] > div::before {
+        content: "" !important;
+        display: inline-block !important;
+        width: 20px !important;
+        height: 20px !important;
+        border-radius: 50% !important;
+        border: 2.5px solid #ddd6fe !important;
+        border-top-color: #7c3aed !important;
+        border-right-color: #6366f1 !important;
+        animation: mdSpinRotate 0.85s linear infinite !important;
+        flex-shrink: 0 !important;
+    }
+    @keyframes mdSpinRotate {
+        to { transform: rotate(360deg); }
+    }
+    /* Loading text + animated typing dots. */
+    [data-testid="stSpinner"] p,
+    [data-testid="stSpinner"] span {
+        font-weight: 650 !important;
+        color: #5b21b6 !important;
+        font-size: 0.88rem !important;
+        margin: 0 !important;
+        letter-spacing: -0.005em !important;
+        line-height: 1.3 !important;
+        position: relative !important;
+        z-index: 1 !important;
+    }
+    /* Three trailing dots that pop in sequence after the text. */
+    [data-testid="stSpinner"] > div::after {
+        content: "" !important;
+        display: inline-block !important;
+        width: 22px !important;
+        height: 4px !important;
+        margin-left: 0.1rem !important;
+        background-image:
+            radial-gradient(circle, #7c3aed 1.6px, transparent 2px),
+            radial-gradient(circle, #7c3aed 1.6px, transparent 2px),
+            radial-gradient(circle, #7c3aed 1.6px, transparent 2px) !important;
+        background-position: 2px center, 10px center, 18px center !important;
+        background-size: 4px 4px, 4px 4px, 4px 4px !important;
+        background-repeat: no-repeat !important;
+        animation: mdSpinDots 1.4s ease-in-out infinite !important;
+        flex-shrink: 0 !important;
+    }
+    @keyframes mdSpinDots {
+        0%, 100% { opacity: 0.45; }
+        25%      { opacity: 1; background-position: 2px center, 10px center, 18px center; }
+        50%      { opacity: 0.7; background-position: 2px center, 10px center, 18px center; }
+        75%      { opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        [data-testid="stSpinner"] > div::before,
+        [data-testid="stSpinner"] > div::after,
+        [data-testid="stSpinner"]::after {
+            animation: none !important;
+        }
+    }
+
     /* ── Bot bubble redesigned to match mockup ──
        Logo as avatar (circular), "MediChat Ai" + sparkle header INSIDE the
        bubble, timestamp right-aligned below the bubble. */
@@ -20176,7 +20283,7 @@ if st.session_state.mode == "chat":
                     else '<div class="av av-bot">M</div>'
                 )
 
-            with st.spinner("MediChat is analysing"):
+            with st.spinner("MediChat is thinking"):
                 # Use the pre-composer placeholder (created above the
                 # composer in the chat-message area) so the streamed
                 # response appears RIGHT BELOW the user message rather
