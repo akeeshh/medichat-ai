@@ -16371,10 +16371,18 @@ div.st-key-privacy_delete_account button [data-testid="stIconMaterial"] {
     # Footer: Privacy & Terms + copyright. (Help Center link removed, # the dedicated Help Center card on the auth right rail is the
     # canonical entry point now, and the in-app help is reachable via
     # the help mode directly if needed.)
+    # NOTE: Append the current ?s= session token if present so clicking
+    # the link doesn't drop the session restore param and log the user
+    # out on the resulting page reload.
+    try:
+        _foot_s_token = str(st.query_params.get("s", "") or "").strip()
+    except Exception:
+        _foot_s_token = ""
+    _foot_privacy_href = "?mode=privacy" + (("&s=" + _foot_s_token) if _foot_s_token else "")
     st.markdown(
         '<div class="md-sidebar-footer">'
         '<div class="md-sidebar-foot-links">'
-        '<a href="?mode=privacy" target="_self">Privacy & Terms</a>'
+        '<a href="' + _foot_privacy_href + '" target="_self">Privacy & Terms</a>'
         '</div>'
         '<div class="md-sidebar-foot-copy">© 2026 ' + APP_TITLE + '. All rights reserved.</div>'
         '</div>',
