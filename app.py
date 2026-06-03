@@ -13261,9 +13261,9 @@ def markdown_to_html(text):
         "<div class='md-verify-head' style='"
         "font-weight:600;color:#334155;"
         "margin-bottom:0.5rem;font-size:0.97em;'>"
-        "🩺 MediChat Verify "
-        "<span style='font-weight:400;font-style:italic;color:#64748b;font-size:0.92em;'>"
-        ", second medical AI perspective</span>"
+        "🩺 MediChat Second Opinion"
+        "<span style='font-weight:400;font-style:italic;color:#64748b;font-size:0.92em;margin-left:0.4rem;'>"
+        "second medical Ai perspective</span>"
         "</div>"
         "<div class='md-verify-body' style='"
         "color:#475569;font-style:italic;line-height:1.55;'>"
@@ -13285,7 +13285,7 @@ def strip_excessive_disclaimers(text):
     if not text:
         return text
 
-    # Protect the MediChat Verify block from the whitespace collapse below
+    # Protect the MediChat Second Opinion block from the whitespace collapse below
     # (the \s{2,} rule was eating the surrounding \n\n separators which
     # broke the marker-swap renderer downstream \u2014 Verify never appeared
     # because its block ended up inline with the primary answer).
@@ -13371,7 +13371,7 @@ def dual_model_review(question, primary_answer, history=None, primary_engine="op
       • primary_engine = "claude"  → OpenAI reviews
       • primary_engine = "groq"    → Claude > OpenAI (whichever is up)
 
-    This means MediChat Verify works no matter which backend served the
+    This means MediChat Second Opinion works no matter which backend served the
     primary answer, previously it only fired when OpenAI was primary,
     which left a silent gap whenever OpenAI failed and Claude streamed
     instead.
@@ -14209,7 +14209,7 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
 
             # Dual-model second opinion (always visible when Claude is configured).
             # The primary answer has already finished streaming to the patient;
-            # this appends a brief value-add perspective from MediChat Verify
+            # this appends a brief value-add perspective from MediChat Second Opinion
             # below, clearly separated as its own paragraph block. Silent only
             # if Claude is disabled, not configured, or the call fails.
             review_text = dual_model_review(question, full_response, history=history, primary_engine="openai")
@@ -19602,7 +19602,7 @@ if st.session_state.mode == "chat":
                 if msg_ts:
                     st.markdown('<div class="bot-ts">' + ui_escape(msg_ts) + '</div>', unsafe_allow_html=True)
 
-                # MediChat Verify, render as its own dedicated block
+                # MediChat Second Opinion, render as its own dedicated block
                 # from msg["verify_text"]. This bypasses the inline
                 # [[VERIFY_START]] marker pipeline entirely (which
                 # previously got eaten by strip_excessive_disclaimers or
@@ -19624,9 +19624,9 @@ if st.session_state.mode == "chat":
                         '<div style="display:flex;align-items:center;gap:0.4rem;font-weight:700;'
                         'color:#334155;font-size:0.78rem;margin-bottom:0.3rem;">'
                         '<span style="font-size:0.95rem;">🩺</span>'
-                        'MediChat Verify '
-                        '<span style="font-weight:500;font-style:italic;color:#64748b;font-size:0.72rem;">'
-                        ', second medical AI perspective</span>'
+                        'MediChat Second Opinion'
+                        '<span style="font-weight:500;font-style:italic;color:#64748b;font-size:0.72rem;margin-left:0.4rem;">'
+                        'second medical Ai perspective</span>'
                         '</div>'
                         '<div style="color:#475569;font-style:italic;line-height:1.55;font-size:0.82rem;">'
                         + ui_lines(_verify_text) +
@@ -20492,7 +20492,7 @@ if st.session_state.mode == "chat":
             conf_level = stream_metadata["confidence"]
             conf_pct = stream_metadata["confidence_pct"]
             engine_used = stream_metadata.get("engine", "unknown")
-            # Pull MediChat Verify text from the stream metadata BEFORE we
+            # Pull MediChat Second Opinion text from the stream metadata BEFORE we
             # run strip_excessive_disclaimers / drug-alert appends on
             # final_text. We also strip the inline [[VERIFY_START]]...
             # [[VERIFY_END]] markers from the visible content so the
