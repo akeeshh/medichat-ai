@@ -6437,6 +6437,37 @@ st.markdown("""
     line-height: 1 !important;
 }
 
+/* In-chat disclaimer (rendered below the composer when a conversation
+   is active). Visually mirrors .md-home-composer-note but uses its
+   own class so the home-page anti-flash rule doesn't suppress it. */
+.md-chat-composer-note {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+    margin: 0.85rem auto 0.3rem auto !important;
+    padding: 0.55rem 1rem !important;
+    background: linear-gradient(135deg, rgba(34,197,94,0.06) 0%, rgba(34,197,94,0.03) 100%) !important;
+    border: 1px solid rgba(34,197,94,0.18) !important;
+    border-radius: 999px !important;
+    font-size: 0.78rem !important;
+    color: #475569 !important;
+    font-weight: 500 !important;
+    line-height: 1.4 !important;
+    max-width: fit-content !important;
+    box-shadow: 0 1px 2px rgba(34,197,94,0.04) !important;
+}
+.md-chat-composer-note .md-chat-disclaimer-shield {
+    font-size: 1rem !important;
+    color: #16a34a !important;
+    -webkit-text-fill-color: #16a34a !important;
+    line-height: 1 !important;
+    flex-shrink: 0 !important;
+    font-variation-settings: 'FILL' 1, 'wght' 500 !important;
+    filter: drop-shadow(0 1px 2px rgba(34,197,94,0.25)) !important;
+}
+
 /* Tighten the gap between the disclaimer line and the Smart Actions header.
    Streamlit's stElementContainer wrappers prevent margin collapse, so total
    gap = note margin-bottom + head margin-top. */
@@ -19778,10 +19809,14 @@ if st.session_state.mode == "chat":
                 st.image(uploaded_image, caption="Ready for analysis", use_container_width=True)
 
     if not home_empty_chat:
+        # NOTE: distinct class md-chat-composer-note so the anti-flash
+        # rule that hides .md-home-composer-note off the home page
+        # doesn't suppress this disclaimer during chat.
         st.markdown(
-            '<div class="md-home-composer-note">'
-            '<span class="material-symbols-rounded md-disclaimer-shield">lock</span>'
-            'This is not emergency care. If you feel seriously unwell, seek immediate medical attention.'
+            '<div class="md-chat-composer-note">'
+            '<span class="material-symbols-rounded md-chat-disclaimer-shield">verified_user</span>'
+            'MediChat Ai can make mistakes. Please consult a healthcare professional for medical advice. '
+            'If you feel seriously unwell, seek immediate medical attention.'
             '</div>',
             unsafe_allow_html=True
         )
