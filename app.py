@@ -18232,6 +18232,58 @@ if st.session_state.mode == "chat":
             unsafe_allow_html=True
         )
 
+        # ── Anti-flash for Home dashboard ─────────────────────────────
+        # Mirror of the Recent Chats nuclear CSS — scoped to body:has
+        # so rules disappear the moment React removes the home marker.
+        # Inside Home, force-hide any Recent Chats / other-page markup
+        # that's still being reconciled away from the previous page.
+        st.markdown("""
+            <style>
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-hist2-title,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-hist2-sub,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-hist2-tiles,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-hist2-tile,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-hist2-row-inner,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-hist2-row-wrap,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-hist-empty,
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-hist_new_chat"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-hist_back"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-hist_open_"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-hist_del_"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-hist_row_"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-hist_toolbar_row"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-hist2_search"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-hist2_filter_"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-hist2_sort_box"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-page-hero-overview,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-page-hero-meds,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-page-hero-appts,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-page-hero-records,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-page-hero-rx,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-page-hero-help,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-page-hero-privacy,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .md-page-hero-insights,
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-add_med_form"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-add_allergy_form"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-add_fh_form"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-add_surg_form"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-add_appt_form"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-cal_url_form"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-rec_upload_form"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-rx_reader_form"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-hr_form_today"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-sleep_form_today"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-steps_form_today"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-del_med_"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-del_allergy_"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-del_fh_"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-del_surg_"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-del_appt_"] {
+                display: none !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
         home_main, home_side = st.columns([2.38, 0.95], gap="medium")
 
         with home_main:
@@ -20140,72 +20192,60 @@ elif st.session_state.mode == "history":
     # headers). All buttons still drive the same st.session_state +
     # st.rerun flow so nothing breaks.
 
-    # ── Nuclear anti-flash for Recent Chats page ─────────────────────
-    # This style block runs FIRST inside the elif (before any other
-    # content / before any other Recent Chats CSS), so its rules apply
-    # to any DOM still being reconciled away from the previous page.
-    # Unconditional `display:none` on every other-page widget key plus
-    # an aggressive opacity fade-in on the main area so any residual
-    # transition glitch is masked by the 200ms fade instead of being
-    # visible as a content flash.
+    # ── Anti-flash for Recent Chats page ──────────────────────────────
+    # Every rule scoped under `body:has(.md-page-marker-history)` so
+    # the moment React removes the marker (which happens together
+    # with the rest of Recent Chats during nav transitions OUT), all
+    # these rules stop matching and don't leak onto the destination
+    # page. Inside Recent Chats they unconditionally hide every other
+    # page's widgets / heroes so any leftover from the previous page
+    # is suppressed.
     st.markdown("""
         <style>
-        /* Unconditionally hide every non-Recent-Chats widget that
-           might linger in the DOM. This <style> tag only exists when
-           the Recent Chats elif runs, so it can't affect other pages. */
-        [data-testid="stMain"] .md-greet-wrap,
-        [data-testid="stMain"] .md-home-greet-wrap,
-        [data-testid="stMain"] .md-home-composer-note,
-        [data-testid="stMain"] .md-home-hero,
-        [data-testid="stMain"] .md-home-rail,
-        [data-testid="stMain"] .md-subgreet,
-        [data-testid="stMain"] .md-greet,
-        [data-testid="stMain"] [class*="st-key-qa_"],
-        [data-testid="stMain"] [class*="st-key-home_chat_form"],
-        [data-testid="stMain"] [class*="st-key-home_chat_input"],
-        [data-testid="stMain"] [class*="st-key-home_upload_btn"],
-        [data-testid="stMain"] [class*="st-key-home_voice_btn"],
-        [data-testid="stMain"] [class*="st-key-home_send_btn"],
-        [data-testid="stMain"] [class*="st-key-home_vision_"],
-        [data-testid="stMain"] [class*="st-key-home_overview_see_all"],
-        [data-testid="stMain"] [class*="st-key-home_tip_"],
-        [data-testid="stMain"] [class*="st-key-smart_"],
-        [data-testid="stMain"] [class*="st-key-tile_"],
-        [data-testid="stMain"] [class*="st-key-rail_"],
-        [data-testid="stMain"] [class*="st-key-add_med_form"],
-        [data-testid="stMain"] [class*="st-key-add_allergy_form"],
-        [data-testid="stMain"] [class*="st-key-add_fh_form"],
-        [data-testid="stMain"] [class*="st-key-add_surg_form"],
-        [data-testid="stMain"] [class*="st-key-add_appt_form"],
-        [data-testid="stMain"] [class*="st-key-cal_url_form"],
-        [data-testid="stMain"] [class*="st-key-rec_upload_form"],
-        [data-testid="stMain"] [class*="st-key-rx_reader_form"],
-        [data-testid="stMain"] [class*="st-key-hr_form_today"],
-        [data-testid="stMain"] [class*="st-key-sleep_form_today"],
-        [data-testid="stMain"] [class*="st-key-steps_form_today"],
-        [data-testid="stMain"] [class*="st-key-del_med_"],
-        [data-testid="stMain"] [class*="st-key-del_allergy_"],
-        [data-testid="stMain"] [class*="st-key-del_fh_"],
-        [data-testid="stMain"] [class*="st-key-del_surg_"],
-        [data-testid="stMain"] [class*="st-key-del_appt_"],
-        [data-testid="stMain"] .md-page-hero-overview,
-        [data-testid="stMain"] .md-page-hero-meds,
-        [data-testid="stMain"] .md-page-hero-appts,
-        [data-testid="stMain"] .md-page-hero-records,
-        [data-testid="stMain"] .md-page-hero-rx,
-        [data-testid="stMain"] .md-page-hero-help,
-        [data-testid="stMain"] .md-page-hero-privacy,
-        [data-testid="stMain"] .md-page-hero-insights {
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-greet-wrap,
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-home-greet-wrap,
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-home-composer-note,
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-home-hero,
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-home-rail,
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-subgreet,
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-greet,
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-qa_"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-home_chat_form"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-home_chat_input"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-home_upload_btn"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-home_voice_btn"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-home_send_btn"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-home_vision_"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-home_overview_see_all"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-home_tip_"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-smart_"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-tile_"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-rail_"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-add_med_form"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-add_allergy_form"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-add_fh_form"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-add_surg_form"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-add_appt_form"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-cal_url_form"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-rec_upload_form"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-rx_reader_form"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-hr_form_today"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-sleep_form_today"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-steps_form_today"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-del_med_"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-del_allergy_"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-del_fh_"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-del_surg_"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-del_appt_"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-page-hero-overview,
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-page-hero-meds,
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-page-hero-appts,
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-page-hero-records,
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-page-hero-rx,
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-page-hero-help,
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-page-hero-privacy,
+        body:has(.md-page-marker-history) [data-testid="stMain"] .md-page-hero-insights {
             display: none !important;
-        }
-        /* Fade the entire main column in to mask any residual glitch
-           from the previous page's React unmount. */
-        @keyframes mdHistFadeIn {
-            from { opacity: 0; }
-            to   { opacity: 1; }
-        }
-        [data-testid="stMain"] .block-container {
-            animation: mdHistFadeIn 220ms ease-out;
         }
         </style>
     """, unsafe_allow_html=True)
