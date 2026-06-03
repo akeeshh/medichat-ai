@@ -3224,27 +3224,63 @@ div[class*="st-key-hist_open_"] button [data-testid="stIconMaterial"] {
     -webkit-text-fill-color: currentColor !important;
 }
 
-/* Delete, subtle icon-only, rose hover. */
+/* Delete button — soft red circle, redesigned. */
 div[class*="st-key-hist_del_"] .stButton > button {
-    background: #f8fafc !important;
-    color: #94a3b8 !important;
-    border: 1px solid var(--md-border) !important;
-    border-radius: 10px !important;
-    min-height: 38px !important;
-    height: 38px !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-    transition: all 0.15s ease !important;
-}
-div[class*="st-key-hist_del_"] .stButton > button:hover {
     background: #fef2f2 !important;
     color: #dc2626 !important;
-    border-color: #fecaca !important;
+    border: 1px solid #fecaca !important;
+    border-radius: 50% !important;
+    width: 38px !important;
+    min-width: 38px !important;
+    max-width: 38px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease !important;
+}
+div[class*="st-key-hist_del_"] .stButton > button:hover {
+    background: #fee2e2 !important;
+    color: #b91c1c !important;
+    border-color: #fca5a5 !important;
+    transform: scale(1.05) !important;
+}
+div[class*="st-key-hist_del_"] .stButton > button:active {
+    transform: scale(0.97) !important;
 }
 div[class*="st-key-hist_del_"] button [data-testid="stIconMaterial"] {
     color: inherit !important;
     -webkit-text-fill-color: currentColor !important;
     font-size: 1.05rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+}
+/* Kill the empty markdown sibling Streamlit emits for the " " label
+   so the icon stays exactly centered. */
+div[class*="st-key-hist_del_"] .stButton > button [data-testid="stMarkdownContainer"] {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+div[class*="st-key-hist_del_"] .stButton > button > span:first-child,
+div[class*="st-key-hist_del_"] .stButton > button > div:first-child {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+/* Vertical-align the button's column against the multi-line row content beside it. */
+div[data-testid="stMain"] [class*="st-key-hist_row_"] [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:last-child {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 /* Empty state cards (no chats yet, signed-out, etc.). */
