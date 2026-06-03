@@ -13258,12 +13258,12 @@ def markdown_to_html(text):
         "<div class='md-verify-block' style='"
         "margin-top:1.4rem;padding-top:1rem;"
         "border-top:1.5px solid #cbd5e1;'>"
-        "<div class='md-verify-head' style='"
-        "font-weight:600;color:#334155;"
-        "margin-bottom:0.5rem;font-size:0.97em;'>"
-        "🩺 MediChat Second Opinion"
-        "<span style='font-weight:400;font-style:italic;color:#64748b;font-size:0.92em;margin-left:0.4rem;'>"
-        "second medical Ai perspective</span>"
+        "<div class='md-verify-head' style='display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.5rem;'>"
+        "<span style='font-size:1.05rem;line-height:1.2;flex-shrink:0;'>🩺</span>"
+        "<div style='min-width:0;'>"
+        "<div style='font-weight:600;color:#334155;font-size:0.97em;line-height:1.2;letter-spacing:-0.005em;'>MediChat Second Opinion</div>"
+        "<div style='font-weight:400;font-style:italic;color:#94a3b8;font-size:0.82em;line-height:1.3;margin-top:0.15rem;'>second medical Ai perspective</div>"
+        "</div>"
         "</div>"
         "<div class='md-verify-body' style='"
         "color:#475569;font-style:italic;line-height:1.55;'>"
@@ -19621,12 +19621,12 @@ if st.session_state.mode == "chat":
                         '<div style="margin-top:0.9rem;margin-bottom:1.3rem;max-width:75%;padding:0.7rem 0.95rem;background:#fbfcff;'
                         'border:1px solid #e6ecf6;border-left:3px solid #7c3aed;border-radius:10px;'
                         'box-shadow:0 1px 2px rgba(15,23,42,0.03);">'
-                        '<div style="display:flex;align-items:center;gap:0.4rem;font-weight:700;'
-                        'color:#334155;font-size:0.78rem;margin-bottom:0.3rem;">'
-                        '<span style="font-size:0.95rem;">🩺</span>'
-                        'MediChat Second Opinion'
-                        '<span style="font-weight:500;font-style:italic;color:#64748b;font-size:0.72rem;margin-left:0.4rem;">'
-                        'second medical Ai perspective</span>'
+                        '<div style="display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.35rem;">'
+                        '<span style="font-size:1rem;line-height:1.2;flex-shrink:0;">🩺</span>'
+                        '<div style="min-width:0;">'
+                        '<div style="font-weight:700;color:#334155;font-size:0.78rem;line-height:1.2;letter-spacing:-0.005em;">MediChat Second Opinion</div>'
+                        '<div style="font-weight:500;font-style:italic;color:#94a3b8;font-size:0.7rem;line-height:1.3;margin-top:0.1rem;">second medical Ai perspective</div>'
+                        '</div>'
                         '</div>'
                         '<div style="color:#475569;font-style:italic;line-height:1.55;font-size:0.82rem;">'
                         + ui_lines(_verify_text) +
