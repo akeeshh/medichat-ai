@@ -18617,22 +18617,24 @@ if st.session_state.mode == "chat":
                 # marker rendering needed.
                 _verify_text = (msg.get("verify_text") or "").strip()
                 if _verify_text:
-                    # margin-bottom prevents the next user message bubble
-                    # from sitting flush against the Verify block's lower
-                    # edge, without it, the user avatar overlapped the
-                    # purple border visually.
+                    # Sized smaller than the primary bot bubble so it
+                    # reads as a supporting aside, not a competing
+                    # response. Capped at 75% width (bubble caps at 85%),
+                    # body font 0.82rem (bubble is 0.9rem), trimmed
+                    # padding + tighter heading. margin-bottom keeps the
+                    # next user bubble from sitting flush.
                     st.markdown(
-                        '<div style="margin-top:1.1rem;margin-bottom:1.5rem;padding:0.9rem 1.1rem;background:#fbfcff;'
-                        'border:1px solid #e6ecf6;border-left:3px solid #7c3aed;border-radius:12px;'
+                        '<div style="margin-top:0.9rem;margin-bottom:1.3rem;max-width:75%;padding:0.7rem 0.95rem;background:#fbfcff;'
+                        'border:1px solid #e6ecf6;border-left:3px solid #7c3aed;border-radius:10px;'
                         'box-shadow:0 1px 2px rgba(15,23,42,0.03);">'
-                        '<div style="display:flex;align-items:center;gap:0.45rem;font-weight:700;'
-                        'color:#334155;font-size:0.86rem;margin-bottom:0.4rem;">'
-                        '<span style="font-size:1.05rem;">🩺</span>'
+                        '<div style="display:flex;align-items:center;gap:0.4rem;font-weight:700;'
+                        'color:#334155;font-size:0.78rem;margin-bottom:0.3rem;">'
+                        '<span style="font-size:0.95rem;">🩺</span>'
                         'MediChat Verify '
-                        '<span style="font-weight:500;font-style:italic;color:#64748b;font-size:0.78rem;">'
+                        '<span style="font-weight:500;font-style:italic;color:#64748b;font-size:0.72rem;">'
                         ', second medical AI perspective</span>'
                         '</div>'
-                        '<div style="color:#475569;font-style:italic;line-height:1.6;font-size:0.92rem;">'
+                        '<div style="color:#475569;font-style:italic;line-height:1.55;font-size:0.82rem;">'
                         + ui_lines(_verify_text) +
                         '</div>'
                         '</div>',
@@ -19501,6 +19503,11 @@ if st.session_state.mode == "chat":
             # field below, independent of any markdown / disclaimer
             # transform that previously ate the markers.
             verify_text = (stream_metadata.get("verify_text") or "").strip()
+            # Run Verify through the same disclaimer/em-dash stripper as
+            # the primary response so commas replace em-dashes and the
+            # voice matches the rest of the chat.
+            if verify_text:
+                verify_text = strip_excessive_disclaimers(verify_text)
             if "[[VERIFY_START]]" in final_text:
                 import re as _re_strip
                 final_text = _re_strip.sub(
