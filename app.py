@@ -3289,7 +3289,7 @@ div[class*="st-key-hist_open_"] button [data-testid="stIconMaterial"] {
 }
 
 /* Delete button — soft red circle, redesigned. */
-div[class*="st-key-hist_del_"] .stButton > button {
+div[class*="st-key-hist_del_"] .stButton button {
     background: #fef2f2 !important;
     color: #dc2626 !important;
     border: 1px solid #fecaca !important;
@@ -3308,13 +3308,13 @@ div[class*="st-key-hist_del_"] .stButton > button {
     justify-content: center !important;
     transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease !important;
 }
-div[class*="st-key-hist_del_"] .stButton > button:hover {
+div[class*="st-key-hist_del_"] .stButton button:hover {
     background: #fee2e2 !important;
     color: #b91c1c !important;
     border-color: #fca5a5 !important;
     transform: scale(1.05) !important;
 }
-div[class*="st-key-hist_del_"] .stButton > button:active {
+div[class*="st-key-hist_del_"] .stButton button:active {
     transform: scale(0.97) !important;
 }
 div[class*="st-key-hist_del_"] button [data-testid="stIconMaterial"] {
@@ -3327,13 +3327,13 @@ div[class*="st-key-hist_del_"] button [data-testid="stIconMaterial"] {
 }
 /* Kill the empty markdown sibling Streamlit emits for the " " label
    so the icon stays exactly centered. */
-div[class*="st-key-hist_del_"] .stButton > button [data-testid="stMarkdownContainer"] {
+div[class*="st-key-hist_del_"] .stButton button [data-testid="stMarkdownContainer"] {
     display: none !important;
     width: 0 !important;
     height: 0 !important;
 }
-div[class*="st-key-hist_del_"] .stButton > button > span:first-child,
-div[class*="st-key-hist_del_"] .stButton > button > div:first-child {
+div[class*="st-key-hist_del_"] .stButton button > span:first-child,
+div[class*="st-key-hist_del_"] .stButton button > div:first-child {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -20752,7 +20752,7 @@ elif st.session_state.mode == "history":
         }
 
         /* The button itself: 38px circle, pale pink, red icon. */
-        [class*="st-key-hist_del_"] .stButton > button {
+        [class*="st-key-hist_del_"] .stButton button {
             width:38px !important;
             min-width:38px !important;
             max-width:38px !important;
@@ -20771,18 +20771,18 @@ elif st.session_state.mode == "history":
             justify-content:center !important;
             transition:background 0.15s ease, border-color 0.15s ease, transform 0.15s ease !important;
         }
-        [class*="st-key-hist_del_"] .stButton > button:hover {
+        [class*="st-key-hist_del_"] .stButton button:hover {
             background:#fee2e2 !important;
             border-color:#fca5a5 !important;
             transform:scale(1.05) !important;
         }
-        [class*="st-key-hist_del_"] .stButton > button:active {
+        [class*="st-key-hist_del_"] .stButton button:active {
             transform:scale(0.97) !important;
         }
 
         /* Kill the empty markdown sibling (Streamlit emits one for the
            " " label) so the icon truly sits centered. */
-        [class*="st-key-hist_del_"] .stButton > button [data-testid="stMarkdownContainer"] {
+        [class*="st-key-hist_del_"] .stButton button [data-testid="stMarkdownContainer"] {
             display:none !important;
             width:0 !important;
             height:0 !important;
@@ -20790,8 +20790,8 @@ elif st.session_state.mode == "history":
             padding:0 !important;
         }
         /* The icon wrapper span. */
-        [class*="st-key-hist_del_"] .stButton > button > span:first-child,
-        [class*="st-key-hist_del_"] .stButton > button > div:first-child {
+        [class*="st-key-hist_del_"] .stButton button > span:first-child,
+        [class*="st-key-hist_del_"] .stButton button > div:first-child {
             display:flex !important;
             align-items:center !important;
             justify-content:center !important;
@@ -20800,7 +20800,7 @@ elif st.session_state.mode == "history":
             margin:0 !important;
             padding:0 !important;
         }
-        [class*="st-key-hist_del_"] .stButton > button [data-testid="stIconMaterial"] {
+        [class*="st-key-hist_del_"] .stButton button [data-testid="stIconMaterial"] {
             margin:0 !important;
             padding:0 !important;
             font-size:1.05rem !important;
@@ -20808,7 +20808,7 @@ elif st.session_state.mode == "history":
             line-height:1 !important;
             display:block !important;
         }
-        [class*="st-key-hist_del_"] .stButton > button:hover [data-testid="stIconMaterial"] {
+        [class*="st-key-hist_del_"] .stButton button:hover [data-testid="stIconMaterial"] {
             color:#b91c1c !important;
         }
         </style>
