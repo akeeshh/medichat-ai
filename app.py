@@ -2887,7 +2887,7 @@ a.md-conv-row-link:hover .md-conv-bubble { background: var(--md-brand-2); color:
 .md-snap-valrow {
     display: flex;
     align-items: baseline;
-    gap: 0.5rem;
+    gap: 0.4rem;
     min-width: 0;
 }
 .md-snap-label {
@@ -3851,19 +3851,19 @@ div[class*="st-key-chat_vision_cancel"] button p {
 }
 .md-snap-tile {
     min-height: 68px !important;
-    padding: 0.72rem 0.78rem !important;
+    padding: 0.72rem 0.65rem !important;
     border-radius: 18px !important;
-    gap: 0.78rem !important;
+    gap: 0.55rem !important;
 }
 .md-snap-label {
-    font-size: 0.74rem !important;
+    font-size: 0.72rem !important;
 }
 .md-snap-value {
-    font-size: 0.92rem !important;
+    font-size: 0.88rem !important;
 }
 .md-spark {
-    width: 74px;
-    height: 28px;
+    width: 52px;
+    height: 24px;
     flex-shrink: 0;
 }
 .md-spark path {
@@ -5425,10 +5425,10 @@ form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primaryFor
     color: #2563eb !important;
 }
 .md-snap-status {
-    font-size: 0.83rem;
+    font-size: 0.76rem;
     font-weight: 700;
     color: #16a34a;
-    margin-left: 0.45rem;
+    margin-left: 0;
 }
 .md-spark {
     margin-top: 0.22rem;
