@@ -20693,28 +20693,72 @@ elif st.session_state.mode == "history":
             opacity:0.92;
         }
 
-        /* Continue chat button, refined pill with subtle gradient
-           fill and a lift on hover that matches the row hover. */
-        [class*="st-key-hist_open_"] .stButton > button {
-            min-height:40px !important; height:40px !important;
-            border-radius:12px !important;
-            background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%) !important;
-            border:1px solid #c7d2fe !important;
-            color:#4338ca !important;
-            font-weight:650 !important; font-size:0.84rem !important;
-            box-shadow:0 1px 2px rgba(79,70,229,0.06) !important;
-            transition:background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease !important;
+        /* ── Open-chat overlay button ─────────────────────────────
+           The whole row card IS the click target now. The Streamlit
+           button is positioned absolutely to cover the entire card
+           with transparent paint, so the visual layout (icon + title
+           + meta + preview) shows through but click events go to
+           the button. Cursor:pointer on the card hint at click. */
+        [data-testid="stMain"] [class*="st-key-hist_row_"] {
+            cursor: pointer !important;
         }
-        [class*="st-key-hist_open_"] .stButton > button:hover {
-            background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%) !important;
-            border-color:transparent !important;
-            color:#ffffff !important;
-            transform:translateY(-1px) !important;
-            box-shadow:0 4px 12px rgba(79,70,229,0.28) !important;
+        [data-testid="stMain"] [class*="st-key-hist_open_"] {
+            position: absolute !important;
+            top: 0 !important; left: 0 !important;
+            width: 100% !important; height: 100% !important;
+            margin: 0 !important; padding: 0 !important;
+            z-index: 1 !important;
         }
-        [class*="st-key-hist_open_"] .stButton > button:hover [data-testid="stIconMaterial"] {
-            color:#ffffff !important;
-            -webkit-text-fill-color:#ffffff !important;
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton,
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button {
+            width: 100% !important; height: 100% !important;
+            min-height: 0 !important; max-height: none !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important; margin: 0 !important;
+            border-radius: 16px !important;
+            color: transparent !important;
+            -webkit-text-fill-color: transparent !important;
+            font-size: 0 !important;
+            cursor: pointer !important;
+            outline: none !important;
+        }
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button:hover,
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button:focus,
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button:active {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        /* Hide the button's icon + label entirely (it's just a click
+           hit area, the visible content is the markdown above). */
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button [data-testid="stIconMaterial"],
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button [data-testid="stMarkdownContainer"],
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button p,
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button span {
+            display: none !important;
+        }
+
+        /* ── X delete button, top-right corner, stays above overlay ─ */
+        [data-testid="stMain"] [class*="st-key-hist_del_"] {
+            position: absolute !important;
+            top: 0.7rem !important;
+            right: 0.7rem !important;
+            width: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            z-index: 5 !important;
+        }
+        /* Clear any prior flex/width layout that assumed the button
+           sat in a column. */
+        [data-testid="stMain"] [class*="st-key-hist_del_"] .stButton,
+        [data-testid="stMain"] [class*="st-key-hist_del_"] [data-testid="stTooltipHoverTarget"] {
+            display: inline-flex !important;
+            width: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
         }
         /* Delete bin, square icon button, properly centered.
            Streamlit emits an empty stMarkdownContainer sibling alongside
@@ -20978,46 +21022,100 @@ elif st.session_state.mode == "history":
                         _time_disp = _d.strftime("%d %b %Y") + "  ·  " + _t_str
                 _msg_word = "message" if _hc == 1 else "messages"
 
-                # Single bordered card per row, the keyed container is
-                # styled as a card via CSS so the Continue + Delete
-                # buttons sit INSIDE the same surface as the title.
+                # Single bordered card per row. CSS positions the
+                # hist_open_ button as an INVISIBLE FULL-TILE overlay,
+                # so clicking anywhere on the card opens the chat.
+                # The hist_del_ X button is positioned absolutely in
+                # the top-right corner above the open overlay so it
+                # remains independently clickable.
                 with st.container(key="hist_row_" + _key):
-                    _row_l, _row_open, _row_del = st.columns([0.74, 0.18, 0.08], gap="small", vertical_alignment="center")
-                    with _row_l:
-                        st.markdown(
-                            '<div class="md-hist2-row-inner">'
-                            '<div class="md-hist2-row-ic"><span class="material-symbols-rounded">chat_bubble</span></div>'
-                            '<div style="min-width:0;">'
-                            '<div class="md-hist2-row-title">' + ui_text(_ht, 90) + '</div>'
-                            '<div class="md-hist2-row-meta">'
-                            '<span class="material-symbols-rounded">schedule</span>'
-                            '<span>' + ui_text(_time_disp, 40) + '</span>'
-                            '<span>·</span>'
-                            '<span>' + str(_hc) + ' ' + _msg_word + '</span>'
-                            '</div>'
-                            + ('<div class="md-hist2-row-prev">' + ui_text(_preview, 180) + '</div>' if _preview else '') +
-                            '</div>'
-                            '</div>',
-                            unsafe_allow_html=True
-                        )
-                    with _row_open:
-                        if st.button("Continue chat", key="hist_open_" + _key, icon=":material/arrow_forward:", use_container_width=True):
-                            _conv = load_conversation(st.session_state.user_email_hash, _hid)
-                            if _conv is not None:
-                                st.session_state.current_conversation_id = _hid
-                                st.session_state.messages = _conv.get("messages", []) or []
-                                st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
-                                st.session_state.feedback = {}
-                                st.session_state.last_sources = []
-                                st.session_state.emergency_detected = False
-                                st.session_state.mode = "chat"
-                                try: del st.query_params["mode"]
-                                except Exception: pass
-                                st.rerun()
-                    with _row_del:
-                        if st.button(" ", key="hist_del_" + _key, icon=":material/delete:", help="Delete this chat"):
-                            delete_conversation(st.session_state.user_email_hash, _hid)
+                    st.markdown(
+                        '<div class="md-hist2-row-inner">'
+                        '<div class="md-hist2-row-ic"><span class="material-symbols-rounded">chat_bubble</span></div>'
+                        '<div style="min-width:0;">'
+                        '<div class="md-hist2-row-title">' + ui_text(_ht, 90) + '</div>'
+                        '<div class="md-hist2-row-meta">'
+                        '<span class="material-symbols-rounded">schedule</span>'
+                        '<span>' + ui_text(_time_disp, 40) + '</span>'
+                        '<span>·</span>'
+                        '<span>' + str(_hc) + ' ' + _msg_word + '</span>'
+                        '</div>'
+                        + ('<div class="md-hist2-row-prev">' + ui_text(_preview, 180) + '</div>' if _preview else '') +
+                        '</div>'
+                        '</div>',
+                        unsafe_allow_html=True
+                    )
+                    # Full-tile clickable overlay (transparent button covers
+                    # the whole card via CSS). Same load-conversation logic.
+                    if st.button("Open conversation", key="hist_open_" + _key, use_container_width=True):
+                        _conv = load_conversation(st.session_state.user_email_hash, _hid)
+                        if _conv is not None:
+                            st.session_state.current_conversation_id = _hid
+                            st.session_state.messages = _conv.get("messages", []) or []
+                            st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
+                            st.session_state.feedback = {}
+                            st.session_state.last_sources = []
+                            st.session_state.emergency_detected = False
+                            st.session_state.mode = "chat"
+                            try: del st.query_params["mode"]
+                            except Exception: pass
                             st.rerun()
+                    # X delete button — sits absolutely top-right above
+                    # the open overlay (z-index trick in CSS). On click
+                    # it stages a pending_delete_hid in session_state
+                    # and reruns; the dialog block below catches it on
+                    # the rerun and shows the confirm modal.
+                    if st.button(" ", key="hist_del_" + _key, icon=":material/close:", help="Delete this chat"):
+                        st.session_state["pending_delete_hid"] = _hid
+                        st.session_state["pending_delete_title"] = _ht
+                        st.rerun()
+
+            # ── Delete-confirmation modal ────────────────────────────
+            # Shown when an X button stages a pending delete. Uses
+            # @st.dialog so it overlays the page; Cancel clears the
+            # pending state, Delete runs the existing
+            # delete_conversation() function then clears state + reruns.
+            if st.session_state.get("pending_delete_hid"):
+                @st.dialog("Delete this conversation?")
+                def _confirm_delete_dialog():
+                    _dlg_hid = st.session_state.get("pending_delete_hid", "")
+                    _dlg_title = (st.session_state.get("pending_delete_title", "") or "this conversation")[:80]
+                    st.markdown(
+                        '<div style="display:flex;align-items:flex-start;gap:0.85rem;margin:0.35rem 0 1.1rem 0;">'
+                        '<div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#fee2e2 0%,#fecaca 100%);'
+                        'display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+                        '<span class="material-symbols-rounded" style="color:#dc2626;font-size:1.4rem;">warning</span>'
+                        '</div>'
+                        '<div style="flex:1;min-width:0;">'
+                        '<div style="font-size:0.95rem;color:#0f172a;font-weight:600;line-height:1.4;margin-bottom:0.25rem;">'
+                        + ui_escape(_dlg_title) +
+                        '</div>'
+                        '<div style="font-size:0.86rem;color:#64748b;line-height:1.55;">'
+                        'This conversation will be permanently removed from your history. '
+                        '<strong style="color:#dc2626;">It cannot be recovered.</strong>'
+                        '</div>'
+                        '</div>'
+                        '</div>',
+                        unsafe_allow_html=True,
+                    )
+                    _dc1, _dc2 = st.columns(2, gap="small")
+                    with _dc1:
+                        if st.button("Cancel", key="dlg_del_cancel", use_container_width=True):
+                            try: del st.session_state["pending_delete_hid"]
+                            except KeyError: pass
+                            try: del st.session_state["pending_delete_title"]
+                            except KeyError: pass
+                            st.rerun()
+                    with _dc2:
+                        if st.button("Delete", key="dlg_del_confirm", icon=":material/delete:", type="primary", use_container_width=True):
+                            if _dlg_hid:
+                                delete_conversation(st.session_state.user_email_hash, _dlg_hid)
+                            try: del st.session_state["pending_delete_hid"]
+                            except KeyError: pass
+                            try: del st.session_state["pending_delete_title"]
+                            except KeyError: pass
+                            st.rerun()
+                _confirm_delete_dialog()
 
 elif st.session_state.mode == "overview":
     # ── Health Overview ─────────────────────────────────────────────
