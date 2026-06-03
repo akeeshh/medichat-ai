@@ -18071,48 +18071,36 @@ if st.session_state.mode == "chat":
                             st.session_state.pending_user_input = qa_query
                             st.rerun()
 
+            # Definitive Enter-to-send: the form contains ONLY the
+            # text_input + Send button. Upload/Voice are regular
+            # st.button widgets OUTSIDE the form. Because the form has
+            # exactly one form_submit_button, Enter in the text_input
+            # unambiguously triggers Send — no priority guards needed.
             with st.form("home_chat_form", clear_on_submit=True):
-                # st.text_input (not text_area) natively submits the form on
-                # Enter — no JS hack needed. The Enter-to-send JS we tried
-                # to inject via components.v1.html() runs in a sandboxed
-                # iframe and silently fails (SecurityError on
-                # window.parent.document). Single-line input is fine for a
-                # chat composer; long messages wrap automatically.
-                home_user_input = st.text_input(
-                    "Start a chat",
-                    placeholder="Ask anything about your health...",
-                    label_visibility="collapsed",
-                    key="home_chat_input_" + str(st.session_state.chat_input_key),
-                )
-                ac1, ac2, ac_spacer, ac3 = st.columns([0.56, 0.56, 4.0, 0.56], vertical_alignment="center")
-                # Send button is declared FIRST so Streamlit treats it as
-                # the default form-submit action when Enter is pressed in
-                # the text_input. Without this, Enter triggered whichever
-                # form_submit_button was declared first (previously
-                # Upload), which incorrectly opened the Vision AI panel
-                # instead of sending the chat. Visual position unchanged:
-                # the `with ac3:` places Send in its original right-side
-                # column regardless of declaration order.
-                with ac3:
+                _ac_input, _ac_send = st.columns([10, 1], vertical_alignment="center")
+                with _ac_input:
+                    home_user_input = st.text_input(
+                        "Start a chat",
+                        placeholder="Ask anything about your health...",
+                        label_visibility="collapsed",
+                        key="home_chat_input_" + str(st.session_state.chat_input_key),
+                    )
+                with _ac_send:
                     home_submit = st.form_submit_button(" ", key="home_send_btn", icon=":material/send:", use_container_width=True, type="primary")
-                with ac1:
-                    home_upload_clicked = st.form_submit_button("Upload", key="home_upload_btn", icon=":material/attach_file:", use_container_width=True)
-                with ac2:
-                    home_voice_clicked = st.form_submit_button("Voice", key="home_voice_btn", icon=":material/mic:", use_container_width=True)
+            # Upload + Voice live OUTSIDE the form so they don't fire on
+            # Enter. Rendered in their own row immediately below the form
+            # so the visual grouping is preserved.
+            _au1, _au2, _au_spacer = st.columns([0.56, 0.56, 8.0], vertical_alignment="center")
+            with _au1:
+                home_upload_clicked = st.button("Upload", key="home_upload_btn", icon=":material/attach_file:", use_container_width=True)
+            with _au2:
+                home_voice_clicked = st.button("Voice", key="home_voice_btn", icon=":material/mic:", use_container_width=True)
             st.markdown('<div class="md-composer-glow"></div>', unsafe_allow_html=True)
-            # When Enter is pressed in the text_input, Streamlit returns
-            # True for EVERY form_submit_button in the form (not just
-            # one). Without guarding, the Upload handler below fires
-            # and opens the Vision AI panel even though the user just
-            # wanted to send a message. Skip Upload/Voice when Send
-            # was also triggered (= Enter key path) AND there's actual
-            # text to send.
-            _enter_send_path = bool(home_submit and (home_user_input or "").strip())
-            if home_upload_clicked and not _enter_send_path:
+            if home_upload_clicked:
                 st.session_state.home_show_vision_upload = True
                 st.session_state.home_show_voice = False
                 st.rerun()
-            if home_voice_clicked and not _enter_send_path:
+            if home_voice_clicked:
                 st.session_state.home_show_voice = True
                 st.session_state.home_show_vision_upload = False
                 st.rerun()
@@ -18786,46 +18774,41 @@ if st.session_state.mode == "chat":
         chat_upload_clicked = False
         chat_voice_clicked = False
         chat_clear_clicked = False
+        # Form contains ONLY text_input + Send button — no other
+        # form_submit_buttons — so Enter unambiguously triggers Send.
+        # Upload / Voice / Clear are regular st.buttons rendered just
+        # below the form (outside it).
         with st.form("chat_form", clear_on_submit=True):
-            # st.text_input (not text_area) so Enter natively submits the
-            # form. See note in home_chat_form above.
-            user_input = st.text_input(
-                "Your message",
-                placeholder="Ask anything about your health...",
-                label_visibility="collapsed",
-                key="chat_input_" + str(st.session_state.chat_input_key),
-            )
-            # Action row: Upload + Voice + Clear pills on the left, big spacer,
-            # round Send ball on the right. Clear lives inside the form so
-            # it's visually grouped with the chat box (no orphan button below).
-            # Send is declared FIRST so Enter in the text_input defaults to
-            # sending the chat instead of triggering Upload (Streamlit treats
-            # the first form_submit_button as the default Enter action).
-            fc1, fc2, fc3, fc_spacer, fc4 = st.columns([0.56, 0.56, 0.56, 5.2, 0.56], vertical_alignment="center")
-            with fc4:
+            _ci_input, _ci_send = st.columns([10, 1], vertical_alignment="center")
+            with _ci_input:
+                user_input = st.text_input(
+                    "Your message",
+                    placeholder="Ask anything about your health...",
+                    label_visibility="collapsed",
+                    key="chat_input_" + str(st.session_state.chat_input_key),
+                )
+            with _ci_send:
                 submit = st.form_submit_button(" ", key="chat_send_btn", icon=":material/send:", use_container_width=True, type="primary")
-            with fc1:
-                chat_upload_clicked = st.form_submit_button("Upload", key="chat_upload_btn", icon=":material/attach_file:", use_container_width=True)
-            with fc2:
-                chat_voice_clicked = st.form_submit_button("Voice", key="chat_voice_btn", icon=":material/mic:", use_container_width=True)
-            with fc3:
-                chat_clear_clicked = st.form_submit_button("Clear", key="chat_clear_btn", icon=":material/delete:", use_container_width=True)
-        # Streamlit returns True for every form_submit_button when Enter
-        # is pressed in the text_input, so guard the Upload/Voice/Clear
-        # handlers against the Enter-send code path (Send is the user's
-        # intent when they hit Enter on a typed message).
-        _chat_enter_send_path = bool(submit and (user_input or "").strip())
+        # Action row: Upload + Voice + Clear pills outside the form so
+        # they don't get caught by Enter-key form submission.
+        fc1, fc2, fc3, fc_spacer = st.columns([0.56, 0.56, 0.56, 7.5], vertical_alignment="center")
+        with fc1:
+            chat_upload_clicked = st.button("Upload", key="chat_upload_btn", icon=":material/attach_file:", use_container_width=True)
+        with fc2:
+            chat_voice_clicked = st.button("Voice", key="chat_voice_btn", icon=":material/mic:", use_container_width=True)
+        with fc3:
+            chat_clear_clicked = st.button("Clear", key="chat_clear_btn", icon=":material/delete:", use_container_width=True)
 
-        # If user hit Clear inside the chat form, wire it to the same clear
-        # action as the standalone button used by vision/voice panels.
-        if chat_clear_clicked and not _chat_enter_send_path:
+        # If user hit Clear, wire it to the same clear action as the
+        # standalone button used by vision/voice panels.
+        if chat_clear_clicked:
             clear = True
 
-        if chat_upload_clicked and not _chat_enter_send_path:
+        if chat_upload_clicked:
             st.session_state.home_show_vision_upload = True
             st.session_state.home_show_voice = False
             st.rerun()
-        if chat_voice_clicked and not _chat_enter_send_path:
+        if chat_voice_clicked:
             st.session_state.home_show_voice = True
             st.session_state.home_show_vision_upload = False
             st.rerun()
