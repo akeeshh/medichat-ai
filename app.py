@@ -22776,21 +22776,24 @@ elif st.session_state.mode == "records":
     }
     .md-ai-summary-body .md-p { margin: 0.4rem 0; }
     .md-ai-summary-body strong { color: #1e293b; }
-    /* Raw document body: monospaced, scroll-capped so a long PDF
-       extract doesn't dominate the page. */
+    /* View document body: clean prose, scroll-capped so a long PDF
+       extract doesn't dominate the page. Renders markdown bold for
+       section headings (PATIENT / MEDICATION / etc). */
     .md-rec-raw-body {
-        font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace !important;
-        font-size: 0.76rem !important;
         background: #fafbff;
         border: 1px solid #eef2ff;
-        border-radius: 8px;
-        padding: 0.65rem 0.85rem;
-        max-height: 320px;
+        border-radius: 10px;
+        padding: 0.85rem 1rem;
+        max-height: 340px;
         overflow-y: auto;
-        white-space: pre-wrap;
-        line-height: 1.5;
+        font-size: 0.82rem !important;
+        line-height: 1.55;
         color: #334155;
     }
+    .md-rec-raw-body strong { color: #1e293b; font-weight: 700; }
+    .md-rec-raw-body .md-p { margin: 0.5rem 0; }
+    .md-rec-raw-body .md-p:first-child { margin-top: 0; }
+    .md-rec-raw-body .md-p:last-child { margin-bottom: 0; }
     .md-rec-raw summary .material-symbols-rounded { color: #0ea5e9 !important; -webkit-text-fill-color: #0ea5e9 !important; }
     .md-rec-raw summary { color: #0369a1 !important; }
     .md-rec-raw[open] summary { color: #075985 !important; }
@@ -22991,12 +22994,15 @@ elif st.session_state.mode == "records":
                         if _has_summary:
                             rh += '<details class="md-rec-summary"><summary><span class="material-symbols-rounded">auto_awesome</span>View Ai summary</summary><div class="md-ai-summary-body">' + markdown_to_html(r.get("summary")) + '</div></details>'
                         if _has_raw:
-                            # "View document" reveals the raw extracted
+                            # "View document" renders the raw extracted
                             # text from the uploaded PDF/image (the actual
                             # file is not stored, raw_text is the next
                             # closest to viewing the document content).
-                            _raw_safe = ui_escape(r.get("raw_text") or "")
-                            rh += '<details class="md-rec-summary md-rec-raw"><summary><span class="material-symbols-rounded">description</span>View document</summary><div class="md-ai-summary-body md-rec-raw-body">' + _raw_safe.replace("\n", "<br>") + '</div></details>'
+                            # Run through markdown_to_html so the bold
+                            # section headings (**PATIENT**, **MEDICATION**,
+                            # etc) render as real bold instead of literal
+                            # asterisks.
+                            rh += '<details class="md-rec-summary md-rec-raw"><summary><span class="material-symbols-rounded">description</span>View document</summary><div class="md-ai-summary-body md-rec-raw-body">' + markdown_to_html(r.get("raw_text") or "") + '</div></details>'
                         rh += '</div>'
                     rh += '</div></div>'
                     st.html(rh)
