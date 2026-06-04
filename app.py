@@ -17210,6 +17210,16 @@ if _mode_from_url in _url_modes:
     # Health Overview. Keeping ?mode= in the URL makes every page bookmark-
     # able and refresh-safe.
 
+# Conv-in-URL ALWAYS means chat mode. This overrides any prior mode handler
+# decision (e.g. a stale ?mode=history from Recent Chats nav) so refreshing
+# on a saved chat reliably lands on that chat, not Recent Chats.
+if str(_query_params.get("conv", "") or "").strip():
+    st.session_state.mode = "chat"
+    try:
+        st.query_params["mode"] = "chat"
+    except Exception:
+        pass
+
 # ?conv=<id> → load that conversation into the chat view. Lets the Recent
 # Chats sidebar render as anchor links (giving us proper title-left +
 # time-right flex layout that st.button can't).
@@ -17234,6 +17244,13 @@ if _conv_id_from_url and st.session_state.is_authenticated and st.session_state.
     else:
         # Same conversation already loaded, just make sure we're in chat mode.
         st.session_state.mode = "chat"
+    # Belt-and-braces: force ?mode=chat in URL so the next refresh has
+    # both params and can never fall through to Recent Chats / Home.
+    try:
+        if st.query_params.get("mode") != "chat":
+            st.query_params["mode"] = "chat"
+    except Exception:
+        pass
 
 # ?new_chat=1 → start a fresh chat session. Mirrors the ?conv handler so the
 # "+ New chat" pill inside the Recent Chats card can be a true anchor link
@@ -20594,6 +20611,17 @@ if st.session_state.mode == "chat":
                 _assistant_msg["noticed_facts"] = _noticed_for_msg
             if verify_text:
                 _assistant_msg["verify_text"] = verify_text
+                # Belt-and-braces logging: if verify_text was generated
+                # but somehow doesn't make the trip to Firestore, this
+                # log line lets us prove the field WAS on the message.
+                try:
+                    import logging as _lg_v
+                    _lg_v.warning(
+                        "[verify-persist] attached verify_text of %d chars to assistant message (conv=%s)",
+                        len(verify_text), st.session_state.get("current_conversation_id", "(new)") or "(new)"
+                    )
+                except Exception:
+                    pass
             st.session_state.messages.append(_assistant_msg)
 
         if st.session_state.is_authenticated and st.session_state.user_email_hash:
@@ -20610,6 +20638,20 @@ if st.session_state.mode == "chat":
             )
             if new_id:
                 st.session_state.current_conversation_id = new_id
+            # Defensive re-save: if the trimmed-payload-on-first-save
+            # somehow dropped verify_text (race, schema mismatch, etc.)
+            # the second call with the exact same messages array
+            # writes again and Firestore merges so the field is there
+            # next time the chat is loaded.
+            if verify_text and st.session_state.current_conversation_id:
+                try:
+                    save_conversation(
+                        st.session_state.user_email_hash,
+                        st.session_state.current_conversation_id,
+                        st.session_state.messages,
+                    )
+                except Exception:
+                    pass
         # Mirror the active conversation id into ?conv= so a browser
         # refresh restores the same chat instead of dropping back to
         # the empty Home dashboard.
