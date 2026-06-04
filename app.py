@@ -22642,6 +22642,210 @@ elif st.session_state.mode == "appointments":
 
 elif st.session_state.mode == "records":
     # ── Health Records ──────────────────────────────────────────────
+    st.markdown("""
+    <style>
+    /* Redesigned record card - icon + content + X delete (outside card). */
+    [data-testid="stMain"] [class*="st-key-hr_rec_"] {
+        background: linear-gradient(180deg, #ffffff 0%, #fcfcff 100%) !important;
+        border: 1px solid #eef0f6 !important;
+        border-radius: 14px !important;
+        box-shadow: 0 1px 2px rgba(15,23,42,0.025) !important;
+        margin-bottom: 0.65rem !important;
+        padding: 0.85rem 1rem !important;
+        position: relative !important;
+        overflow: hidden !important;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease !important;
+    }
+    [data-testid="stMain"] [class*="st-key-hr_rec_"]::before {
+        content: "" !important;
+        position: absolute !important;
+        left: 0 !important; top: 50% !important;
+        width: 3px !important; height: 0% !important;
+        background: linear-gradient(180deg, #4f46e5 0%, #7c3aed 100%) !important;
+        border-radius: 0 3px 3px 0 !important;
+        transform: translateY(-50%) !important;
+        transition: height 0.22s ease !important;
+    }
+    [data-testid="stMain"] [class*="st-key-hr_rec_"]:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 16px rgba(79,70,229,0.08) !important;
+        border-color: #dbe1ff !important;
+    }
+    [data-testid="stMain"] [class*="st-key-hr_rec_"]:hover::before { height: 60% !important; }
+    .md-rec-card-inner {
+        display: grid;
+        grid-template-columns: 40px 1fr;
+        gap: 0.85rem;
+        align-items: flex-start;
+    }
+    .md-rec-card-ic {
+        width: 40px; height: 40px;
+        border-radius: 11px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4);
+    }
+    .md-rec-card-ic .material-symbols-rounded {
+        font-size: 1.25rem;
+        font-variation-settings: 'FILL' 1, 'wght' 500;
+    }
+    .md-rec-card-ic-pdf {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        color: #dc2626;
+    }
+    .md-rec-card-ic-img {
+        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        color: #16a34a;
+    }
+    .md-rec-card-body { min-width: 0; flex: 1; }
+    .md-rec-card-title {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: 0.93rem;
+        line-height: 1.3;
+        letter-spacing: -0.005em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .md-rec-card-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        flex-wrap: wrap;
+        font-size: 0.7rem;
+        color: #64748b;
+        font-weight: 500;
+        margin-top: 0.32rem;
+    }
+    .md-rec-card-chip {
+        background: #f5f3ff;
+        color: #6d28d9;
+        padding: 0.08rem 0.5rem;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.66rem;
+        border: 1px solid #ede9fe;
+        letter-spacing: 0.02em;
+    }
+    .md-rec-card-dot { color: #cbd5e1; font-weight: 700; }
+    .md-rec-card-clock.material-symbols-rounded {
+        font-size: 0.82rem;
+        opacity: 0.8;
+        color: #7c3aed;
+    }
+    .md-rec-summary {
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px dashed #e2e8f0;
+    }
+    .md-rec-summary summary {
+        cursor: pointer;
+        font-size: 0.76rem;
+        color: #4f46e5;
+        font-weight: 650;
+        list-style: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.32rem;
+        user-select: none;
+    }
+    .md-rec-summary summary::-webkit-details-marker { display: none; }
+    .md-rec-summary summary .material-symbols-rounded {
+        font-size: 0.92rem;
+        color: #7c3aed;
+        -webkit-text-fill-color: #7c3aed;
+    }
+    .md-rec-summary[open] summary { color: #312e81; }
+    .md-ai-summary-body {
+        font-size: 0.82rem;
+        color: #475569;
+        margin-top: 0.5rem;
+        line-height: 1.55;
+    }
+    .md-ai-summary-body .md-p { margin: 0.4rem 0; }
+    .md-ai-summary-body strong { color: #1e293b; }
+
+    /* X delete button matches Recent Chats: plain icon, grey,
+       turns red on hover, sits in the outer margin column. */
+    [data-testid="stMain"] [class*="st-key-hr_del_"] {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+    }
+    [data-testid="stMain"] [class*="st-key-hr_del_"] .stButton button {
+        width: 26px !important;
+        min-width: 26px !important;
+        max-width: 26px !important;
+        height: 26px !important;
+        min-height: 26px !important;
+        max-height: 26px !important;
+        border-radius: 6px !important;
+        padding: 0 !important;
+        margin: 0 0 0 auto !important;
+        background: transparent !important;
+        border: none !important;
+        color: #94a3b8 !important;
+        box-shadow: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: color 0.15s ease, transform 0.15s ease !important;
+    }
+    [data-testid="stMain"] [class*="st-key-hr_del_"] .stButton button:hover {
+        background: transparent !important;
+        border: none !important;
+        color: #dc2626 !important;
+        transform: scale(1.18) !important;
+    }
+    [data-testid="stMain"] [class*="st-key-hr_del_"] .stButton button [data-testid="stIconMaterial"] {
+        font-size: 1.05rem !important;
+        color: inherit !important;
+        -webkit-text-fill-color: currentColor !important;
+        line-height: 1 !important;
+    }
+    [data-testid="stMain"] [class*="st-key-hr_del_"] .stButton button [data-testid="stMarkdownContainer"] {
+        display: none !important;
+    }
+
+    /* Empty-state card. */
+    .md-rec-empty {
+        text-align: center;
+        background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%);
+        border: 1px dashed #c7d2fe;
+        border-radius: 18px;
+        padding: 2rem 1.5rem;
+        margin-top: 0.4rem;
+    }
+    .md-rec-empty-ic {
+        width: 56px; height: 56px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+        color: #6d28d9;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.85rem;
+    }
+    .md-rec-empty-ic .material-symbols-rounded {
+        font-size: 1.7rem;
+        font-variation-settings: 'FILL' 1, 'wght' 500;
+    }
+    .md-rec-empty-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.3rem;
+    }
+    .md-rec-empty-sub {
+        font-size: 0.85rem;
+        color: #64748b;
+        line-height: 1.5;
+        max-width: 460px;
+        margin: 0 auto;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     st.markdown(
         '<div class="md-page-hero md-page-hero-records">'
         '<div class="md-page-hero-ic"><span class="material-symbols-rounded">medical_information</span></div>'
@@ -22684,29 +22888,54 @@ elif st.session_state.mode == "records":
 
     records = list_health_records()
     if not records:
-        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.6rem;">No records uploaded yet.</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="md-rec-empty">'
+            '<div class="md-rec-empty-ic"><span class="material-symbols-rounded">folder_open</span></div>'
+            '<div class="md-rec-empty-title">No records yet</div>'
+            '<div class="md-rec-empty-sub">Upload a PDF or image above and we will summarize it and keep the metadata so MediChat can reference it in your chats.</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
     else:
         records_sorted = sorted(records, key=lambda r: r.get("uploaded_at", ""), reverse=True)
         for r in records_sorted:
-            ic = "📄" if "pdf" in (r.get("file_type", "").lower()) else "🖼"
+            _is_pdf = "pdf" in (r.get("file_type", "").lower())
+            _ic_glyph = "picture_as_pdf" if _is_pdf else "image"
+            _ic_cls = "md-rec-card-ic-pdf" if _is_pdf else "md-rec-card-ic-img"
             try:
                 kb = round(r.get("size_bytes", 0) / 1024, 1)
                 size_lbl = (str(kb) + " KB") if kb < 1024 else (str(round(kb / 1024, 1)) + " MB")
             except Exception:
                 size_lbl = ""
             uploaded = r.get("uploaded_at", "")[:16].replace("T", " ")
-            rh = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
-            rh += '<div class="md-metric-icon md-hp-green" style="width:42px;height:42px;flex-shrink:0;font-size:1.2rem;">' + ic + '</div>'
-            rh += '<div style="flex:1;min-width:0;">'
-            rh += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.96rem;">' + ui_text(r.get("name", ""), 120) + '</div>'
-            rh += '<div style="font-size:0.74rem;color:var(--md-text-3);margin-top:0.15rem;">' + ui_text(r.get("file_type", ""), 30) + ' · ' + ui_text(size_lbl, 20) + ' · uploaded ' + ui_text(uploaded, 30) + '</div>'
-            if r.get("summary"):
-                rh += '<details style="margin-top:0.4rem;"><summary style="cursor:pointer;font-size:0.78rem;color:var(--md-brand-2);font-weight:600;">View Ai summary</summary><div class="md-ai-summary-body" style="font-size:0.84rem;color:var(--md-text-2);margin-top:0.4rem;line-height:1.55;">' + markdown_to_html(r.get("summary")) + '</div></details>'
-            rh += '</div></div></div>'
-            st.markdown(rh, unsafe_allow_html=True)
-            if st.button("Remove", key="del_rec_" + str(r.get("id", "")), use_container_width=False):
-                delete_health_record(r.get("id"))
-                st.rerun()
+            _rid = str(r.get("id", ""))
+
+            # Outer 2-col row: card on left, X delete button on right
+            # (mirrors the Recent Chats pattern - delete sits OUTSIDE
+            # the card surface in its own margin column).
+            _rec_l, _rec_x = st.columns([0.96, 0.04], gap="small", vertical_alignment="center")
+            with _rec_l:
+                with st.container(key="hr_rec_" + _rid):
+                    rh = '<div class="md-rec-card-inner">'
+                    rh += '<div class="md-rec-card-ic ' + _ic_cls + '"><span class="material-symbols-rounded">' + _ic_glyph + '</span></div>'
+                    rh += '<div class="md-rec-card-body">'
+                    rh += '<div class="md-rec-card-title">' + ui_text(r.get("name", ""), 120) + '</div>'
+                    rh += '<div class="md-rec-card-meta">'
+                    rh += '<span class="md-rec-card-chip">' + ui_text(r.get("file_type", "").upper().split("/")[-1] or "FILE", 20) + '</span>'
+                    rh += '<span class="md-rec-card-dot">·</span>'
+                    rh += '<span>' + ui_text(size_lbl, 20) + '</span>'
+                    rh += '<span class="md-rec-card-dot">·</span>'
+                    rh += '<span class="material-symbols-rounded md-rec-card-clock">schedule</span>'
+                    rh += '<span>' + ui_text(uploaded, 30) + '</span>'
+                    rh += '</div>'
+                    if r.get("summary"):
+                        rh += '<details class="md-rec-summary"><summary><span class="material-symbols-rounded">auto_awesome</span>View Ai summary</summary><div class="md-ai-summary-body">' + markdown_to_html(r.get("summary")) + '</div></details>'
+                    rh += '</div></div>'
+                    st.html(rh)
+            with _rec_x:
+                if st.button(" ", key="hr_del_" + _rid, icon=":material/close:", help="Remove this record"):
+                    delete_health_record(r.get("id"))
+                    st.rerun()
 
 elif st.session_state.mode == "rx_reader":
     # ── Prescription Reader ────────────────────────────────────────
