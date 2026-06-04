@@ -21183,7 +21183,7 @@ elif st.session_state.mode == "history":
            visible HTML; a transparent Streamlit button overlays it to
            capture clicks via WebSocket-driven rerun. Active state is
            driven by _hist2_active_tile, so exactly one tile lights up. */
-        .md-hist2-tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:0.8rem; margin:0.5rem 0 1.5rem 0; }
+        .md-hist2-tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:0.8rem; margin:0.5rem 0 1.5rem 0; }
         [class*="st-key-hist2_stat_tiles"] [data-testid="stHorizontalBlock"] { gap:0.8rem !important; margin:0.5rem 0 1.5rem 0 !important; }
         [class*="st-key-hist2_stat_tiles"] [data-testid="stColumn"] { position:relative !important; }
         .md-hist2-tile  {
@@ -22549,7 +22549,7 @@ elif st.session_state.mode == "appointments":
     with sync_tab3:
         st.markdown(
             '<div style="font-size:0.88rem;color:var(--md-text-2);line-height:1.65;padding:0.4rem 0 1.2rem 0;">'
-            'Just mention an appointment in any MediChat conversation , for example:'
+            'Just mention an appointment in any MediChat conversation, for example:'
             '<ul style="margin-top:0.55rem;margin-bottom:0.7rem;padding-left:1.2rem;">'
             '<li style="margin-bottom:0.2rem;"><em>&ldquo;I have a GP follow-up next Tuesday at 3 pm with Dr Patel.&rdquo;</em></li>'
             '<li style="margin-bottom:0.2rem;"><em>&ldquo;Blood test at Melbourne Pathology on the 12th.&rdquo;</em></li>'
@@ -22849,7 +22849,7 @@ elif st.session_state.mode == "help":
         '<div class="md-page-hero-ic"><span class="material-symbols-rounded">help</span></div>'
         '<div class="md-page-hero-text">'
         '<div class="md-page-hero-title">Help Center</div>'
-        '<div class="md-page-hero-sub">Quick answers to common questions about MediChat , how to use it, what it can and cannot do, and how to reach a real person if you need one.</div>'
+        '<div class="md-page-hero-sub">Quick answers to common questions about MediChat, how to use it, what it can and cannot do, and how to reach a real person if you need one.</div>'
         '</div>'
         '</div>',
         unsafe_allow_html=True
@@ -22884,31 +22884,31 @@ elif st.session_state.mode == "help":
         (
             "person_add", "Getting started",
             '<ul class="md-privacy-ul">'
-            '<li><strong>Sign up</strong> , tap <em>Create profile</em>, enter your email and a 4 to 8 digit PIN. We hash both irreversibly , we cannot see or recover your originals.</li>'
-            '<li><strong>Sign in</strong> , use the same email + PIN. Forgot PIN? You will need to create a new profile (see the linked privacy policy for why we cannot reset hashed PINs).</li>'
-            '<li><strong>Guest mode</strong> , tap <em>Continue as Guest</em> from the sign-in screen. Useful for one-off questions; nothing is saved after you close the tab.</li>'
-            '<li><strong>Personalise</strong> , add a first name on your profile so MediChat can greet you and tailor replies.</li>'
+            '<li><strong>Sign up</strong>, tap <em>Create profile</em>, enter your email and a 4 to 8 digit PIN. We hash both irreversibly, we cannot see or recover your originals.</li>'
+            '<li><strong>Sign in</strong>, use the same email + PIN. Forgot PIN? You will need to create a new profile (see the linked privacy policy for why we cannot reset hashed PINs).</li>'
+            '<li><strong>Guest mode</strong>, tap <em>Continue as Guest</em> from the sign-in screen. Useful for one-off questions; nothing is saved after you close the tab.</li>'
+            '<li><strong>Personalise</strong>, add a first name on your profile so MediChat can greet you and tailor replies.</li>'
             '</ul>'
         ),
         (
             "chat_bubble", "Using MediChat",
             '<ul class="md-privacy-ul">'
-            '<li><strong>Ask anything health-related</strong> in the chat composer on Home , symptoms, drug interactions, lifestyle, recovery, etc.</li>'
-            '<li><strong>Upload a prescription</strong> , use the <em>Prescription Reader</em> tile or click the upload icon in the chat composer. We extract the medication, dose, and instructions, then explain them in plain English.</li>'
-            '<li><strong>Upload a medical image or PDF</strong> , from the chat composer. MediChat summarises what it can interpret. <em>This is not a substitute for radiologist or specialist review.</em></li>'
-            '<li><strong>Symptoms Checker</strong> , a guided triage flow with structured questions, severity prompts, and recommended next steps (self-care, GP, emergency).</li>'
-            '<li><strong>Smart Action tiles</strong> , one-tap shortcuts for common concerns (Headache, Low energy, Better sleep, etc.).</li>'
+            '<li><strong>Ask anything health-related</strong> in the chat composer on Home, symptoms, drug interactions, lifestyle, recovery, etc.</li>'
+            '<li><strong>Upload a prescription</strong>, use the <em>Prescription Reader</em> tile or click the upload icon in the chat composer. We extract the medication, dose, and instructions, then explain them in plain English.</li>'
+            '<li><strong>Upload a medical image or PDF</strong>, from the chat composer. MediChat summarises what it can interpret. <em>This is not a substitute for radiologist or specialist review.</em></li>'
+            '<li><strong>Symptoms Checker</strong>, a guided triage flow with structured questions, severity prompts, and recommended next steps (self-care, GP, emergency).</li>'
+            '<li><strong>Smart Action tiles</strong>, one-tap shortcuts for common concerns (Headache, Low energy, Better sleep, etc.).</li>'
             '</ul>'
         ),
         (
             "manage_accounts", "Account & data",
             '<ul class="md-privacy-ul">'
-            '<li><strong>Sign out</strong> , click the logout icon on your profile card in the sidebar.</li>'
-            '<li><strong>View your chats</strong> , tap <em>Recent Chats</em> in the sidebar nav.</li>'
-            '<li><strong>Delete a single chat</strong> , open <em>Recent Chats</em>, hover the conversation, click the delete icon.</li>'
-            '<li><strong>Export all your data</strong> , visit <em>Privacy &amp; Consent</em> and tap <em>Export my data</em> for instructions.</li>'
-            '<li><strong>Delete your entire account</strong> , visit <em>Privacy &amp; Consent</em> and tap <em>Delete my account</em>. This is irreversible and completes within 30 days.</li>'
-            '<li><strong>Change language</strong> , use the language picker at the bottom of the sidebar.</li>'
+            '<li><strong>Sign out</strong>, click the logout icon on your profile card in the sidebar.</li>'
+            '<li><strong>View your chats</strong>, tap <em>Recent Chats</em> in the sidebar nav.</li>'
+            '<li><strong>Delete a single chat</strong>, open <em>Recent Chats</em>, hover the conversation, click the delete icon.</li>'
+            '<li><strong>Export all your data</strong>, visit <em>Privacy &amp; Consent</em> and tap <em>Export my data</em> for instructions.</li>'
+            '<li><strong>Delete your entire account</strong>, visit <em>Privacy &amp; Consent</em> and tap <em>Delete my account</em>. This is irreversible and completes within 30 days.</li>'
+            '<li><strong>Change language</strong>, use the language picker at the bottom of the sidebar.</li>'
             '</ul>'
         ),
         (
@@ -22916,7 +22916,7 @@ elif st.session_state.mode == "help":
             '<div class="md-privacy-grid">'
             '<div class="md-privacy-grid-item">'
             '<div class="md-privacy-grid-title">Health Overview</div>'
-            '<div class="md-privacy-grid-body">Daily vitals dashboard , heart rate, steps, sleep, water intake. Log values to populate the sparklines.</div>'
+            '<div class="md-privacy-grid-body">Daily vitals dashboard, heart rate, steps, sleep, water intake. Log values to populate the sparklines.</div>'
             '</div>'
             '<div class="md-privacy-grid-item">'
             '<div class="md-privacy-grid-title">Health Records</div>'
@@ -22932,7 +22932,7 @@ elif st.session_state.mode == "help":
             '</div>'
             '<div class="md-privacy-grid-item">'
             '<div class="md-privacy-grid-title">AI Insights</div>'
-            '<div class="md-privacy-grid-body">Personalised observations refreshed each visit, based on what you have logged. Never a diagnosis , always a prompt to consider.</div>'
+            '<div class="md-privacy-grid-body">Personalised observations refreshed each visit, based on what you have logged. Never a diagnosis, always a prompt to consider.</div>'
             '</div>'
             '<div class="md-privacy-grid-item">'
             '<div class="md-privacy-grid-title">Health Passport</div>'
@@ -22943,12 +22943,12 @@ elif st.session_state.mode == "help":
         (
             "build", "Troubleshooting",
             '<ul class="md-privacy-ul">'
-            '<li><strong>Chat will not respond</strong> , check your internet connection, then refresh the browser tab. If it persists, our AI provider may be temporarily down , try again in a few minutes.</li>'
-            '<li><strong>Upload failed</strong> , make sure the file is under 10 MB and is one of: PNG, JPG, JPEG, PDF.</li>'
-            '<li><strong>Sidebar collapsed</strong> , click the small chevron icon at the top of the screen to expand it again.</li>'
-            '<li><strong>Language not switching</strong> , reload the page after picking a language; some labels are cached per-session.</li>'
-            '<li><strong>"Logged out" unexpectedly</strong> , sessions reset if you open the app URL in a new tab. Use the sidebar nav links instead of typing URLs.</li>'
-            '<li><strong>Did not receive a confirmation email</strong> , we currently use email-as-identifier (no verification email). Just sign back in with your email + PIN.</li>'
+            '<li><strong>Chat will not respond</strong>, check your internet connection, then refresh the browser tab. If it persists, our AI provider may be temporarily down, try again in a few minutes.</li>'
+            '<li><strong>Upload failed</strong>, make sure the file is under 10 MB and is one of: PNG, JPG, JPEG, PDF.</li>'
+            '<li><strong>Sidebar collapsed</strong>, click the small chevron icon at the top of the screen to expand it again.</li>'
+            '<li><strong>Language not switching</strong>, reload the page after picking a language; some labels are cached per-session.</li>'
+            '<li><strong>"Logged out" unexpectedly</strong>, sessions reset if you open the app URL in a new tab. Use the sidebar nav links instead of typing URLs.</li>'
+            '<li><strong>Did not receive a confirmation email</strong>, we currently use email-as-identifier (no verification email). Just sign back in with your email + PIN.</li>'
             '</ul>'
         ),
         (
@@ -22963,10 +22963,10 @@ elif st.session_state.mode == "help":
             '<li>Severe allergic reaction (anaphylaxis), poisoning, or overdose.</li>'
             '</ul>'
             '<div class="md-privacy-grid" style="margin-top:0.5rem;">'
-            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">Australia , 000</div><div class="md-privacy-grid-body">Ambulance, police, fire. Lifeline 13 11 14 for mental health crisis.</div></div>'
-            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">US / Canada , 911</div><div class="md-privacy-grid-body">988 for Suicide &amp; Crisis Lifeline (US).</div></div>'
-            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">UK , 999 or 112</div><div class="md-privacy-grid-body">NHS 111 for non-emergency advice. Samaritans 116 123.</div></div>'
-            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">EU , 112</div><div class="md-privacy-grid-body">Pan-European emergency number, works from any phone.</div></div>'
+            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">Australia,000</div><div class="md-privacy-grid-body">Ambulance, police, fire. Lifeline 13 11 14 for mental health crisis.</div></div>'
+            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">US / Canada,911</div><div class="md-privacy-grid-body">988 for Suicide &amp; Crisis Lifeline (US).</div></div>'
+            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">UK,999 or 112</div><div class="md-privacy-grid-body">NHS 111 for non-emergency advice. Samaritans 116 123.</div></div>'
+            '<div class="md-privacy-grid-item"><div class="md-privacy-grid-title">EU,112</div><div class="md-privacy-grid-body">Pan-European emergency number, works from any phone.</div></div>'
             '</div>'
         ),
         (
@@ -22980,7 +22980,7 @@ elif st.session_state.mode == "help":
             '<ul class="md-privacy-ul">'
             '<li>Email: <a class="md-privacy-link" href="mailto:support@medichat.example">support@medichat.example</a></li>'
             '<li>Response time: typically within 2 business days; complex requests may take up to 5 business days</li>'
-            '<li>For privacy-specific requests (access, correction, deletion, complaints): email <a class="md-privacy-link" href="mailto:privacy@medichat.example">privacy@medichat.example</a> , covered by our 30-day legal response window</li>'
+            '<li>For privacy-specific requests (access, correction, deletion, complaints): email <a class="md-privacy-link" href="mailto:privacy@medichat.example">privacy@medichat.example</a>, covered by our 30-day legal response window</li>'
             '</ul>'
             '<p class="md-privacy-p md-privacy-note">Please <strong>do not</strong> include sensitive health details in unencrypted email. If you need to share clinical context, mention it in-app and reference the chat date/time in your email instead.</p>'
         ),
@@ -23023,7 +23023,7 @@ elif st.session_state.mode == "privacy":
         '<div class="md-page-hero-ic"><span class="material-symbols-rounded">shield_person</span></div>'
         '<div class="md-page-hero-text">'
         '<div class="md-page-hero-title">Privacy &amp; Consent</div>'
-        '<div class="md-page-hero-sub">How MediChat collects, protects, and uses your health information , written in plain English, aligned with Australian and international privacy standards.</div>'
+        '<div class="md-page-hero-sub">How MediChat collects, protects, and uses your health information, written in plain English, aligned with Australian and international privacy standards.</div>'
         '</div>'
         '</div>',
         unsafe_allow_html=True
@@ -23038,7 +23038,7 @@ elif st.session_state.mode == "privacy":
         '</div>'
         '<ul class="md-privacy-summary-list">'
         '<li><span class="material-symbols-rounded">check_circle</span>'
-        '<span><strong>You own your data.</strong> You can view, export, correct, or delete it at any time , no questions asked.</span></li>'
+        '<span><strong>You own your data.</strong> You can view, export, correct, or delete it at any time, no questions asked.</span></li>'
         '<li><span class="material-symbols-rounded">check_circle</span>'
         '<span><strong>We never sell or trade your data.</strong> Not to advertisers, data brokers, insurers, or any third party for marketing.</span></li>'
         '<li><span class="material-symbols-rounded">check_circle</span>'
@@ -23070,17 +23070,17 @@ elif st.session_state.mode == "privacy":
             "person_check", "Your rights",
             '<p class="md-privacy-p">Under the <em>Privacy Act 1988</em> (Cth) and equivalent overseas regimes (GDPR, HIPAA), you have the following rights at all times:</p>'
             '<ul class="md-privacy-ul">'
-            '<li><strong>Access</strong> , request a copy of the personal information we hold about you.</li>'
-            '<li><strong>Correction</strong> , ask us to fix anything that is inaccurate, out of date, incomplete, or misleading.</li>'
-            '<li><strong>Erasure</strong> ("right to be forgotten") , delete your account and all associated health, profile, and chat data.</li>'
-            '<li><strong>Portability</strong> , export your data in a structured, machine-readable format (JSON or CSV).</li>'
-            '<li><strong>Withdraw consent</strong> , revoke consent for any optional processing without affecting your right to use the service in Guest mode.</li>'
-            '<li><strong>Lodge a complaint</strong> , with the Office of the Australian Information Commissioner (OAIC) or your local data protection authority.</li>'
+            '<li><strong>Access</strong>, request a copy of the personal information we hold about you.</li>'
+            '<li><strong>Correction</strong>, ask us to fix anything that is inaccurate, out of date, incomplete, or misleading.</li>'
+            '<li><strong>Erasure</strong> ("right to be forgotten"), delete your account and all associated health, profile, and chat data.</li>'
+            '<li><strong>Portability</strong>, export your data in a structured, machine-readable format (JSON or CSV).</li>'
+            '<li><strong>Withdraw consent</strong>, revoke consent for any optional processing without affecting your right to use the service in Guest mode.</li>'
+            '<li><strong>Lodge a complaint</strong>, with the Office of the Australian Information Commissioner (OAIC) or your local data protection authority.</li>'
             '</ul>'
             '<p class="md-privacy-p md-privacy-note">Requests are actioned within 30 days. There is no fee. Email <a href="mailto:privacy@medichat.example" class="md-privacy-link">privacy@medichat.example</a>.</p>'
         ),
         (
-            "database", "What we collect , and why",
+            "database", "What we collect, and why",
             '<p class="md-privacy-p">We collect the <strong>minimum data needed</strong> to give you a useful, personalised health chat. Nothing else.</p>'
             '<div class="md-privacy-grid">'
             '<div class="md-privacy-grid-item">'
@@ -23116,7 +23116,7 @@ elif st.session_state.mode == "privacy":
             '<ul class="md-privacy-ul">'
             '<li><strong>Encryption in transit:</strong> TLS 1.2+ for every request between your device and our servers.</li>'
             '<li><strong>Encryption at rest:</strong> data stored in cloud infrastructure that supports AES-256 disk encryption (Google Cloud Firestore / equivalent).</li>'
-            '<li><strong>Irreversible password storage:</strong> email and PIN are hashed with a unique salt before storage. The original values are never written to disk and cannot be recovered , even by us.</li>'
+            '<li><strong>Irreversible password storage:</strong> email and PIN are hashed with a unique salt before storage. The original values are never written to disk and cannot be recovered, even by us.</li>'
             '<li><strong>Role-aware access controls:</strong> only authorised engineers on duty can access infrastructure, with multi-factor authentication and audit logging.</li>'
             '<li><strong>Audit logs</strong> for administrative access are retained for the period required by law.</li>'
             '<li><strong>Regular security reviews</strong> of dependencies, configurations, and code paths handling personal information.</li>'
@@ -23154,12 +23154,12 @@ elif st.session_state.mode == "privacy":
             '<p class="md-privacy-p md-privacy-note">OAIC contact: <a href="https://www.oaic.gov.au/" target="_blank" rel="noopener noreferrer" class="md-privacy-link">oaic.gov.au</a> &middot; 1300 363 992</p>'
         ),
         (
-            "task_alt", "Consent , how it works",
+            "task_alt", "Consent, how it works",
             '<ul class="md-privacy-ul">'
             '<li><strong>Express opt-in:</strong> creating a profile is an explicit consent to the processing described on this page. You must tick the consent checkbox before continuing.</li>'
             '<li><strong>Guest mode:</strong> if you prefer not to consent to long-term storage, use Guest mode for a single session.</li>'
             '<li><strong>Granular consent:</strong> optional features (e.g. uploading prescription images, allowing your chats to inform AI improvements) are off by default and can be enabled / disabled in your profile.</li>'
-            '<li><strong>Withdrawal:</strong> withdraw consent any time by signing out and deleting your account , this triggers full erasure within 30 days.</li>'
+            '<li><strong>Withdrawal:</strong> withdraw consent any time by signing out and deleting your account, this triggers full erasure within 30 days.</li>'
             '</ul>'
         ),
         (
@@ -23207,10 +23207,10 @@ elif st.session_state.mode == "privacy":
             '</ul>'
             '<p class="md-privacy-p md-privacy-note">If you are not satisfied with our response, you may lodge a complaint:</p>'
             '<ul class="md-privacy-ul">'
-            '<li>Australia , <a href="https://www.oaic.gov.au/privacy/privacy-complaints" target="_blank" rel="noopener noreferrer" class="md-privacy-link">OAIC</a> (1300 363 992)</li>'
-            '<li>EU/EEA , your national data protection authority (<a href="https://edpb.europa.eu/about-edpb/board/members_en" target="_blank" rel="noopener noreferrer" class="md-privacy-link">EDPB member list</a>)</li>'
-            '<li>UK , <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener noreferrer" class="md-privacy-link">Information Commissioner&rsquo;s Office (ICO)</a></li>'
-            '<li>US , <a href="https://www.hhs.gov/hipaa/filing-a-complaint/index.html" target="_blank" rel="noopener noreferrer" class="md-privacy-link">HHS Office for Civil Rights</a> for HIPAA-related concerns</li>'
+            '<li>Australia,<a href="https://www.oaic.gov.au/privacy/privacy-complaints" target="_blank" rel="noopener noreferrer" class="md-privacy-link">OAIC</a> (1300 363 992)</li>'
+            '<li>EU/EEA, your national data protection authority (<a href="https://edpb.europa.eu/about-edpb/board/members_en" target="_blank" rel="noopener noreferrer" class="md-privacy-link">EDPB member list</a>)</li>'
+            '<li>UK,<a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener noreferrer" class="md-privacy-link">Information Commissioner&rsquo;s Office (ICO)</a></li>'
+            '<li>US,<a href="https://www.hhs.gov/hipaa/filing-a-complaint/index.html" target="_blank" rel="noopener noreferrer" class="md-privacy-link">HHS Office for Civil Rights</a> for HIPAA-related concerns</li>'
             '</ul>'
         ),
         (
@@ -23263,7 +23263,7 @@ elif st.session_state.mode == "privacy":
     st.markdown(
         '<div class="md-privacy-meta">'
         '<div><strong>Last updated:</strong> 27 May 2026</div>'
-        '<div><strong>Governing law:</strong> Privacy Act 1988 (Cth), Australia , with equivalent rights extended internationally.</div>'
+        '<div><strong>Governing law:</strong> Privacy Act 1988 (Cth), Australia, with equivalent rights extended internationally.</div>'
         '<div><strong>Effective date:</strong> on first use of the service or first sign-in after this date.</div>'
         '</div>',
         unsafe_allow_html=True
@@ -23373,7 +23373,7 @@ elif st.session_state.mode == "insights":
         ("Days logged (7d)", str(days_with_metrics) + "/7", ("Consistent" if days_with_metrics >= 5 else ("Patchy" if days_with_metrics >= 2 else "Just starting")), "#10b981"),
         ("Next appointment", next_appt_label, next_appt_sub, "#f59e0b"),
     ]
-    tiles_html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.7rem;margin-top:0.6rem;margin-bottom:1.4rem;">'
+    tiles_html = '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px,1fr));gap:0.7rem;margin-top:0.6rem;margin-bottom:1.4rem;">'
     for label, val, sub, color in snap_tiles:
         # Auto-shrink the value font when the text is long so it never
         # truncates (e.g. "None scheduled" → smaller; "75%" → big).
