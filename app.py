@@ -19325,7 +19325,12 @@ if st.session_state.mode == "chat":
                     if _all_convs and _all_convs[0].get("last_updated"):
                         try:
                             _lu = _all_convs[0]["last_updated"]
-                            _delta = datetime.utcnow() - (_lu.replace(tzinfo=None) if _lu.tzinfo else _lu)
+                            # Use a naive UTC clock to subtract from the
+                            # stored last_updated (Firestore returns naive
+                            # or tz-aware mixed; normalise both sides).
+                            from datetime import timezone as _tzmod_x
+                            _now_utc = datetime.now(_tzmod_x.utc).replace(tzinfo=None)
+                            _delta = _now_utc - (_lu.replace(tzinfo=None) if _lu.tzinfo else _lu)
                             _h = int(_delta.total_seconds() // 3600)
                             _last_visit_str = (str(int(_delta.total_seconds() // 60)) + "m ago") if _h < 1 else (str(_h) + "h ago" if _h < 24 else str(_h // 24) + "d ago")
                         except Exception:
@@ -20643,7 +20648,11 @@ if st.session_state.mode == "chat":
             # the second call with the exact same messages array
             # writes again and Firestore merges so the field is there
             # next time the chat is loaded.
-            if verify_text and st.session_state.current_conversation_id:
+            # verify_text is only defined in the streaming flow above;
+            # the vision / rx-reader / PDF paths skip it, so guard the
+            # name lookup with locals() to avoid NameError there.
+            _vt_local = locals().get("verify_text", "") or ""
+            if _vt_local and st.session_state.current_conversation_id:
                 try:
                     save_conversation(
                         st.session_state.user_email_hash,
@@ -21782,7 +21791,7 @@ elif st.session_state.mode == "history":
             with st.container(key="hist_toolbar_row"):
                 _tb1, _tb2, _tb3, _tb4, _tb5, _tb6 = st.columns([1.5, 0.55, 0.7, 0.85, 1.0, 0.95])
                 with _tb1:
-                    _hist_search = st.text_input(" ", value=st.session_state.get("_hist2_search", ""), key="hist2_search", placeholder="Search chats…", label_visibility="collapsed")
+                    _hist_search = st.text_input("Search chats", value=st.session_state.get("_hist2_search", ""), key="hist2_search", placeholder="Search chats…", label_visibility="collapsed")
                     st.session_state._hist2_search = _hist_search
                 for _i, (_fkey, _flab) in enumerate([("all", "All"), ("today", "Today"), ("yesterday", "Yesterday"), ("7d", "Last 7 Days")]):
                     _btn_col = [_tb2, _tb3, _tb4, _tb5][_i]
@@ -21792,7 +21801,7 @@ elif st.session_state.mode == "history":
                             st.session_state._hist2_filter = _fkey
                             st.rerun()
                 with _tb6:
-                    _sort_label = st.selectbox(" ", options=["Newest first", "Oldest first", "Most messages"], index={"newest": 0, "oldest": 1, "most": 2}.get(_sort, 0), key="hist2_sort_box", label_visibility="collapsed")
+                    _sort_label = st.selectbox("Sort chats", options=["Newest first", "Oldest first", "Most messages"], index={"newest": 0, "oldest": 1, "most": 2}.get(_sort, 0), key="hist2_sort_box", label_visibility="collapsed")
                     _new_sort = {"Newest first": "newest", "Oldest first": "oldest", "Most messages": "most"}.get(_sort_label, "newest")
                     if _new_sort != _sort:
                         st.session_state._hist2_sort = _new_sort
@@ -23923,7 +23932,7 @@ else:
                             st.rerun()
 
             with st.form(key="assessment_form_" + str(stage), clear_on_submit=True):
-                typed = st.text_input("", placeholder="Or type your own answer here...", label_visibility="collapsed")
+                typed = st.text_input("Your answer", placeholder="Or type your own answer here...", label_visibility="collapsed")
                 ac1, ac2 = st.columns([3, 1])
                 with ac1:
                     next_btn = st.form_submit_button(L["next"], use_container_width=True, type="primary", icon=":material/arrow_forward:")
