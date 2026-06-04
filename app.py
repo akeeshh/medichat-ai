@@ -342,44 +342,130 @@ def _trim_messages_for_storage(messages):
         trimmed.append(_entry)
     return trimmed
 
+def _clean_title_text(t):
+    """Strip markdown markers, section headings, and excess whitespace
+    so a fallback title reads as plain text, not raw AI markup."""
+    if not t:
+        return ""
+    import re as _re_t
+    t = t.replace("\r", " ").replace("\n", " ")
+    # Drop common opening section labels.
+    for _lab in ("**What I see:**", "What I see:", "**Findings:**", "Findings:",
+                 "**Analysis:**", "Analysis:", "**Observation:**", "Observation:"):
+        if t.lower().startswith(_lab.lower()):
+            t = t[len(_lab):].strip()
+            break
+    # Remove **bold**, *italic*, _italic_, `code`, # headings.
+    t = _re_t.sub(r"\*\*([^*]+)\*\*", r"\1", t)
+    t = _re_t.sub(r"\*([^*]+)\*", r"\1", t)
+    t = _re_t.sub(r"_([^_]+)_", r"\1", t)
+    t = _re_t.sub(r"`([^`]+)`", r"\1", t)
+    t = _re_t.sub(r"^#+\s+", "", t)
+    # Collapse whitespace.
+    t = _re_t.sub(r"\s+", " ", t).strip(" ,;:-")
+    return t
+
 def derive_chat_title(messages):
+    """Cheap fallback title from the first meaningful user message.
+
+    If the user opened the chat with an image / PDF upload (no text
+    content) we fall through to the assistant's response opener so the
+    title still says something useful ("Ankle X-ray review") instead of
+    the generic "New chat". Markdown markers are stripped and section
+    headings like "What I see:" are skipped so the title reads cleanly.
+    """
+    # First, try the first user message that actually has text content.
     for m in messages or []:
-        if m.get("role") == "user" and m.get("content"):
-            t = (m["content"] or "").strip().replace("\n", " ")
-            return (t[:50] + "…") if len(t) > 50 else t
+        if m.get("role") == "user":
+            c = (m.get("content") or "").strip()
+            if c and not c.startswith("[image]") and not c.startswith("[pdf]"):
+                t = _clean_title_text(c)
+                if t:
+                    return (t[:50] + "...") if len(t) > 50 else t
+    # No textual user message; use the assistant's opening reply as a
+    # rough description (the assistant's first sentence usually names
+    # the image / scan / topic it just analysed). Clean it first so we
+    # don't ship raw markdown like "**What I see:** This X-ray..." as
+    # the visible title.
+    for m in messages or []:
+        if m.get("role") == "assistant":
+            c = (m.get("content") or "").strip()
+            if c:
+                cleaned = _clean_title_text(c)
+                if cleaned:
+                    first_sentence = cleaned.split(".")[0].strip()
+                    if first_sentence:
+                        return (first_sentence[:50] + "...") if len(first_sentence) > 50 else first_sentence
     return "New chat"
 
 def generate_ai_chat_title(messages):
     """Use Claude to summarise a chat into a 3-6 word clinical title.
     One call per chat. Falls back to derive_chat_title on any failure."""
-    if not CLAUDE_ACTIVE or not messages:
+    if not messages:
         return derive_chat_title(messages)
+    lines = []
+    for m in messages[:8]:
+        role = "Patient" if m.get("role") == "user" else "MediChat"
+        content = (m.get("content", "") or "")[:280]
+        # Note when the patient's "message" was actually an upload so
+        # the model can title it as e.g. "Ankle X-ray review" rather
+        # than "New chat".
+        msg_type = (m.get("type") or "").lower()
+        sources = m.get("sources") or []
+        if not content and msg_type:
+            if msg_type == "image" or "Image Analysis" in sources:
+                content = "[patient uploaded a medical image / scan]"
+            elif msg_type == "pdf" or "PDF Report Analysis" in sources:
+                content = "[patient uploaded a medical PDF report]"
+        elif "Prescription Reader" in sources:
+            content = (content or "") + "\n[patient uploaded a handwritten prescription]"
+        if content:
+            lines.append(role + ": " + content)
+    transcript = "\n".join(lines)
+    _title_system = (
+        "You are a clinical scribe. Read the chat and output a 3-6 word title "
+        "summarising the patient's chief concern OR the type of medical document "
+        "they uploaded. Output the title and nothing else: no quotes, no punctuation "
+        "at the end, no preamble. Examples: "
+        "Migraine workup, Type 2 diabetes review, Persistent dry cough, "
+        "Lower back pain after lifting, Ankle X-ray review, Blood test results, "
+        "Skin rash assessment, Prescription transcription."
+    )
+
+    # Title generation dispatch: OpenAI -> Claude -> derived fallback.
     try:
-        lines = []
-        for m in messages[:8]:
-            role = "Patient" if m.get("role") == "user" else "MediChat"
-            content = (m.get("content", "") or "")[:280]
-            if content:
-                lines.append(role + ": " + content)
-        transcript = "\n".join(lines)
-        resp = anthropic_client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=24,
-            system=(
-                "You are a clinical scribe. Read the chat and output a 3-6 word title "
-                "summarising the patient's chief concern. Output the title and nothing else: "
-                "no quotes, no punctuation at the end, no preamble. Examples: "
-                "Migraine workup, Type 2 diabetes review, Persistent dry cough, "
-                "Lower back pain after lifting."
-            ),
-            messages=[{"role": "user", "content": transcript}],
-            temperature=0.3,
-        )
-        title = (resp.content[0].text or "").strip().strip('"\'').rstrip(".")[:60]
-        return title or derive_chat_title(messages)
+        if OPENAI_ACTIVE and openai_client is not None:
+            resp = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": _title_system},
+                    {"role": "user", "content": transcript},
+                ],
+                temperature=0.3,
+                max_tokens=24,
+            )
+            title = (resp.choices[0].message.content or "").strip().strip('"\'').rstrip(".")[:60]
+            if title:
+                return title
     except Exception as e:
-        print("AI title generation failed:", e)
-        return derive_chat_title(messages)
+        print("OpenAI title generation failed, trying Claude:", e)
+
+    try:
+        if CLAUDE_ACTIVE:
+            resp = anthropic_client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=24,
+                system=_title_system,
+                messages=[{"role": "user", "content": transcript}],
+                temperature=0.3,
+            )
+            title = (resp.content[0].text or "").strip().strip('"\'').rstrip(".")[:60]
+            if title:
+                return title
+    except Exception as e:
+        print("Claude title generation failed:", e)
+
+    return derive_chat_title(messages)
 
 def list_conversations(email_hash, limit=30):
     if not FIREBASE_ACTIVE or not email_hash:
@@ -436,11 +522,43 @@ def save_conversation(email_hash, conv_id, messages):
         "last_assistant_msg": (_last_asst or "")[:320],
         "last_updated": firestore.SERVER_TIMESTAMP,
     }
-    # Title strategy: cheap fallback on first save, AI upgrade once at 4 messages.
+    # Title strategy:
+    #   - On the very first save, write a cheap fallback so something
+    #     shows up immediately in Recent Chats while the user is still
+    #     typing.
+    #   - AS SOON AS there's been an exchange (>= 2 messages: one user
+    #     + one assistant), generate a real AI title. This catches the
+    #     case where the user only uploaded an image and the previous
+    #     "First user message" title was empty.
+    #   - Upgrade again at 4 messages once there's richer context.
+    #   - Re-generate any time the current title is still the generic
+    #     "New chat" placeholder.
     if not conv_id:
         payload["title"] = derive_chat_title(trimmed)
-    elif msg_count == 4:
-        payload["title"] = generate_ai_chat_title(trimmed)
+    else:
+        try:
+            _existing_doc = (firestore_db.collection("medichat_profiles")
+                              .document(email_hash)
+                              .collection("conversations")
+                              .document(conv_id).get())
+            _existing_title = (_existing_doc.to_dict() or {}).get("title", "") if _existing_doc.exists else ""
+        except Exception:
+            _existing_title = ""
+        _needs_real_title = (
+            not _existing_title
+            or _existing_title == "New chat"
+            or _existing_title.startswith("[image]")
+            or _existing_title.startswith("[pdf]")
+            or "**" in _existing_title  # leftover markdown bold
+            or _existing_title.lower().startswith("what i see")
+            or _existing_title.lower().startswith("findings")
+        )
+        if msg_count == 2 or msg_count == 4 or _needs_real_title:
+            _ai_title = generate_ai_chat_title(trimmed)
+            # Belt-and-braces: even AI titles get the markdown stripper
+            # so a model that returns "**X-ray review**" still saves
+            # clean.
+            payload["title"] = _clean_title_text(_ai_title) or _ai_title or "New chat"
     try:
         coll = firestore_db.collection("medichat_profiles").document(email_hash).collection("conversations")
         if conv_id:
@@ -512,15 +630,445 @@ def _today_key():
         return datetime.now().strftime("%Y-%m-%d")
 
 def get_user_doc():
-    """Read fresh profile doc for the signed-in user; returns {} if guest/none."""
+    """Read fresh profile doc for the signed-in user; returns {} if guest/none.
+
+    If `viewing_partner_hash` is set in session_state (user has switched
+    to a linked partner's view), this returns the PARTNER's doc for read
+    operations. update_user_doc() always writes to the signed-in user's
+    own doc so partner-view mode is effectively read-only.
+    """
+    if not (st.session_state.get("is_authenticated") and st.session_state.get("user_email_hash") and FIREBASE_ACTIVE):
+        return None
+    # Partner view: route reads to the partner's profile doc.
+    _vp = (st.session_state.get("viewing_partner_hash") or "").strip()
+    _target_hash = _vp if _vp else st.session_state.user_email_hash
+    try:
+        snap = firestore_db.collection("medichat_profiles").document(_target_hash).get()
+        return snap.to_dict() or {} if snap.exists else {}
+    except Exception as e:
+        print("get_user_doc failed:", e)
+        return {}
+
+def get_active_view_user_hash():
+    """Return the email hash whose data is currently being viewed.
+
+    If the user has switched to a linked partner's view this returns the
+    partner's hash; otherwise the user's own hash. Use for READ queries
+    that should respect partner view.
+    """
+    _vp = (st.session_state.get("viewing_partner_hash") or "").strip()
+    return _vp if _vp else (st.session_state.get("user_email_hash") or "")
+
+def get_active_view_user_display():
+    """Display name + email for the currently-viewed user (for the banner)."""
+    _vp = (st.session_state.get("viewing_partner_hash") or "").strip()
+    if not _vp:
+        return (st.session_state.get("patient_name") or "You", st.session_state.get("user_email_display") or "")
+    for _lp in (list_linked_partners() or []):
+        if _lp.get("email_hash") == _vp:
+            return (_lp.get("name") or _lp.get("email") or "Partner", _lp.get("email") or "")
+    return ("Partner", "")
+
+def get_own_user_doc():
+    """Always read the signed-in user's OWN doc, ignoring partner view.
+
+    Used for partnership management UI so users can see/edit their own
+    invites + linked partners even while viewing a partner's data.
+    """
     if not (st.session_state.get("is_authenticated") and st.session_state.get("user_email_hash") and FIREBASE_ACTIVE):
         return None
     try:
         snap = firestore_db.collection("medichat_profiles").document(st.session_state.user_email_hash).get()
         return snap.to_dict() or {} if snap.exists else {}
     except Exception as e:
-        print("get_user_doc failed:", e)
+        print("get_own_user_doc failed:", e)
         return {}
+
+# ── Linked partners (family / carer accounts) ─────────────────────────
+# Schema:
+#   partner_invites_in:  invites received, awaiting my Accept
+#   partner_invites_out: invites I've sent, awaiting their Accept (so
+#                       I can review or cancel them)
+#   linked_partners:    accepted relationships. Each entry now carries
+#                       a `relationship` label (Spouse / Parent / Carer /
+#                       etc.) and `consent_scopes` granting access per
+#                       data category. Both sides have independent
+#                       consent_scopes; data flows only if the OWNING
+#                       side has granted that scope to the viewer.
+#   partner_audit_log:  rolling log (last ~30 entries) of who viewed
+#                       what category and when, for transparency.
+# Hash uses the canonical hash_email() so it matches sign-up storage.
+
+PARTNER_SCOPES = ("vitals", "records", "meds", "appointments", "chats", "insights")
+PARTNER_SCOPE_LABELS = {
+    "vitals": "Health Overview & vitals",
+    "records": "Health Records",
+    "meds": "Medications & allergies",
+    "appointments": "Appointments",
+    "chats": "Recent Chats history",
+    "insights": "AI Insights",
+}
+PARTNER_RELATIONSHIPS = (
+    "Spouse / Partner", "Parent", "Child", "Sibling",
+    "Carer", "Friend", "Doctor / GP", "Other",
+)
+
+def _default_consent_scopes():
+    return {s: True for s in PARTNER_SCOPES}
+
+def list_pending_partner_invites():
+    """Pending invites someone else sent TO me (still waiting for my Accept)."""
+    if not (st.session_state.get("is_authenticated") and FIREBASE_ACTIVE):
+        return []
+    own = get_own_user_doc() or {}
+    return own.get("partner_invites_in", []) or []
+
+def list_sent_partner_invites():
+    """Invites I've sent (still awaiting their Accept). Lets me cancel them."""
+    if not (st.session_state.get("is_authenticated") and FIREBASE_ACTIVE):
+        return []
+    own = get_own_user_doc() or {}
+    return own.get("partner_invites_out", []) or []
+
+def list_linked_partners():
+    """Partners I've mutually linked with (after both sides accept)."""
+    if not (st.session_state.get("is_authenticated") and FIREBASE_ACTIVE):
+        return []
+    own = get_own_user_doc() or {}
+    return own.get("linked_partners", []) or []
+
+def find_linked_partner(partner_email_hash):
+    """Look up the linked-partner entry for `partner_email_hash` in my list."""
+    for _lp in (list_linked_partners() or []):
+        if _lp.get("email_hash") == partner_email_hash:
+            return _lp
+    return None
+
+def viewer_can_see(scope):
+    """When viewing a partner, does the OWNING side allow this scope?
+
+    `scope` is one of PARTNER_SCOPES. Returns True if not in partner-view
+    mode (own data is always fully visible to self), or if the partner
+    has granted this scope to the current viewer.
+    """
+    _vp = (st.session_state.get("viewing_partner_hash") or "").strip()
+    if not _vp:
+        return True
+    # Read the partner's doc and find MY entry in their linked_partners
+    # list — that's where the partner-side consent lives.
+    try:
+        snap = firestore_db.collection("medichat_profiles").document(_vp).get()
+        if not snap.exists:
+            return False
+        their = snap.to_dict() or {}
+        my_hash = st.session_state.get("user_email_hash", "")
+        for _lp in (their.get("linked_partners", []) or []):
+            if _lp.get("email_hash") == my_hash:
+                return bool((_lp.get("consent_scopes") or _default_consent_scopes()).get(scope, True))
+    except Exception:
+        return False
+    return False
+
+def _log_partner_view(scope):
+    """Append a view event to the partner's audit log (best-effort)."""
+    _vp = (st.session_state.get("viewing_partner_hash") or "").strip()
+    if not _vp:
+        return
+    try:
+        viewer_hash = st.session_state.get("user_email_hash", "")
+        viewer_name = st.session_state.get("patient_name", "Partner")
+        snap = firestore_db.collection("medichat_profiles").document(_vp).get()
+        if not snap.exists:
+            return
+        their = snap.to_dict() or {}
+        log = their.get("partner_audit_log", []) or []
+        # Only log a fresh entry if same viewer+scope hasn't logged in
+        # last 5 minutes (avoids spamming the log on every rerun).
+        from datetime import timezone as _tzal
+        _now = datetime.now(_tzal.utc).replace(tzinfo=None)
+        _recent = False
+        if log:
+            _last = log[-1]
+            if _last.get("viewer_hash") == viewer_hash and _last.get("scope") == scope:
+                try:
+                    _last_t = datetime.fromisoformat(_last.get("at", ""))
+                    if (_now - _last_t).total_seconds() < 300:
+                        _recent = True
+                except Exception:
+                    pass
+        if _recent:
+            return
+        log.append({
+            "viewer_hash": viewer_hash,
+            "viewer_name": viewer_name,
+            "scope": scope,
+            "at": _now.isoformat(timespec="seconds"),
+        })
+        log = log[-30:]  # keep last 30 events
+        firestore_db.collection("medichat_profiles").document(_vp).set(
+            {"partner_audit_log": log}, merge=True
+        )
+    except Exception as e:
+        print("[partner-audit] log skipped:", e)
+
+def update_partner_consent(partner_email_hash, scopes):
+    """Save my consent_scopes for one of my linked partners.
+
+    Scopes are stored on MY side of the relationship (in my
+    linked_partners list), so they govern what THAT partner can see
+    when they switch into MY view.
+    """
+    if not (st.session_state.get("is_authenticated") and FIREBASE_ACTIVE):
+        return False
+    own_hash = st.session_state.user_email_hash
+    try:
+        own_doc = get_own_user_doc() or {}
+        partners = own_doc.get("linked_partners", []) or []
+        updated = False
+        for _lp in partners:
+            if _lp.get("email_hash") == partner_email_hash:
+                _lp["consent_scopes"] = {s: bool(scopes.get(s, True)) for s in PARTNER_SCOPES}
+                updated = True
+                break
+        if not updated:
+            return False
+        firestore_db.collection("medichat_profiles").document(own_hash).set(
+            {"linked_partners": partners}, merge=True
+        )
+        return True
+    except Exception as e:
+        print("update_partner_consent failed:", e)
+        return False
+
+def update_partner_relationship(partner_email_hash, label):
+    if not (st.session_state.get("is_authenticated") and FIREBASE_ACTIVE):
+        return False
+    own_hash = st.session_state.user_email_hash
+    try:
+        own_doc = get_own_user_doc() or {}
+        partners = own_doc.get("linked_partners", []) or []
+        for _lp in partners:
+            if _lp.get("email_hash") == partner_email_hash:
+                _lp["relationship"] = (label or "")[:40]
+                break
+        firestore_db.collection("medichat_profiles").document(own_hash).set(
+            {"linked_partners": partners}, merge=True
+        )
+        return True
+    except Exception as e:
+        print("update_partner_relationship failed:", e)
+        return False
+
+def cancel_sent_partner_invite(target_email_hash):
+    """Remove a pending outgoing invite from both sides."""
+    if not (st.session_state.get("is_authenticated") and FIREBASE_ACTIVE):
+        return False
+    own_hash = st.session_state.user_email_hash
+    try:
+        # Mine
+        own_doc = get_own_user_doc() or {}
+        new_out = [i for i in (own_doc.get("partner_invites_out", []) or []) if i.get("target_email_hash") != target_email_hash]
+        firestore_db.collection("medichat_profiles").document(own_hash).set(
+            {"partner_invites_out": new_out}, merge=True
+        )
+        # Theirs (remove from their inbox)
+        their_snap = firestore_db.collection("medichat_profiles").document(target_email_hash).get()
+        if their_snap.exists:
+            their = their_snap.to_dict() or {}
+            new_in = [i for i in (their.get("partner_invites_in", []) or []) if i.get("from_email_hash") != own_hash]
+            firestore_db.collection("medichat_profiles").document(target_email_hash).set(
+                {"partner_invites_in": new_in}, merge=True
+            )
+        return True
+    except Exception as e:
+        print("cancel_sent_partner_invite failed:", e)
+        return False
+
+def list_partner_audit_log(limit=20):
+    """Read MY OWN audit log (who viewed my data when)."""
+    if not (st.session_state.get("is_authenticated") and FIREBASE_ACTIVE):
+        return []
+    own = get_own_user_doc() or {}
+    log = (own.get("partner_audit_log") or [])[-limit:]
+    return list(reversed(log))  # newest first
+
+def send_partner_invite(to_email, from_relationship=""):
+    """Write a pending-invite entry to the target user's profile doc.
+
+    `from_relationship` is the SENDER's perspective ("This person is my
+    Wife / Parent / Doctor / ..."). It's stored on the invite so the
+    receiver can see context and so the relationship label on the
+    SENDER's side is preset automatically when they accept.
+
+    Returns (ok: bool, message: str). The target user has to Accept
+    before the link goes live for both sides.
+    """
+    to_email = (to_email or "").strip().lower()
+    if not to_email or "@" not in to_email:
+        return False, "Please enter a valid email."
+    if to_email == (st.session_state.get("user_email_display") or "").strip().lower():
+        return False, "You can't invite yourself."
+    if not FIREBASE_ACTIVE:
+        return False, "Care Circle needs Firebase. Please sign in."
+    try:
+        _target_hash = hash_email(to_email)
+    except Exception:
+        _target_hash = ""
+    if not _target_hash:
+        return False, "Could not process that email."
+    try:
+        # Confirm the target exists in the system.
+        _target_snap = firestore_db.collection("medichat_profiles").document(_target_hash).get()
+        if not _target_snap.exists:
+            return False, "No MediChat user with that email. Ask them to sign up first."
+        _target_doc = _target_snap.to_dict() or {}
+        # Don't double-invite if already linked or already pending.
+        own_hash = st.session_state.user_email_hash
+        for _lp in (_target_doc.get("linked_partners", []) or []):
+            if _lp.get("email_hash") == own_hash:
+                return False, "You're already linked with this person."
+        for _inv in (_target_doc.get("partner_invites_in", []) or []):
+            if _inv.get("from_email_hash") == own_hash:
+                return False, "Invite already sent. Waiting for them to accept."
+        _sent_at = datetime.now().isoformat(timespec="seconds")
+        _from_rel = (from_relationship or "").strip()[:40]
+        _invite_for_them = {
+            "from_email": (st.session_state.user_email_display or "").strip(),
+            "from_email_hash": own_hash,
+            "from_name": (st.session_state.patient_name or "MediChat user"),
+            "from_relationship": _from_rel,  # how the SENDER described the recipient
+            "sent_at": _sent_at,
+        }
+        firestore_db.collection("medichat_profiles").document(_target_hash).set(
+            {"partner_invites_in": (_target_doc.get("partner_invites_in", []) or []) + [_invite_for_them]},
+            merge=True
+        )
+        # Mirror to my own outbox so I can review / cancel.
+        _outbox_entry = {
+            "target_email": to_email,
+            "target_email_hash": _target_hash,
+            "target_name": _target_doc.get("name") or to_email,
+            "from_relationship": _from_rel,
+            "sent_at": _sent_at,
+        }
+        own_doc = get_own_user_doc() or {}
+        firestore_db.collection("medichat_profiles").document(own_hash).set(
+            {"partner_invites_out": (own_doc.get("partner_invites_out", []) or []) + [_outbox_entry]},
+            merge=True
+        )
+        return True, "Invite sent. They'll see it next time they sign in."
+    except Exception as e:
+        print("send_partner_invite failed:", e)
+        return False, "Could not send the invite. Try again."
+
+def accept_partner_invite(from_email_hash, relationship_label=""):
+    """Both sides get added to each other's linked_partners.
+
+    The inviter's outbox + my inbox are cleared. Each side starts with
+    all consent_scopes ON; either side can dial back individual scopes
+    in the Permissions panel.
+    """
+    if not (st.session_state.get("is_authenticated") and FIREBASE_ACTIVE):
+        return False, "Sign in to accept invites."
+    own_hash = st.session_state.user_email_hash
+    try:
+        own_doc = get_own_user_doc() or {}
+        invites = own_doc.get("partner_invites_in", []) or []
+        target_invite = next((i for i in invites if i.get("from_email_hash") == from_email_hash), None)
+        if not target_invite:
+            return False, "Invite no longer available."
+        _now_iso = datetime.now().isoformat(timespec="seconds")
+        # Receiver's perspective ("they are my Wife/Parent/etc")
+        _receiver_perspective = (relationship_label or "").strip()[:40]
+        # Sender's perspective came on the invite ("the receiver is my ...")
+        _sender_perspective = (target_invite.get("from_relationship") or "").strip()[:40]
+        # Each side gets the label that describes the OTHER from their POV.
+        _link_for_me = {
+            "email": target_invite.get("from_email"),
+            "email_hash": from_email_hash,
+            "name": target_invite.get("from_name") or target_invite.get("from_email") or "Partner",
+            "linked_at": _now_iso,
+            "relationship": _receiver_perspective,
+            "consent_scopes": _default_consent_scopes(),
+        }
+        _link_for_them = {
+            "email": st.session_state.user_email_display or "",
+            "email_hash": own_hash,
+            "name": st.session_state.patient_name or "Partner",
+            "linked_at": _now_iso,
+            "relationship": _sender_perspective or _receiver_perspective,  # fallback for legacy invites
+            "consent_scopes": _default_consent_scopes(),
+        }
+        # Append to mine, remove the invite.
+        own_linked = own_doc.get("linked_partners", []) or []
+        own_linked = [l for l in own_linked if l.get("email_hash") != from_email_hash]
+        own_linked.append(_link_for_me)
+        new_invites = [i for i in invites if i.get("from_email_hash") != from_email_hash]
+        firestore_db.collection("medichat_profiles").document(own_hash).set(
+            {"linked_partners": own_linked, "partner_invites_in": new_invites},
+            merge=True
+        )
+        # Append to theirs + clear their outbox entry pointing at me.
+        their_snap = firestore_db.collection("medichat_profiles").document(from_email_hash).get()
+        their_doc = their_snap.to_dict() or {}
+        their_linked = their_doc.get("linked_partners", []) or []
+        their_linked = [l for l in their_linked if l.get("email_hash") != own_hash]
+        their_linked.append(_link_for_them)
+        their_outbox = [i for i in (their_doc.get("partner_invites_out", []) or []) if i.get("target_email_hash") != own_hash]
+        firestore_db.collection("medichat_profiles").document(from_email_hash).set(
+            {"linked_partners": their_linked, "partner_invites_out": their_outbox},
+            merge=True
+        )
+        return True, "Linked. You can now view each other's data."
+    except Exception as e:
+        print("accept_partner_invite failed:", e)
+        return False, "Could not accept. Try again."
+
+def decline_partner_invite(from_email_hash):
+    if not (st.session_state.get("is_authenticated") and FIREBASE_ACTIVE):
+        return False
+    own_hash = st.session_state.user_email_hash
+    try:
+        own_doc = get_own_user_doc() or {}
+        new_invites = [i for i in (own_doc.get("partner_invites_in", []) or []) if i.get("from_email_hash") != from_email_hash]
+        firestore_db.collection("medichat_profiles").document(own_hash).set(
+            {"partner_invites_in": new_invites},
+            merge=True
+        )
+        return True
+    except Exception as e:
+        print("decline_partner_invite failed:", e)
+        return False
+
+def unlink_partner(partner_email_hash):
+    """Remove the link from both sides."""
+    if not (st.session_state.get("is_authenticated") and FIREBASE_ACTIVE):
+        return False
+    own_hash = st.session_state.user_email_hash
+    try:
+        # Mine
+        own_doc = get_own_user_doc() or {}
+        new_mine = [l for l in (own_doc.get("linked_partners", []) or []) if l.get("email_hash") != partner_email_hash]
+        firestore_db.collection("medichat_profiles").document(own_hash).set(
+            {"linked_partners": new_mine},
+            merge=True
+        )
+        # Theirs
+        their_snap = firestore_db.collection("medichat_profiles").document(partner_email_hash).get()
+        if their_snap.exists:
+            their_doc = their_snap.to_dict() or {}
+            new_theirs = [l for l in (their_doc.get("linked_partners", []) or []) if l.get("email_hash") != own_hash]
+            firestore_db.collection("medichat_profiles").document(partner_email_hash).set(
+                {"linked_partners": new_theirs},
+                merge=True
+            )
+        # If we were viewing this partner, switch back to self.
+        if st.session_state.get("viewing_partner_hash") == partner_email_hash:
+            st.session_state.viewing_partner_hash = ""
+        return True
+    except Exception as e:
+        print("unlink_partner failed:", e)
+        return False
 
 def update_user_doc(updates):
     """Patch the signed-in user's profile doc."""
@@ -536,6 +1084,11 @@ def update_user_doc(updates):
 # ── Medications ──────────────────────────────────────────────────────
 def list_medications():
     if st.session_state.get("is_authenticated"):
+        # When viewing a partner, check their consent for the meds scope.
+        if st.session_state.get("viewing_partner_hash"):
+            if not viewer_can_see("meds"):
+                return []
+            _log_partner_view("meds")
         return (get_user_doc() or {}).get("medications", []) or []
     return _ensure_guest_store()["medications"]
 
@@ -571,6 +1124,10 @@ def delete_medication(med_id):
 # ── Appointments ─────────────────────────────────────────────────────
 def list_appointments():
     if st.session_state.get("is_authenticated"):
+        if st.session_state.get("viewing_partner_hash"):
+            if not viewer_can_see("appointments"):
+                return []
+            _log_partner_view("appointments")
         return (get_user_doc() or {}).get("appointments", []) or []
     return _ensure_guest_store()["appointments"]
 
@@ -945,6 +1502,10 @@ def delete_surgical_history(surg_id):
 # ── Health Records (file metadata only, file content not stored to keep doc <1MB) ──
 def list_health_records():
     if st.session_state.get("is_authenticated"):
+        if st.session_state.get("viewing_partner_hash"):
+            if not viewer_can_see("records"):
+                return []
+            _log_partner_view("records")
         return (get_user_doc() or {}).get("health_records", []) or []
     return _ensure_guest_store()["health_records"]
 
@@ -1020,6 +1581,11 @@ DAILY_METRIC_DEFAULTS = {
 def get_daily_metrics(date_key=None):
     date_key = date_key or _today_key()
     if st.session_state.get("is_authenticated"):
+        # Partner-view consent check for the vitals scope.
+        if st.session_state.get("viewing_partner_hash"):
+            if not viewer_can_see("vitals"):
+                return {**DAILY_METRIC_DEFAULTS}
+            _log_partner_view("vitals")
         all_dm = (get_user_doc() or {}).get("daily_metrics", {}) or {}
     else:
         all_dm = _ensure_guest_store()["daily_metrics"]
@@ -1033,6 +1599,10 @@ def get_all_daily_metrics():
     current user. One DB fetch, for callers that need history across many
     days (e.g. sparklines on the home page) instead of just one day."""
     if st.session_state.get("is_authenticated"):
+        # Partner-view consent check for the vitals scope.
+        if st.session_state.get("viewing_partner_hash"):
+            if not viewer_can_see("vitals"):
+                return {}
         return (get_user_doc() or {}).get("daily_metrics", {}) or {}
     return _ensure_guest_store()["daily_metrics"]
 
@@ -1824,6 +2394,28 @@ st.markdown("""
         background: linear-gradient(135deg, var(--clinical-100), var(--clinical-200));
         color: var(--clinical-900);
     }
+    /* Authenticated-user avatar: shows the user's initial in an indigo
+       gradient tile, matching the brand palette used in the profile
+       chip + Care Circle tile. Falls back to the icon-only .av-user
+       for guests / unsigned-in chats. */
+    .av-user.av-user-initial {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 6px rgba(79,70,229,0.28), inset 0 0 0 1px rgba(255,255,255,0.18) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    .av-user.av-user-initial .av-user-letter {
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        letter-spacing: -0.005em !important;
+        line-height: 1 !important;
+        text-transform: uppercase !important;
+        font-family: 'Manrope', 'Inter', system-ui, sans-serif !important;
+    }
 
     .bot-bubble {
         background: white;
@@ -1864,15 +2456,24 @@ st.markdown("""
     .bot-bubble .md-p:first-child { margin-top: 0; }
     .bot-bubble .md-p:last-child { margin-bottom: 0; }
     .bot-bubble .md-ul, .bot-bubble .md-ol {
-        margin: 0.45rem 0 0.5rem 0;
-        padding-left: 1.3rem;
+        margin: 0.6rem 0 0.7rem 0;
+        padding-left: 1.5rem;
+        display: block;
     }
     .bot-bubble .md-ul li, .bot-bubble .md-ol li {
-        margin: 0.2rem 0;
-        line-height: 1.5;
+        margin: 0.4rem 0;
+        line-height: 1.55;
+        padding-left: 0.25rem;
     }
     .bot-bubble .md-ul li::marker { color: var(--clinical-500); }
-    .bot-bubble .md-ol li::marker { color: var(--clinical-500); font-weight: 600; }
+    .bot-bubble .md-ol li::marker {
+        color: #4f46e5;
+        font-weight: 700;
+        font-size: 0.95em;
+    }
+    /* Make sure each <li> starts on its own visual row. */
+    .bot-bubble .md-ol li + li,
+    .bot-bubble .md-ul li + li { margin-top: 0.5rem; }
     .bot-bubble strong { color: var(--clinical-900); font-weight: 600; }
     .bot-bubble em { font-style: italic; color: var(--clinical-700); }
     .bot-bubble .md-hr { border: none; border-top: 1px solid var(--clinical-100); margin: 0.7rem 0; }
@@ -1938,6 +2539,17 @@ st.markdown("""
         margin-left: 2px;
         vertical-align: text-bottom;
         animation: blink 1s step-end infinite;
+    }
+    /* Smooth fade-in on bot bubbles so the streaming -> persisted
+       handoff doesn't pop. The bubble is rendered first in the
+       streaming placeholder, then again from session_state on
+       rerun, the fade keeps both moments feeling continuous. */
+    .bot-bubble {
+        animation: botBubbleFade 0.22s ease-out;
+    }
+    @keyframes botBubbleFade {
+        from { opacity: 0; transform: translateY(2px); }
+        to   { opacity: 1; transform: translateY(0); }
     }
     @keyframes blink {
         0%, 50% { opacity: 1; }
@@ -12289,7 +12901,27 @@ def read_prescription(image_bytes, user_note="", lang_instruction=""):
 
     reading = ""
     model_used = "unavailable"
-    if CLAUDE_ACTIVE:
+    # Prescription Reader dispatch order: OpenAI -> Claude -> Groq.
+    if OPENAI_ACTIVE and openai_client is not None:
+        try:
+            resp = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + b64}},
+                    ],
+                }],
+                temperature=0.2,
+                max_tokens=1800,
+            )
+            reading = resp.choices[0].message.content
+            model_used = "openai-vision"
+        except Exception as e:
+            print("Prescription reader OpenAI pass failed, trying Claude:", e)
+
+    if not reading and CLAUDE_ACTIVE:
         try:
             first = anthropic_client.messages.create(
                 model=CLAUDE_MODEL,
@@ -12308,7 +12940,7 @@ def read_prescription(image_bytes, user_note="", lang_instruction=""):
         except Exception as e:
             print("Prescription reader Claude pass failed:", e)
 
-    if not reading:
+    if not reading and GROQ_ACTIVE and groq_client is not None:
         try:
             r = groq_client.chat.completions.create(
                 model="meta-llama/llama-4-scout-17b-16e-instruct",
@@ -12506,27 +13138,52 @@ def medichat_pdf_analysis(question, pdf_text, all_messages, lang_instruction="")
     system += "PATIENT'S UPLOADED REPORT:\n" + pdf_text + "\n\n"
     system += "PATIENT'S QUESTION ABOUT THE REPORT:\n" + (question or "Please review this report and tell me what stands out.")
 
+    # PDF analysis dispatch order: OpenAI -> Claude -> Groq.
+    _q_text = question or "Please review this report and tell me what stands out."
+
+    if OPENAI_ACTIVE and openai_client is not None:
+        try:
+            resp = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": _q_text},
+                ],
+                temperature=0.4,
+                max_tokens=1500,
+            )
+            return resp.choices[0].message.content, "openai"
+        except Exception as e:
+            print("OpenAI PDF analysis failed, trying Claude:", e)
+
     if CLAUDE_ACTIVE:
         try:
             resp = anthropic_client.messages.create(
                 model=CLAUDE_MODEL,
                 max_tokens=1500,
                 system=system,
-                messages=[{"role": "user", "content": question or "Please review this report and tell me what stands out."}],
+                messages=[{"role": "user", "content": _q_text}],
                 temperature=0.4,
             )
             return resp.content[0].text, "claude"
         except Exception as e:
-            print("Claude PDF analysis failed, falling back to Groq:", e)
+            print("Claude PDF analysis failed, trying Groq:", e)
 
-    msgs = [{"role": "system", "content": system}, {"role": "user", "content": question or "Please review this report and tell me what stands out."}]
-    r = groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=msgs,
-        temperature=0.4,
-        max_tokens=1500,
-    )
-    return r.choices[0].message.content, "groq"
+    if GROQ_ACTIVE and groq_client is not None:
+        msgs = [{"role": "system", "content": system}, {"role": "user", "content": _q_text}]
+        try:
+            r = groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=msgs,
+                temperature=0.4,
+                max_tokens=1500,
+            )
+            return r.choices[0].message.content, "groq"
+        except Exception as e:
+            print("Groq PDF analysis failed:", e)
+
+    return ("PDF analysis is not available right now. Please configure an OpenAI, "
+            "Anthropic, or Groq API key in Streamlit secrets."), "unavailable"
 
 def extract_patient_memory(messages):
     memory = {"symptoms": [], "conditions": [], "medications": []}
@@ -13272,6 +13929,19 @@ def markdown_to_html(text):
     raw = re.sub(r"(?<=[a-zA-Z\.])\s+\*\s+(?=[A-Z])", "\n- ", raw)
     raw = re.sub(r"(?<=[.!?])\s+(\*\*[^\*\n]{2,40}:\*\*)", r"\n\n\1\n\n", raw)
     raw = re.sub(r"(?<=[a-zA-Z\.\)])\s+(?=-\s+[A-Z])", r"\n", raw)
+    # ── Inline numbered list normaliser ─────────────────────────────
+    # AI models often produce "...common ones: 1. **Tension**: ... 2.
+    # **Dehydration**: ... 3. **Migraines**: ..." which Python's
+    # markdown parser keeps as ONE paragraph because the items aren't
+    # separated by blank lines. Insert a blank line before EVERY
+    # number-marker that follows a sentence end so markdown sees a
+    # proper ordered list. Single regex done in a loop so we keep
+    # promoting numbers until none remain in inline form.
+    for _ in range(6):
+        new_raw = re.sub(r"([:.!?,])[ \t]+(?=\d{1,2}[\.)][ \t]+\S)", r"\1\n\n", raw)
+        if new_raw == raw:
+            break
+        raw = new_raw
     raw = re.sub(r"\n{3,}", "\n\n", raw)
 
     try:
@@ -13357,11 +14027,16 @@ def strip_excessive_disclaimers(text):
     for pat in patterns:
         cleaned = re.sub(pat, "", cleaned, flags=re.IGNORECASE)
 
-    cleaned = re.sub(r"\s+[\u2014\u2013]\s+", ", ", cleaned)
+    cleaned = re.sub(r"[ \t]+[\u2014\u2013][ \t]+", ", ", cleaned)
     cleaned = cleaned.replace("\u2014", ", ")
     cleaned = cleaned.replace("\u2013", ", ")
     cleaned = re.sub(r",\s*,", ",", cleaned)
-    cleaned = re.sub(r"\s{2,}", " ", cleaned)
+    # CRITICAL: only collapse RUNS OF SPACES/TABS, NEVER newlines.
+    # The previous `\s{2,}` was eating the \n\n separators that markdown
+    # needs to render numbered / bullet lists as real <ol>/<ul> blocks,
+    # so saved messages came back as one long inline paragraph even
+    # though streaming looked fine.
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     cleaned = cleaned.strip()
 
@@ -14123,6 +14798,14 @@ def medichat_rag_stream(question, all_messages, lang_instruction="", patient_nam
         "RULE 6, NO MARKDOWN HEADINGS:\n"
         "Never use # ## ### markdown headings. If you need a section label, write it as a short bold line: **Section label:** then continue on a new line.\n\n"
 
+        "RULE 7, FORMAT LISTS PROPERLY:\n"
+        "When you list multiple items (causes, symptoms, steps, etc.), put EACH item on its OWN line:\n"
+        "  - For bullet lists, start each line with '- ' (dash space).\n"
+        "  - For numbered lists, start each line with '1. ', '2. ', '3. ' etc.\n"
+        "  - Add a blank line BEFORE the first list item so it renders as a real list, not inline text.\n"
+        "  - NEVER cram numbered items onto one line ('1. X 2. Y 3. Z'). Always break them across lines.\n"
+        "  - Keep each item to ONE sentence when possible. If you need more detail, the detail goes on the same line, not a new bullet.\n\n"
+
         "RULE 7, NO REPEATED GREETINGS OR RESTATEMENTS:\n"
         "ONLY greet the patient in your VERY FIRST message. On every subsequent turn, jump straight into your answer.\n"
         "NEVER start with 'Hi there', 'Hi [name]', 'Hello', or any greeting after the first turn.\n"
@@ -14399,6 +15082,25 @@ def medichat_vision(question, b64, all_messages, lang_instruction=""):
         + profile_note + memory_note + lang_note
     )
 
+    # Vision dispatch order: OpenAI (frontier) -> Claude -> Groq.
+    if OPENAI_ACTIVE and openai_client is not None:
+        try:
+            resp = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_text},
+                    {"role": "user", "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + b64}},
+                    ]},
+                ],
+                temperature=0.4,
+                max_tokens=1200,
+            )
+            return resp.choices[0].message.content, "openai-vision"
+        except Exception as e:
+            print("OpenAI vision failed, trying Claude:", e)
+
     if CLAUDE_ACTIVE:
         try:
             resp = anthropic_client.messages.create(
@@ -14418,15 +15120,31 @@ def medichat_vision(question, b64, all_messages, lang_instruction=""):
         except Exception as e:
             print("Claude vision failed, falling back to Groq:", e)
 
-    r = groq_client.chat.completions.create(
-        model="meta-llama/llama-4-scout-17b-16e-instruct",
-        messages=[{"role": "user", "content": [
-            {"type": "text", "text": system_text + "\n\nQuestion: " + prompt},
-            {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + b64}}
-        ]}],
-        temperature=0.5, max_tokens=1024
-    )
-    return r.choices[0].message.content, "groq-vision"
+    # Groq fallback. Guard against the client being None when the
+    # GROQ_API_KEY is not configured (local dev, missing secret) so
+    # the user sees a clean message instead of an AttributeError.
+    if not GROQ_ACTIVE or groq_client is None:
+        return (
+            "Vision Ai is not available right now. The image analyser needs an active "
+            "Claude or Groq API key configured in Streamlit secrets. Please ask the "
+            "admin to set ANTHROPIC_API_KEY or GROQ_API_KEY."
+        ), "unavailable"
+    try:
+        r = groq_client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[{"role": "user", "content": [
+                {"type": "text", "text": system_text + "\n\nQuestion: " + prompt},
+                {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + b64}}
+            ]}],
+            temperature=0.5, max_tokens=1024
+        )
+        return r.choices[0].message.content, "groq-vision"
+    except Exception as e:
+        print("Groq vision failed:", e)
+        return (
+            "Vision Ai could not analyse this image right now. The connection to the "
+            "image model failed. Please try again in a moment or check the network."
+        ), "error"
 
 def clean_text(text):
     replacements = {"\u2019": "'", "\u2018": "'", "\u201c": '"', "\u201d": '"', "\u2013": "-", "\u2014": "-", "\u2022": "-"}
@@ -14484,7 +15202,23 @@ def generate_doctor_visit_summary(messages, patient_name=""):
     )
 
     summary_text = ""
-    if CLAUDE_ACTIVE:
+    # Doctor Visit Summary dispatch: OpenAI -> Claude -> Groq.
+    if OPENAI_ACTIVE and openai_client is not None:
+        try:
+            resp = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.3,
+                max_tokens=1500,
+            )
+            summary_text = resp.choices[0].message.content
+        except Exception as e:
+            print("OpenAI summary failed, trying Claude:", e)
+
+    if not summary_text and CLAUDE_ACTIVE:
         try:
             resp = anthropic_client.messages.create(
                 model=CLAUDE_MODEL,
@@ -14495,9 +15229,9 @@ def generate_doctor_visit_summary(messages, patient_name=""):
             )
             summary_text = resp.content[0].text
         except Exception as e:
-            print("Claude summary failed, falling back to Groq:", e)
+            print("Claude summary failed, trying Groq:", e)
 
-    if not summary_text:
+    if not summary_text and GROQ_ACTIVE and groq_client is not None:
         try:
             r = groq_client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
@@ -14508,31 +15242,25 @@ def generate_doctor_visit_summary(messages, patient_name=""):
             summary_text = r.choices[0].message.content
         except Exception as e:
             print("Groq summary failed:", e)
-            return None, None
+
+    if not summary_text:
+        return None, None
 
     pdf = FPDF()
     pdf.add_page()
     pdf.set_margins(20, 20, 20)
+    pdf.set_auto_page_break(auto=True, margin=28)
 
-    pdf.set_fill_color(33, 118, 174)
-    pdf.rect(0, 0, 210, 38, "F")
-    pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Helvetica", "B", 22)
-    pdf.set_y(8)
-    pdf.cell(0, 10, "Doctor Visit Summary", ln=True, align="C")
-    pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 7, "Prepared by MediChat for: " + (patient_name if patient_name and patient_name != "Guest" else "Patient"), ln=True, align="C")
-    pdf.set_y(28)
-    pdf.set_font("Helvetica", "I", 8)
-    pdf.cell(0, 5, "Generated on " + datetime.now().strftime("%B %d, %Y at %I:%M %p"), ln=True, align="C")
-
-    pdf.set_y(46)
-
-    pdf.set_fill_color(237, 246, 252)
-    pdf.set_text_color(20, 66, 114)
-
-    pdf.set_font("Helvetica", "", 9)
-    pdf.multi_cell(0, 5, "Bring this summary to your GP appointment. It captures what you discussed with MediChat, including symptoms, history, and questions to ask. This is NOT a diagnosis. Your GP will make the clinical judgement.", fill=True, border=0)
+    _pdf_header(
+        pdf,
+        "Doctor Visit Summary",
+        "Patient: " + (patient_name if patient_name and patient_name != "Guest" else "Patient"),
+    )
+    _pdf_info_box(pdf,
+        "Bring this summary to your GP appointment. It captures what you "
+        "discussed with MediChat, including symptoms, history, and questions to ask. "
+        "This is NOT a diagnosis. Your GP will make the clinical judgement."
+    )
     pdf.ln(4)
 
     pdf.set_text_color(40, 40, 40)
@@ -14563,15 +15291,7 @@ def generate_doctor_visit_summary(messages, patient_name=""):
         plain = re.sub(r"\*\*([^\*]+)\*\*", r"\1", stripped)
         pdf.multi_cell(0, 5, plain)
 
-    pdf.ln(8)
-    pdf.set_draw_color(168, 197, 189)
-    pdf.line(20, pdf.get_y(), 190, pdf.get_y())
-    pdf.ln(3)
-    pdf.set_font("Helvetica", "I", 7)
-    pdf.set_text_color(120, 120, 120)
-    pdf.multi_cell(0, 4, "MediChat is a research prototype, not a medical device. This summary is generated by Ai from a chat conversation and may contain errors or omissions. Always rely on your qualified healthcare professional for diagnosis and treatment decisions.")
-    pdf.ln(2)
-    pdf.cell(0, 4, APP_VERSION_LABEL, ln=True, align="C")
+    _pdf_footer(pdf)
 
     pdf_bytes = bytes(pdf.output(dest="S"))
     return pdf_bytes, summary_text
@@ -14587,32 +15307,15 @@ def generate_full_medical_record_pdf(patient_name=""):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_margins(20, 20, 20)
+    pdf.set_auto_page_break(auto=True, margin=28)
 
-    # ── Cover banner ─────────────────────────────────────────────
-    pdf.set_fill_color(33, 118, 174)
-    pdf.rect(0, 0, 210, 42, "F")
-    pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Helvetica", "B", 22)
-    pdf.set_y(10)
-    pdf.cell(0, 10, "Patient Medical Record", ln=True, align="C")
-    pdf.set_font("Helvetica", "", 10)
     _patient_label = patient_name if patient_name and patient_name.lower() != "guest" else "Patient"
-    pdf.cell(0, 7, "Prepared by MediChat for: " + _patient_label, ln=True, align="C")
-    pdf.set_font("Helvetica", "I", 8)
-    pdf.cell(0, 5, "Generated " + datetime.now().strftime("%B %d, %Y at %I:%M %p"),
-             ln=True, align="C")
-
-    pdf.set_y(50)
-    pdf.set_fill_color(237, 246, 252)
-    pdf.set_text_color(20, 66, 114)
-    pdf.set_font("Helvetica", "", 9)
-    pdf.multi_cell(
-        0, 5,
+    _pdf_header(pdf, "Patient Medical Record", "Patient: " + _patient_label)
+    _pdf_info_box(pdf,
         "This is a structured summary of the patient's MediChat profile. "
-        "All entries below were saved by the patient or extracted from "
-        "documents they uploaded. Use as a starting point for clinical "
-        "history; verify with the patient where needed.",
-        fill=True, border=0
+        "All entries below were saved by the patient or extracted from documents "
+        "they uploaded. Use as a starting point for clinical history; verify with "
+        "the patient where needed."
     )
     pdf.ln(4)
 
@@ -14857,74 +15560,206 @@ def generate_full_medical_record_pdf(patient_name=""):
             pdf.ln(3)
 
     # ── Footer disclaimer on the last page ───────────────────────
-    pdf.ln(6)
-    pdf.set_draw_color(168, 197, 189)
-    pdf.line(20, pdf.get_y(), 190, pdf.get_y())
-    pdf.ln(3)
-    pdf.set_font("Helvetica", "I", 7)
-    pdf.set_text_color(120, 120, 120)
-    pdf.multi_cell(
-        0, 4,
-        "MediChat is a research prototype, not a medical device. This record is "
-        "compiled from patient-submitted data and AI-extracted text and may contain "
-        "errors or omissions. Always rely on the patient's stated history and your "
-        "own clinical judgement for diagnosis and treatment."
-    )
-    pdf.ln(2)
-    pdf.cell(0, 4, APP_VERSION_LABEL, ln=True, align="C")
+    _pdf_footer(pdf)
 
     return bytes(pdf.output(dest="S"))
 
+
+def _pdf_logo_path():
+    """Resolve the MediChat brand logo path for embedding in PDFs."""
+    return _resolve_asset_path("MediChat logo.png")
+
+def _pdf_measure_lines(pdf, w, text, line_h=5):
+    """Return the line count multi_cell would produce, without rendering.
+    Uses fpdf2's dry_run if available; falls back to character estimation."""
+    try:
+        result = pdf.multi_cell(w, line_h, clean_text(text), dry_run=True, output="LINES")
+        return max(1, len(result))
+    except Exception:
+        pass
+    # Conservative fallback: split on newlines + estimate wrap.
+    text = clean_text(text)
+    n = 0
+    for paragraph in text.split("\n"):
+        if not paragraph.strip():
+            n += 1
+            continue
+        try:
+            pw = pdf.get_string_width(paragraph)
+            n += max(1, int(pw / max(1, w - 2)) + 1)
+        except Exception:
+            n += max(1, len(paragraph) // 70 + 1)
+    return max(1, n)
+
+def _pdf_header(pdf, title, subtitle=""):
+    """Standard MediChat PDF header: logo + brand + title + generated date."""
+    # Logo (skip silently if asset missing)
+    try:
+        _logo = _pdf_logo_path()
+        if _logo and os.path.exists(_logo):
+            pdf.image(_logo, x=20, y=15, w=12, h=12)
+    except Exception:
+        pass
+    # Brand wordmark next to logo
+    pdf.set_xy(34, 17)
+    pdf.set_text_color(33, 118, 174)
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(50, 8, "MediChat")
+    # Generated date top-right
+    pdf.set_xy(120, 17)
+    pdf.set_text_color(100, 116, 139)
+    pdf.set_font("Helvetica", "", 8)
+    pdf.cell(70, 4, "Generated: " + datetime.now().strftime("%B %d, %Y at %I:%M %p"), align="R")
+    # Title — large bold blue
+    pdf.set_xy(20, 32)
+    pdf.set_text_color(12, 45, 72)
+    pdf.set_font("Helvetica", "B", 22)
+    pdf.cell(0, 10, clean_text(title), ln=True)
+    if subtitle:
+        pdf.set_x(20)
+        pdf.set_text_color(33, 118, 174)
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(0, 6, clean_text(subtitle), ln=True)
+    # Divider
+    pdf.set_draw_color(226, 232, 240)
+    pdf.set_line_width(0.4)
+    y_div = pdf.get_y() + 3
+    pdf.line(20, y_div, 190, y_div)
+    pdf.set_y(y_div + 5)
+
+def _pdf_info_box(pdf, text, color="info"):
+    """Soft tinted call-out box with a dynamically-sized rect."""
+    if color == "warn":
+        bg, ic_bg, ic_fg, tx = (255, 251, 235), (245, 158, 11), (255, 255, 255), (146, 64, 14)
+    elif color == "safe":
+        bg, ic_bg, ic_fg, tx = (240, 253, 244), (34, 197, 94), (255, 255, 255), (22, 101, 52)
+    else:
+        bg, ic_bg, ic_fg, tx = (239, 246, 252), (33, 118, 174), (255, 255, 255), (30, 64, 175)
+    pdf.set_font("Helvetica", "", 9)
+    body_w = 148
+    line_h = 4.6
+    n_lines = _pdf_measure_lines(pdf, body_w, text, line_h=line_h)
+    pad_y = 4
+    box_h = max(14, pad_y * 2 + n_lines * line_h)
+    y = pdf.get_y()
+    pdf.set_fill_color(*bg)
+    pdf.set_draw_color(*ic_bg)
+    pdf.set_line_width(0.3)
+    pdf.rect(20, y, 170, box_h, "DF")
+    # Info dot (perfectly centered vertically inside the box)
+    icon_d = 7
+    icon_y = y + (box_h - icon_d) / 2
+    pdf.set_fill_color(*ic_bg)
+    pdf.ellipse(25, icon_y, icon_d, icon_d, "F")
+    pdf.set_text_color(*ic_fg)
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.set_xy(25, icon_y + 1)
+    pdf.cell(icon_d, icon_d - 2, "i", align="C")
+    # Body
+    pdf.set_text_color(*tx)
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_xy(36, y + pad_y)
+    pdf.multi_cell(body_w, line_h, clean_text(text))
+    pdf.set_y(y + box_h + 4)
+
+def _pdf_section_label(pdf, label, color=(13, 148, 136)):
+    """Caps section header with thin colored underline."""
+    y = pdf.get_y()
+    pdf.set_text_color(*color)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_xy(20, y)
+    pdf.cell(0, 5, label.upper())
+    pdf.set_draw_color(*color)
+    pdf.set_line_width(0.4)
+    pdf.line(20, y + 7, 190, y + 7)
+    pdf.set_y(y + 10)
+
+def _pdf_footer(pdf):
+    """Footer pinned to the bottom of the current page. Auto-page-break is
+    temporarily disabled so the footer placement never spills to a new
+    blank page."""
+    was_auto = getattr(pdf, "auto_page_break", True)
+    try:
+        pdf.set_auto_page_break(False)
+        pdf.set_y(275)
+        pdf.set_draw_color(226, 232, 240)
+        pdf.set_line_width(0.3)
+        pdf.line(20, 275, 190, 275)
+        # Small print disclaimer left
+        pdf.set_text_color(120, 130, 144)
+        pdf.set_font("Helvetica", "", 7)
+        pdf.set_xy(20, 278)
+        pdf.multi_cell(135, 3.0,
+            "MediChat is a research prototype, not a medical device. This document is compiled "
+            "from patient-submitted data and AI-extracted text and may contain errors or "
+            "omissions. Always rely on your qualified clinical judgement."
+        )
+        # Brand mark right
+        pdf.set_xy(155, 280)
+        pdf.set_text_color(33, 118, 174)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(35, 4, "MediChat AI", align="R")
+    finally:
+        # Restore auto-page-break (best effort)
+        try:
+            if was_auto:
+                pdf.set_auto_page_break(True, margin=22)
+        except Exception:
+            pass
 
 def generate_chat_pdf(messages):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_margins(20, 20, 20)
-    pdf.set_fill_color(33, 118, 174)
-    pdf.rect(0, 0, 210, 35, "F")
-    pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Helvetica", "B", 20)
-    pdf.set_y(8)
-    pdf.cell(0, 10, "MediChat - Conversation Export", ln=True, align="C")
-    pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 7, "Generated: " + datetime.now().strftime("%B %d, %Y at %I:%M %p"), ln=True, align="C")
-    pdf.set_y(43)
-    pdf.set_text_color(146, 64, 14)
-    pdf.set_fill_color(255, 251, 235)
-    pdf.set_font("Helvetica", "", 8)
-    pdf.multi_cell(0, 5, "DISCLAIMER: This conversation is for informational purposes only. Always consult a qualified healthcare professional.", fill=True)
-    pdf.ln(4)
+    # Bottom margin 28 leaves room for the pinned footer at y=275 and
+    # stops content from drifting over the disclaimer line.
+    pdf.set_auto_page_break(auto=True, margin=28)
+    _pdf_header(pdf, "Conversation Export")
+    _pdf_info_box(pdf,
+        "DISCLAIMER: This conversation is for informational purposes only. "
+        "Always consult a qualified healthcare professional."
+    )
+    _pdf_section_label(pdf, "Conversation Transcript")
+
     for msg in messages:
         role = msg.get("role", "")
         content = msg.get("content", "")
         msg_type = msg.get("type", "text")
-        if not content:
+        msg_ts = msg.get("ts", "")
+        if not content and msg_type != "image":
             continue
-        if role == "user":
-            pdf.set_fill_color(42, 143, 197)
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font("Helvetica", "B", 9)
-            pdf.cell(0, 7, "  You", ln=True, fill=True)
-            pdf.set_fill_color(237, 246, 252)
-            pdf.set_text_color(12, 45, 72)
+        is_user = role == "user"
+        stripe_clr = (33, 118, 174) if is_user else (13, 148, 136)
+        label_text = "You" if is_user else "MediChat"
+        body_text = (
+            "[Medical image uploaded]" + (": " + clean_text(content) if content else "")
+            if msg_type == "image" else clean_text(content)
+        )
 
-            pdf.set_font("Helvetica", "", 9)
-            display = "[Medical image uploaded]" + (" - " + clean_text(content) if content else "") if msg_type == "image" else clean_text(content)
-            pdf.multi_cell(0, 6, "  " + display, fill=True)
-        else:
-            pdf.set_fill_color(30, 41, 59)
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font("Helvetica", "B", 9)
-            pdf.cell(0, 7, "  MediChat", ln=True, fill=True)
-            pdf.set_fill_color(248, 250, 252)
-            pdf.set_text_color(51, 65, 85)
-            pdf.set_font("Helvetica", "", 9)
-            pdf.multi_cell(0, 6, "  " + clean_text(content), fill=True)
-        pdf.ln(3)
-    pdf.set_y(-18)
-    pdf.set_text_color(148, 163, 184)
-    pdf.set_font("Helvetica", "", 7)
-    pdf.cell(0, 5, APP_VERSION_LABEL, align="C")
+        # Label row (label left, timestamp right) - rendered first so
+        # wrap math is bullet-proof.
+        start_y = pdf.get_y()
+        pdf.set_xy(26, start_y)
+        pdf.set_text_color(*stripe_clr)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(80, 5, label_text)
+        if msg_ts:
+            pdf.set_xy(150, start_y)
+            pdf.set_text_color(140, 150, 165)
+            pdf.set_font("Helvetica", "", 8)
+            pdf.cell(40, 5, clean_text(msg_ts), align="R")
+        # Body
+        pdf.set_xy(26, start_y + 6)
+        pdf.set_text_color(40, 50, 65)
+        pdf.set_font("Helvetica", "", 9)
+        pdf.multi_cell(164, 5.0, body_text)
+        end_y = pdf.get_y()
+        # Left color stripe sized to the actual rendered height.
+        pdf.set_fill_color(*stripe_clr)
+        pdf.rect(20, start_y, 1.5, max(8, end_y - start_y - 1), "F")
+        pdf.ln(5)
+
+    _pdf_footer(pdf)
     return bytes(pdf.output())
 
 def generate_assessment_pdf(parsed, data, report_date):
@@ -16297,6 +17132,348 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     word-wrap: break-word !important;
 }
 
+/* ── Linked-accounts banner + dialog (partner view) ────────────── */
+.md-partner-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 1px solid #fcd34d;
+    border-radius: 14px;
+    padding: 0.7rem 1rem;
+    margin: 0 0 1rem 0;
+    box-shadow: 0 1px 2px rgba(180,83,9,0.08);
+}
+.md-partner-banner-left {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    flex: 1;
+    min-width: 0;
+}
+.md-partner-banner-ic {
+    width: 38px; height: 38px;
+    border-radius: 11px;
+    background: rgba(255,255,255,0.55);
+    color: #b45309 !important;
+    -webkit-text-fill-color: #b45309 !important;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-variation-settings: 'FILL' 1, 'wght' 500 !important;
+    font-size: 1.2rem !important;
+}
+.md-partner-banner-title {
+    font-weight: 700;
+    color: #78350f;
+    font-size: 0.92rem;
+    line-height: 1.25;
+}
+.md-partner-banner-sub {
+    font-size: 0.76rem;
+    color: #92400e;
+    margin-top: 0.15rem;
+    line-height: 1.4;
+}
+[data-testid="stMain"] [class*="st-key-partner_switch_back"] .stButton button {
+    background: #fff !important;
+    color: #78350f !important;
+    border: 1px solid #fbbf24 !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 1px 2px rgba(180,83,9,0.06) !important;
+}
+[data-testid="stMain"] [class*="st-key-partner_switch_back"] .stButton button:hover {
+    background: #fef3c7 !important;
+    border-color: #f59e0b !important;
+}
+
+/* Dialog content */
+.md-partner-dlg-intro {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    font-size: 0.86rem;
+    color: #475569;
+    line-height: 1.55;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #f5f3ff 0%, #eef2ff 100%);
+    border: 1px solid #c7d2fe;
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+}
+.md-partner-dlg-intro-ic {
+    color: #4f46e5 !important;
+    -webkit-text-fill-color: #4f46e5 !important;
+    font-size: 1.5rem !important;
+    font-variation-settings: 'FILL' 1, 'wght' 500 !important;
+    flex-shrink: 0;
+}
+.md-partner-dlg-intro strong {
+    color: #1e293b;
+    display: block;
+    margin-bottom: 0.2rem;
+}
+.md-partner-row-chip {
+    display: inline-block;
+    background: #eef2ff;
+    color: #4338ca;
+    font-size: 0.66rem;
+    font-weight: 600;
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    margin-left: 0.4rem;
+    letter-spacing: 0.02em;
+    border: 1px solid #c7d2fe;
+    vertical-align: 1px;
+}
+.md-partner-row-sub-inline {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #64748b;
+    margin-left: 0.5rem;
+    letter-spacing: 0;
+}
+/* Partner-invite form fields: cleaner email input + readonly-look
+   relationship dropdown. */
+[class*="st-key-partner_invite_email"] [data-baseweb="input"] {
+    border-radius: 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+[class*="st-key-partner_invite_email"] [data-baseweb="input"]:focus-within {
+    border-color: #a5b4fc !important;
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.08) !important;
+}
+[class*="st-key-partner_invite_email"] input {
+    font-size: 0.9rem !important;
+    padding: 0.55rem 0.85rem !important;
+    color: #0f172a !important;
+}
+[class*="st-key-partner_invite_rel"] [data-baseweb="select"] {
+    border-radius: 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    min-height: 40px !important;
+    height: 40px !important;
+}
+[class*="st-key-partner_invite_rel"] [data-baseweb="select"]:hover {
+    border-color: #cbd5e1 !important;
+}
+[class*="st-key-partner_invite_rel"],
+[class*="st-key-partner_invite_rel"] *,
+[class*="st-key-partner_invite_rel"] input {
+    cursor: pointer !important;
+    caret-color: transparent !important;
+}
+[class*="st-key-partner_rel_"],
+[class*="st-key-partner_rel_"] *,
+[class*="st-key-partner_rel_"] input {
+    cursor: pointer !important;
+    caret-color: transparent !important;
+}
+.md-partner-row-sent {
+    background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%);
+    border-color: #fde68a;
+}
+.md-partner-row-ic-sent {
+    background: #fef3c7;
+    color: #b45309 !important;
+}
+.md-partner-banner-chip {
+    display: inline-block;
+    background: rgba(255,255,255,0.6);
+    color: #78350f;
+    border: 1px solid #fbbf24;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.05rem 0.5rem;
+    border-radius: 999px;
+    margin-left: 0.45rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    vertical-align: 2px;
+}
+.md-partner-audit-row {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.7rem;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    margin: 0.35rem 0;
+    font-size: 0.82rem;
+    color: #475569;
+}
+.md-partner-audit-ic {
+    color: #4f46e5 !important;
+    -webkit-text-fill-color: #4f46e5 !important;
+    font-size: 1rem !important;
+}
+.md-partner-audit-row strong { color: #0f172a; }
+.md-partner-audit-row em { color: #4338ca; font-style: normal; font-weight: 600; }
+.md-partner-audit-time {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    white-space: nowrap;
+}
+.md-partner-dlg-section-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #475569;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 1rem 0 0.5rem 0;
+}
+.md-partner-row {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.6rem 0.85rem;
+    margin: 0.4rem 0;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.03);
+}
+.md-partner-row-linked {
+    background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%);
+    border-color: #bbf7d0;
+}
+.md-partner-row-ic {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: #eef2ff;
+    color: #4f46e5;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.md-partner-row-ic .material-symbols-rounded {
+    font-size: 1.15rem !important;
+    font-variation-settings: 'FILL' 1, 'wght' 500 !important;
+}
+.md-partner-row-ic-linked {
+    background: #dcfce7;
+    color: #15803d !important;
+}
+.md-partner-row-body {
+    flex: 1; min-width: 0;
+}
+.md-partner-row-name {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.9rem;
+    line-height: 1.25;
+}
+.md-partner-row-sub {
+    font-size: 0.76rem;
+    color: #64748b;
+    margin-top: 0.12rem;
+}
+
+/* "Linked accounts" sidebar button - sized EXACTLY like the language
+   picker tile that sits below it (same width math, same 38px height,
+   same white card surface). Matches the global sidebar rule that
+   applies margin-right: 1.6rem; width: calc(100% - 1.6rem) to the
+   language selectbox so they line up perfectly. */
+[data-testid="stSidebar"] [class*="st-key-open_partners_dialog"] {
+    box-sizing: border-box !important;
+    margin: 0 1.6rem 0.35rem 0 !important;
+    padding: 0 !important;
+    width: calc(100% - 1.6rem) !important;
+    max-width: calc(100% - 1.6rem) !important;
+}
+[data-testid="stSidebar"] [class*="st-key-open_partners_dialog"] .stButton {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+[data-testid="stSidebar"] [class*="st-key-open_partners_dialog"] .stButton button {
+    background: #ffffff !important;
+    color: #4f46e5 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    font-size: 0.84rem !important;
+    line-height: 1.2 !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 0.85rem !important;
+    box-shadow: 0 4px 12px rgba(15,23,42,0.03) !important;
+    letter-spacing: -0.005em !important;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    /* CSS Grid lays the two children (icon span + label markdown) in
+       two auto-sized columns and centres them as one block via
+       place-content. This sidesteps Streamlit's default flex layout
+       that was pushing icon left + label right. */
+    display: grid !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: max-content !important;
+    place-content: center !important;
+    place-items: center !important;
+    column-gap: 0.5rem !important;
+    text-align: center !important;
+}
+/* Kill every default margin/flex-grow Streamlit applies to the icon
+   span and the label container, so neither child can claim extra
+   horizontal space. With both shrunk to content-width and the
+   button's gap handling the spacing, the icon+label pair sits as
+   one centred unit in the tile (no left/right drift). */
+[data-testid="stSidebar"] [class*="st-key-open_partners_dialog"] .stButton button > * {
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+}
+[data-testid="stSidebar"] [class*="st-key-open_partners_dialog"] .stButton button > span:first-child {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+[data-testid="stSidebar"] [class*="st-key-open_partners_dialog"] .stButton button [data-testid="stMarkdownContainer"] {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+[data-testid="stSidebar"] [class*="st-key-open_partners_dialog"] .stButton button [data-testid="stMarkdownContainer"] p {
+    margin: 0 !important;
+    padding: 0 !important;
+    white-space: nowrap !important;
+    line-height: 1 !important;
+}
+[data-testid="stSidebar"] [class*="st-key-open_partners_dialog"] .stButton button:hover {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    color: #3730a3 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 16px rgba(15,23,42,0.06) !important;
+}
+[data-testid="stSidebar"] [class*="st-key-open_partners_dialog"] [data-testid="stIconMaterial"] {
+    color: #4f46e5 !important;
+    -webkit-text-fill-color: #4f46e5 !important;
+    font-size: 1.1rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+}
+[data-testid="stSidebar"] [class*="st-key-open_partners_dialog"] .stButton button p {
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 0.84rem !important;
+    line-height: 1.2 !important;
+    font-weight: 600 !important;
+    color: inherit !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
 /* ── Profile card v2, redesigned (May 2026). ─────────────────────
    Layout: [44px gradient avatar] [name + email + status pill] [⏻ icon].
    Sign-out icon is a real <a> with href="?signout=1" so the existing
@@ -16411,11 +17588,46 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     color: #64748b !important;
 }
 [data-testid="stSidebar"] .md-side-pc-dot {
-    width: 6px !important;
-    height: 6px !important;
+    width: 7px !important;
+    height: 7px !important;
     border-radius: 50% !important;
     background: currentColor !important;
     flex-shrink: 0 !important;
+    position: relative !important;
+}
+/* Beating heart on the green "Synced" dot only (guest mode dot stays
+   static). Two stacked animations: the dot itself gently breathes
+   (scale + halo ring) on a 1.4s loop, and a sibling ::after expands
+   outward and fades - the classic live-indicator ripple. */
+[data-testid="stSidebar"] .md-side-pc-status-on .md-side-pc-dot {
+    background: #22c55e !important;
+    animation: mdSyncPcBeat 1.4s ease-in-out infinite !important;
+    box-shadow: 0 0 0 0 rgba(34,197,94,0.55) !important;
+}
+[data-testid="stSidebar"] .md-side-pc-status-on .md-side-pc-dot::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    border-radius: 50% !important;
+    background: #22c55e !important;
+    opacity: 0.55 !important;
+    pointer-events: none !important;
+    animation: mdSyncPcRipple 1.4s ease-out infinite !important;
+}
+@keyframes mdSyncPcBeat {
+    0%, 100% { transform: scale(1);    box-shadow: 0 0 0 2px rgba(34,197,94,0.18); }
+    50%      { transform: scale(1.18); box-shadow: 0 0 0 3px rgba(34,197,94,0.28); }
+}
+@keyframes mdSyncPcRipple {
+    0%   { transform: scale(1);   opacity: 0.55; }
+    80%  { transform: scale(2.6); opacity: 0; }
+    100% { transform: scale(2.6); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    [data-testid="stSidebar"] .md-side-pc-status-on .md-side-pc-dot,
+    [data-testid="stSidebar"] .md-side-pc-status-on .md-side-pc-dot::after {
+        animation: none !important;
+    }
 }
 [data-testid="stSidebar"] .md-side-pc-signout {
     width: 34px !important;
@@ -16886,6 +18098,14 @@ div.st-key-privacy_delete_account button [data-testid="stIconMaterial"] {
 
     # ── Sidebar bottom: language picker → Privacy & Consent → footer ──
     st.markdown('<div class="md-sidebar-bottom">', unsafe_allow_html=True)
+
+    # ── Linked accounts entry (authenticated users only) ──────────────
+    if st.session_state.get("is_authenticated"):
+        _pending_count = len(list_pending_partner_invites() or [])
+        _link_label = ("Care Circle" + (("  (" + str(_pending_count) + ")") if _pending_count else ""))
+        if st.button(_link_label, key="open_partners_dialog", icon=":material/diversity_3:", use_container_width=True):
+            st.session_state.show_partners_dialog = True
+            st.rerun()
 
     # Language selector sits immediately above the Privacy & Consent button.
     _lang_keys_top = list(LANGUAGES.keys())
@@ -18906,6 +20126,242 @@ home_uploaded_image = None
 home_vision_analyze = False
 home_empty_chat = st.session_state.mode == "chat" and not st.session_state.messages
 
+# ── Partner-view banner (sticky, top of main, when viewing a partner) ──
+if st.session_state.get("viewing_partner_hash") and st.session_state.get("is_authenticated"):
+    _pv_name, _pv_email = get_active_view_user_display()
+    # Pull the relationship label from MY linked_partners entry so it
+    # reads "Viewing Mum's data (Parent)" instead of just "Viewing".
+    _pv_rel = ""
+    _pv_entry = find_linked_partner(st.session_state.get("viewing_partner_hash"))
+    if _pv_entry:
+        _pv_rel = (_pv_entry.get("relationship") or "").strip()
+    _pv_chip = ('<span class="md-partner-banner-chip">' + ui_text(_pv_rel, 24) + '</span>') if _pv_rel else ""
+    st.markdown(
+        '<div class="md-partner-banner">'
+        '<div class="md-partner-banner-left">'
+        '<span class="material-symbols-rounded md-partner-banner-ic">visibility</span>'
+        '<div><div class="md-partner-banner-title">Viewing ' + ui_text(_pv_name, 60) + '\'s data ' + _pv_chip + '</div>'
+        '<div class="md-partner-banner-sub">From your Care Circle. Read-only, everything you log goes to your own profile.</div></div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True
+    )
+    _pv_c1, _pv_c2 = st.columns([5, 1])
+    with _pv_c2:
+        if st.button("Switch back", key="partner_switch_back", icon=":material/swap_horiz:", use_container_width=True):
+            st.session_state.viewing_partner_hash = ""
+            st.rerun()
+
+# ── Linked-accounts dialog (modal, when user clicks the sidebar entry) ──
+if st.session_state.get("show_partners_dialog"):
+    @st.dialog("Your Care Circle", width="large")
+    def _partners_dialog():
+        st.markdown(
+            '<div class="md-partner-dlg-intro">'
+            '<span class="material-symbols-rounded md-partner-dlg-intro-ic">diversity_3</span>'
+            '<div><strong>Your Care Circle.</strong> '
+            'Share your MediChat data with the people you trust, spouses, parents, carers, doctors. '
+            'Each side has to accept; either side can leave any time. Shared access is always read-only.</div>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+        _pending = list_pending_partner_invites()
+        _sent = list_sent_partner_invites()
+        _linked = list_linked_partners()
+        _audit = list_partner_audit_log(limit=20)
+
+        # ─── PENDING (inbox) ────────────────────────────────────────────
+        if _pending:
+            st.markdown('<div class="md-partner-dlg-section-title">Invitations for you</div>', unsafe_allow_html=True)
+            for _inv in _pending:
+                _ih = _inv.get("from_email_hash", "")
+                _from_rel = (_inv.get("from_relationship") or "").strip()
+                # Friendlier framing: "Mum says you're her Child" so the
+                # receiver knows the inviter's perspective before picking
+                # their own.
+                if _from_rel:
+                    _ctx_line = ui_text(_inv.get("from_name", "They"), 60) + " says you are their " + ui_text(_from_rel.lower(), 30) + "."
+                else:
+                    _ctx_line = ui_text(_inv.get("from_email", ""), 80)
+                st.markdown(
+                    '<div class="md-partner-row">'
+                    '<div class="md-partner-row-ic"><span class="material-symbols-rounded">mail</span></div>'
+                    '<div class="md-partner-row-body">'
+                    '<div class="md-partner-row-name">' + ui_text(_inv.get("from_name", "Unknown"), 60) + ' <span class="md-partner-row-sub-inline">' + ui_text(_inv.get("from_email", ""), 80) + '</span></div>'
+                    '<div class="md-partner-row-sub">' + _ctx_line + '</div>'
+                    '</div></div>',
+                    unsafe_allow_html=True
+                )
+                st.caption("In your eyes, they are your...")
+                _rc1, _rc2, _rc3 = st.columns([2, 1, 1])
+                with _rc1:
+                    _rel_pick = st.selectbox(
+                        "Relationship",
+                        options=PARTNER_RELATIONSHIPS,
+                        index=0,
+                        key="partner_rel_" + _ih[:12],
+                        label_visibility="collapsed",
+                    )
+                with _rc2:
+                    if st.button("Accept", key="partner_accept_" + _ih[:12], type="primary", use_container_width=True, icon=":material/check:"):
+                        ok, msg = accept_partner_invite(_ih, relationship_label=_rel_pick)
+                        if ok:
+                            st.success(msg)
+                            st.rerun()
+                        else:
+                            st.error(msg)
+                with _rc3:
+                    if st.button("Decline", key="partner_decline_" + _ih[:12], use_container_width=True, icon=":material/close:"):
+                        if decline_partner_invite(_ih):
+                            st.rerun()
+
+        # ─── SENT (outbox) ──────────────────────────────────────────────
+        if _sent:
+            st.markdown('<div class="md-partner-dlg-section-title">Invitations you sent</div>', unsafe_allow_html=True)
+            for _sv in _sent:
+                _sh = _sv.get("target_email_hash", "")
+                _s_rel = (_sv.get("from_relationship") or "").strip()
+                _s_rel_chip = ('<span class="md-partner-row-chip">' + ui_text(_s_rel, 30) + '</span>') if _s_rel else ""
+                _so1, _so2 = st.columns([5, 1])
+                with _so1:
+                    st.markdown(
+                        '<div class="md-partner-row md-partner-row-sent">'
+                        '<div class="md-partner-row-ic md-partner-row-ic-sent"><span class="material-symbols-rounded">hourglass_top</span></div>'
+                        '<div class="md-partner-row-body">'
+                        '<div class="md-partner-row-name">' + ui_text(_sv.get("target_name", "Pending"), 60) + ' ' + _s_rel_chip + '</div>'
+                        '<div class="md-partner-row-sub">' + ui_text(_sv.get("target_email", ""), 80) + ' · waiting for them to accept</div>'
+                        '</div></div>',
+                        unsafe_allow_html=True
+                    )
+                with _so2:
+                    if st.button("Cancel", key="partner_cancel_" + _sh[:12], use_container_width=True, icon=":material/close:"):
+                        if cancel_sent_partner_invite(_sh):
+                            st.rerun()
+
+        # ─── LINKED PARTNERS (with permissions per partner) ─────────────
+        if _linked:
+            st.markdown('<div class="md-partner-dlg-section-title">Your circle</div>', unsafe_allow_html=True)
+            for _lp in _linked:
+                _lh = _lp.get("email_hash", "")
+                _rel_label = _lp.get("relationship", "") or "Linked"
+                st.markdown(
+                    '<div class="md-partner-row md-partner-row-linked">'
+                    '<div class="md-partner-row-ic md-partner-row-ic-linked"><span class="material-symbols-rounded">link</span></div>'
+                    '<div class="md-partner-row-body">'
+                    '<div class="md-partner-row-name">' + ui_text(_lp.get("name", "Partner"), 60) + ' <span class="md-partner-row-chip">' + ui_text(_rel_label, 30) + '</span></div>'
+                    '<div class="md-partner-row-sub">' + ui_text(_lp.get("email", ""), 80) + '</div>'
+                    '</div></div>',
+                    unsafe_allow_html=True
+                )
+                _ac1, _ac2 = st.columns([1, 1])
+                _is_viewing = (st.session_state.get("viewing_partner_hash") == _lh)
+                with _ac1:
+                    if st.button(
+                        "Currently viewing" if _is_viewing else "Switch to their view",
+                        key="partner_view_" + _lh[:12],
+                        type="primary" if not _is_viewing else "secondary",
+                        use_container_width=True,
+                        icon=":material/visibility:",
+                        disabled=_is_viewing,
+                    ):
+                        st.session_state.viewing_partner_hash = _lh
+                        st.session_state.show_partners_dialog = False
+                        st.rerun()
+                with _ac2:
+                    if st.button("Unlink", key="partner_unlink_" + _lh[:12], use_container_width=True, icon=":material/link_off:"):
+                        if unlink_partner(_lh):
+                            st.rerun()
+                # Permissions expander (consent per data category)
+                with st.expander("Permissions, what " + (_lp.get("name", "they") or "they") + " can see"):
+                    _cur_scopes = _lp.get("consent_scopes") or _default_consent_scopes()
+                    _scope_state = {}
+                    _ec1, _ec2 = st.columns(2)
+                    for _i, _scope in enumerate(PARTNER_SCOPES):
+                        _col = _ec1 if _i % 2 == 0 else _ec2
+                        with _col:
+                            _scope_state[_scope] = st.checkbox(
+                                PARTNER_SCOPE_LABELS[_scope],
+                                value=bool(_cur_scopes.get(_scope, True)),
+                                key="partner_scope_" + _lh[:12] + "_" + _scope,
+                            )
+                    if st.button("Save permissions", key="partner_save_scopes_" + _lh[:12], use_container_width=True, type="primary", icon=":material/save:"):
+                        if update_partner_consent(_lh, _scope_state):
+                            st.success("Permissions updated.")
+                            st.rerun()
+
+        # ─── INVITE NEW PARTNER ─────────────────────────────────────────
+        st.markdown('<div class="md-partner-dlg-section-title">Invite someone to your circle</div>', unsafe_allow_html=True)
+        with st.form("partner_invite_form", clear_on_submit=True):
+            _new_email = st.text_input("Their email address", placeholder="e.g. mum@example.com", key="partner_invite_email")
+            _rel_options = ("Select a relationship",) + PARTNER_RELATIONSHIPS
+            _from_rel = st.selectbox(
+                "Who are they to you?",
+                options=_rel_options,
+                index=0,
+                key="partner_invite_rel",
+                help="The person you're sharing with will see this so they know the context.",
+            )
+            # Lock the relationship combobox to readonly so it behaves
+            # as a tap-to-open dropdown (same pattern as the sidebar
+            # language picker + Recent Chats sort).
+            import streamlit.components.v1 as _components_rel
+            _components_rel.html(
+                """
+                <script>
+                (function(){
+                    function lock(){
+                        try {
+                            var doc = window.parent.document;
+                            var ids = ['partner_invite_rel'];
+                            ids.forEach(function(rel_key){
+                                var inputs = doc.querySelectorAll('[class*="st-key-' + rel_key + '"] input[role="combobox"]');
+                                inputs.forEach(function(input){
+                                    input.setAttribute('readonly', '');
+                                    input.setAttribute('tabindex', '-1');
+                                    input.setAttribute('inputmode', 'none');
+                                    input.style.caretColor = 'transparent';
+                                    input.style.cursor = 'pointer';
+                                });
+                            });
+                            // Also lock every accept-flow relationship picker.
+                            var accept = doc.querySelectorAll('[class*="st-key-partner_rel_"] input[role="combobox"]');
+                            accept.forEach(function(input){
+                                input.setAttribute('readonly', '');
+                                input.setAttribute('tabindex', '-1');
+                                input.setAttribute('inputmode', 'none');
+                                input.style.caretColor = 'transparent';
+                                input.style.cursor = 'pointer';
+                            });
+                        } catch (e) {}
+                    }
+                    lock();
+                    setTimeout(lock, 200);
+                    setTimeout(lock, 800);
+                    setInterval(lock, 1500);
+                })();
+                </script>
+                """,
+                height=0,
+            )
+            _pc1, _pc2 = st.columns([3, 1])
+            with _pc1:
+                _send_clicked = st.form_submit_button("Send invite", type="primary", use_container_width=True, icon=":material/send:")
+            with _pc2:
+                _close_clicked = st.form_submit_button("Close", use_container_width=True)
+            if _send_clicked:
+                _from_rel_send = "" if _from_rel == "Select a relationship" else _from_rel
+                ok, msg = send_partner_invite(_new_email, from_relationship=_from_rel_send)
+                if ok:
+                    st.success(msg)
+                    st.rerun()
+                else:
+                    st.error(msg)
+            if _close_clicked:
+                st.session_state.show_partners_dialog = False
+                st.rerun()
+    _partners_dialog()
+
 if st.session_state.mode == "chat":
     # ── New Dashboard Home (only on empty chat) ─────────────────────
     if not st.session_state.messages:
@@ -19615,13 +21071,32 @@ if st.session_state.mode == "chat":
                 if msg_type == "image":
                     st.markdown('<span class="image-tag">Medical image uploaded for analysis</span>', unsafe_allow_html=True)
                 if content or msg_type != "image":
+                    # Authenticated users see their own initial in the
+                    # avatar; guests keep the generic person glyph.
+                    _is_signed_in = bool(
+                        st.session_state.get("is_authenticated")
+                        and st.session_state.get("patient_name")
+                        and st.session_state.patient_name != "Guest"
+                    )
+                    if _is_signed_in:
+                        _user_av_html = (
+                            '<div class="av av-user av-user-initial">'
+                            '<span class="av-user-letter">' + safe_initial + '</span>'
+                            '</div>'
+                        )
+                    else:
+                        _user_av_html = (
+                            '<div class="av av-user">'
+                            '<span class="material-symbols-rounded" style="font-size: 1.25rem;">person</span>'
+                            '</div>'
+                        )
                     st.markdown(
                         '<div class="user-wrap">'
                         '<div class="user-stack">'
                         '<div class="user-bubble">' + safe_content + '</div>'
                         + ts_html +
                         '</div>'
-                        '<div class="av av-user"><span class="material-symbols-rounded" style="font-size: 1.25rem;">person</span></div>'
+                        + _user_av_html +
                         '</div>',
                         unsafe_allow_html=True
                     )
@@ -19746,7 +21221,7 @@ if st.session_state.mode == "chat":
                             '</span>'
                         )
                     st.markdown(
-                        '<div style="margin-top:0.45rem;padding:0.55rem 0.7rem;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;">'
+                        '<div style="margin:0.45rem 0 1.4rem 0;padding:0.55rem 0.7rem;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;max-width:75%;">'
                         '<div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;display:flex;align-items:center;gap:0.35rem;margin-bottom:0.35rem;">'
                         '<span class="material-symbols-rounded" style="font-size:0.85rem;color:#7c3aed;">auto_awesome</span>'
                         'MediChat noticed and saved'
@@ -20547,8 +22022,32 @@ if st.session_state.mode == "chat":
                         elif kind == "done":
                             final_text = event[1]
                             stream_metadata = event[2]
-                    
-                    stream_placeholder.empty()
+
+                    # Seamless handoff: render the FINAL polished bubble
+                    # into the same placeholder (no streaming cursor, no
+                    # blank flash). The subsequent st.rerun() will
+                    # repaint the message at this exact DOM position
+                    # from session_state.messages, so the user sees the
+                    # streamed reply smoothly become the persisted reply
+                    # instead of disappearing and popping back in.
+                    if final_text:
+                        try:
+                            _final_clean = strip_excessive_disclaimers(final_text)
+                        except Exception:
+                            _final_clean = final_text
+                        stream_placeholder.markdown(
+                            '<div class="bot-wrap">' + _bot_avatar_html + '<div class="bot-stack">'
+                            '<div class="bot-bubble">'
+                            '<div class="bot-bubble-head">'
+                            '<span class="bot-bubble-name">MediChat Ai</span>'
+                            '<span class="bot-bubble-spark material-symbols-rounded">verified_user</span>'
+                            '</div>' + markdown_to_html(_final_clean) + '</div>'
+                            '</div>'
+                            '</div>',
+                            unsafe_allow_html=True
+                        )
+                    else:
+                        stream_placeholder.empty()
                     
                 except Exception as streaming_fault:
                     import traceback as _tb
@@ -21712,7 +23211,17 @@ elif st.session_state.mode == "history":
             unsafe_allow_html=True
         )
     else:
-        _hist = list_conversations(st.session_state.user_email_hash, limit=200) or []
+        # Use the active-view hash so the Recent Chats list shows the
+        # partner's conversations when the user has switched to partner
+        # view, and their own otherwise. Gate on the chats consent
+        # scope when in partner view.
+        if st.session_state.get("viewing_partner_hash") and not viewer_can_see("chats"):
+            _hist = []
+            st.warning("This partner has not shared their chat history with you.")
+        else:
+            if st.session_state.get("viewing_partner_hash"):
+                _log_partner_view("chats")
+            _hist = list_conversations(get_active_view_user_hash() or st.session_state.user_email_hash, limit=200) or []
         if not _hist:
             st.markdown(
                 '<div class="md-hist-empty">'
@@ -23052,18 +24561,17 @@ elif st.session_state.mode == "records":
                     rh += '<span>' + ui_text(uploaded, 30) + '</span>'
                     rh += '</div>'
                     _has_summary = bool(r.get("summary"))
-                    _has_raw = bool((r.get("raw_text") or "").strip())
                     _file_b64 = r.get("file_data_b64") or ""
                     _ft = (r.get("file_type") or "").lower()
                     _has_file = bool(_file_b64)
-                    if _has_summary or _has_raw or _has_file:
+                    if _has_summary or _has_file:
                         rh += '<div class="md-rec-actions">'
                         if _has_summary:
                             rh += '<details class="md-rec-summary"><summary><span class="material-symbols-rounded">auto_awesome</span>View Ai summary</summary><div class="md-ai-summary-body">' + markdown_to_html(r.get("summary")) + '</div></details>'
-                        # "View document" - prefer the actual file (image
-                        # or PDF embedded as base64) when we have it.
-                        # Falls back to the markdown-rendered raw text
-                        # for legacy records uploaded before file inlining.
+                        # "View document" only when we have the actual
+                        # file bytes. Legacy records (no file_data_b64)
+                        # don't get a misleading button that would just
+                        # show the AI-extracted text again.
                         if _has_file:
                             if "pdf" in _ft:
                                 _mime = "application/pdf"
@@ -23084,13 +24592,6 @@ elif st.session_state.mode == "records":
                                 '<details class="md-rec-summary md-rec-raw">'
                                 '<summary><span class="material-symbols-rounded">description</span>View document</summary>'
                                 '<div class="md-rec-file-body">' + _body + '</div>'
-                                '</details>'
-                            )
-                        elif _has_raw:
-                            rh += (
-                                '<details class="md-rec-summary md-rec-raw">'
-                                '<summary><span class="material-symbols-rounded">description</span>View document</summary>'
-                                '<div class="md-ai-summary-body md-rec-raw-body">' + markdown_to_html(r.get("raw_text") or "") + '</div>'
                                 '</details>'
                             )
                         rh += '</div>'
