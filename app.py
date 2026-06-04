@@ -331,7 +331,7 @@ def _trim_messages_for_storage(messages):
             "engine": m.get("engine", ""),
             "ts": m.get("ts", ""),
         }
-        # MediChat Second Opinion text — must persist so it renders
+        # MediChat Second Opinion text - must persist so it renders
         # again when the conversation is reloaded from Recent Chats.
         _vt = (m.get("verify_text") or "").strip()
         if _vt:
@@ -498,7 +498,7 @@ def _ensure_guest_store():
 def _today_key():
     """Return today's ISO date in the USER's local timezone.
 
-    Previously used server-local datetime.now() — on Streamlit Cloud
+    Previously used server-local datetime.now() - on Streamlit Cloud
     that's UTC, so a user in AEST logging at 10am Wednesday landed
     under Tuesday's UTC key, and the next morning the snapshot still
     showed "Synced today" with the previous day's data. Use the
