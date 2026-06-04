@@ -321,7 +321,7 @@ def _trim_messages_for_storage(messages):
     for m in (messages or [])[-80:]:
         if not isinstance(m, dict):
             continue
-        trimmed.append({
+        _entry = {
             "role": m.get("role", ""),
             "type": m.get("type", "text"),
             "content": (m.get("content", "") or "")[:4000],
@@ -329,7 +329,17 @@ def _trim_messages_for_storage(messages):
             "confidence": m.get("confidence", ""),
             "confidence_pct": m.get("confidence_pct", 0),
             "engine": m.get("engine", ""),
-        })
+            "ts": m.get("ts", ""),
+        }
+        # MediChat Second Opinion text — must persist so it renders
+        # again when the conversation is reloaded from Recent Chats.
+        _vt = (m.get("verify_text") or "").strip()
+        if _vt:
+            _entry["verify_text"] = _vt[:3000]
+        _nf = m.get("noticed_facts")
+        if _nf:
+            _entry["noticed_facts"] = _nf
+        trimmed.append(_entry)
     return trimmed
 
 def derive_chat_title(messages):
@@ -486,7 +496,20 @@ def _ensure_guest_store():
     return _store
 
 def _today_key():
-    return datetime.now().strftime("%Y-%m-%d")
+    """Return today's ISO date in the USER's local timezone.
+
+    Previously used server-local datetime.now() — on Streamlit Cloud
+    that's UTC, so a user in AEST logging at 10am Wednesday landed
+    under Tuesday's UTC key, and the next morning the snapshot still
+    showed "Synced today" with the previous day's data. Use the
+    browser-reported timezone (via st.context) so the date bucket
+    matches the user's clock.
+    """
+    try:
+        _now = get_user_local_now()
+        return _now.strftime("%Y-%m-%d")
+    except Exception:
+        return datetime.now().strftime("%Y-%m-%d")
 
 def get_user_doc():
     """Read fresh profile doc for the signed-in user; returns {} if guest/none."""
@@ -17190,21 +17213,27 @@ if _mode_from_url in _url_modes:
 # ?conv=<id> → load that conversation into the chat view. Lets the Recent
 # Chats sidebar render as anchor links (giving us proper title-left +
 # time-right flex layout that st.button can't).
+# IMPORTANT: ?conv= is INTENTIONALLY KEPT in the URL after loading so a
+# browser refresh on a saved chat restores the same conversation (was
+# previously deleted; refresh fell back to the empty Home dashboard).
 _conv_id_from_url = str(_query_params.get("conv", "") or "").strip()
 if _conv_id_from_url and st.session_state.is_authenticated and st.session_state.user_email_hash:
-    _conv_obj = load_conversation(st.session_state.user_email_hash, _conv_id_from_url)
-    if _conv_obj is not None:
-        st.session_state.current_conversation_id = _conv_id_from_url
-        st.session_state.messages = _conv_obj.get("messages", []) or []
-        st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
-        st.session_state.feedback = {}
-        st.session_state.last_sources = []
-        st.session_state.emergency_detected = False
+    # Only reload from Firestore if this isn't the currently-active
+    # conversation (avoids overwriting in-flight streamed messages
+    # with stale Firestore on every rerun).
+    if st.session_state.get("current_conversation_id") != _conv_id_from_url:
+        _conv_obj = load_conversation(st.session_state.user_email_hash, _conv_id_from_url)
+        if _conv_obj is not None:
+            st.session_state.current_conversation_id = _conv_id_from_url
+            st.session_state.messages = _conv_obj.get("messages", []) or []
+            st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
+            st.session_state.feedback = {}
+            st.session_state.last_sources = []
+            st.session_state.emergency_detected = False
+            st.session_state.mode = "chat"
+    else:
+        # Same conversation already loaded, just make sure we're in chat mode.
         st.session_state.mode = "chat"
-    try:
-        del st.query_params["conv"]
-    except Exception:
-        pass
 
 # ?new_chat=1 → start a fresh chat session. Mirrors the ?conv handler so the
 # "+ New chat" pill inside the Recent Chats card can be a true anchor link
@@ -19317,7 +19346,9 @@ if st.session_state.mode == "chat":
                 # sees at a glance how fresh the snapshot is.
                 _last_sync_label = "No data yet"
                 try:
-                    _today = datetime.now().date()
+                    # Use the USER's local date so "today / yesterday"
+                    # buckets match the user's clock, not the UTC server.
+                    _today = get_user_local_now().date()
                     for _i in range(60):
                         _dk = (_today - timedelta(days=_i)).strftime("%Y-%m-%d")
                         _day = _all_dm.get(_dk, {}) or {}
@@ -20579,6 +20610,15 @@ if st.session_state.mode == "chat":
             )
             if new_id:
                 st.session_state.current_conversation_id = new_id
+        # Mirror the active conversation id into ?conv= so a browser
+        # refresh restores the same chat instead of dropping back to
+        # the empty Home dashboard.
+        try:
+            if st.session_state.current_conversation_id:
+                st.query_params["conv"] = st.session_state.current_conversation_id
+                st.query_params["mode"] = "chat"
+        except Exception:
+            pass
         st.session_state.chat_input_key = st.session_state.get("chat_input_key", 0) + 1
         st.rerun()
 
