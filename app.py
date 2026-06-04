@@ -22907,7 +22907,34 @@ elif st.session_state.mode == "records":
                 size_lbl = (str(kb) + " KB") if kb < 1024 else (str(round(kb / 1024, 1)) + " MB")
             except Exception:
                 size_lbl = ""
-            uploaded = r.get("uploaded_at", "")[:16].replace("T", " ")
+            # Friendly upload time: "Today · 8:29 AM" / "Yesterday ·
+            # 2:30 PM" / "4 Jun 2026 · 8:29 AM" - in the user's local
+            # timezone (uploaded_at is stored as ISO UTC).
+            _uploaded_raw = r.get("uploaded_at", "") or ""
+            uploaded = ""
+            if _uploaded_raw:
+                try:
+                    from datetime import timezone as _tzu
+                    # Parse ISO 8601 (handle "Z" suffix and tz-aware)
+                    _iso = _uploaded_raw.rstrip("Z")
+                    _dt_utc = datetime.fromisoformat(_iso)
+                    if _dt_utc.tzinfo is None:
+                        _dt_utc = _dt_utc.replace(tzinfo=_tzu.utc)
+                    # Convert to user's local timezone
+                    _user_now = get_user_local_now()
+                    _user_tz = _user_now.tzinfo
+                    _dt_local = _dt_utc.astimezone(_user_tz) if _user_tz else _dt_utc
+                    _today = _user_now.date()
+                    _yesterday = _today - timedelta(days=1)
+                    _t_str = _dt_local.strftime("%I:%M %p").lstrip("0")
+                    if _dt_local.date() == _today:
+                        uploaded = "Today · " + _t_str
+                    elif _dt_local.date() == _yesterday:
+                        uploaded = "Yesterday · " + _t_str
+                    else:
+                        uploaded = _dt_local.strftime("%d %b %Y") + " · " + _t_str
+                except Exception:
+                    uploaded = _uploaded_raw[:16].replace("T", " ")
             _rid = str(r.get("id", ""))
 
             # Outer 2-col row: card on left, X delete button on right
