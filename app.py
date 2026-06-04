@@ -22734,10 +22734,21 @@ elif st.session_state.mode == "records":
         opacity: 0.8;
         color: #7c3aed;
     }
-    .md-rec-summary {
+    .md-rec-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem 1.1rem;
         margin-top: 0.5rem;
         padding-top: 0.5rem;
         border-top: 1px dashed #e2e8f0;
+    }
+    .md-rec-summary {
+        flex: 1 1 100%;
+    }
+    .md-rec-actions > .md-rec-summary {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+        border-top: none !important;
     }
     .md-rec-summary summary {
         cursor: pointer;
@@ -22765,6 +22776,24 @@ elif st.session_state.mode == "records":
     }
     .md-ai-summary-body .md-p { margin: 0.4rem 0; }
     .md-ai-summary-body strong { color: #1e293b; }
+    /* Raw document body: monospaced, scroll-capped so a long PDF
+       extract doesn't dominate the page. */
+    .md-rec-raw-body {
+        font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace !important;
+        font-size: 0.76rem !important;
+        background: #fafbff;
+        border: 1px solid #eef2ff;
+        border-radius: 8px;
+        padding: 0.65rem 0.85rem;
+        max-height: 320px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        line-height: 1.5;
+        color: #334155;
+    }
+    .md-rec-raw summary .material-symbols-rounded { color: #0ea5e9 !important; -webkit-text-fill-color: #0ea5e9 !important; }
+    .md-rec-raw summary { color: #0369a1 !important; }
+    .md-rec-raw[open] summary { color: #075985 !important; }
 
     /* X delete button matches Recent Chats: plain icon, grey,
        turns red on hover, sits in the outer margin column. */
@@ -22955,8 +22984,20 @@ elif st.session_state.mode == "records":
                     rh += '<span class="material-symbols-rounded md-rec-card-clock">schedule</span>'
                     rh += '<span>' + ui_text(uploaded, 30) + '</span>'
                     rh += '</div>'
-                    if r.get("summary"):
-                        rh += '<details class="md-rec-summary"><summary><span class="material-symbols-rounded">auto_awesome</span>View Ai summary</summary><div class="md-ai-summary-body">' + markdown_to_html(r.get("summary")) + '</div></details>'
+                    _has_summary = bool(r.get("summary"))
+                    _has_raw = bool((r.get("raw_text") or "").strip())
+                    if _has_summary or _has_raw:
+                        rh += '<div class="md-rec-actions">'
+                        if _has_summary:
+                            rh += '<details class="md-rec-summary"><summary><span class="material-symbols-rounded">auto_awesome</span>View Ai summary</summary><div class="md-ai-summary-body">' + markdown_to_html(r.get("summary")) + '</div></details>'
+                        if _has_raw:
+                            # "View document" reveals the raw extracted
+                            # text from the uploaded PDF/image (the actual
+                            # file is not stored, raw_text is the next
+                            # closest to viewing the document content).
+                            _raw_safe = ui_escape(r.get("raw_text") or "")
+                            rh += '<details class="md-rec-summary md-rec-raw"><summary><span class="material-symbols-rounded">description</span>View document</summary><div class="md-ai-summary-body md-rec-raw-body">' + _raw_safe.replace("\n", "<br>") + '</div></details>'
+                        rh += '</div>'
                     rh += '</div></div>'
                     st.html(rh)
             with _rec_x:
