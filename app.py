@@ -948,7 +948,7 @@ def list_health_records():
         return (get_user_doc() or {}).get("health_records", []) or []
     return _ensure_guest_store()["health_records"]
 
-def add_health_record(name, file_type, size_bytes, summary="", raw_text="", patient_name="", record_type=""):
+def add_health_record(name, file_type, size_bytes, summary="", raw_text="", patient_name="", record_type="", file_bytes=None):
     """Save a health record (PDF/image/scan/letter etc.) to the patient's
     profile.
 
@@ -963,6 +963,10 @@ def add_health_record(name, file_type, size_bytes, summary="", raw_text="", pati
     before incorporating it into analysis.
     `record_type` (optional) e.g. "prescription", lets the analysis layer
     apply name-matching rules only to prescription records.
+    `file_bytes` (optional) is the raw uploaded file content. We base64
+    encode it and store inline so View document can render the actual
+    image or PDF later. Skipped when over ~800 KB to stay safely under
+    Firestore's 1 MB document limit.
     """
     name = (name or "").strip()
     if not name:
@@ -978,6 +982,16 @@ def add_health_record(name, file_type, size_bytes, summary="", raw_text="", pati
         "record_type": (record_type or "").strip()[:32],
         "uploaded_at": datetime.now().isoformat(timespec="seconds"),
     }
+    # Inline file bytes (base64) so View document can render the real
+    # file. Cap at ~800 KB raw (base64 grows ~33%, so ~1.06 MB encoded)
+    # to stay under Firestore's 1 MB per-document limit.
+    if file_bytes:
+        try:
+            if len(file_bytes) <= 800_000:
+                import base64 as _b64_hr
+                entry["file_data_b64"] = _b64_hr.b64encode(file_bytes).decode("ascii")
+        except Exception as _e:
+            print("[add_health_record] base64 embed skipped:", _e)
     if st.session_state.get("is_authenticated"):
         current = list_health_records()
         update_user_doc({"health_records": current + [entry]})
@@ -22797,6 +22811,32 @@ elif st.session_state.mode == "records":
     .md-rec-raw summary .material-symbols-rounded { color: #0ea5e9 !important; -webkit-text-fill-color: #0ea5e9 !important; }
     .md-rec-raw summary { color: #0369a1 !important; }
     .md-rec-raw[open] summary { color: #075985 !important; }
+    /* Embedded image / PDF viewer container. */
+    .md-rec-file-body {
+        background: #fafbff;
+        border: 1px solid #eef2ff;
+        border-radius: 10px;
+        padding: 0.6rem;
+        margin-top: 0.5rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .md-rec-file-img {
+        max-width: 100%;
+        max-height: 520px;
+        height: auto;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(15,23,42,0.08);
+        display: block;
+    }
+    .md-rec-file-pdf {
+        width: 100%;
+        height: 560px;
+        border: none;
+        border-radius: 8px;
+        background: #fff;
+    }
 
     /* X delete button matches Recent Chats: plain icon, grey,
        turns red on hover, sits in the outer margin column. */
@@ -22899,6 +22939,15 @@ elif st.session_state.mode == "records":
                 st.error("Please add a label.")
             else:
                 size = len(rec_file.getbuffer())
+                # Capture the raw file bytes BEFORE any other read
+                # consumes the cursor; we'll persist them so View
+                # document can show the actual image / PDF later.
+                try:
+                    rec_file.seek(0)
+                    _rec_raw_bytes = rec_file.read()
+                    rec_file.seek(0)
+                except Exception:
+                    _rec_raw_bytes = None
                 summary = ""
                 raw_text_for_record = ""
                 # AI summary generation is mandatory, drops the previous
@@ -22914,7 +22963,7 @@ elif st.session_state.mode == "records":
                                 summary = strip_excessive_disclaimers(ai_resp or "")[:1400]
                     except Exception as _e:
                         print("record summary failed:", _e)
-                if add_health_record(rec_label, rec_file.type or rec_file.name.split(".")[-1].upper(), size, summary, raw_text=raw_text_for_record):
+                if add_health_record(rec_label, rec_file.type or rec_file.name.split(".")[-1].upper(), size, summary, raw_text=raw_text_for_record, file_bytes=_rec_raw_bytes):
                     st.success("Record saved.")
                     st.rerun()
 
@@ -22989,20 +23038,46 @@ elif st.session_state.mode == "records":
                     rh += '</div>'
                     _has_summary = bool(r.get("summary"))
                     _has_raw = bool((r.get("raw_text") or "").strip())
-                    if _has_summary or _has_raw:
+                    _file_b64 = r.get("file_data_b64") or ""
+                    _ft = (r.get("file_type") or "").lower()
+                    _has_file = bool(_file_b64)
+                    if _has_summary or _has_raw or _has_file:
                         rh += '<div class="md-rec-actions">'
                         if _has_summary:
                             rh += '<details class="md-rec-summary"><summary><span class="material-symbols-rounded">auto_awesome</span>View Ai summary</summary><div class="md-ai-summary-body">' + markdown_to_html(r.get("summary")) + '</div></details>'
-                        if _has_raw:
-                            # "View document" renders the raw extracted
-                            # text from the uploaded PDF/image (the actual
-                            # file is not stored, raw_text is the next
-                            # closest to viewing the document content).
-                            # Run through markdown_to_html so the bold
-                            # section headings (**PATIENT**, **MEDICATION**,
-                            # etc) render as real bold instead of literal
-                            # asterisks.
-                            rh += '<details class="md-rec-summary md-rec-raw"><summary><span class="material-symbols-rounded">description</span>View document</summary><div class="md-ai-summary-body md-rec-raw-body">' + markdown_to_html(r.get("raw_text") or "") + '</div></details>'
+                        # "View document" - prefer the actual file (image
+                        # or PDF embedded as base64) when we have it.
+                        # Falls back to the markdown-rendered raw text
+                        # for legacy records uploaded before file inlining.
+                        if _has_file:
+                            if "pdf" in _ft:
+                                _mime = "application/pdf"
+                                _body = (
+                                    '<embed class="md-rec-file-pdf" type="' + _mime + '" '
+                                    'src="data:' + _mime + ';base64,' + _file_b64 + '">'
+                                )
+                            else:
+                                # Default to a generic image mime; the
+                                # browser handles jpeg/png/webp uniformly.
+                                _img_mime = _ft if _ft.startswith("image/") else "image/jpeg"
+                                _body = (
+                                    '<img class="md-rec-file-img" '
+                                    'src="data:' + _img_mime + ';base64,' + _file_b64 + '" '
+                                    'alt="' + ui_escape(r.get("name", "")) + '">'
+                                )
+                            rh += (
+                                '<details class="md-rec-summary md-rec-raw">'
+                                '<summary><span class="material-symbols-rounded">description</span>View document</summary>'
+                                '<div class="md-rec-file-body">' + _body + '</div>'
+                                '</details>'
+                            )
+                        elif _has_raw:
+                            rh += (
+                                '<details class="md-rec-summary md-rec-raw">'
+                                '<summary><span class="material-symbols-rounded">description</span>View document</summary>'
+                                '<div class="md-ai-summary-body md-rec-raw-body">' + markdown_to_html(r.get("raw_text") or "") + '</div>'
+                                '</details>'
+                            )
                         rh += '</div>'
                     rh += '</div></div>'
                     st.html(rh)
