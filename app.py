@@ -21487,6 +21487,49 @@ elif st.session_state.mode == "history":
         [data-testid="stMain"] .md-hist2-row-link * {
             cursor: pointer !important;
         }
+        /* ── Invisible Streamlit button overlay on the row card ────
+           The card is now click-handled by a Streamlit button (in-app
+           rerun, no browser navigation, no blank flash). The button
+           sits absolutely on top of the markdown content with full
+           transparent paint - clicks fire instantly. */
+        [data-testid="stMain"] [class*="st-key-hist_row_"] [class*="st-key-hist_open_"] {
+            position: absolute !important;
+            top: 0 !important; left: 0 !important;
+            width: 100% !important; height: 100% !important;
+            margin: 0 !important; padding: 0 !important;
+            z-index: 3 !important;
+        }
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton,
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton > button,
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton button {
+            width: 100% !important; height: 100% !important;
+            min-height: 0 !important; max-height: none !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important; margin: 0 !important;
+            border-radius: 14px !important;
+            color: transparent !important;
+            -webkit-text-fill-color: transparent !important;
+            font-size: 0 !important;
+            cursor: pointer !important;
+            outline: none !important;
+        }
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton button:hover,
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton button:focus,
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton button:active {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        /* Hide all button inner content (label + icon spans). */
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton button [data-testid="stIconMaterial"],
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton button [data-testid="stMarkdownContainer"],
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton button p,
+        [data-testid="stMain"] [class*="st-key-hist_open_"] .stButton button span {
+            display: none !important;
+        }
         /* Make the right column where the X sits center its content
            vertically against the multi-line markdown column. */
         [data-testid="stMain"] [class*="st-key-hist_row_"] [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:last-child {
@@ -21906,32 +21949,19 @@ elif st.session_state.mode == "history":
                         _time_disp = _d.strftime("%d %b %Y") + "  ·  " + _t_str
                 _msg_word = "message" if _hc == 1 else "messages"
 
-                # Single bordered card per row. Layout is now a
-                # 2-column row:
-                #   col 1 - native <a> link wrapping the icon+title+
-                #           meta+preview. Click anywhere on this area
-                #           opens the conversation via ?conv=<id>.
-                #           ?s=<token> is preserved so the URL-driven
-                #           reload restores the session and the user
-                #           stays signed in.
-                #   col 2 - small X delete button. Click stages a
-                #           pending_delete_hid and reruns; the modal
-                #           dialog below catches it on the next run.
-                _open_s_tok = str(st.query_params.get("s", "") or "").strip()
-                _open_href = (
-                    "?conv=" + ui_escape(_hid) +
-                    (("&s=" + _open_s_tok) if _open_s_tok else "")
-                )
                 # Layout: outer 2-col row. Left col holds the bordered
-                # card with the link content; right col holds the X
-                # button OUTSIDE the card surface, sitting in the
-                # margin area next to it.
+                # card; right col holds the X button OUTSIDE the card.
+                # Click target on the card is now a Streamlit BUTTON
+                # overlay (in-app rerun via WebSocket - no browser
+                # navigation, no blank flash, no Firestore session
+                # round-trip). The visible content is plain HTML
+                # rendered first, and the transparent button is
+                # absolutely positioned on top via CSS to catch clicks.
                 _ht_short = _ht
                 _outer_l, _outer_x = st.columns([0.96, 0.04], gap="small", vertical_alignment="center")
                 with _outer_l:
                     with st.container(key="hist_row_" + _key):
                         st.html(
-                            '<a class="md-hist2-row-link" href="' + _open_href + '" target="_self">'
                             '<div class="md-hist2-row-inner md-hist2-row-compact">'
                             '<div class="md-hist2-row-ic"><span class="material-symbols-rounded">chat_bubble</span></div>'
                             '<div class="md-hist2-row-body">'
@@ -21944,8 +21974,26 @@ elif st.session_state.mode == "history":
                             '</div>'
                             '</div>'
                             '</div>'
-                            '</a>'
                         )
+                        # Invisible overlay button covers the whole card
+                        # (positioned absolute via CSS) and loads the
+                        # conversation in-app on click.
+                        if st.button(" ", key="hist_open_" + _key, use_container_width=True):
+                            _conv = load_conversation(st.session_state.user_email_hash, _hid)
+                            if _conv is not None:
+                                st.session_state.current_conversation_id = _hid
+                                st.session_state.messages = _conv.get("messages", []) or []
+                                st.session_state.qcount = sum(1 for m in st.session_state.messages if m.get("role") == "user")
+                                st.session_state.feedback = {}
+                                st.session_state.last_sources = []
+                                st.session_state.emergency_detected = False
+                                st.session_state.mode = "chat"
+                                try:
+                                    st.query_params["conv"] = _hid
+                                    st.query_params["mode"] = "chat"
+                                except Exception:
+                                    pass
+                                st.rerun()
                 with _outer_x:
                     if st.button(" ", key="hist_del_" + _key, icon=":material/close:", help="Delete this chat"):
                         st.session_state["pending_delete_hid"] = _hid
