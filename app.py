@@ -10505,9 +10505,18 @@ body:not(:has(.md-page-hero-appts)) [class*="st-key-cal_"] {
     display: none !important;
 }
 
-/* Health Records page row buttons (View / Download / Delete). */
+/* Health Records page row buttons (View / Download / Delete) and
+   the redesigned record-card containers (hr_rec_*) + X delete
+   buttons (hr_del_*). Also catches the markdown card inner content
+   and the empty-state placeholder so they don't bleed onto other
+   pages during React reconciliation. */
 body:not(:has(.md-page-hero-records)) [class*="st-key-rec_"],
-body:not(:has(.md-page-hero-records)) [class*="st-key-records_"] {
+body:not(:has(.md-page-hero-records)) [class*="st-key-records_"],
+body:not(:has(.md-page-hero-records)) [class*="st-key-hr_rec_"],
+body:not(:has(.md-page-hero-records)) [class*="st-key-hr_del_"],
+body:not(:has(.md-page-hero-records)) [class*="st-key-hr_upload"],
+body:not(:has(.md-page-hero-records)) .md-rec-card-inner,
+body:not(:has(.md-page-hero-records)) .md-rec-empty {
     display: none !important;
 }
 
@@ -18960,6 +18969,9 @@ if st.session_state.mode == "chat":
             body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-add_appt_form"],
             body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-cal_url_form"],
             body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-rec_upload_form"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-hr_rec_"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-hr_del_"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-hr_upload"],
             body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-rx_reader_form"],
             body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-hr_form_today"],
             body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-sleep_form_today"],
@@ -21099,6 +21111,9 @@ elif st.session_state.mode == "history":
         body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-add_appt_form"],
         body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-cal_url_form"],
         body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-rec_upload_form"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-hr_rec_"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-hr_del_"],
+        body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-hr_upload"],
         body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-rx_reader_form"],
         body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-hr_form_today"],
         body:has(.md-page-marker-history) [data-testid="stMain"] [class*="st-key-sleep_form_today"],
