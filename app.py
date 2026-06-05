@@ -21467,6 +21467,69 @@ if st.session_state.mode == "chat":
             else '<div class="av av-bot">M</div>'
         )
 
+        # ── Pending vision analysis handoff (from home Analyze button) ──
+        # Set by the home form's two-phase intercept. We're now on the chat
+        # page with the user's image visible above; run the actual analysis
+        # here so the spinner shows in context (under the user's image).
+        if st.session_state.get("pending_vision_b64"):
+            _pv_b64 = st.session_state.pop("pending_vision_b64", "")
+            _pv_q = st.session_state.pop("pending_vision_question", "")
+            _pv_fname = st.session_state.pop("pending_vision_filename", "uploaded image")
+            _pv_mime = st.session_state.pop("pending_vision_mime", "image/jpeg")
+            _pv_lang = LANGUAGES[st.session_state.selected_language]["lang_instruction"]
+            for _msg in st.session_state.messages:
+                if _msg.get("role") == "user" and _msg.get("type") == "image":
+                    _user_av_pv = (
+                        '<div class="av av-user av-user-initial"><span class="av-user-letter">'
+                        + ui_text((st.session_state.patient_name or "?")[:1].upper(), 2) +
+                        '</span></div>'
+                        if (st.session_state.get("is_authenticated") and st.session_state.get("patient_name") and st.session_state.patient_name != "Guest")
+                        else '<div class="av av-user"><span class="material-symbols-rounded" style="font-size: 1.25rem;">person</span></div>'
+                    )
+                    _ts_pv = ('<div class="bubble-ts">' + ui_escape(_msg.get("ts", "")) + '</div>') if _msg.get("ts") else ""
+                    st.markdown('<span class="image-tag">Medical image uploaded for analysis</span>', unsafe_allow_html=True)
+                    if _msg.get("image_b64"):
+                        st.markdown(
+                            '<div class="md-chat-img-wrap">'
+                            '<img class="md-chat-img" src="data:' + (_msg.get("image_mime", "image/jpeg")) + ';base64,' + _msg["image_b64"] + '" alt="' + ui_text(_msg.get("image_name", ""), 80) + '">'
+                            '<div class="md-chat-img-cap">' + ui_text(_msg.get("image_name", ""), 80) + '</div>'
+                            '</div>',
+                            unsafe_allow_html=True,
+                        )
+                    if _msg.get("content"):
+                        st.markdown(
+                            '<div class="user-wrap"><div class="user-stack">'
+                            '<div class="user-bubble">' + ui_lines(_msg.get("content", "")) + '</div>'
+                            + _ts_pv + '</div>' + _user_av_pv + '</div>',
+                            unsafe_allow_html=True,
+                        )
+                    break
+            with st.spinner("MediChat is analysing your image..."):
+                try:
+                    _pv_reply, _pv_engine = medichat_vision(_pv_q, _pv_b64, st.session_state.messages, _pv_lang)
+                    _pv_reply = strip_excessive_disclaimers(_pv_reply)
+                except Exception as _pv_e:
+                    print("Vision analysis failed:", _pv_e)
+                    _pv_reply = "Sorry, I couldn't analyse this image right now. Please try uploading it again."
+                    _pv_engine = "vision-error"
+            st.session_state.last_image_context = (
+                "User uploaded image: " + _pv_fname + "\n"
+                "User's question about image: " + (_pv_q if _pv_q else "(no question, just the image)") + "\n"
+                "Your visual analysis: " + _pv_reply
+            )
+            st.session_state.last_sources = ["Image Analysis"]
+            st.session_state.messages.append({
+                "role": "assistant", "type": "text", "content": _pv_reply,
+                "sources": ["Image Analysis"], "confidence": "medium", "confidence_pct": 75,
+                "engine": _pv_engine, "ts": _msg_now_ts(),
+            })
+            # Persist to Firestore + Health Records (best effort).
+            try:
+                save_conversation()
+            except Exception:
+                pass
+            st.rerun()
+
         for msg in st.session_state.messages:
             role = msg.get("role", "")
             content = msg.get("content", "")
@@ -22206,6 +22269,33 @@ if st.session_state.mode == "chat":
                 _up_b64 = base64.b64encode(_up_bytes).decode("ascii") if _up_bytes else ""
             except Exception:
                 _up_b64 = ""
+
+            # ── Two-phase vision flow (image uploads from the EMPTY HOME) ──
+            # Rather than block the user on the home page for 10-30s while
+            # medichat_vision runs, push the user image message + stash the
+            # analysis bytes, then rerun. The next rerun lands on the chat
+            # page (messages is non-empty) where the user sees their image
+            # immediately + a "MediChat is analysing" spinner. The actual
+            # analysis runs there, with proper visible feedback.
+            # PDFs keep using the existing fast inline flow (they read the
+            # text fast and the user expects to see the chat anyway).
+            if not is_pdf and home_empty_chat:
+                st.session_state.messages.append({
+                    "role": "user", "type": "image",
+                    "content": effective_user_input.strip(),
+                    "image_b64": _up_b64,
+                    "image_mime": uploaded_image.type or "image/jpeg",
+                    "image_name": uploaded_image.name,
+                    "ts": _msg_now_ts(),
+                })
+                st.session_state.pending_vision_b64 = _up_b64
+                st.session_state.pending_vision_question = effective_user_input.strip()
+                st.session_state.pending_vision_filename = uploaded_image.name
+                st.session_state.pending_vision_mime = uploaded_image.type or "image/jpeg"
+                st.session_state.home_show_vision_upload = False
+                st.session_state.uploader_key = st.session_state.get("uploader_key", 0) + 1
+                st.rerun()
+
             if is_pdf:
                 st.session_state.messages.append({"role": "user", "type": "pdf", "content": (effective_user_input.strip() + " " if effective_user_input.strip() else "") + "[PDF: " + uploaded_image.name + "]", "ts": _msg_now_ts(), "file_b64": _up_b64, "file_name": uploaded_image.name, "file_mime": uploaded_image.type or "application/pdf"})
                 with st.spinner("Reading your medical report..."):
