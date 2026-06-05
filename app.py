@@ -222,54 +222,59 @@ st.markdown(
     """
     <style>
     @media (max-width: 768px) {
-        /* Kill Streamlit's collapse / chevron controls — we render a
-           permanent thin icon rail instead. */
+        /* Hide Streamlit's collapse / re-open chevron — we render a
+           permanent thin icon rail instead, so the chevron is noise. */
         [data-testid='stSidebarCollapsedControl'],
         [data-testid='stSidebarCollapseButton'],
         [data-testid='collapsedControl'] {
             display: none !important;
         }
 
-        /* Force-narrow the sidebar at every wrapper level with maximum
-           specificity so Streamlit's inline emotion-cache widths can't
-           override us. */
-        section[data-testid='stSidebar'],
-        section[data-testid='stSidebar'] > div,
-        section[data-testid='stSidebar'] [data-testid='stSidebarContent'],
-        section[data-testid='stSidebar'] [data-testid='stSidebarUserContent'] {
-            width: 64px !important;
-            min-width: 64px !important;
-            max-width: 64px !important;
-            flex-basis: 64px !important;
+        /* Sidebar becomes a thin icon-only rail (~68px) instead of a
+           full-width drawer that blocks the content. */
+        [data-testid='stSidebar'] {
+            width: 68px !important;
+            min-width: 68px !important;
+            max-width: 68px !important;
+            padding: 0.4rem 0 !important;
+        }
+        [data-testid='stSidebar'] > div,
+        [data-testid='stSidebar'] [data-testid='stSidebarContent'],
+        [data-testid='stSidebar'] [data-testid='stSidebarUserContent'] {
+            width: 68px !important;
+            min-width: 68px !important;
+            max-width: 68px !important;
             padding-left: 0 !important;
             padding-right: 0 !important;
         }
-        section[data-testid='stSidebar'] {
-            padding-top: 0.4rem !important;
-            padding-bottom: 0.4rem !important;
-        }
 
-        /* Bulletproof hide: every direct child of the sidebar's content
-           area is hidden UNLESS it contains a nav button. This catches
-           the logo, Recent Chats, language picker, Privacy & Terms,
-           profile chip, copyright, sign-in tile — without needing to
-           know each one's exact class. */
-        section[data-testid='stSidebar'] [data-testid='stVerticalBlock'] > [data-testid='stElementContainer']:not(:has([class*='st-key-nav_'])) {
+        /* Hide everything in the sidebar that isn't a nav button on mobile:
+           logo block, Recent Chats list, language picker, Privacy & Terms,
+           profile chip, copyright, dividers. The user navigates by icon. */
+        [data-testid='stSidebar'] .md-sidebar-logo,
+        [data-testid='stSidebar'] .md-past-chats,
+        [data-testid='stSidebar'] .md-sidebar-bottom,
+        [data-testid='stSidebar'] .md-profile-chip,
+        [data-testid='stSidebar'] .md-copyright,
+        [data-testid='stSidebar'] .md-lang-selector-anchor,
+        [data-testid='stSidebar'] [data-testid='stSelectbox'],
+        [data-testid='stSidebar'] [class*='st-key-_privacy_terms_btn'],
+        [data-testid='stSidebar'] [class*='st-key-open_partners_dialog'],
+        [data-testid='stSidebar'] hr,
+        [data-testid='stSidebar'] [data-testid='stMarkdown']:has(h2),
+        [data-testid='stSidebar'] [data-testid='stMarkdown']:has(h3),
+        [data-testid='stSidebar'] [data-testid='stImage'] {
             display: none !important;
         }
 
-        /* Nav buttons: circular icon tiles with no label. */
-        section[data-testid='stSidebar'] [class*='st-key-nav_'] {
-            margin: 0.32rem auto !important;
+        /* Nav buttons: circular icon tiles. Hide text label, center icon,
+           tight vertical rhythm. */
+        [data-testid='stSidebar'] [class*='st-key-nav_'] {
+            margin: 0.35rem auto !important;
             display: flex !important;
             justify-content: center !important;
-            width: 48px !important;
         }
-        section[data-testid='stSidebar'] [class*='st-key-nav_'] .stButton {
-            width: 48px !important;
-            margin: 0 auto !important;
-        }
-        section[data-testid='stSidebar'] [class*='st-key-nav_'] .stButton button {
+        [data-testid='stSidebar'] [class*='st-key-nav_'] .stButton button {
             width: 44px !important;
             min-width: 44px !important;
             max-width: 44px !important;
@@ -284,28 +289,24 @@ st.markdown(
             justify-content: center !important;
             gap: 0 !important;
         }
-        section[data-testid='stSidebar'] [class*='st-key-nav_'] .stButton button [data-testid='stMarkdownContainer'],
-        section[data-testid='stSidebar'] [class*='st-key-nav_'] .stButton button p {
+        [data-testid='stSidebar'] [class*='st-key-nav_'] .stButton button [data-testid='stMarkdownContainer'] {
             display: none !important;
         }
-        section[data-testid='stSidebar'] [class*='st-key-nav_'] .stButton button [data-testid='stIconMaterial'] {
+        [data-testid='stSidebar'] [class*='st-key-nav_'] .stButton button [data-testid='stIconMaterial'] {
             font-size: 1.3rem !important;
             margin: 0 !important;
         }
 
-        /* Main content shifts right to make room for the 64px rail and
-           fills the rest of the viewport. */
+        /* Main content shifts right to make room for the 68px rail. */
         [data-testid='stAppViewContainer'] > section.stMain,
-        section.stMain[data-testid='stMain'] {
-            margin-left: 64px !important;
-            width: calc(100vw - 64px) !important;
-            max-width: calc(100vw - 64px) !important;
-            flex: 1 1 calc(100vw - 64px) !important;
+        [data-testid='stMain'] {
+            margin-left: 68px !important;
+            width: calc(100vw - 68px) !important;
+            max-width: calc(100vw - 68px) !important;
         }
         [data-testid='stMainBlockContainer'] {
             padding: 0.7rem 0.9rem 1.2rem !important;
             max-width: 100% !important;
-            width: 100% !important;
         }
     }
     </style>
