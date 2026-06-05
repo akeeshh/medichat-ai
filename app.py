@@ -16207,6 +16207,109 @@ except Exception:
     pass
 
 
+# ── Instant nav-click transition (snappy feel, hides rerun lag) ──────
+# Streamlit's full-page rerun takes ~500-1000ms during nav clicks. The
+# browser sees the OLD page until the new content arrives, which feels
+# laggy. This script listens for nav button clicks and INSTANTLY hides
+# the main content + shows a soft brand-color spinner so the user sees
+# immediate feedback. A MutationObserver clears the hidden state the
+# moment the new page DOM is reconciled in. Result: click → blank +
+# spinner → new page fades in. Same total time, but the click feels
+# responsive instead of frozen.
+try:
+    import streamlit.components.v1 as _navfx_components
+    _navfx_components.html(
+        """
+        <script>
+        (function() {
+            try {
+                const win = window.parent;
+                const doc = win.document;
+                if (win.__medichatNavTransitionV1) return;
+                win.__medichatNavTransitionV1 = true;
+
+                const style = doc.createElement('style');
+                style.textContent = `
+                    body[data-medichat-navigating="true"] [data-testid="stMainBlockContainer"] {
+                        opacity: 0 !important;
+                        pointer-events: none !important;
+                        transition: opacity 80ms ease-out !important;
+                    }
+                    body[data-medichat-navigating="true"] [data-testid="stMain"]::after {
+                        content: '';
+                        position: fixed;
+                        top: 50%;
+                        left: calc(50% + 130px);
+                        width: 36px;
+                        height: 36px;
+                        margin: -18px 0 0 -18px;
+                        border-radius: 50%;
+                        border: 3px solid rgba(33, 118, 174, 0.18);
+                        border-top-color: #2176ae;
+                        animation: mdNavSpin 0.7s linear infinite;
+                        z-index: 99999;
+                        pointer-events: none;
+                    }
+                    @keyframes mdNavSpin { to { transform: rotate(360deg); } }
+                `;
+                doc.head.appendChild(style);
+
+                let clearTimer = null;
+                function markNavigating() {
+                    doc.body.setAttribute('data-medichat-navigating', 'true');
+                    if (clearTimer) clearTimeout(clearTimer);
+                    // Safety: never leave the spinner up longer than 4s
+                    clearTimer = setTimeout(function() {
+                        doc.body.removeAttribute('data-medichat-navigating');
+                    }, 4000);
+                }
+                function clearNavigating() {
+                    doc.body.removeAttribute('data-medichat-navigating');
+                    if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
+                }
+
+                // Catch every sidebar nav button click + Smart Action cards
+                // + Recent Chats tiles + dashboard tiles. Anything that
+                // changes the page should feel instant.
+                doc.addEventListener('click', function(e) {
+                    const btn = e.target.closest(
+                        '[class*="st-key-nav_"], ' +
+                        '[class*="st-key-sa_"], ' +
+                        '[class*="st-key-qa_"], ' +
+                        '[class*="st-key-hist_open_"], ' +
+                        '[class*="st-key-hist_new_chat"], ' +
+                        '[class*="st-key-hist_back"]'
+                    );
+                    if (btn) markNavigating();
+                }, true);
+
+                // MutationObserver: when the main block container's children
+                // change (new page rendered), clear the navigating state on
+                // next frame so the new content reveals smoothly.
+                const obs = new MutationObserver(function() {
+                    if (doc.body.getAttribute('data-medichat-navigating') === 'true') {
+                        win.requestAnimationFrame(clearNavigating);
+                    }
+                });
+                function attach() {
+                    const main = doc.querySelector('[data-testid="stMain"]');
+                    if (main) {
+                        obs.observe(main, { childList: true, subtree: true });
+                    } else {
+                        setTimeout(attach, 100);
+                    }
+                }
+                attach();
+            } catch (e) { console.error('[MediChat] nav-transition setup failed:', e); }
+        })();
+        </script>
+        """,
+        height=0,
+    )
+except Exception:
+    pass
+
+
 # ── Early session-restore (BEFORE the sidebar renders) ──────────────
 # The sidebar profile tile renders ~1900 lines later but its display
 # depends on st.session_state.is_authenticated. Without this early-restore,
