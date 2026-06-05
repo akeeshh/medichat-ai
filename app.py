@@ -190,7 +190,7 @@ def load_asset_data_uri(filename):
 def get_brand_logo_data_uri():
     """Backwards-compatible accessor for the MediChat brand logo."""
     return load_asset_data_uri("MediChat logo.png")
-MEDICAL_REFERENCE_TARGET = max(1000, _safe_int_env("MEDICHAT_REFERENCE_TARGET", 5000))
+MEDICAL_REFERENCE_TARGET = max(1000, _safe_int_env("MEDICHAT_REFERENCE_TARGET", 10000))
 PRIVACY_POLICY_URL = _safe_secret(
     "PRIVACY_POLICY_URL",
     os.environ.get("PRIVACY_POLICY_URL", "?mode=privacy"),
