@@ -11052,19 +11052,59 @@ body:not(:has(.md-page-marker-home)) [class*="st-key-home_send_btn"],
 body:not(:has(.md-page-marker-home)) [class*="st-key-home_vision_"],
 body:not(:has(.md-page-marker-home)) [class*="st-key-home_overview_see_all"],
 body:not(:has(.md-page-marker-home)) [class*="st-key-smart_"],
+body:not(:has(.md-page-marker-home)) [class*="st-key-sa_"],
 body:not(:has(.md-page-marker-home)) [class*="st-key-tile_"],
 body:not(:has(.md-page-marker-home)) [class*="st-key-rail_"],
 body:not(:has(.md-page-marker-home)) [class*="st-key-home_tip_"] {
     display: none !important;
 }
-/* Home greeting + subgreeting + composer note, so the "Good morning,
-   Akee 👋" and the disclaimer line don't flash on other pages. */
+/* Home greeting + subgreeting + composer note + right-rail Health
+   Overview / Health Passport / Daily Tip carousel / wearable card,
+   so none of these flash on AI Insights, Records, Meds, Appts, etc.
+   while React reconciles the old home DOM away. */
 body:not(:has(.md-page-marker-home)) .md-greet-wrap,
 body:not(:has(.md-page-marker-home)) .md-home-greet-wrap,
 body:not(:has(.md-page-marker-home)) .md-home-composer-note,
 body:not(:has(.md-page-marker-home)) .md-home-hero,
-body:not(:has(.md-page-marker-home)) .md-home-rail {
+body:not(:has(.md-page-marker-home)) .md-home-rail,
+body:not(:has(.md-page-marker-home)) .md-smart-head,
+body:not(:has(.md-page-marker-home)) .md-smart-title,
+body:not(:has(.md-page-marker-home)) .md-snap-card,
+body:not(:has(.md-page-marker-home)) .md-passport-card,
+body:not(:has(.md-page-marker-home)) .md-passport-head,
+body:not(:has(.md-page-marker-home)) .md-passport-sub,
+body:not(:has(.md-page-marker-home)) .md-passport-progress,
+body:not(:has(.md-page-marker-home)) .md-passport-check,
+body:not(:has(.md-page-marker-home)) .md-tip-carousel,
+body:not(:has(.md-page-marker-home)) .md-tip,
+body:not(:has(.md-page-marker-home)) .md-wearable-card,
+body:not(:has(.md-page-marker-home)) .md-composer-glow {
     display: none !important;
+}
+
+/* Streamlit's default "running" state fades all elements to ~0.5 opacity
+   during reruns. That's what makes nav transitions look like a clumsy
+   half-loaded page mid-jump. Force full opacity so each rerun snaps in
+   clean instead of dimming the world first. */
+[data-stale="true"],
+[data-testid="stAppViewContainer"][data-stale="true"],
+.stApp[data-stale="true"],
+.element-container[data-stale="true"],
+div[data-testid="stMarkdownContainer"][data-stale="true"] {
+    opacity: 1 !important;
+    filter: none !important;
+    transition: none !important;
+}
+
+/* Subtle fade-in on the main content block so a nav click feels like a
+   smooth swap rather than a hard pop. Sidebar stays still (it doesn't
+   change between pages), only the main pane animates. */
+@keyframes md-page-fade-in {
+    from { opacity: 0; transform: translateY(3px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+[data-testid="stMain"] [data-testid="stMainBlockContainer"] {
+    animation: md-page-fade-in 180ms ease-out;
 }
 
 /* Help page action buttons / FAQ togglers. */
