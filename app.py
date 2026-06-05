@@ -15657,7 +15657,12 @@ def _pdf_header(pdf, title, subtitle=""):
     pdf.set_xy(120, 14)
     pdf.set_text_color(100, 116, 139)
     pdf.set_font("Helvetica", "", 8)
-    pdf.cell(70, 4, "Generated " + datetime.now().strftime("%B %d, %Y at %I:%M %p"), align="R")
+    # Use the viewer's local time, not UTC (Streamlit Cloud server is UTC).
+    try:
+        _gen_dt = get_user_local_now()
+    except Exception:
+        _gen_dt = datetime.now()
+    pdf.cell(70, 4, "Generated " + _gen_dt.strftime("%B %d, %Y at %I:%M %p"), align="R")
     # Title - large bold navy
     pdf.set_xy(20, 34)
     pdf.set_text_color(12, 45, 72)
@@ -21351,7 +21356,7 @@ if st.session_state.mode == "chat":
         with dl_col1:
             if st.button(L["download_chat_btn"], use_container_width=True, key="dl_chat_btn"):
                 pdf_bytes = generate_chat_pdf(st.session_state.messages)
-                st.download_button(label="Click here to save your PDF", data=pdf_bytes, file_name="MediChat_Conversation_" + datetime.now().strftime("%Y%m%d_%H%M") + ".pdf", mime="application/pdf", use_container_width=True, key="dl_chat_dl")
+                st.download_button(label="Click here to save your PDF", data=pdf_bytes, file_name="MediChat_Conversation_" + get_user_local_now().strftime("%Y%m%d_%H%M") + ".pdf", mime="application/pdf", use_container_width=True, key="dl_chat_dl")
 
         with dl_col2:
             if st.button("📋 Doctor Visit Summary", use_container_width=True, key="dl_summary_btn", help="Generates a structured one-page summary you can hand to your GP at your next appointment"):
@@ -21361,7 +21366,7 @@ if st.session_state.mode == "chat":
                     st.download_button(
                         label="Save Doctor Visit Summary PDF",
                         data=summary_pdf,
-                        file_name="MediChat_DoctorVisitSummary_" + datetime.now().strftime("%Y%m%d_%H%M") + ".pdf",
+                        file_name="MediChat_DoctorVisitSummary_" + get_user_local_now().strftime("%Y%m%d_%H%M") + ".pdf",
                         mime="application/pdf",
                         use_container_width=True,
                         key="dl_summary_dl"
@@ -21391,7 +21396,7 @@ if st.session_state.mode == "chat":
                     st.download_button(
                         label="Save Full Medical Record PDF",
                         data=full_pdf,
-                        file_name="MediChat_FullMedicalRecord_" + datetime.now().strftime("%Y%m%d_%H%M") + ".pdf",
+                        file_name="MediChat_FullMedicalRecord_" + get_user_local_now().strftime("%Y%m%d_%H%M") + ".pdf",
                         mime="application/pdf",
                         use_container_width=True,
                         key="dl_full_record_dl"
@@ -22655,7 +22660,7 @@ elif st.session_state.mode == "eval":
                 st.download_button(
                     "📊 Export Analytics (Excel)",
                     data=_buffer.getvalue(),
-                    file_name="medichat_analytics_" + datetime.now().strftime("%Y%m%d_%H%M") + ".xlsx",
+                    file_name="medichat_analytics_" + get_user_local_now().strftime("%Y%m%d_%H%M") + ".xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )
@@ -25745,7 +25750,7 @@ else:
         data = st.session_state.assessment_data
         urgency = parsed.get("urgency", "See a doctor soon")
         urgency_lower = urgency.lower()
-        report_date = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+        report_date = get_user_local_now().strftime("%B %d, %Y at %I:%M %p")
 
         st.markdown("---")
         st.markdown("### " + L["report_title"])
@@ -25806,7 +25811,7 @@ else:
         st.markdown("---")
         st.markdown("**" + L["download_chat"] + "**")
         pdf_bytes = generate_assessment_pdf(parsed, data, report_date)
-        st.download_button(label=L["download_assess_btn"], data=pdf_bytes, file_name="MediChat_Assessment_" + datetime.now().strftime("%Y%m%d_%H%M") + ".pdf", mime="application/pdf", use_container_width=True)
+        st.download_button(label=L["download_assess_btn"], data=pdf_bytes, file_name="MediChat_Assessment_" + get_user_local_now().strftime("%Y%m%d_%H%M") + ".pdf", mime="application/pdf", use_container_width=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
         br1, br2 = st.columns(2)
