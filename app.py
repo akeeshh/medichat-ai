@@ -15632,26 +15632,34 @@ def _pdf_measure_lines(pdf, w, text, line_h=5):
     return max(1, n)
 
 def _pdf_header(pdf, title, subtitle=""):
-    """Standard MediChat PDF header: logo + brand + title + generated date."""
+    """Premium MediChat PDF header: brand band, logo + brand + tagline + title."""
+    # Slim brand-color band across the very top — instant premium feel.
+    pdf.set_fill_color(33, 118, 174)
+    pdf.rect(0, 0, 210, 3.5, "F")
     # Logo (skip silently if asset missing)
     try:
         _logo = _pdf_logo_path()
         if _logo and os.path.exists(_logo):
-            pdf.image(_logo, x=20, y=15, w=12, h=12)
+            pdf.image(_logo, x=20, y=11, w=14, h=14)
     except Exception:
         pass
     # Brand wordmark next to logo
-    pdf.set_xy(34, 17)
+    pdf.set_xy(36, 12)
     pdf.set_text_color(33, 118, 174)
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(50, 8, "MediChat")
+    pdf.set_font("Helvetica", "B", 17)
+    pdf.cell(50, 7, "MediChat")
+    # Tagline under wordmark, mirrors the in-app brand lockup
+    pdf.set_xy(36, 20)
+    pdf.set_text_color(120, 130, 144)
+    pdf.set_font("Helvetica", "", 7.5)
+    pdf.cell(50, 4, "Your AI Health Assistant")
     # Generated date top-right
-    pdf.set_xy(120, 17)
+    pdf.set_xy(120, 14)
     pdf.set_text_color(100, 116, 139)
     pdf.set_font("Helvetica", "", 8)
-    pdf.cell(70, 4, "Generated: " + datetime.now().strftime("%B %d, %Y at %I:%M %p"), align="R")
-    # Title — large bold blue
-    pdf.set_xy(20, 32)
+    pdf.cell(70, 4, "Generated " + datetime.now().strftime("%B %d, %Y at %I:%M %p"), align="R")
+    # Title - large bold navy
+    pdf.set_xy(20, 34)
     pdf.set_text_color(12, 45, 72)
     pdf.set_font("Helvetica", "B", 22)
     pdf.cell(0, 10, clean_text(title), ln=True)
@@ -15660,7 +15668,7 @@ def _pdf_header(pdf, title, subtitle=""):
         pdf.set_text_color(33, 118, 174)
         pdf.set_font("Helvetica", "B", 11)
         pdf.cell(0, 6, clean_text(subtitle), ln=True)
-    # Divider
+    # Hairline divider
     pdf.set_draw_color(226, 232, 240)
     pdf.set_line_width(0.4)
     y_div = pdf.get_y() + 3
@@ -15668,7 +15676,7 @@ def _pdf_header(pdf, title, subtitle=""):
     pdf.set_y(y_div + 5)
 
 def _pdf_info_box(pdf, text, color="info"):
-    """Soft tinted call-out box with a dynamically-sized rect."""
+    """Soft tinted call-out box, borderless for a cleaner card feel."""
     if color == "warn":
         bg, ic_bg, ic_fg, tx = (255, 251, 235), (245, 158, 11), (255, 255, 255), (146, 64, 14)
     elif color == "safe":
@@ -15677,46 +15685,56 @@ def _pdf_info_box(pdf, text, color="info"):
         bg, ic_bg, ic_fg, tx = (239, 246, 252), (33, 118, 174), (255, 255, 255), (30, 64, 175)
     pdf.set_font("Helvetica", "", 9)
     body_w = 148
-    line_h = 4.6
+    line_h = 4.7
     n_lines = _pdf_measure_lines(pdf, body_w, text, line_h=line_h)
-    pad_y = 4
-    box_h = max(14, pad_y * 2 + n_lines * line_h)
+    pad_y = 5
+    box_h = max(16, pad_y * 2 + n_lines * line_h)
     y = pdf.get_y()
+    # Borderless tinted card — looks softer than the old outlined rect.
     pdf.set_fill_color(*bg)
-    pdf.set_draw_color(*ic_bg)
-    pdf.set_line_width(0.3)
-    pdf.rect(20, y, 170, box_h, "DF")
-    # Info dot (perfectly centered vertically inside the box)
-    icon_d = 7
+    pdf.set_draw_color(*bg)
+    pdf.rect(20, y, 170, box_h, "F")
+    # Icon disc, vertically centered
+    icon_d = 8
     icon_y = y + (box_h - icon_d) / 2
     pdf.set_fill_color(*ic_bg)
     pdf.ellipse(25, icon_y, icon_d, icon_d, "F")
     pdf.set_text_color(*ic_fg)
-    pdf.set_font("Helvetica", "B", 9)
-    pdf.set_xy(25, icon_y + 1)
-    pdf.cell(icon_d, icon_d - 2, "i", align="C")
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_xy(25, icon_y + 1.2)
+    pdf.cell(icon_d, icon_d - 2.4, "i", align="C")
     # Body
     pdf.set_text_color(*tx)
     pdf.set_font("Helvetica", "", 9)
-    pdf.set_xy(36, y + pad_y)
+    pdf.set_xy(37, y + pad_y)
     pdf.multi_cell(body_w, line_h, clean_text(text))
-    pdf.set_y(y + box_h + 4)
+    pdf.set_y(y + box_h + 5)
 
 def _pdf_section_label(pdf, label, color=(13, 148, 136)):
-    """Caps section header with thin colored underline."""
+    """Section header rendered as a soft colored pill chip — premium feel."""
     y = pdf.get_y()
-    pdf.set_text_color(*color)
-    pdf.set_font("Helvetica", "B", 10)
-    pdf.set_xy(20, y)
-    pdf.cell(0, 5, label.upper())
-    pdf.set_draw_color(*color)
-    pdf.set_line_width(0.4)
-    pdf.line(20, y + 7, 190, y + 7)
-    pdf.set_y(y + 10)
+    label_text = label.upper()
+    pdf.set_font("Helvetica", "B", 8.5)
+    text_w = pdf.get_string_width(label_text)
+    pad_x = 4.5
+    chip_w = text_w + pad_x * 2
+    chip_h = 6.2
+    r, g, b = color
+    # Mix 88% white into the brand color for a soft tinted bg
+    lr = int(255 - (255 - r) * 0.12)
+    lg = int(255 - (255 - g) * 0.12)
+    lb = int(255 - (255 - b) * 0.12)
+    pdf.set_fill_color(lr, lg, lb)
+    pdf.set_draw_color(lr, lg, lb)
+    pdf.rect(20, y, chip_w, chip_h, "F")
+    pdf.set_text_color(r, g, b)
+    pdf.set_xy(20 + pad_x, y + 0.9)
+    pdf.cell(text_w, chip_h - 1.8, label_text)
+    pdf.set_y(y + chip_h + 5)
 
 def _pdf_footer(pdf):
-    """Footer pinned to the bottom of the current page. Auto-page-break is
-    temporarily disabled so the footer placement never spills to a new
+    """Footer pinned at the bottom: disclaimer left, brand + page number right.
+    Auto-page-break is temporarily disabled so placement never spills to a new
     blank page."""
     was_auto = getattr(pdf, "auto_page_break", True)
     try:
@@ -15729,16 +15747,26 @@ def _pdf_footer(pdf):
         pdf.set_text_color(120, 130, 144)
         pdf.set_font("Helvetica", "", 7)
         pdf.set_xy(20, 278)
-        pdf.multi_cell(135, 3.0,
+        pdf.multi_cell(128, 3.0,
             "MediChat is a research prototype, not a medical device. This document is compiled "
             "from patient-submitted data and AI-extracted text and may contain errors or "
             "omissions. Always rely on your qualified clinical judgement."
         )
         # Brand mark right
-        pdf.set_xy(155, 280)
+        pdf.set_xy(150, 278)
         pdf.set_text_color(33, 118, 174)
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(35, 4, "MediChat AI", align="R")
+        pdf.set_font("Helvetica", "B", 9.5)
+        pdf.cell(40, 4, "MediChat AI", align="R")
+        # Page number below brand mark
+        try:
+            page_n = pdf.page_no()
+        except Exception:
+            page_n = 0
+        if page_n:
+            pdf.set_xy(150, 283)
+            pdf.set_text_color(160, 170, 184)
+            pdf.set_font("Helvetica", "", 7)
+            pdf.cell(40, 3, "Page " + str(page_n), align="R")
     finally:
         # Restore auto-page-break (best effort)
         try:
@@ -15769,35 +15797,49 @@ def generate_chat_pdf(messages):
         if not content and msg_type != "image":
             continue
         is_user = role == "user"
-        stripe_clr = (33, 118, 174) if is_user else (13, 148, 136)
+        if is_user:
+            stripe_clr = (33, 118, 174)
+            bubble_bg = (239, 246, 252)
+        else:
+            stripe_clr = (13, 148, 136)
+            bubble_bg = (240, 253, 250)
         label_text = "You" if is_user else "MediChat"
         body_text = (
             "[Medical image uploaded]" + (": " + clean_text(content) if content else "")
             if msg_type == "image" else clean_text(content)
         )
 
-        # Label row (label left, timestamp right) - rendered first so
-        # wrap math is bullet-proof.
+        # Measure body height first so we can draw the tinted bubble bg
+        # UNDER the text in a single pass (no double-render).
+        body_w = 160
+        line_h = 5.2
+        pdf.set_font("Helvetica", "", 9.5)
+        body_n_lines = _pdf_measure_lines(pdf, body_w, body_text, line_h=line_h)
+        bubble_h = max(18, 11 + body_n_lines * line_h + 5)
+
         start_y = pdf.get_y()
-        pdf.set_xy(26, start_y)
+        # Paint bg + left stripe first so text renders on top.
+        pdf.set_fill_color(*bubble_bg)
+        pdf.set_draw_color(*bubble_bg)
+        pdf.rect(20, start_y, 170, bubble_h, "F")
+        pdf.set_fill_color(*stripe_clr)
+        pdf.rect(20, start_y, 2.5, bubble_h, "F")
+        # Label (left) + timestamp (right)
+        pdf.set_xy(28, start_y + 5)
         pdf.set_text_color(*stripe_clr)
         pdf.set_font("Helvetica", "B", 10)
         pdf.cell(80, 5, label_text)
         if msg_ts:
-            pdf.set_xy(150, start_y)
+            pdf.set_xy(150, start_y + 5)
             pdf.set_text_color(140, 150, 165)
             pdf.set_font("Helvetica", "", 8)
             pdf.cell(40, 5, clean_text(msg_ts), align="R")
         # Body
-        pdf.set_xy(26, start_y + 6)
+        pdf.set_xy(28, start_y + 11)
         pdf.set_text_color(40, 50, 65)
-        pdf.set_font("Helvetica", "", 9)
-        pdf.multi_cell(164, 5.0, body_text)
-        end_y = pdf.get_y()
-        # Left color stripe sized to the actual rendered height.
-        pdf.set_fill_color(*stripe_clr)
-        pdf.rect(20, start_y, 1.5, max(8, end_y - start_y - 1), "F")
-        pdf.ln(5)
+        pdf.set_font("Helvetica", "", 9.5)
+        pdf.multi_cell(body_w, line_h, body_text)
+        pdf.set_y(start_y + bubble_h + 4)
 
     _pdf_footer(pdf)
     return bytes(pdf.output())
