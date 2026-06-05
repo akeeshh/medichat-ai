@@ -125,6 +125,47 @@ def _resolve_asset_path(filename):
     # Fallback to prevent unhandled runtime errors if file is created dynamically
     return os.path.join(base_dir, "assets", filename)
 
+# Short-TTL memoization for hot Firestore reads. Many list_* functions
+# get called 2-4 times per rerun (sidebar + main + hero). Within one rerun
+# that's wasted Firestore round-trips. A 1.5s TTL dedupes all calls inside
+# a single rerun, and the NEXT rerun (which is usually >1.5s after the
+# previous one due to network + script time) naturally refetches, so
+# writes show up promptly without any explicit cache_clear().
+import functools as _functools_short
+import time as _time_short
+def _short_cache(ttl=1.5):
+    def deco(fn):
+        cache = {}
+        @_functools_short.wraps(fn)
+        def wrapper(*args, **kwargs):
+            # Include current user hash in the cache key so the same
+            # process serving multiple Streamlit Cloud users never leaks
+            # one user's data into another's view. Also key off
+            # viewing_partner_hash so partner-view switches don't return
+            # the wrong person's data.
+            user_key = ""
+            try:
+                user_key = st.session_state.get("user_email_hash", "") or ""
+                _vp = st.session_state.get("viewing_partner_hash", "") or ""
+                if _vp:
+                    user_key = _vp + "@" + user_key
+            except Exception:
+                user_key = ""
+            try:
+                key = (user_key, args, tuple(sorted(kwargs.items())))
+            except TypeError:
+                return fn(*args, **kwargs)
+            now = _time_short.time()
+            rec = cache.get(key)
+            if rec is not None and (now - rec[0]) < ttl:
+                return rec[1]
+            val = fn(*args, **kwargs)
+            cache[key] = (now, val)
+            return val
+        wrapper.cache_clear = cache.clear
+        return wrapper
+    return deco
+
 @st.cache_data(show_spinner=False)
 def _load_asset_data_uri_cached(path, mtime):
     """Cache key is (path, mtime) so the cache invalidates automatically when
@@ -467,6 +508,7 @@ def generate_ai_chat_title(messages):
 
     return derive_chat_title(messages)
 
+@_short_cache(ttl=1.5)
 def list_conversations(email_hash, limit=30):
     if not FIREBASE_ACTIVE or not email_hash:
         return []
@@ -1082,6 +1124,7 @@ def update_user_doc(updates):
         return False
 
 # ── Medications ──────────────────────────────────────────────────────
+@_short_cache(ttl=1.5)
 def list_medications():
     if st.session_state.get("is_authenticated"):
         # When viewing a partner, check their consent for the meds scope.
@@ -1122,6 +1165,7 @@ def delete_medication(med_id):
     return True
 
 # ── Appointments ─────────────────────────────────────────────────────
+@_short_cache(ttl=1.5)
 def list_appointments():
     if st.session_state.get("is_authenticated"):
         if st.session_state.get("viewing_partner_hash"):
@@ -1500,6 +1544,7 @@ def delete_surgical_history(surg_id):
     return True
 
 # ── Health Records (file metadata only, file content not stored to keep doc <1MB) ──
+@_short_cache(ttl=1.5)
 def list_health_records():
     if st.session_state.get("is_authenticated"):
         if st.session_state.get("viewing_partner_hash"):
@@ -1578,6 +1623,7 @@ DAILY_METRIC_DEFAULTS = {
     "heart_rate_resting": None,
 }
 
+@_short_cache(ttl=1.5)
 def get_daily_metrics(date_key=None):
     date_key = date_key or _today_key()
     if st.session_state.get("is_authenticated"):
