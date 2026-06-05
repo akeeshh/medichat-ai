@@ -222,43 +222,61 @@ st.markdown(
     """
     <style>
     @media (max-width: 768px) {
-        /* Hard-hide every sidebar-related element on mobile: the drawer,
-           the collapse chevron, AND the open button — Streamlit's mobile
-           default tries to overlay the sidebar over content, so we have
-           to neutralize it from every angle. */
+        /* Remove the sidebar from the flex layout entirely so it can't
+           reserve horizontal space. position:absolute takes it out of
+           normal flow; left:-200vw puts it off-screen for good measure. */
         section[data-testid='stSidebar'],
-        [data-testid='stSidebar'],
+        [data-testid='stSidebar'] {
+            position: absolute !important;
+            left: -200vw !important;
+            top: 0 !important;
+            width: 0 !important;
+            min-width: 0 !important;
+            max-width: 0 !important;
+            flex: 0 0 0 !important;
+            flex-basis: 0 !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            overflow: hidden !important;
+            transform: translateX(-100%) !important;
+        }
+        /* Kill every toggle / chevron / open-sidebar control so the user
+           can't accidentally summon the drawer. */
         [data-testid='stSidebarCollapsedControl'],
         [data-testid='stSidebarCollapseButton'],
         [data-testid='collapsedControl'],
         [data-testid='stSidebarHeader'],
-        button[kind='headerNoPadding'][aria-label*='sidebar' i],
+        button[kind='headerNoPadding'],
         button[aria-label*='Open sidebar' i],
-        button[aria-label*='Close sidebar' i] {
+        button[aria-label*='Close sidebar' i],
+        button[aria-label*='sidebar' i] {
             display: none !important;
-            width: 0 !important;
-            min-width: 0 !important;
-            max-width: 0 !important;
             visibility: hidden !important;
             opacity: 0 !important;
             pointer-events: none !important;
-            position: fixed !important;
-            left: -200vw !important;
         }
-        /* Belt and braces: even if the sidebar wrapper renders, push it
-           completely off-screen so it can't overlay the content. */
-        section[data-testid='stSidebar'] * {
-            display: none !important;
+
+        /* Main pane fills the entire viewport, no sidebar margin. */
+        [data-testid='stAppViewContainer'] {
+            display: block !important;
         }
         [data-testid='stAppViewContainer'] > section.stMain,
+        section.stMain[data-testid='stMain'],
         [data-testid='stMain'] {
             margin-left: 0 !important;
+            left: 0 !important;
             width: 100vw !important;
+            min-width: 100vw !important;
             max-width: 100vw !important;
+            flex: 1 1 100vw !important;
+            padding-left: 0 !important;
         }
         [data-testid='stMainBlockContainer'] {
             padding: 0.7rem 0.9rem 1.2rem !important;
             max-width: 100% !important;
+            width: 100% !important;
+            margin-left: 0 !important;
         }
     }
     </style>
