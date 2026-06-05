@@ -219,30 +219,98 @@ st.set_page_config(
 # already link to every section the sidebar covered). Desktop view
 # (≥ 769px) is byte-identical.
 st.markdown(
-    "<style>"
-    "@media (max-width: 768px) {"
-    "  [data-testid='stSidebar'],"
-    "  [data-testid='stSidebarCollapsedControl'],"
-    "  [data-testid='stSidebarCollapseButton'],"
-    "  [data-testid='collapsedControl'] {"
-    "    display: none !important;"
-    "    width: 0 !important;"
-    "    min-width: 0 !important;"
-    "    max-width: 0 !important;"
-    "    visibility: hidden !important;"
-    "  }"
-    "  [data-testid='stAppViewContainer'] > section.stMain,"
-    "  [data-testid='stMain'] {"
-    "    margin-left: 0 !important;"
-    "    width: 100vw !important;"
-    "    max-width: 100vw !important;"
-    "  }"
-    "  [data-testid='stMainBlockContainer'] {"
-    "    padding: 0.7rem 0.9rem 1.2rem !important;"
-    "    max-width: 100% !important;"
-    "  }"
-    "}"
-    "</style>",
+    """
+    <style>
+    @media (max-width: 768px) {
+        /* Hide Streamlit's collapse / re-open chevron — we render a
+           permanent thin icon rail instead, so the chevron is noise. */
+        [data-testid='stSidebarCollapsedControl'],
+        [data-testid='stSidebarCollapseButton'],
+        [data-testid='collapsedControl'] {
+            display: none !important;
+        }
+
+        /* Sidebar becomes a thin icon-only rail (~68px) instead of a
+           full-width drawer that blocks the content. */
+        [data-testid='stSidebar'] {
+            width: 68px !important;
+            min-width: 68px !important;
+            max-width: 68px !important;
+            padding: 0.4rem 0 !important;
+        }
+        [data-testid='stSidebar'] > div,
+        [data-testid='stSidebar'] [data-testid='stSidebarContent'],
+        [data-testid='stSidebar'] [data-testid='stSidebarUserContent'] {
+            width: 68px !important;
+            min-width: 68px !important;
+            max-width: 68px !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        /* Hide everything in the sidebar that isn't a nav button on mobile:
+           logo block, Recent Chats list, language picker, Privacy & Terms,
+           profile chip, copyright, dividers. The user navigates by icon. */
+        [data-testid='stSidebar'] .md-sidebar-logo,
+        [data-testid='stSidebar'] .md-past-chats,
+        [data-testid='stSidebar'] .md-sidebar-bottom,
+        [data-testid='stSidebar'] .md-profile-chip,
+        [data-testid='stSidebar'] .md-copyright,
+        [data-testid='stSidebar'] .md-lang-selector-anchor,
+        [data-testid='stSidebar'] [data-testid='stSelectbox'],
+        [data-testid='stSidebar'] [class*='st-key-_privacy_terms_btn'],
+        [data-testid='stSidebar'] [class*='st-key-open_partners_dialog'],
+        [data-testid='stSidebar'] hr,
+        [data-testid='stSidebar'] [data-testid='stMarkdown']:has(h2),
+        [data-testid='stSidebar'] [data-testid='stMarkdown']:has(h3),
+        [data-testid='stSidebar'] [data-testid='stImage'] {
+            display: none !important;
+        }
+
+        /* Nav buttons: circular icon tiles. Hide text label, center icon,
+           tight vertical rhythm. */
+        [data-testid='stSidebar'] [class*='st-key-nav_'] {
+            margin: 0.35rem auto !important;
+            display: flex !important;
+            justify-content: center !important;
+        }
+        [data-testid='stSidebar'] [class*='st-key-nav_'] .stButton button {
+            width: 44px !important;
+            min-width: 44px !important;
+            max-width: 44px !important;
+            height: 44px !important;
+            min-height: 44px !important;
+            max-height: 44px !important;
+            padding: 0 !important;
+            margin: 0 auto !important;
+            border-radius: 14px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0 !important;
+        }
+        [data-testid='stSidebar'] [class*='st-key-nav_'] .stButton button [data-testid='stMarkdownContainer'] {
+            display: none !important;
+        }
+        [data-testid='stSidebar'] [class*='st-key-nav_'] .stButton button [data-testid='stIconMaterial'] {
+            font-size: 1.3rem !important;
+            margin: 0 !important;
+        }
+
+        /* Main content shifts right to make room for the 68px rail. */
+        [data-testid='stAppViewContainer'] > section.stMain,
+        [data-testid='stMain'] {
+            margin-left: 68px !important;
+            width: calc(100vw - 68px) !important;
+            max-width: calc(100vw - 68px) !important;
+        }
+        [data-testid='stMainBlockContainer'] {
+            padding: 0.7rem 0.9rem 1.2rem !important;
+            max-width: 100% !important;
+        }
+    }
+    </style>
+    """,
     unsafe_allow_html=True
 )
 
