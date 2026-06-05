@@ -4677,7 +4677,7 @@ div[class*="st-key-chat_vision_cancel"] button p {
     font-size: 0.88rem !important;
 }
 .md-spark {
-    width: 52px;
+    width: 40px;
     height: 24px;
     flex-shrink: 0;
 }
@@ -12218,12 +12218,13 @@ st.markdown("""
 }
 .md-snap-value {
     white-space: nowrap !important;
-    font-size: 0.92rem !important;
+    font-size: 0.86rem !important;
     line-height: 1.18 !important;
     flex: 1 1 auto !important;
     min-width: 0 !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    letter-spacing: -0.01em !important;
 }
 .md-snap-status {
     white-space: nowrap !important;
