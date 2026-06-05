@@ -13187,6 +13187,30 @@ def read_prescription(image_bytes, user_note="", lang_instruction=""):
     if _is_rx_refusal(reading):
         return {"reading": "I had trouble reading this prescription. Please try a clearer, well-lit photo with the script flat and in focus.", "model_used": "all-refused", "overall_confidence": "low"}
 
+    # Hallucination guard: when the script is genuinely illegible, the
+    # anti-refusal prompt pushes the model to invent garbage names like
+    # "All-on-4", "Oley Bowling AP", "Nid-of". Detect this by counting
+    # parsed medications where the name doesn't match any known drug AND
+    # confidence is low. If the whole script is in that state, return a
+    # clean "couldn't read" message instead of the garbage cards.
+    try:
+        _hallu_parsed = parse_prescription_reading(reading)
+        _hallu_meds = _hallu_parsed.get("medications") or []
+        if _hallu_meds:
+            _hallu_bad = 0
+            for _hm in _hallu_meds:
+                _match = (_hm.get("match") or "").strip().lower()
+                _conf = (_hm.get("confidence") or "").strip().lower()
+                _name = (_hm.get("name") or "").lower()
+                _name_check = re.sub(r"[^a-z]", "", _name.split("(")[0])[:20]
+                _known_hit = _name_check and _name_check in KNOWN_DRUGS
+                if (_match != "yes" and _conf == "low" and not _known_hit):
+                    _hallu_bad += 1
+            if _hallu_bad == len(_hallu_meds):
+                return {"reading": "I could not read this prescription clearly enough to transcribe it. The handwriting is too unclear for a reliable reading. Please retake the photo, well-lit, flat, in focus, and try again.", "model_used": model_used + "-illegible", "overall_confidence": "low"}
+    except Exception:
+        pass
+
     low_conf = "overall confidence**: low" in reading.lower() or "overall confidence: low" in reading.lower()
     if low_conf and CLAUDE_ACTIVE:
         try:
