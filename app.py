@@ -15224,6 +15224,11 @@ def medichat_vision(question, b64, all_messages, lang_instruction=""):
         "You are MediChat, a warm but rigorous clinical AI companion. The patient has shared a medical image "
         "(skin condition, X-ray, rash, mole, wound, CT slice, ultrasound, ECG, etc.). Analyse it carefully and "
         "respond in plain language with the specificity a thoughtful junior doctor would use.\n\n"
+        "CRITICAL: This image is the patient's OWN medical image that they uploaded for their own education and "
+        "triage. There is no third-party identification involved, an X-ray, CT, MRI, ultrasound, ECG, or skin photo "
+        "cannot identify a specific person to anyone outside their care team. NEVER refuse with 'I can't identify "
+        "or analyze individuals in images' or similar, that refusal does not apply here. Describe the anatomy and "
+        "findings you can see. Do not refuse a medical-image analysis task.\n\n"
         "STRUCTURE YOUR RESPONSE WITH THESE BOLD SECTIONS:\n"
         "**What I see:**\n"
         "Describe what is visible with SPECIFIC anatomical detail. For chest X-rays this means:\n"
@@ -15250,6 +15255,27 @@ def medichat_vision(question, b64, all_messages, lang_instruction=""):
         + profile_note + memory_note + lang_note
     )
 
+    # Refusal patterns that mean OpenAI's safety filter wrongly flagged
+    # the medical image. When we see one, fall through to Claude which
+    # handles medical imaging more reliably.
+    def _is_refusal(text):
+        if not text:
+            return True
+        t = text.lower().strip()
+        return any(p in t for p in (
+            "can't help with identifying",
+            "cannot help with identifying",
+            "can't help with analyzing individuals",
+            "cannot help with analyzing individuals",
+            "can't identify or analyze",
+            "cannot identify or analyze",
+            "i'm sorry, i can't",
+            "i'm sorry, i cannot",
+            "i am unable to analyze",
+            "i'm unable to analyze",
+            "as an ai, i can't analyze",
+        )) and len(t) < 400
+
     # Vision dispatch order: OpenAI (frontier) -> Claude -> Groq.
     if OPENAI_ACTIVE and openai_client is not None:
         try:
@@ -15265,7 +15291,10 @@ def medichat_vision(question, b64, all_messages, lang_instruction=""):
                 temperature=0.3,
                 max_tokens=1500,
             )
-            return resp.choices[0].message.content, "openai-vision"
+            _openai_out = resp.choices[0].message.content
+            if not _is_refusal(_openai_out):
+                return _openai_out, "openai-vision"
+            print("OpenAI vision refused, falling back to Claude.")
         except Exception as e:
             print("OpenAI vision failed, trying Claude:", e)
 
