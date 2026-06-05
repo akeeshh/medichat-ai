@@ -11104,7 +11104,7 @@ div[data-testid="stMarkdownContainer"][data-stale="true"] {
     to   { opacity: 1; transform: translateY(0); }
 }
 [data-testid="stMain"] [data-testid="stMainBlockContainer"] {
-    animation: md-page-fade-in 180ms ease-out;
+    animation: md-page-fade-in 90ms ease-out;
 }
 
 /* Help page action buttons / FAQ togglers. */
@@ -16233,20 +16233,20 @@ try:
                     body[data-medichat-navigating="true"] [data-testid="stMainBlockContainer"] {
                         opacity: 0 !important;
                         pointer-events: none !important;
-                        transition: opacity 80ms ease-out !important;
+                        transition: none !important;
                     }
                     body[data-medichat-navigating="true"] [data-testid="stMain"]::after {
                         content: '';
                         position: fixed;
                         top: 50%;
                         left: calc(50% + 130px);
-                        width: 36px;
-                        height: 36px;
-                        margin: -18px 0 0 -18px;
+                        width: 26px;
+                        height: 26px;
+                        margin: -13px 0 0 -13px;
                         border-radius: 50%;
-                        border: 3px solid rgba(33, 118, 174, 0.18);
+                        border: 2.5px solid rgba(33, 118, 174, 0.18);
                         border-top-color: #2176ae;
-                        animation: mdNavSpin 0.7s linear infinite;
+                        animation: mdNavSpin 0.55s linear infinite;
                         z-index: 99999;
                         pointer-events: none;
                     }
