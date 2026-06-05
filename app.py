@@ -12999,36 +12999,35 @@ CONFIDENCE RULES:
 - medium: legible but uncommon drug, or ambiguous handwriting that you resolved using context.
 - low: significant guessing or unfamiliar drug; flag the affected section in ILLEGIBLE SECTIONS.
 
+CRITICAL: A single prescription almost always contains MULTIPLE medications. Read the ENTIRE page top to bottom and transcribe EVERY medication, advice item, ointment, gel, inhaler, or prescribed product, even if it is in the bottom corner or written as "Adv:" (advice). Do NOT stop at the first medication.
+
+For each medication, output a **MEDICATION #n** block with the structure below. Include as many blocks as there are medications on the script. Use the "after meals" / "before meals" / "with food" annotations from the brace { groupings if present, and apply them to every drug inside that brace.
+
 Output this exact format (do NOT add extra sections or commentary):
 
 **PATIENT**
 Name: <as written on the script, or "not specified" if no patient name appears>
+Age / Sex: <e.g. "28/M" if written, or "not specified">
 
-**MEDICATION**
+**MEDICATION #1**
 Reading: <best transcription, brand (generic) if both written>
 Matches known drug: <yes/no>
+Strength: <exact text including unit (mg, mcg, mL, IU), or "unclear">
+As written: <exact text including abbreviations like 1-0-1 x 5 days, BD, TDS, PRN, mane, nocte>
+Plain English: <expanded short rewrite, e.g. "1 tablet in the morning and 1 tablet at night, for 5 days, after meals">
+Route: <oral / topical / inhaled / sublingual / subcutaneous / intramuscular / intravenous / rectal / not specified>
+Quantity: <exact text or "not specified">
+Refills: <exact text or "no repeats">
 Confidence: high | medium | low
 
-**STRENGTH / DOSE**
-Reading: <exact text including unit, or "unclear"; never invent>
-Confidence: high | medium | low
+**MEDICATION #2**
+(same fields as above)
 
-**FREQUENCY / DIRECTIONS**
-As written: <exact text including abbreviations>
-Plain English: <expanded short rewrite, e.g. "1 tablet, twice daily, for 7 days">
-Confidence: high | medium | low
-
-**ROUTE**
-Reading: <oral / topical / inhaled / sublingual / subcutaneous / intramuscular / intravenous / rectal / not specified>
-
-**QUANTITY**
-Reading: <exact text including tablets / mL / pack size, or "not specified">
-
-**REFILLS**
-Reading: <exact text, e.g. "2 repeats", or "no repeats" / "not specified">
+(continue **MEDICATION #3**, **MEDICATION #4**, etc. for every medication on the script)
 
 **PRESCRIBER**
 Name: <as written or unclear>
+Clinic / Header: <e.g. "The White Tusk Dental" if written, or blank>
 Date: <as written, normalised to DD/MM/YYYY if possible, or unclear>
 
 **OVERALL CONFIDENCE**: high | medium | low
@@ -13186,48 +13185,89 @@ def read_prescription(image_bytes, user_note="", lang_instruction=""):
 
 def parse_prescription_reading(text):
     """Break the structured **SECTION** transcription into a dict the UI can
-    render as a clean, aligned prescription card. Missing sections degrade
-    gracefully to empty strings, the renderer hides empty rows.
+    render as a clean, aligned prescription card. Now supports MULTIPLE
+    **MEDICATION #n** blocks. The first medication's fields are flattened
+    onto the top-level dict for backward compatibility; the full list lives
+    under out['medications']. Missing sections degrade gracefully to empty
+    strings, the renderer hides empty rows.
     """
     out = {
-        "patient_name": "",
+        "patient_name": "", "patient_age_sex": "",
         "medication": "", "medication_match": "", "medication_conf": "",
         "strength": "", "strength_conf": "",
         "frequency": "", "frequency_plain": "", "frequency_conf": "",
         "route": "",
         "quantity": "",
         "refills": "",
-        "prescriber_name": "", "prescriber_date": "",
+        "prescriber_name": "", "prescriber_clinic": "", "prescriber_date": "",
         "illegible": "",
         "drug_check": "",
+        "medications": [],
     }
     if not text:
         return out
-    def _grab(pattern, default=""):
-        m = re.search(pattern, text, flags=re.IGNORECASE | re.DOTALL)
+
+    def _grab(pattern, src=None, default=""):
+        m = re.search(pattern, src if src is not None else text, flags=re.IGNORECASE | re.DOTALL)
         if not m:
             return default
         return (m.group(1) or "").strip().splitlines()[0].strip()
 
     out["patient_name"]      = _grab(r"\*\*PATIENT\*\*[\s\S]*?Name:\s*([^\n]+)")
-    out["medication"]        = _grab(r"\*\*MEDICATION\*\*[\s\S]*?Reading:\s*([^\n]+)")
-    out["medication_match"]  = _grab(r"\*\*MEDICATION\*\*[\s\S]*?Matches known drug:\s*([^\n]+)")
-    out["medication_conf"]   = _grab(r"\*\*MEDICATION\*\*[\s\S]*?Confidence:\s*(high|medium|low)")
-    out["strength"]          = _grab(r"\*\*STRENGTH\s*/\s*DOSE\*\*[\s\S]*?Reading:\s*([^\n]+)")
-    out["strength_conf"]     = _grab(r"\*\*STRENGTH\s*/\s*DOSE\*\*[\s\S]*?Confidence:\s*(high|medium|low)")
-    out["frequency"]         = _grab(r"\*\*FREQUENCY\s*/\s*DIRECTIONS\*\*[\s\S]*?As written:\s*([^\n]+)")
-    out["frequency_plain"]   = _grab(r"\*\*FREQUENCY\s*/\s*DIRECTIONS\*\*[\s\S]*?Plain English:\s*([^\n]+)")
-    out["frequency_conf"]    = _grab(r"\*\*FREQUENCY\s*/\s*DIRECTIONS\*\*[\s\S]*?Confidence:\s*(high|medium|low)")
-    out["route"]             = _grab(r"\*\*ROUTE\*\*[\s\S]*?Reading:\s*([^\n]+)")
-    out["quantity"]          = _grab(r"\*\*QUANTITY\*\*[\s\S]*?Reading:\s*([^\n]+)")
-    out["refills"]           = _grab(r"\*\*REFILLS\*\*[\s\S]*?Reading:\s*([^\n]+)")
+    out["patient_age_sex"]   = _grab(r"\*\*PATIENT\*\*[\s\S]*?Age\s*/\s*Sex:\s*([^\n]+)")
     out["prescriber_name"]   = _grab(r"\*\*PRESCRIBER\*\*[\s\S]*?Name:\s*([^\n]+)")
+    out["prescriber_clinic"] = _grab(r"\*\*PRESCRIBER\*\*[\s\S]*?Clinic\s*/\s*Header:\s*([^\n]+)")
     out["prescriber_date"]   = _grab(r"\*\*PRESCRIBER\*\*[\s\S]*?Date:\s*([^\n]+)")
     out["illegible"]         = _grab(r"\*\*ILLEGIBLE SECTIONS\*\*\s*:\s*([^\n]+)")
     out["drug_check"]        = _grab(r"\*\*Drug name check:\*\*\s*([^\n]+)")
-    # Clean "not specified" / "unclear" / "none" → empty so the row hides
-    for k, v in list(out.items()):
-        vl = (v or "").strip().lower()
+
+    # Multi-medication blocks: split on "**MEDICATION #N**" markers.
+    # Each block ends at the next **MEDICATION #** or the next top-level
+    # **HEADER**. Handles both new "#N" format and legacy single "MEDICATION".
+    med_blocks = re.findall(
+        r"\*\*MEDICATION(?:\s*#\s*\d+)?\*\*([\s\S]*?)(?=\n\s*\*\*(?:MEDICATION(?:\s*#\s*\d+)?|PRESCRIBER|OVERALL|ILLEGIBLE|Drug name check)\*\*|\Z)",
+        text, flags=re.IGNORECASE,
+    )
+    for block in med_blocks:
+        med = {
+            "name": _grab(r"Reading:\s*([^\n]+)", block),
+            "match": _grab(r"Matches known drug:\s*([^\n]+)", block),
+            "strength": _grab(r"Strength:\s*([^\n]+)", block),
+            "frequency_raw": _grab(r"As written:\s*([^\n]+)", block),
+            "frequency_plain": _grab(r"Plain English:\s*([^\n]+)", block),
+            "route": _grab(r"Route:\s*([^\n]+)", block),
+            "quantity": _grab(r"Quantity:\s*([^\n]+)", block),
+            "refills": _grab(r"Refills:\s*([^\n]+)", block),
+            "confidence": _grab(r"Confidence:\s*(high|medium|low)", block),
+        }
+        # Clean placeholder values so empty rows hide cleanly in the UI.
+        for k, v in list(med.items()):
+            vl = (v or "").strip().lower()
+            if vl in {"not specified", "unclear", "none", "n/a", "na", "-", ",", "no repeats"}:
+                med[k] = "" if k != "refills" else v  # keep "no repeats" as content
+        # Skip blocks with no usable drug name at all.
+        if med["name"]:
+            out["medications"].append(med)
+
+    # Backward compat: flatten the first medication onto the top-level keys
+    # so legacy code paths (e.g. add_to_medications) still work.
+    if out["medications"]:
+        first = out["medications"][0]
+        out["medication"]       = first["name"]
+        out["medication_match"] = first["match"]
+        out["medication_conf"]  = first["confidence"]
+        out["strength"]         = first["strength"]
+        out["strength_conf"]    = first["confidence"]
+        out["frequency"]        = first["frequency_raw"]
+        out["frequency_plain"]  = first["frequency_plain"]
+        out["frequency_conf"]   = first["confidence"]
+        out["route"]            = first["route"]
+        out["quantity"]         = first["quantity"]
+        out["refills"]          = first["refills"]
+
+    # Clean top-level placeholders too
+    for k in ("patient_name", "patient_age_sex", "prescriber_name", "prescriber_clinic", "prescriber_date", "illegible", "drug_check"):
+        vl = (out.get(k) or "").strip().lower()
         if vl in {"not specified", "unclear", "none", "n/a", "na", "-", ","}:
             out[k] = ""
     return out
@@ -25226,47 +25266,240 @@ elif st.session_state.mode == "rx_reader":
             unsafe_allow_html=True
         )
 
-        # ── Clean prescription card ─────────────────────────────────
-        def _row(label, value, sub="", conf=""):
+        # ── Polished prescription card (supports multiple medications) ──
+        def _conf_chip(conf):
+            if not conf:
+                return ""
+            cclass = "md-status-good" if conf == "high" else ("md-status-warn" if conf == "medium" else "md-status-alert")
+            return '<span class="md-metric-status ' + cclass + '" style="font-size:0.62rem;margin-left:0.5rem;vertical-align:middle;">' + conf + '</span>'
+
+        def _med_row(label, value, sub=""):
             if not value:
                 return ""
-            conf_html = ""
-            if conf:
-                cclass = "md-status-good" if conf == "high" else ("md-status-warn" if conf == "medium" else "md-status-alert")
-                conf_html = ' <span class="md-metric-status ' + cclass + '" style="font-size:0.62rem;margin-left:0.4rem;">' + conf + '</span>'
-            sub_html = ('<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.18rem;">' + ui_text(sub, 200) + '</div>') if sub else ""
+            sub_html = ('<div class="md-rx-row-sub">' + ui_text(sub, 200) + '</div>') if sub else ""
             return (
-                '<div style="display:grid;grid-template-columns:140px 1fr;gap:0.6rem;padding:0.6rem 0;border-bottom:1px solid var(--md-border);">'
-                '<div style="font-size:0.74rem;font-weight:600;color:var(--md-text-2);text-transform:uppercase;letter-spacing:0.04em;">' + label + '</div>'
-                '<div style="font-size:0.96rem;font-weight:600;color:var(--md-text-1);">' + ui_text(value, 200) + conf_html + sub_html + '</div>'
+                '<div class="md-rx-row">'
+                '<div class="md-rx-row-label">' + label + '</div>'
+                '<div class="md-rx-row-value">' + ui_text(value, 200) + sub_html + '</div>'
                 '</div>'
             )
 
-        pres_line = ""
-        if parsed.get("prescriber_name") or parsed.get("prescriber_date"):
-            pres_line = " ".join([x for x in [parsed.get("prescriber_name", ""), ("· " + parsed.get("prescriber_date", "")) if parsed.get("prescriber_date") else ""] if x]).strip()
+        # Header row, common to all medications
+        header_chips = ""
+        if parsed.get("patient_name"):
+            header_chips += '<span class="md-rx-chip"><span class="material-symbols-rounded" style="font-size:0.95rem;">person</span>' + ui_text(parsed.get("patient_name"), 60) + '</span>'
+        if parsed.get("patient_age_sex"):
+            header_chips += '<span class="md-rx-chip">' + ui_text(parsed.get("patient_age_sex"), 20) + '</span>'
+        if parsed.get("prescriber_clinic"):
+            header_chips += '<span class="md-rx-chip"><span class="material-symbols-rounded" style="font-size:0.95rem;">local_hospital</span>' + ui_text(parsed.get("prescriber_clinic"), 60) + '</span>'
+        if parsed.get("prescriber_date"):
+            header_chips += '<span class="md-rx-chip"><span class="material-symbols-rounded" style="font-size:0.95rem;">event</span>' + ui_text(parsed.get("prescriber_date"), 20) + '</span>'
 
-        rows_html = "".join([
-            _row("Patient", parsed.get("patient_name", "")),
-            _row("Medication", parsed.get("medication", ""), sub=parsed.get("medication_match", ""), conf=parsed.get("medication_conf", "")),
-            _row("Strength", parsed.get("strength", ""), conf=parsed.get("strength_conf", "")),
-            _row("Directions", parsed.get("frequency", ""), sub=parsed.get("frequency_plain", ""), conf=parsed.get("frequency_conf", "")),
-            _row("Route", parsed.get("route", "")),
-            _row("Quantity", parsed.get("quantity", "")),
-            _row("Refills", parsed.get("refills", "")),
-            _row("Prescriber", pres_line),
-            _row("Drug check", parsed.get("drug_check", "")),
-            _row("Illegible", parsed.get("illegible", "")),
-        ])
+        # Build one card per medication
+        meds_list = parsed.get("medications") or []
+        if not meds_list and parsed.get("medication"):
+            # Fallback: rebuild a single-item list from the flattened top-level
+            # fields so legacy single-medication responses still render in the
+            # new card layout.
+            meds_list = [{
+                "name": parsed.get("medication", ""),
+                "match": parsed.get("medication_match", ""),
+                "strength": parsed.get("strength", ""),
+                "frequency_raw": parsed.get("frequency", ""),
+                "frequency_plain": parsed.get("frequency_plain", ""),
+                "route": parsed.get("route", ""),
+                "quantity": parsed.get("quantity", ""),
+                "refills": parsed.get("refills", ""),
+                "confidence": parsed.get("medication_conf", ""),
+            }]
 
-        if rows_html.strip():
-            st.markdown(
-                '<div class="md-rcard" style="margin-top:0.65rem;padding:0.4rem 1rem 0.6rem 1rem;">'
-                '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.55rem 0 0.4rem 0;border-bottom:1px solid var(--md-border);margin-bottom:0.1rem;">'
-                '<span class="md-rx-glyph" style="font-size:1.15rem;color:#f59e0b;">&#8478;</span>'
-                '<div style="font-weight:700;color:var(--md-text-1);">Transcribed prescription</div>'
+        med_cards_html = ""
+        for _idx, _m in enumerate(meds_list, start=1):
+            _rows = "".join([
+                _med_row("Strength", _m.get("strength", "")),
+                _med_row("Directions", _m.get("frequency_raw", ""), sub=_m.get("frequency_plain", "")),
+                _med_row("Route", _m.get("route", "")),
+                _med_row("Quantity", _m.get("quantity", "")),
+                _med_row("Refills", _m.get("refills", "")),
+            ])
+            _match_html = ""
+            if _m.get("match", "").strip().lower() == "yes":
+                _match_html = '<span class="md-rx-match"><span class="material-symbols-rounded" style="font-size:0.9rem;">verified</span>Known medication</span>'
+            med_cards_html += (
+                '<div class="md-rx-med-card">'
+                '<div class="md-rx-med-head">'
+                '<div class="md-rx-med-num">' + str(_idx) + '</div>'
+                '<div class="md-rx-med-name-wrap">'
+                '<div class="md-rx-med-name">' + ui_text(_m.get("name", "Medication"), 120) + _conf_chip(_m.get("confidence", "")) + '</div>'
+                + (_match_html if _match_html else "") +
                 '</div>'
-                + rows_html +
+                '</div>'
+                + _rows +
+                '</div>'
+            )
+
+        if med_cards_html:
+            st.markdown("""
+            <style>
+            .md-rx-card2 {
+                margin-top: 0.7rem;
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-radius: 16px;
+                padding: 1rem 1.1rem 0.6rem 1.1rem;
+                box-shadow: 0 2px 8px rgba(15,23,42,0.04);
+            }
+            .md-rx-card2-head {
+                display: flex;
+                align-items: center;
+                gap: 0.55rem;
+                padding-bottom: 0.7rem;
+                border-bottom: 1px solid #e2e8f0;
+                margin-bottom: 0.7rem;
+            }
+            .md-rx-card2-head-ic {
+                width: 32px; height: 32px;
+                border-radius: 10px;
+                background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                color: #b45309;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 800;
+                font-size: 1.05rem;
+            }
+            .md-rx-card2-title {
+                font-weight: 700;
+                color: #0f172a;
+                font-size: 1rem;
+                line-height: 1.25;
+            }
+            .md-rx-card2-sub {
+                font-size: 0.78rem;
+                color: #64748b;
+                margin-top: 0.15rem;
+            }
+            .md-rx-chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.4rem;
+                margin: 0 0 0.85rem 0;
+            }
+            .md-rx-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.32rem;
+                padding: 0.28rem 0.6rem;
+                background: #f1f5f9;
+                border: 1px solid #e2e8f0;
+                border-radius: 999px;
+                font-size: 0.76rem;
+                color: #334155;
+                font-weight: 500;
+            }
+            .md-rx-med-card {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 13px;
+                padding: 0.9rem 1rem;
+                margin-bottom: 0.7rem;
+                transition: border-color 0.18s ease, box-shadow 0.18s ease;
+            }
+            .md-rx-med-card:last-child { margin-bottom: 0.2rem; }
+            .md-rx-med-card:hover {
+                border-color: #cbd5e1;
+                box-shadow: 0 4px 14px rgba(15,23,42,0.05);
+            }
+            .md-rx-med-head {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.7rem;
+                padding-bottom: 0.7rem;
+                margin-bottom: 0.55rem;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .md-rx-med-num {
+                width: 26px; height: 26px;
+                border-radius: 8px;
+                background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+                color: #ffffff;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 700;
+                font-size: 0.78rem;
+                flex-shrink: 0;
+            }
+            .md-rx-med-name-wrap { flex: 1; min-width: 0; }
+            .md-rx-med-name {
+                font-size: 1.02rem;
+                font-weight: 700;
+                color: #0f172a;
+                line-height: 1.3;
+            }
+            .md-rx-match {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.25rem;
+                font-size: 0.72rem;
+                color: #16a34a;
+                margin-top: 0.18rem;
+                font-weight: 500;
+            }
+            .md-rx-row {
+                display: grid;
+                grid-template-columns: 110px 1fr;
+                gap: 0.55rem;
+                padding: 0.45rem 0;
+                border-bottom: 1px dashed #e2e8f0;
+            }
+            .md-rx-row:last-child { border-bottom: none; }
+            .md-rx-row-label {
+                font-size: 0.7rem;
+                font-weight: 600;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                padding-top: 0.15rem;
+            }
+            .md-rx-row-value {
+                font-size: 0.92rem;
+                font-weight: 500;
+                color: #0f172a;
+                line-height: 1.4;
+            }
+            .md-rx-row-sub {
+                font-size: 0.78rem;
+                color: #64748b;
+                margin-top: 0.2rem;
+                font-style: italic;
+                line-height: 1.45;
+            }
+            .md-rx-footer-note {
+                font-size: 0.75rem;
+                color: #94a3b8;
+                margin-top: 0.6rem;
+                padding-top: 0.55rem;
+                border-top: 1px solid #e2e8f0;
+                font-style: italic;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            _footer_note = ""
+            if parsed.get("illegible"):
+                _footer_note = '<div class="md-rx-footer-note">Illegible: ' + ui_text(parsed.get("illegible"), 220) + '</div>'
+            st.markdown(
+                '<div class="md-rx-card2">'
+                '<div class="md-rx-card2-head">'
+                '<div class="md-rx-card2-head-ic">&#8478;</div>'
+                '<div>'
+                '<div class="md-rx-card2-title">Transcribed prescription</div>'
+                '<div class="md-rx-card2-sub">' + str(len(meds_list)) + ' medication' + ('s' if len(meds_list) != 1 else '') + ' detected</div>'
+                '</div>'
+                '</div>'
+                + (('<div class="md-rx-chips">' + header_chips + '</div>') if header_chips else "")
+                + med_cards_html
+                + _footer_note +
                 '</div>',
                 unsafe_allow_html=True
             )
