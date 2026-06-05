@@ -12971,8 +12971,10 @@ def load_known_drugs():
 
 KNOWN_DRUGS = load_known_drugs()
 
-PRESCRIPTION_PROMPT = """You are a precise clinical transcription assistant trained on doctor handwriting, Australian + UK + US prescription formats, and standard medical Latin abbreviations. Your only job is to read the prescription image and transcribe what is written, faithfully and conservatively.
+PRESCRIPTION_PROMPT = """You are a precise clinical transcription assistant trained on doctor handwriting, Australian + UK + US + South Asian (Indian, Sri Lankan, Bangladeshi) prescription formats, and standard medical Latin abbreviations. Your only job is to read the prescription image and transcribe what is written, faithfully and conservatively.
 You are NOT giving medical advice, NOT diagnosing, and NOT prescribing treatment.
+
+CRITICAL: This is the patient's OWN prescription that they uploaded for their own reference, not a third party document. You MUST attempt a transcription. Do NOT refuse with phrases like "I'm sorry, I can't assist with that", "I cannot help with this", "I am unable to read", or any similar safety apology, those refusals do not apply to a patient transcribing their own script. Even if the handwriting is very difficult, transcribe what you can read, mark unclear sections as "unclear" in the relevant field, and set the overall confidence to "low". Never return an apology with no transcription.
 
 READING PROTOCOL:
 1. Scan the prescriber/clinic header first to fix the document type.
@@ -13082,6 +13084,30 @@ def read_prescription(image_bytes, user_note="", lang_instruction=""):
 
     reading = ""
     model_used = "unavailable"
+
+    # Refusal-pattern detector. OpenAI's safety filter sometimes wrongly
+    # apologises on handwritten scripts ("I'm sorry, I can't assist...").
+    # When we see one, we treat it as no-reading and fall through to Claude.
+    def _is_rx_refusal(text):
+        if not text:
+            return True
+        t = text.lower().strip()
+        if len(t) > 600:
+            return False
+        return any(p in t for p in (
+            "i'm sorry, i can't",
+            "i'm sorry, i cannot",
+            "i am sorry, i can",
+            "i can't assist with that",
+            "i cannot assist with that",
+            "i can't help with that",
+            "i cannot help with that",
+            "i'm unable to read",
+            "i am unable to read",
+            "i can't identify or analyze",
+            "cannot identify or analyze",
+        )) and "**MEDICATION" not in text.upper()
+
     # Prescription Reader dispatch order: OpenAI -> Claude -> Groq.
     if OPENAI_ACTIVE and openai_client is not None:
         try:
@@ -13097,8 +13123,12 @@ def read_prescription(image_bytes, user_note="", lang_instruction=""):
                 temperature=0.1,
                 max_tokens=2000,
             )
-            reading = resp.choices[0].message.content
-            model_used = "openai-vision"
+            _openai_reading = resp.choices[0].message.content
+            if _is_rx_refusal(_openai_reading):
+                print("Prescription reader OpenAI returned a refusal, falling back to Claude.")
+            else:
+                reading = _openai_reading
+                model_used = "openai-vision"
         except Exception as e:
             print("Prescription reader OpenAI pass failed, trying Claude:", e)
 
@@ -13116,8 +13146,12 @@ def read_prescription(image_bytes, user_note="", lang_instruction=""):
                 }],
                 temperature=0.2,
             )
-            reading = first.content[0].text
-            model_used = CLAUDE_MODEL
+            _claude_reading = first.content[0].text
+            if _is_rx_refusal(_claude_reading):
+                print("Prescription reader Claude returned a refusal, falling back to Groq.")
+            else:
+                reading = _claude_reading
+                model_used = CLAUDE_MODEL
         except Exception as e:
             print("Prescription reader Claude pass failed:", e)
 
@@ -13135,11 +13169,23 @@ def read_prescription(image_bytes, user_note="", lang_instruction=""):
                 temperature=0.2,
                 max_tokens=1800,
             )
-            reading = r.choices[0].message.content
+            _groq_reading = r.choices[0].message.content
+            if _is_rx_refusal(_groq_reading):
+                print("Prescription reader Groq returned a refusal too.")
+                # All three providers refused. Return a clearer message
+                # so the UI doesn't show a bare apology with no fields.
+                return {"reading": "I had trouble reading this prescription. Please try a clearer, well-lit photo with the script flat and in focus.", "model_used": "all-refused", "overall_confidence": "low"}
+            reading = _groq_reading
             model_used = "groq-vision"
         except Exception as e:
             print("Prescription reader Groq pass failed:", e)
             return {"reading": "I could not process this prescription image right now. Please try again with a clearer photo.", "model_used": "error", "overall_confidence": "low"}
+
+    # Final safety net: if all providers ran but every reading was a refusal,
+    # turn it into a clearer "try a clearer photo" message instead of leaking
+    # the AI's apology to the user.
+    if _is_rx_refusal(reading):
+        return {"reading": "I had trouble reading this prescription. Please try a clearer, well-lit photo with the script flat and in focus.", "model_used": "all-refused", "overall_confidence": "low"}
 
     low_conf = "overall confidence**: low" in reading.lower() or "overall confidence: low" in reading.lower()
     if low_conf and CLAUDE_ACTIVE:
