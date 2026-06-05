@@ -80,7 +80,7 @@
 | Vision (X-ray / image analysis) | OpenAI GPT-4o (`detail: "high"`) → Claude vision → Groq Llama-4 Scout |
 | Prescription OCR | OpenAI GPT-4o → Claude vision → Groq Llama-4 Scout (with refusal + hallucination guards) |
 | Retrieval (RAG) | sentence-transformers (`all-MiniLM-L6-v2`) + FAISS |
-| Knowledge sources | 10,000 documents — 5,000 PubMedQA + 5,000 MedDialog (HuggingFace `datasets`) |
+| Knowledge sources | 25,000 documents — ~12,500 PubMed research abstracts (`qiaojin/PubMedQA` config `pqa_artificial`) + ~12,500 MedDialog doctor-patient dialogues (HuggingFace `datasets`) |
 | Persistence | Firebase Firestore (per-user profile, chats, records, settings) |
 | Per-process caching | Short-TTL memoization (per-user-keyed) on hot Firestore reads |
 | Calendar import | iCalendar (ICS) parser — Google / Apple / Outlook |

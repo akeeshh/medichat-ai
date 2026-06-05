@@ -190,7 +190,7 @@ def load_asset_data_uri(filename):
 def get_brand_logo_data_uri():
     """Backwards-compatible accessor for the MediChat brand logo."""
     return load_asset_data_uri("MediChat logo.png")
-MEDICAL_REFERENCE_TARGET = max(1000, _safe_int_env("MEDICHAT_REFERENCE_TARGET", 10000))
+MEDICAL_REFERENCE_TARGET = max(1000, _safe_int_env("MEDICHAT_REFERENCE_TARGET", 25000))
 PRIVACY_POLICY_URL = _safe_secret(
     "PRIVACY_POLICY_URL",
     os.environ.get("PRIVACY_POLICY_URL", "?mode=privacy"),
@@ -12967,12 +12967,27 @@ def load_rag_system():
     pubmed_target = max(500, MEDICAL_REFERENCE_TARGET // 2)
     dialog_target = max(500, MEDICAL_REFERENCE_TARGET - pubmed_target)
     
-    # Attempt PubMedQA pipeline loading
+    # Attempt PubMedQA pipeline loading.
+    #
+    # Config choice: `pqa_artificial` (211k entries) instead of `pqa_labeled`
+    # (capped at 1k). The QUESTION text in pqa_artificial is the title of a
+    # real PubMed paper and the long_answer is the conclusion section of a
+    # real PubMed abstract, so the underlying content remains 100%
+    # human-written, peer-reviewed medical literature. Only the question /
+    # answer FRAMING is templated; the source material is genuine PubMed.
+    # If pqa_artificial is unavailable for any reason we fall back to the
+    # smaller pqa_labeled config, then to the hardcoded backup entries
+    # below, so MediChat never boots without some grounding corpus.
     try:
-        pubmed = load_dataset("qiaojin/PubMedQA", "pqa_labeled", split="train[:" + str(pubmed_target) + "]", timeout=10)
+        pubmed = load_dataset("qiaojin/PubMedQA", "pqa_artificial", split="train[:" + str(pubmed_target) + "]", timeout=10)
         pubmed_docs = ["[PubMed Research]\nQuestion: " + i["question"] + "\nAnswer: " + i["long_answer"] for i in pubmed]
     except Exception as e:
-        print("PubMedQA repository offline. Switched to secure backup arrays.", e)
+        print("pqa_artificial unavailable, trying pqa_labeled fallback.", e)
+        try:
+            pubmed = load_dataset("qiaojin/PubMedQA", "pqa_labeled", split="train[:" + str(pubmed_target) + "]", timeout=10)
+            pubmed_docs = ["[PubMed Research]\nQuestion: " + i["question"] + "\nAnswer: " + i["long_answer"] for i in pubmed]
+        except Exception as e2:
+            print("PubMedQA repository offline. Switched to secure backup arrays.", e2)
 
     # Attempt MedDialog pipeline loading
     dialog_sources = [
