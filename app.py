@@ -20722,7 +20722,19 @@ if st.session_state.mode == "chat":
             body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-del_allergy_"],
             body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-del_fh_"],
             body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-del_surg_"],
-            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-del_appt_"] {
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-del_appt_"],
+            /* Symptoms Checker / assessment form leftovers: Quick select
+               option buttons (opt_X_Y), the typed-answer form
+               (assessment_form_X), and the Next/Cancel + restart buttons
+               + the markdown question / progress chrome. */
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-opt_"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-assessment_form_"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] [class*="st-key-assess_"],
+            body:has(.md-page-marker-home) [data-testid="stMain"] .question-bubble,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .assessment-title,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .assessment-subtitle,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .progress-label,
+            body:has(.md-page-marker-home) [data-testid="stMain"] .progress-bar-wrap {
                 display: none !important;
             }
             </style>
