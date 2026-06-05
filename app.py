@@ -6435,6 +6435,13 @@ form#home_chat_form [data-testid="stFormSubmitButton"] > button[kind="primaryFor
     color: #16a34a;
     margin-left: 0;
 }
+/* Severity-coloured variants applied per metric (heart rate "High" turns
+   red, sleep "Low" turns red, etc.). Override the default green color so
+   abnormal readings read as alarming instead of cheerful. */
+.md-snap-status.md-status-good   { color: #16a34a !important; }
+.md-snap-status.md-status-info   { color: #2563eb !important; }
+.md-snap-status.md-status-warn   { color: #d97706 !important; }
+.md-snap-status.md-status-alert  { color: #dc2626 !important; }
 .md-spark {
     margin-top: 0.22rem;
 }
@@ -21462,6 +21469,10 @@ if st.session_state.mode == "chat":
 
                 _steps_display = (f"{int(_steps_val):,} / 10,000") if _steps_val else "-"
                 _steps_status_text = (str(min(100, int(round((int(_steps_val) / 10000) * 100)))) + "%") if _steps_val else ""
+                _steps_cls = ""
+                if _steps_val:
+                    _sp = int(round((int(_steps_val) / 10000) * 100))
+                    _steps_cls = "md-status-good" if _sp >= 80 else ("md-status-info" if _sp >= 50 else "md-status-warn")
 
                 _sleep_display = (f"{float(_sleep_hours):.1f}h") if _sleep_hours else "-"
                 _sl_status, _sl_cls = sleep_status(_sleep_hours)
@@ -21470,6 +21481,10 @@ if st.session_state.mode == "chat":
                 _wc_int = int(_water_count) if _water_count is not None else None
                 _water_display = (f"{_wc_int} / 8 glasses") if _wc_int is not None else "-"
                 _water_status_text = (str(min(100, int(round((_wc_int / 8) * 100)))) + "%") if _wc_int else ""
+                _water_cls = ""
+                if _wc_int is not None:
+                    _wp = int(round((_wc_int / 8) * 100))
+                    _water_cls = "md-status-good" if _wp >= 80 else ("md-status-info" if _wp >= 50 else "md-status-warn")
 
                 # Fetch the full daily_metrics map ONCE for the 7-day
                 # sparklines. Each metric pulls its own series from this dict
@@ -21502,17 +21517,17 @@ if st.session_state.mode == "chat":
                 except Exception:
                     pass
                 _tiles = [
-                    ("md-accent-pink", "favorite", "Heart Rate", _heart_rate_display, _heart_rate_status_text, "md-line-pink", "heart_rate_resting"),
-                    ("md-accent-green", "directions_walk", "Steps", _steps_display, _steps_status_text, "md-line-green", "steps"),
-                    ("md-accent-purple", "bedtime", "Sleep", _sleep_display, _sleep_status_text, "md-line-purple", "sleep_hours"),
-                    ("md-accent-blue", "water_drop", "Water Intake", _water_display, _water_status_text, "md-line-blue", "water_glasses"),
+                    ("md-accent-pink", "favorite", "Heart Rate", _heart_rate_display, _heart_rate_status_text, "md-line-pink", "heart_rate_resting", _hr_cls or ""),
+                    ("md-accent-green", "directions_walk", "Steps", _steps_display, _steps_status_text, "md-line-green", "steps", _steps_cls),
+                    ("md-accent-purple", "bedtime", "Sleep", _sleep_display, _sleep_status_text, "md-line-purple", "sleep_hours", _sl_cls or ""),
+                    ("md-accent-blue", "water_drop", "Water Intake", _water_display, _water_status_text, "md-line-blue", "water_glasses", _water_cls),
                 ]
                 snap_html = (
                     '<div class="md-rcard md-snap-card">'
                     '<div class="md-rcard-head"><div class="md-rcard-title">' + _snap_title + '</div><div class="md-snap-sync' + (' md-snap-sync-today' if _last_sync_label == "Synced today" else '') + '">' + _last_sync_label + '</div></div>'
                     '<div class="md-snap-grid">'
                 )
-                for _cls, _icon, _lbl, _val, _status, _line_cls, _metric_key in _tiles:
+                for _cls, _icon, _lbl, _val, _status, _line_cls, _metric_key, _status_cls in _tiles:
                     # Build a REAL sparkline from the last 7 days of this
                     # metric. If fewer than 2 days of values exist we draw
                     # a faint dashed centerline marker rather than a fake
@@ -21553,7 +21568,7 @@ if st.session_state.mode == "chat":
                         '<div class="md-snap-label">' + ui_text(_lbl, 40) + '</div>'
                         '<div class="md-snap-valrow">'
                         '<div class="md-snap-value">' + ui_text(_val, 40) + '</div>'
-                        '<div class="md-snap-status">' + ui_text(_status, 20) + '</div>'
+                        '<div class="md-snap-status ' + _status_cls + '">' + ui_text(_status, 20) + '</div>'
                         '</div>'
                         '</div>'
                         + _spark_svg +
