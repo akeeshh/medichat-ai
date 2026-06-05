@@ -12971,15 +12971,33 @@ def load_known_drugs():
 
 KNOWN_DRUGS = load_known_drugs()
 
-PRESCRIPTION_PROMPT = """You are a clinical transcription assistant. Your only job is to read the prescription image and transcribe what is written.
+PRESCRIPTION_PROMPT = """You are a precise clinical transcription assistant trained on doctor handwriting, Australian + UK + US prescription formats, and standard medical Latin abbreviations. Your only job is to read the prescription image and transcribe what is written, faithfully and conservatively.
 You are NOT giving medical advice, NOT diagnosing, and NOT prescribing treatment.
 
-Read this order:
-1. Prescriber/clinic header
-2. Patient identifiers
-3. Medication line(s)
-4. Dose, frequency, route, quantity, repeats
-5. Date and signature
+READING PROTOCOL:
+1. Scan the prescriber/clinic header first to fix the document type.
+2. Identify the patient identifiers.
+3. Locate every medication line, including any inhaler or topical strip in the corner.
+4. For each medication, extract: drug name, strength/dose, frequency, route, quantity, repeats.
+5. Read the date and prescriber signature.
+
+TRANSCRIPTION RULES:
+- If a letter looks like a 'curl' (e.g. 'a/o', 't/l', '1/7'), pick the option that forms a real word or a real medication name. NEVER invent a drug.
+- Expand standard Latin / medical abbreviations to plain English in the "Plain English" line:
+  - bd / b.d.s = twice daily; tds / t.d.s = three times daily; qds / q.i.d = four times daily.
+  - mane = morning; nocte = at night; prn = as needed; ac = before meals; pc = after meals.
+  - po = by mouth; sl = sublingual; pr = rectal; sc = subcutaneous; im = intramuscular; iv = intravenous.
+  - Mitte / Disp = quantity to dispense; rpts / repeats = repeats; stat = immediately.
+- Brand vs generic: if both are written (e.g. "Panadol (paracetamol) 500 mg"), record the brand in Reading and add "(generic: paracetamol)" inline.
+- Normalise common Australian PBS brands: Foracort (budesonide+formoterol), Ventolin (salbutamol), Symbicort (budesonide+formoterol), Seretide (fluticasone+salmeterol), Augmentin (amoxicillin+clavulanate), Panadol (paracetamol), Nurofen (ibuprofen), Endone (oxycodone), Targin (oxycodone+naloxone), Lyrica (pregabalin), Pristiq (desvenlafaxine).
+- Strengths: always include the unit (mg, mcg, g, mL, IU). If the unit is missing on the script, write the number then "(unit unclear)".
+- Frequency: if the script says "1 tab BD x 7/7", expand to "1 tablet, twice daily, for 7 days".
+- If a section is unreadable, write "unclear", do not guess.
+
+CONFIDENCE RULES:
+- high: legible, unambiguous, drug matches a known medication.
+- medium: legible but uncommon drug, or ambiguous handwriting that you resolved using context.
+- low: significant guessing or unfamiliar drug; flag the affected section in ILLEGIBLE SECTIONS.
 
 Output this exact format (do NOT add extra sections or commentary):
 
@@ -12987,48 +13005,55 @@ Output this exact format (do NOT add extra sections or commentary):
 Name: <as written on the script, or "not specified" if no patient name appears>
 
 **MEDICATION**
-Reading: <best transcription>
+Reading: <best transcription, brand (generic) if both written>
 Matches known drug: <yes/no>
 Confidence: high | medium | low
 
 **STRENGTH / DOSE**
-Reading: <exact text or not specified>
+Reading: <exact text including unit, or "unclear"; never invent>
 Confidence: high | medium | low
 
 **FREQUENCY / DIRECTIONS**
-As written: <exact text>
-Plain English: <short rewrite>
+As written: <exact text including abbreviations>
+Plain English: <expanded short rewrite, e.g. "1 tablet, twice daily, for 7 days">
 Confidence: high | medium | low
 
 **ROUTE**
-Reading: <oral/topical/inhaled/injection/not specified>
+Reading: <oral / topical / inhaled / sublingual / subcutaneous / intramuscular / intravenous / rectal / not specified>
 
 **QUANTITY**
-Reading: <exact text or not specified>
+Reading: <exact text including tablets / mL / pack size, or "not specified">
 
 **REFILLS**
-Reading: <exact text or not specified>
+Reading: <exact text, e.g. "2 repeats", or "no repeats" / "not specified">
 
 **PRESCRIBER**
 Name: <as written or unclear>
-Date: <as written or unclear>
+Date: <as written, normalised to DD/MM/YYYY if possible, or unclear>
 
 **OVERALL CONFIDENCE**: high | medium | low
 **ILLEGIBLE SECTIONS**: <list regions that are genuinely unreadable, or "none">
 """
 
 def preprocess_prescription(image_bytes):
+    """Boost contrast + sharpness + autocontrast at high resolution so the
+    handwriting reads cleanly to the vision model. 2048px keeps fine
+    pen-stroke detail without bloating the payload."""
     img = Image.open(io.BytesIO(image_bytes))
     img = ImageOps.exif_transpose(img)
     if img.mode != "RGB":
         img = img.convert("RGB")
-    max_dim = 1568
+    max_dim = 2048
     if max(img.size) > max_dim:
         img.thumbnail((max_dim, max_dim), Image.LANCZOS)
-    img = ImageEnhance.Contrast(img).enhance(1.35)
-    img = ImageEnhance.Sharpness(img).enhance(1.4)
+    # Autocontrast normalises lighting (phone photos often have heavy
+    # shadows from the camera hand), then a measured contrast + sharpness
+    # boost lifts the ink off the page.
+    img = ImageOps.autocontrast(img, cutoff=1)
+    img = ImageEnhance.Contrast(img).enhance(1.5)
+    img = ImageEnhance.Sharpness(img).enhance(1.6)
     out = io.BytesIO()
-    img.save(out, format="JPEG", quality=92)
+    img.save(out, format="JPEG", quality=95)
     return out.getvalue()
 
 def validate_drug_name(reading):
@@ -13062,16 +13087,16 @@ def read_prescription(image_bytes, user_note="", lang_instruction=""):
     if OPENAI_ACTIVE and openai_client is not None:
         try:
             resp = openai_client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=[{
                     "role": "user",
                     "content": [
                         {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + b64}},
+                        {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + b64, "detail": "high"}},
                     ],
                 }],
-                temperature=0.2,
-                max_tokens=1800,
+                temperature=0.1,
+                max_tokens=2000,
             )
             reading = resp.choices[0].message.content
             model_used = "openai-vision"
