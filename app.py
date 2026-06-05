@@ -15800,7 +15800,7 @@ def generate_chat_pdf(messages):
         content = msg.get("content", "")
         msg_type = msg.get("type", "text")
         msg_ts = msg.get("ts", "")
-        if not content and msg_type != "image":
+        if not content and msg_type not in ("image", "pdf"):
             continue
         is_user = role == "user"
         if is_user:
@@ -15810,10 +15810,33 @@ def generate_chat_pdf(messages):
             stripe_clr = (13, 148, 136)
             bubble_bg = (240, 253, 250)
         label_text = "You" if is_user else "MediChat"
-        body_text = (
-            "[Medical image uploaded]" + (": " + clean_text(content) if content else "")
-            if msg_type == "image" else clean_text(content)
+        # Strip markdown bold (**text** / **text:**) and inline markers
+        # so the PDF reads clean — no literal asterisks bleeding through.
+        _raw_body = (
+            "[Medical image uploaded]" + (": " + content if content else "")
+            if msg_type == "image" else
+            ("[PDF: " + (msg.get("file_name", "document.pdf")) + "]" + ((" " + content) if content and "[PDF:" not in content else ""))
+            if msg_type == "pdf" else
+            content
         )
+        _raw_body = re.sub(r"\*\*([^\*]+)\*\*", r"\1", _raw_body)
+        _raw_body = _raw_body.replace("**", "")
+        body_text = clean_text(_raw_body)
+
+        # If the user uploaded an actual image, decode it once so we can
+        # both size the bubble around it AND embed it after the text.
+        _embed_image_bio = None
+        _embed_img_h = 0
+        if msg_type == "image":
+            _img_b64 = msg.get("image_b64", "") or ""
+            if _img_b64:
+                try:
+                    import io as _io_em
+                    _embed_image_bio = _io_em.BytesIO(base64.b64decode(_img_b64))
+                    _embed_img_h = 60  # mm — uniform thumbnail height
+                except Exception:
+                    _embed_image_bio = None
+                    _embed_img_h = 0
 
         # Measure body height first so we can draw the tinted bubble bg
         # UNDER the text in a single pass (no double-render).
@@ -15821,7 +15844,7 @@ def generate_chat_pdf(messages):
         line_h = 5.2
         pdf.set_font("Helvetica", "", 9.5)
         body_n_lines = _pdf_measure_lines(pdf, body_w, body_text, line_h=line_h)
-        bubble_h = max(18, 11 + body_n_lines * line_h + 5)
+        bubble_h = max(18, 11 + body_n_lines * line_h + 5 + (_embed_img_h + 4 if _embed_image_bio else 0))
 
         start_y = pdf.get_y()
         # Paint bg + left stripe first so text renders on top.
@@ -15845,6 +15868,13 @@ def generate_chat_pdf(messages):
         pdf.set_text_color(40, 50, 65)
         pdf.set_font("Helvetica", "", 9.5)
         pdf.multi_cell(body_w, line_h, body_text)
+        # Embed the actual uploaded image right under the caption.
+        if _embed_image_bio is not None:
+            try:
+                _img_y = pdf.get_y() + 2
+                pdf.image(_embed_image_bio, x=28, y=_img_y, h=_embed_img_h)
+            except Exception:
+                pass
         pdf.set_y(start_y + bubble_h + 4)
 
     _pdf_footer(pdf)
@@ -21985,8 +22015,17 @@ if st.session_state.mode == "chat":
 
         if uploaded_image:
             is_pdf = uploaded_image.name.lower().endswith(".pdf")
+            # Snapshot the raw upload bytes once so we can embed the actual
+            # image / PDF cover in the Conversation Export PDF later.
+            try:
+                uploaded_image.seek(0)
+                _up_bytes = uploaded_image.read()
+                uploaded_image.seek(0)
+                _up_b64 = base64.b64encode(_up_bytes).decode("ascii") if _up_bytes else ""
+            except Exception:
+                _up_b64 = ""
             if is_pdf:
-                st.session_state.messages.append({"role": "user", "type": "pdf", "content": (effective_user_input.strip() + " " if effective_user_input.strip() else "") + "[PDF: " + uploaded_image.name + "]", "ts": _msg_now_ts()})
+                st.session_state.messages.append({"role": "user", "type": "pdf", "content": (effective_user_input.strip() + " " if effective_user_input.strip() else "") + "[PDF: " + uploaded_image.name + "]", "ts": _msg_now_ts(), "file_b64": _up_b64, "file_name": uploaded_image.name, "file_mime": uploaded_image.type or "application/pdf"})
                 with st.spinner("Reading your medical report..."):
                     pdf_text = extract_pdf_text(uploaded_image)
                     if not pdf_text:
@@ -22027,7 +22066,7 @@ if st.session_state.mode == "chat":
                 st.session_state.uploader_key += 1
                 st.session_state.home_show_vision_upload = False
             else:
-                st.session_state.messages.append({"role": "user", "type": "image", "content": effective_user_input.strip(), "ts": _msg_now_ts()})
+                st.session_state.messages.append({"role": "user", "type": "image", "content": effective_user_input.strip(), "ts": _msg_now_ts(), "image_b64": _up_b64, "image_mime": uploaded_image.type or "image/jpeg", "image_name": uploaded_image.name})
                 if looks_like_prescription_request(effective_user_input):
                     with st.spinner("Reading prescription handwriting..."):
                         uploaded_image.seek(0)
