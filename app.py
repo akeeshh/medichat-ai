@@ -21559,9 +21559,9 @@ if st.session_state.mode == "chat":
                         + _spark_svg +
                         '</div>'
                     )
-                snap_html += '</div></div>'
-                # Inject trend-warning chips just before the closing tile
-                # so they sit visually inside the Health Overview card.
+                # Inject trend-warning chips at the END of the snap card
+                # (after the metric grid, before the closing card div) so
+                # they sit visually inside the Health Overview card.
                 if _trend_warnings:
                     _warn_chips = ""
                     for _w in _trend_warnings[:3]:
@@ -21571,11 +21571,9 @@ if st.session_state.mode == "chat":
                             '<span>' + ui_text(_w, 120) + '</span>'
                             '</div>'
                         )
-                    snap_html = snap_html.replace(
-                        '</div></div>',
-                        '<div class="md-snap-warns">' + _warn_chips + '</div></div></div>',
-                        1,
-                    )
+                    snap_html += '</div><div class="md-snap-warns">' + _warn_chips + '</div></div>'
+                else:
+                    snap_html += '</div></div>'
                 st.markdown("""
                 <style>
                 .md-snap-warns {
