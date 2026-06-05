@@ -24189,6 +24189,99 @@ elif st.session_state.mode == "history":
                     )
             st.markdown('<div style="height:0.5rem;"></div>', unsafe_allow_html=True)
 
+            # ── Delete-all button (with confirmation dialog) ─────────
+            # Sits to the right under the toolbar so it doesn't compete
+            # with the per-row × delete affordance.
+            st.markdown("""
+            <style>
+            div.st-key-hist_delete_all_btn .stButton > button {
+                background: transparent !important;
+                color: #b91c1c !important;
+                border: 1px solid #fecaca !important;
+                padding: 0.42rem 0.95rem !important;
+                font-size: 0.82rem !important;
+                font-weight: 600 !important;
+                border-radius: 10px !important;
+                box-shadow: none !important;
+                margin-left: auto !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                gap: 0.4rem !important;
+                width: auto !important;
+                min-width: 0 !important;
+            }
+            div.st-key-hist_delete_all_btn .stButton > button:hover {
+                background: #fef2f2 !important;
+                border-color: #fca5a5 !important;
+                color: #991b1b !important;
+            }
+            div.st-key-hist_delete_all_btn {
+                display: flex !important;
+                justify-content: flex-end !important;
+                margin: 0.4rem 0 0.2rem 0 !important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            _hist_convs_existing = (
+                list_conversations(st.session_state.user_email_hash, limit=200)
+                if st.session_state.get("is_authenticated") else []
+            )
+            if _hist_convs_existing:
+                with st.container(key="hist_delete_all_btn"):
+                    if st.button("Delete all chats", icon=":material/delete_sweep:", key="hist_delete_all_open"):
+                        st.session_state["pending_delete_all_count"] = len(_hist_convs_existing)
+                        st.rerun()
+
+            if st.session_state.get("pending_delete_all_count"):
+                @st.dialog("Delete all conversations?")
+                def _confirm_delete_all_dialog():
+                    _n = st.session_state.get("pending_delete_all_count", 0)
+                    st.markdown(
+                        '<div style="display:flex;align-items:flex-start;gap:0.85rem;margin:0.35rem 0 1.1rem 0;">'
+                        '<div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#fee2e2 0%,#fecaca 100%);'
+                        'display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+                        '<span class="material-symbols-rounded" style="color:#dc2626;font-size:1.4rem;">delete_sweep</span>'
+                        '</div>'
+                        '<div style="flex:1;min-width:0;">'
+                        '<div style="font-size:0.95rem;color:#0f172a;font-weight:600;line-height:1.4;margin-bottom:0.25rem;">'
+                        'All ' + str(_n) + ' conversation' + ('s' if _n != 1 else '') + ' will be permanently removed.'
+                        '</div>'
+                        '<div style="font-size:0.86rem;color:#64748b;line-height:1.55;">'
+                        'Your entire chat history will be wiped from your MediChat profile. '
+                        '<strong style="color:#dc2626;">This cannot be undone.</strong>'
+                        '</div>'
+                        '</div>'
+                        '</div>',
+                        unsafe_allow_html=True,
+                    )
+                    _dac1, _dac2 = st.columns(2, gap="small")
+                    with _dac1:
+                        if st.button("Cancel", key="hist_delete_all_cancel", use_container_width=True):
+                            try: del st.session_state["pending_delete_all_count"]
+                            except KeyError: pass
+                            st.rerun()
+                    with _dac2:
+                        if st.button("Delete all", key="hist_delete_all_confirm", icon=":material/delete_sweep:", type="primary", use_container_width=True):
+                            try:
+                                _eh = st.session_state.user_email_hash
+                                for _c in list_conversations(_eh, limit=500) or []:
+                                    try:
+                                        delete_conversation(_eh, _c.get("id"))
+                                    except Exception:
+                                        pass
+                                try:
+                                    list_conversations.cache_clear()
+                                except Exception:
+                                    pass
+                                st.session_state.current_conversation_id = ""
+                                st.session_state.messages = []
+                            except Exception as _e:
+                                print("Delete-all failed:", _e)
+                            try: del st.session_state["pending_delete_all_count"]
+                            except KeyError: pass
+                            st.rerun()
+                _confirm_delete_all_dialog()
+
             # ── Apply filter + sort ──────────────────────────────────
             def _passes_filter(_d):
                 if _d is None:
