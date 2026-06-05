@@ -219,30 +219,50 @@ st.set_page_config(
 # already link to every section the sidebar covered). Desktop view
 # (≥ 769px) is byte-identical.
 st.markdown(
-    "<style>"
-    "@media (max-width: 768px) {"
-    "  [data-testid='stSidebar'],"
-    "  [data-testid='stSidebarCollapsedControl'],"
-    "  [data-testid='stSidebarCollapseButton'],"
-    "  [data-testid='collapsedControl'] {"
-    "    display: none !important;"
-    "    width: 0 !important;"
-    "    min-width: 0 !important;"
-    "    max-width: 0 !important;"
-    "    visibility: hidden !important;"
-    "  }"
-    "  [data-testid='stAppViewContainer'] > section.stMain,"
-    "  [data-testid='stMain'] {"
-    "    margin-left: 0 !important;"
-    "    width: 100vw !important;"
-    "    max-width: 100vw !important;"
-    "  }"
-    "  [data-testid='stMainBlockContainer'] {"
-    "    padding: 0.7rem 0.9rem 1.2rem !important;"
-    "    max-width: 100% !important;"
-    "  }"
-    "}"
-    "</style>",
+    """
+    <style>
+    @media (max-width: 768px) {
+        /* Hard-hide every sidebar-related element on mobile: the drawer,
+           the collapse chevron, AND the open button — Streamlit's mobile
+           default tries to overlay the sidebar over content, so we have
+           to neutralize it from every angle. */
+        section[data-testid='stSidebar'],
+        [data-testid='stSidebar'],
+        [data-testid='stSidebarCollapsedControl'],
+        [data-testid='stSidebarCollapseButton'],
+        [data-testid='collapsedControl'],
+        [data-testid='stSidebarHeader'],
+        button[kind='headerNoPadding'][aria-label*='sidebar' i],
+        button[aria-label*='Open sidebar' i],
+        button[aria-label*='Close sidebar' i] {
+            display: none !important;
+            width: 0 !important;
+            min-width: 0 !important;
+            max-width: 0 !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            position: fixed !important;
+            left: -200vw !important;
+        }
+        /* Belt and braces: even if the sidebar wrapper renders, push it
+           completely off-screen so it can't overlay the content. */
+        section[data-testid='stSidebar'] * {
+            display: none !important;
+        }
+        [data-testid='stAppViewContainer'] > section.stMain,
+        [data-testid='stMain'] {
+            margin-left: 0 !important;
+            width: 100vw !important;
+            max-width: 100vw !important;
+        }
+        [data-testid='stMainBlockContainer'] {
+            padding: 0.7rem 0.9rem 1.2rem !important;
+            max-width: 100% !important;
+        }
+    }
+    </style>
+    """,
     unsafe_allow_html=True
 )
 
