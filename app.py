@@ -2827,6 +2827,38 @@ st.markdown("""
         font-weight: 500;
         margin-bottom: 0.4rem;
     }
+    /* Inline thumbnail of the actual uploaded image, sits under the
+       "Medical image uploaded for analysis" chip so the conversation
+       visually reflects what MediChat is reading. */
+    .md-chat-img-wrap {
+        display: inline-block;
+        max-width: 320px;
+        margin: 0.35rem 0 0.85rem 0;
+        padding: 0.45rem 0.45rem 0.5rem 0.45rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+    }
+    .md-chat-img {
+        display: block;
+        width: 100%;
+        max-width: 300px;
+        max-height: 320px;
+        height: auto;
+        object-fit: contain;
+        border-radius: 10px;
+        background: #0f172a;
+    }
+    .md-chat-img-cap {
+        font-size: 0.72rem;
+        color: #64748b;
+        margin-top: 0.42rem;
+        padding: 0 0.2rem;
+        text-align: center;
+        word-break: break-all;
+        line-height: 1.3;
+    }
 
     /* ── Name Welcome ────────────────────────────────────────────── */
     .name-welcome {
@@ -21417,6 +21449,20 @@ if st.session_state.mode == "chat":
                 safe_initial = ui_text(user_initial, 2)
                 if msg_type == "image":
                     st.markdown('<span class="image-tag">Medical image uploaded for analysis</span>', unsafe_allow_html=True)
+                    # If we have the original upload bytes, show the actual
+                    # image inline so the conversation visually reflects what
+                    # MediChat is analysing.
+                    _img_b64 = msg.get("image_b64") or ""
+                    if _img_b64:
+                        _img_mime = msg.get("image_mime") or "image/jpeg"
+                        _img_name = ui_text(msg.get("image_name", "uploaded-image"), 80)
+                        st.markdown(
+                            '<div class="md-chat-img-wrap">'
+                            '<img class="md-chat-img" src="data:' + _img_mime + ';base64,' + _img_b64 + '" alt="' + _img_name + '">'
+                            '<div class="md-chat-img-cap">' + _img_name + '</div>'
+                            '</div>',
+                            unsafe_allow_html=True,
+                        )
                 if content or msg_type != "image":
                     # Authenticated users see their own initial in the
                     # avatar; guests keep the generic person glyph.
