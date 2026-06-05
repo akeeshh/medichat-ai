@@ -24045,8 +24045,16 @@ elif st.session_state.mode == "medications":
     body:has(.md-page-hero-meds) .md-mp-section {
         display: flex;
         align-items: center;
-        gap: 0.6rem;
-        margin: 1.6rem 0 0.85rem 0;
+        gap: 0.7rem;
+        margin: 0 0 0.85rem 0;
+        padding-top: 2.2rem;
+        border-top: 1px solid transparent;
+    }
+    /* First section header (Add medication) sits right under the hero,
+       no top divider needed there. */
+    body:has(.md-page-hero-meds) [data-testid="stMain"] .stMarkdown:has(.md-page-hero-meds) ~ .stElementContainer:first-of-type .md-mp-section,
+    body:has(.md-page-hero-meds) [data-testid="stMain"] .md-mp-section:first-of-type {
+        padding-top: 0.6rem;
     }
     body:has(.md-page-hero-meds) .md-mp-section-ic {
         width: 30px;
@@ -24171,31 +24179,42 @@ elif st.session_state.mode == "medications":
     body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_allergy_"] .stButton button,
     body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_fh_"] .stButton button,
     body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_surg_"] .stButton button {
-        width: 30px !important;
-        min-width: 30px !important;
-        max-width: 30px !important;
-        height: 30px !important;
-        min-height: 30px !important;
-        max-height: 30px !important;
-        border-radius: 8px !important;
+        width: 32px !important;
+        min-width: 32px !important;
+        max-width: 32px !important;
+        height: 32px !important;
+        min-height: 32px !important;
+        max-height: 32px !important;
+        border-radius: 9px !important;
         padding: 0 !important;
         margin: 0 0 0 auto !important;
-        background: transparent !important;
-        border: none !important;
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
         color: #94a3b8 !important;
         box-shadow: none !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        transition: color 0.15s ease, transform 0.15s ease, background 0.15s ease !important;
+        transition: color 0.15s ease, transform 0.15s ease, background 0.15s ease, border-color 0.15s ease !important;
     }
     body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_med_"] .stButton button:hover,
     body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_allergy_"] .stButton button:hover,
     body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_fh_"] .stButton button:hover,
     body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_surg_"] .stButton button:hover {
-        background: #fef2f2 !important;
+        background: #fee2e2 !important;
+        border-color: #fecaca !important;
         color: #dc2626 !important;
-        transform: scale(1.08) !important;
+        transform: scale(1.04) !important;
+    }
+    /* Give the X column breathing room so the button doesn't visually
+       clash with the card's right edge. */
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [data-testid="stHorizontalBlock"]:has([class*="st-key-del_med_"]) [data-testid="stColumn"]:last-child,
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [data-testid="stHorizontalBlock"]:has([class*="st-key-del_allergy_"]) [data-testid="stColumn"]:last-child,
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [data-testid="stHorizontalBlock"]:has([class*="st-key-del_fh_"]) [data-testid="stColumn"]:last-child,
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [data-testid="stHorizontalBlock"]:has([class*="st-key-del_surg_"]) [data-testid="stColumn"]:last-child {
+        padding-left: 0.5rem !important;
+        display: flex !important;
+        align-items: center !important;
     }
     body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_med_"] .stButton button [data-testid="stIconMaterial"],
     body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_allergy_"] .stButton button [data-testid="stIconMaterial"],
