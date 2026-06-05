@@ -21602,17 +21602,26 @@ if st.session_state.mode == "chat":
                 .md-snap-warn-chip {
                     display: flex;
                     align-items: center;
-                    gap: 0.4rem;
-                    padding: 0.42rem 0.6rem;
+                    gap: 0.32rem;
+                    padding: 0.28rem 0.55rem;
                     background: #fef2f2;
                     border: 1px solid #fecaca;
-                    border-radius: 10px;
-                    font-size: 0.78rem;
+                    border-radius: 8px;
+                    font-size: 0.68rem;
                     color: #b91c1c;
-                    line-height: 1.35;
+                    line-height: 1.2;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .md-snap-warn-chip > span:not(.material-symbols-rounded) {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    min-width: 0;
                 }
                 .md-snap-warn-chip .material-symbols-rounded {
-                    font-size: 1rem;
+                    font-size: 0.85rem;
                     color: #dc2626;
                     font-variation-settings: 'FILL' 1;
                     flex-shrink: 0;
