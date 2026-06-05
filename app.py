@@ -25210,21 +25210,51 @@ elif st.session_state.mode == "rx_reader":
         with rx_btn_b:
             rx_clear = st.form_submit_button("Clear", use_container_width=True)
 
+    # Stash the uploaded file bytes into session state the MOMENT the
+    # uploader returns a value. Streamlit's file_uploader inside a form
+    # sometimes returns None at the click rerun (the widget's value
+    # hasn't committed yet), causing a spurious "Please upload..." error
+    # that forces a re-attach. Reading from session_state at submit time
+    # avoids that race.
+    if rx_img is not None:
+        try:
+            rx_img.seek(0)
+            st.session_state.rx_pending_bytes = rx_img.read()
+            st.session_state.rx_pending_name = rx_img.name
+            rx_img.seek(0)
+        except Exception:
+            pass
+
     if rx_clear:
         reset_prescription_reader_state()
+        # Also flush the stashed bytes so the next upload starts clean.
+        st.session_state.pop("rx_pending_bytes", None)
+        st.session_state.pop("rx_pending_name", None)
 
     if rx_submit:
-        if not rx_img:
+        _rx_bytes = st.session_state.get("rx_pending_bytes")
+        # Fall back to the live widget value if we somehow didn't stash.
+        if not _rx_bytes and rx_img is not None:
+            try:
+                rx_img.seek(0)
+                _rx_bytes = rx_img.read()
+            except Exception:
+                _rx_bytes = None
+        if not _rx_bytes:
             st.error("Please upload a prescription image first.")
         else:
             with st.spinner("Reading prescription text..."):
                 try:
-                    rx_img.seek(0)
                     st.session_state.rx_reader_result = read_prescription(
-                        rx_img.read(),
+                        _rx_bytes,
                         user_note=rx_note,
                         lang_instruction=LANGUAGES[st.session_state.selected_language]["lang_instruction"],
                     )
+                    # Successful read: flush the stashed upload so the next
+                    # script run starts clean (otherwise a stale image
+                    # could be re-analysed if the user clicks Read again).
+                    st.session_state.pop("rx_pending_bytes", None)
+                    st.session_state.pop("rx_pending_name", None)
                 except Exception as e:
                     st.session_state.rx_reader_result = None
                     st.error("Prescription reader failed. Please retry with a clearer image. Error: " + str(e))
