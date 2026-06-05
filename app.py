@@ -18197,8 +18197,8 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
    outward and fades - the classic live-indicator ripple. */
 [data-testid="stSidebar"] .md-side-pc-status-on .md-side-pc-dot {
     background: #22c55e !important;
-    animation: mdSyncPcBeat 1.4s ease-in-out infinite !important;
-    box-shadow: 0 0 0 0 rgba(34,197,94,0.55) !important;
+    animation: mdSyncPcBeat 2.6s ease-in-out infinite !important;
+    box-shadow: 0 0 0 0 rgba(34,197,94,0.4) !important;
 }
 [data-testid="stSidebar"] .md-side-pc-status-on .md-side-pc-dot::after {
     content: "" !important;
@@ -18206,18 +18206,18 @@ div[data-testid="stElementContainer"]:has(.md-lang-selector-anchor) + div[data-t
     inset: 0 !important;
     border-radius: 50% !important;
     background: #22c55e !important;
-    opacity: 0.55 !important;
+    opacity: 0.32 !important;
     pointer-events: none !important;
-    animation: mdSyncPcRipple 1.4s ease-out infinite !important;
+    animation: mdSyncPcRipple 2.6s ease-out infinite !important;
 }
 @keyframes mdSyncPcBeat {
-    0%, 100% { transform: scale(1);    box-shadow: 0 0 0 2px rgba(34,197,94,0.18); }
-    50%      { transform: scale(1.18); box-shadow: 0 0 0 3px rgba(34,197,94,0.28); }
+    0%, 100% { transform: scale(1);    box-shadow: 0 0 0 1.5px rgba(34,197,94,0.12); }
+    50%      { transform: scale(1.06); box-shadow: 0 0 0 2px   rgba(34,197,94,0.18); }
 }
 @keyframes mdSyncPcRipple {
-    0%   { transform: scale(1);   opacity: 0.55; }
-    80%  { transform: scale(2.6); opacity: 0; }
-    100% { transform: scale(2.6); opacity: 0; }
+    0%   { transform: scale(1);   opacity: 0.32; }
+    80%  { transform: scale(1.7); opacity: 0; }
+    100% { transform: scale(1.7); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
     [data-testid="stSidebar"] .md-side-pc-status-on .md-side-pc-dot,
