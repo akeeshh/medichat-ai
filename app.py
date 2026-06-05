@@ -24036,12 +24036,196 @@ elif st.session_state.mode == "medications":
         '</div>',
         unsafe_allow_html=True
     )
+
+    # Page-scoped polish: nicer section headers, card hover, integrated
+    # X delete button on every list item (same affordance pattern as
+    # Health Records + Recent Chats), softer form intro typography.
+    st.markdown("""
+    <style>
+    body:has(.md-page-hero-meds) .md-mp-section {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin: 1.6rem 0 0.85rem 0;
+    }
+    body:has(.md-page-hero-meds) .md-mp-section-ic {
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    body:has(.md-page-hero-meds) .md-mp-section-ic .material-symbols-rounded {
+        font-size: 1.1rem;
+        font-variation-settings: 'FILL' 1, 'wght' 500;
+    }
+    body:has(.md-page-hero-meds) .md-mp-section-ic-meds   { background:#ede9fe; color:#7c3aed; }
+    body:has(.md-page-hero-meds) .md-mp-section-ic-allerg { background:#fee2e2; color:#dc2626; }
+    body:has(.md-page-hero-meds) .md-mp-section-ic-family { background:#dbeafe; color:#2563eb; }
+    body:has(.md-page-hero-meds) .md-mp-section-ic-surg   { background:#d1fae5; color:#059669; }
+    body:has(.md-page-hero-meds) .md-mp-section-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+    }
+    body:has(.md-page-hero-meds) .md-mp-section-title {
+        font-size: 1.02rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.2;
+    }
+    body:has(.md-page-hero-meds) .md-mp-section-sub {
+        font-size: 0.8rem;
+        color: #64748b;
+        line-height: 1.35;
+    }
+
+    /* Polished list-item card — softer surface, hover lift */
+    body:has(.md-page-hero-meds) .md-mp-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 0.85rem 1rem;
+        box-shadow: 0 1px 2px rgba(15,23,42,0.03);
+        transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+    }
+    body:has(.md-page-hero-meds) .md-mp-card:hover {
+        box-shadow: 0 6px 18px rgba(15,23,42,0.06);
+        border-color: #cbd5e1;
+        transform: translateY(-1px);
+    }
+    body:has(.md-page-hero-meds) .md-mp-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.85rem;
+    }
+    body:has(.md-page-hero-meds) .md-mp-ic {
+        width: 40px;
+        height: 40px;
+        border-radius: 11px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    body:has(.md-page-hero-meds) .md-mp-ic .material-symbols-rounded {
+        font-size: 1.15rem;
+        font-variation-settings: 'FILL' 1, 'wght' 500;
+    }
+    body:has(.md-page-hero-meds) .md-mp-ic-meds   { background:#ede9fe; color:#7c3aed; }
+    body:has(.md-page-hero-meds) .md-mp-ic-allerg { background:#fee2e2; color:#dc2626; }
+    body:has(.md-page-hero-meds) .md-mp-ic-family { background:#dbeafe; color:#2563eb; }
+    body:has(.md-page-hero-meds) .md-mp-ic-surg   { background:#d1fae5; color:#059669; }
+    body:has(.md-page-hero-meds) .md-mp-name {
+        font-size: 0.96rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.3;
+    }
+    body:has(.md-page-hero-meds) .md-mp-sub {
+        font-size: 0.78rem;
+        color: #475569;
+        margin-top: 0.18rem;
+        line-height: 1.4;
+    }
+    body:has(.md-page-hero-meds) .md-mp-notes {
+        font-size: 0.76rem;
+        color: #64748b;
+        margin-top: 0.32rem;
+        font-style: italic;
+        line-height: 1.45;
+    }
+    body:has(.md-page-hero-meds) .md-mp-pill {
+        display: inline-block;
+        padding: 0.1rem 0.5rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.72rem;
+        margin-right: 0.45rem;
+    }
+
+    /* Empty state — softer + centered */
+    body:has(.md-page-hero-meds) .md-mp-empty {
+        text-align: center;
+        background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%);
+        border: 1px dashed #c7d2fe;
+        border-radius: 14px;
+        padding: 1.3rem 1rem;
+        color: #64748b;
+        font-size: 0.85rem;
+        font-style: italic;
+    }
+
+    /* X delete button — same affordance as Health Records / Recent Chats */
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_med_"],
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_allergy_"],
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_fh_"],
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_surg_"] {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_med_"] .stButton button,
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_allergy_"] .stButton button,
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_fh_"] .stButton button,
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_surg_"] .stButton button {
+        width: 30px !important;
+        min-width: 30px !important;
+        max-width: 30px !important;
+        height: 30px !important;
+        min-height: 30px !important;
+        max-height: 30px !important;
+        border-radius: 8px !important;
+        padding: 0 !important;
+        margin: 0 0 0 auto !important;
+        background: transparent !important;
+        border: none !important;
+        color: #94a3b8 !important;
+        box-shadow: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: color 0.15s ease, transform 0.15s ease, background 0.15s ease !important;
+    }
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_med_"] .stButton button:hover,
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_allergy_"] .stButton button:hover,
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_fh_"] .stButton button:hover,
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_surg_"] .stButton button:hover {
+        background: #fef2f2 !important;
+        color: #dc2626 !important;
+        transform: scale(1.08) !important;
+    }
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_med_"] .stButton button [data-testid="stIconMaterial"],
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_allergy_"] .stButton button [data-testid="stIconMaterial"],
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_fh_"] .stButton button [data-testid="stIconMaterial"],
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_surg_"] .stButton button [data-testid="stIconMaterial"] {
+        font-size: 1.05rem !important;
+        color: inherit !important;
+        -webkit-text-fill-color: currentColor !important;
+        line-height: 1 !important;
+    }
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_med_"] .stButton button [data-testid="stMarkdownContainer"],
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_allergy_"] .stButton button [data-testid="stMarkdownContainer"],
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_fh_"] .stButton button [data-testid="stMarkdownContainer"],
+    body:has(.md-page-hero-meds) [data-testid="stMain"] [class*="st-key-del_surg_"] .stButton button [data-testid="stMarkdownContainer"] {
+        display: none !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ─── Add medication (form section header) ────────────────────────
+    st.markdown(
+        '<div class="md-mp-section">'
+        '<div class="md-mp-section-ic md-mp-section-ic-meds"><span class="material-symbols-rounded">pill</span></div>'
+        '<div class="md-mp-section-text">'
+        '<div class="md-mp-section-title">Add medication</div>'
+        '<div class="md-mp-section-sub">Capture dose, timing and notes so MediChat can reference them in future chats.</div>'
+        '</div></div>',
+        unsafe_allow_html=True
+    )
     with st.form("add_med_form", clear_on_submit=True):
-        st.markdown(
-            '<div class="md-form-intro">Add medication</div>'
-            '<div class="md-form-sub">Capture dose, timing and notes so MediChat can reference them in future chats.</div>',
-            unsafe_allow_html=True
-        )
         mc1, mc2 = st.columns(2)
         with mc1:
             m_name = st.text_input("Name", placeholder="e.g. Metformin")
@@ -24059,27 +24243,33 @@ elif st.session_state.mode == "medications":
 
     meds = list_medications()
     if not meds:
-        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.6rem;">No medications added yet.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="md-mp-empty">No medications added yet.</div>', unsafe_allow_html=True)
     else:
         for m in meds:
-            mh = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
-            mh += '<div class="md-metric-icon md-hp-violet" style="width:42px;height:42px;flex-shrink:0;">💊</div>'
-            mh += '<div style="flex:1;min-width:0;">'
-            mh += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + ui_text(m.get("name", ""), 90) + '</div>'
-            mh += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.15rem;">' + ui_text(m.get("dose", "") or "Dose not specified", 40) + ' · ' + ui_text(m.get("frequency", ""), 40) + (" · " + ui_text(m.get("time_of_day"), 40) if m.get("time_of_day") else "") + '</div>'
-            if m.get("notes"):
-                mh += '<div style="font-size:0.76rem;color:var(--md-text-2);margin-top:0.3rem;font-style:italic;">' + ui_text(m.get("notes"), 260) + '</div>'
-            mh += '</div></div></div>'
-            st.markdown(mh, unsafe_allow_html=True)
-            if st.button("Remove", key="del_med_" + str(m.get("id", "")), use_container_width=False):
-                delete_medication(m.get("id"))
-                st.rerun()
+            _row_card, _row_x = st.columns([20, 1], gap="small")
+            with _row_card:
+                mh = '<div class="md-mp-card"><div class="md-mp-row">'
+                mh += '<div class="md-mp-ic md-mp-ic-meds"><span class="material-symbols-rounded">pill</span></div>'
+                mh += '<div style="flex:1;min-width:0;">'
+                mh += '<div class="md-mp-name">' + ui_text(m.get("name", ""), 90) + '</div>'
+                mh += '<div class="md-mp-sub">' + ui_text(m.get("dose", "") or "Dose not specified", 40) + ' · ' + ui_text(m.get("frequency", ""), 40) + (" · " + ui_text(m.get("time_of_day"), 40) if m.get("time_of_day") else "") + '</div>'
+                if m.get("notes"):
+                    mh += '<div class="md-mp-notes">' + ui_text(m.get("notes"), 260) + '</div>'
+                mh += '</div></div></div>'
+                st.markdown(mh, unsafe_allow_html=True)
+            with _row_x:
+                if st.button(" ", key="del_med_" + str(m.get("id", "")), icon=":material/close:", help="Remove medication"):
+                    delete_medication(m.get("id"))
+                    st.rerun()
 
     # ── Allergies ───────────────────────────────────────────────────
     st.markdown(
-        '<div style="margin-top:2rem;"></div>'
-        '<div class="md-form-intro">Allergies</div>'
-        '<div class="md-form-sub">Drug, food, and environmental allergies. MediChat checks these before suggesting any treatment.</div>',
+        '<div class="md-mp-section">'
+        '<div class="md-mp-section-ic md-mp-section-ic-allerg"><span class="material-symbols-rounded">e911_emergency</span></div>'
+        '<div class="md-mp-section-text">'
+        '<div class="md-mp-section-title">Allergies</div>'
+        '<div class="md-mp-section-sub">Drug, food, and environmental allergies. MediChat checks these before suggesting any treatment.</div>'
+        '</div></div>',
         unsafe_allow_html=True
     )
     with st.form("add_allergy_form", clear_on_submit=True):
@@ -24099,35 +24289,41 @@ elif st.session_state.mode == "medications":
 
     allergies = list_allergies()
     if not allergies:
-        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.2rem;font-size:0.85rem;">No allergies recorded yet.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="md-mp-empty">No allergies recorded yet.</div>', unsafe_allow_html=True)
     else:
         for a in allergies:
             sev = (a.get("severity") or "").strip()
             sev_color = {"Anaphylaxis": "#ef4444", "Severe": "#f97316", "Moderate": "#f59e0b", "Mild": "#22c55e"}.get(sev, "#94a3b8")
-            ah = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
-            ah += '<div class="md-metric-icon" style="width:42px;height:42px;flex-shrink:0;background:rgba(239,68,68,0.12);color:#ef4444;">⚠️</div>'
-            ah += '<div style="flex:1;min-width:0;">'
-            ah += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + ui_text(a.get("name", ""), 90) + '</div>'
-            if sev or a.get("reaction"):
-                ah += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.15rem;">'
-                if sev:
-                    ah += '<span style="display:inline-block;padding:0.1rem 0.5rem;border-radius:6px;background:' + sev_color + '20;color:' + sev_color + ';font-weight:600;font-size:0.72rem;margin-right:0.5rem;">' + sev + '</span>'
-                if a.get("reaction"):
-                    ah += ui_text(a.get("reaction"), 200)
-                ah += '</div>'
-            if a.get("notes"):
-                ah += '<div style="font-size:0.76rem;color:var(--md-text-2);margin-top:0.3rem;font-style:italic;">' + ui_text(a.get("notes"), 260) + '</div>'
-            ah += '</div></div></div>'
-            st.markdown(ah, unsafe_allow_html=True)
-            if st.button("Remove", key="del_allergy_" + str(a.get("id", "")), use_container_width=False):
-                delete_allergy(a.get("id"))
-                st.rerun()
+            _row_card, _row_x = st.columns([20, 1], gap="small")
+            with _row_card:
+                ah = '<div class="md-mp-card"><div class="md-mp-row">'
+                ah += '<div class="md-mp-ic md-mp-ic-allerg"><span class="material-symbols-rounded">e911_emergency</span></div>'
+                ah += '<div style="flex:1;min-width:0;">'
+                ah += '<div class="md-mp-name">' + ui_text(a.get("name", ""), 90) + '</div>'
+                if sev or a.get("reaction"):
+                    ah += '<div class="md-mp-sub">'
+                    if sev:
+                        ah += '<span class="md-mp-pill" style="background:' + sev_color + '20;color:' + sev_color + ';">' + sev + '</span>'
+                    if a.get("reaction"):
+                        ah += ui_text(a.get("reaction"), 200)
+                    ah += '</div>'
+                if a.get("notes"):
+                    ah += '<div class="md-mp-notes">' + ui_text(a.get("notes"), 260) + '</div>'
+                ah += '</div></div></div>'
+                st.markdown(ah, unsafe_allow_html=True)
+            with _row_x:
+                if st.button(" ", key="del_allergy_" + str(a.get("id", "")), icon=":material/close:", help="Remove allergy"):
+                    delete_allergy(a.get("id"))
+                    st.rerun()
 
     # ── Family medical history ──────────────────────────────────────
     st.markdown(
-        '<div style="margin-top:2rem;"></div>'
-        '<div class="md-form-intro">Family medical history</div>'
-        '<div class="md-form-sub">Conditions in close blood relatives, helps MediChat assess genetic and familial risk.</div>',
+        '<div class="md-mp-section">'
+        '<div class="md-mp-section-ic md-mp-section-ic-family"><span class="material-symbols-rounded">family_restroom</span></div>'
+        '<div class="md-mp-section-text">'
+        '<div class="md-mp-section-title">Family medical history</div>'
+        '<div class="md-mp-section-sub">Conditions in close blood relatives, helps MediChat assess genetic and familial risk.</div>'
+        '</div></div>',
         unsafe_allow_html=True
     )
     with st.form("add_fh_form", clear_on_submit=True):
@@ -24152,33 +24348,39 @@ elif st.session_state.mode == "medications":
 
     fh_list = list_family_history()
     if not fh_list:
-        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.2rem;font-size:0.85rem;">No family history recorded yet.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="md-mp-empty">No family history recorded yet.</div>', unsafe_allow_html=True)
     else:
         for f in fh_list:
-            fh_card = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
-            fh_card += '<div class="md-metric-icon md-hp-blue" style="width:42px;height:42px;flex-shrink:0;">👪</div>'
-            fh_card += '<div style="flex:1;min-width:0;">'
-            fh_card += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + ui_text(f.get("condition", ""), 100) + '</div>'
-            sub_bits = []
-            if f.get("relationship"):
-                sub_bits.append(f["relationship"])
-            if f.get("age_at_diagnosis"):
-                sub_bits.append("diagnosed at " + str(f["age_at_diagnosis"]))
-            if sub_bits:
-                fh_card += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.15rem;">' + ui_text(" · ".join(sub_bits), 200) + '</div>'
-            if f.get("notes"):
-                fh_card += '<div style="font-size:0.76rem;color:var(--md-text-2);margin-top:0.3rem;font-style:italic;">' + ui_text(f.get("notes"), 260) + '</div>'
-            fh_card += '</div></div></div>'
-            st.markdown(fh_card, unsafe_allow_html=True)
-            if st.button("Remove", key="del_fh_" + str(f.get("id", "")), use_container_width=False):
-                delete_family_history(f.get("id"))
-                st.rerun()
+            _row_card, _row_x = st.columns([20, 1], gap="small")
+            with _row_card:
+                fh_card = '<div class="md-mp-card"><div class="md-mp-row">'
+                fh_card += '<div class="md-mp-ic md-mp-ic-family"><span class="material-symbols-rounded">family_restroom</span></div>'
+                fh_card += '<div style="flex:1;min-width:0;">'
+                fh_card += '<div class="md-mp-name">' + ui_text(f.get("condition", ""), 100) + '</div>'
+                sub_bits = []
+                if f.get("relationship"):
+                    sub_bits.append(f["relationship"])
+                if f.get("age_at_diagnosis"):
+                    sub_bits.append("diagnosed at " + str(f["age_at_diagnosis"]))
+                if sub_bits:
+                    fh_card += '<div class="md-mp-sub">' + ui_text(" · ".join(sub_bits), 200) + '</div>'
+                if f.get("notes"):
+                    fh_card += '<div class="md-mp-notes">' + ui_text(f.get("notes"), 260) + '</div>'
+                fh_card += '</div></div></div>'
+                st.markdown(fh_card, unsafe_allow_html=True)
+            with _row_x:
+                if st.button(" ", key="del_fh_" + str(f.get("id", "")), icon=":material/close:", help="Remove entry"):
+                    delete_family_history(f.get("id"))
+                    st.rerun()
 
     # ── Surgical history ────────────────────────────────────────────
     st.markdown(
-        '<div style="margin-top:2rem;"></div>'
-        '<div class="md-form-intro">Surgical history</div>'
-        '<div class="md-form-sub">Past surgeries, changes anatomy, drug clearance, and post-op risk profile.</div>',
+        '<div class="md-mp-section">'
+        '<div class="md-mp-section-ic md-mp-section-ic-surg"><span class="material-symbols-rounded">local_hospital</span></div>'
+        '<div class="md-mp-section-text">'
+        '<div class="md-mp-section-title">Surgical history</div>'
+        '<div class="md-mp-section-sub">Past surgeries, changes anatomy, drug clearance, and post-op risk profile.</div>'
+        '</div></div>',
         unsafe_allow_html=True
     )
     with st.form("add_surg_form", clear_on_submit=True):
@@ -24198,31 +24400,34 @@ elif st.session_state.mode == "medications":
 
     surg_list = list_surgical_history()
     if not surg_list:
-        st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.2rem;font-size:0.85rem;">No surgical history recorded yet.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="md-mp-empty">No surgical history recorded yet.</div>', unsafe_allow_html=True)
     else:
         try:
             surg_sorted = sorted(surg_list, key=lambda s: (s.get("year") or ""), reverse=True)
         except Exception:
             surg_sorted = surg_list
         for s in surg_sorted:
-            surg_card = '<div class="md-rcard"><div style="display:flex;align-items:flex-start;gap:0.8rem;">'
-            surg_card += '<div class="md-metric-icon md-hp-green" style="width:42px;height:42px;flex-shrink:0;">🏥</div>'
-            surg_card += '<div style="flex:1;min-width:0;">'
-            surg_card += '<div style="font-weight:700;color:var(--md-text-1);font-size:0.98rem;">' + ui_text(s.get("procedure", ""), 120) + '</div>'
-            sub_bits = []
-            if s.get("year"):
-                sub_bits.append(s["year"])
-            if s.get("hospital"):
-                sub_bits.append(s["hospital"])
-            if sub_bits:
-                surg_card += '<div style="font-size:0.78rem;color:var(--md-text-2);margin-top:0.15rem;">' + ui_text(" · ".join(sub_bits), 200) + '</div>'
-            if s.get("notes"):
-                surg_card += '<div style="font-size:0.76rem;color:var(--md-text-2);margin-top:0.3rem;font-style:italic;">' + ui_text(s.get("notes"), 260) + '</div>'
-            surg_card += '</div></div></div>'
-            st.markdown(surg_card, unsafe_allow_html=True)
-            if st.button("Remove", key="del_surg_" + str(s.get("id", "")), use_container_width=False):
-                delete_surgical_history(s.get("id"))
-                st.rerun()
+            _row_card, _row_x = st.columns([20, 1], gap="small")
+            with _row_card:
+                surg_card = '<div class="md-mp-card"><div class="md-mp-row">'
+                surg_card += '<div class="md-mp-ic md-mp-ic-surg"><span class="material-symbols-rounded">local_hospital</span></div>'
+                surg_card += '<div style="flex:1;min-width:0;">'
+                surg_card += '<div class="md-mp-name">' + ui_text(s.get("procedure", ""), 120) + '</div>'
+                sub_bits = []
+                if s.get("year"):
+                    sub_bits.append(s["year"])
+                if s.get("hospital"):
+                    sub_bits.append(s["hospital"])
+                if sub_bits:
+                    surg_card += '<div class="md-mp-sub">' + ui_text(" · ".join(sub_bits), 200) + '</div>'
+                if s.get("notes"):
+                    surg_card += '<div class="md-mp-notes">' + ui_text(s.get("notes"), 260) + '</div>'
+                surg_card += '</div></div></div>'
+                st.markdown(surg_card, unsafe_allow_html=True)
+            with _row_x:
+                if st.button(" ", key="del_surg_" + str(s.get("id", "")), icon=":material/close:", help="Remove surgery"):
+                    delete_surgical_history(s.get("id"))
+                    st.rerun()
 
 elif st.session_state.mode == "appointments":
     # ── Appointments ────────────────────────────────────────────────
