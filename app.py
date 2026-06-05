@@ -1755,20 +1755,34 @@ def render_sparkline_path(values, view_w=96, view_h=28, padding=2):
     return path
 
 def heart_rate_status(bpm):
-    """Return (label, css_status_class) for a resting heart rate, or (None, None)."""
+    """Return (label, css_status_class) for a resting heart rate, or (None, None).
+
+    Clinical thresholds (resting, adult):
+      < 50    : low (bradycardia, possible concern)
+      50-59   : low-normal (athletic / borderline low)
+      60-89   : normal
+      90-99   : elevated (upper edge of normal, worth noticing)
+      >= 100  : high (tachycardia, clinical attention if persistent)
+    """
     if bpm is None:
         return (None, None)
     try:
         v = int(bpm)
     except Exception:
         return (None, None)
-    if 60 <= v <= 100:
-        return ("Normal", "md-status-good")
+    if v < 50:
+        return ("Low", "md-status-alert")
     if v < 60:
-        return ("Low", "md-status-info")
-    return ("High", "md-status-warn")
+        return ("Low-normal", "md-status-info")
+    if v < 90:
+        return ("Normal", "md-status-good")
+    if v < 100:
+        return ("Elevated", "md-status-warn")
+    return ("High", "md-status-alert")
 
 def sleep_status(hours):
+    """Adult sleep thresholds (NHS / AASM): 7-9h optimal, 6-7h or 9-10h fair,
+    < 6h or > 10h flagged as inadequate / excess."""
     if hours is None:
         return (None, None)
     try:
@@ -1779,7 +1793,67 @@ def sleep_status(hours):
         return ("Good", "md-status-good")
     if 6 <= v < 7 or 9 < v <= 10:
         return ("Fair", "md-status-info")
+    if v < 5 or v > 11:
+        return ("Low" if v < 6 else "High", "md-status-alert")
     return ("Low" if v < 6 else "High", "md-status-warn")
+
+def daily_trend_warnings(today_metrics, yesterday_metrics):
+    """Compare today vs yesterday for the four core vitals and return a list
+    of short warning strings the UI can render as chips. Returns [] when
+    everything looks unchanged or when yesterday's data is missing.
+
+    Trigger thresholds (deliberately conservative so we don't alarm-fatigue):
+      Heart rate : +/- 20 bpm jump, OR crossing the 100 / 60 threshold.
+      Sleep      : drop of >= 2 hours, OR sleep < 5h while yesterday was normal.
+      Steps      : drop of >= 5000 steps when yesterday was >= 4000.
+      Water      : <= 2 glasses when yesterday was >= 6.
+    """
+    out = []
+    if not today_metrics or not yesterday_metrics:
+        return out
+
+    def _i(x):
+        try:
+            return int(x)
+        except Exception:
+            return None
+    def _f(x):
+        try:
+            return float(x)
+        except Exception:
+            return None
+
+    hr_t = _i(today_metrics.get("heart_rate_resting"))
+    hr_y = _i(yesterday_metrics.get("heart_rate_resting"))
+    if hr_t is not None and hr_y is not None:
+        diff = hr_t - hr_y
+        if abs(diff) >= 20:
+            direction = "up" if diff > 0 else "down"
+            out.append("Heart rate jumped " + direction + " " + str(abs(diff)) + " bpm vs yesterday")
+        elif hr_t >= 100 and hr_y < 100:
+            out.append("Heart rate crossed into the high range today")
+        elif hr_t < 60 and hr_y >= 60:
+            out.append("Heart rate dropped below the normal range today")
+
+    sl_t = _f(today_metrics.get("sleep_hours"))
+    sl_y = _f(yesterday_metrics.get("sleep_hours"))
+    if sl_t is not None and sl_y is not None:
+        if sl_y - sl_t >= 2:
+            out.append("Slept " + str(round(sl_y - sl_t, 1)) + "h less than yesterday")
+        elif sl_t < 5 and sl_y >= 6:
+            out.append("Very low sleep tonight, under 5 hours")
+
+    st_t = _i(today_metrics.get("steps"))
+    st_y = _i(yesterday_metrics.get("steps"))
+    if st_t is not None and st_y is not None and st_y >= 4000 and (st_y - st_t) >= 5000:
+        out.append("Activity dropped ~" + str(int((st_y - st_t) / 1000)) + "k steps vs yesterday")
+
+    w_t = _i(today_metrics.get("water_glasses"))
+    w_y = _i(yesterday_metrics.get("water_glasses"))
+    if w_t is not None and w_y is not None and w_t <= 2 and w_y >= 6:
+        out.append("Hydration is much lower today, only " + str(w_t) + " glass" + ("es" if w_t != 1 else ""))
+
+    return out
 
 def update_daily_metric(field, value, date_key=None):
     date_key = date_key or _today_key()
@@ -21369,6 +21443,19 @@ if st.session_state.mode == "chat":
                 _sleep_hours = _daily.get("sleep_hours")
                 _water_count = _daily.get("water_glasses")
 
+                # Today vs yesterday trend warnings (HR jumps, sleep drop,
+                # activity collapse, hydration drop). Rendered as red chips
+                # under the metrics tile so the user sees a real "second
+                # set of eyes" comparison rather than just point-in-time
+                # status pills.
+                _trend_warnings = []
+                try:
+                    _yk = (get_user_local_now() - timedelta(days=1)).strftime("%Y-%m-%d")
+                    _yesterday = get_daily_metrics(date_key=_yk) or {}
+                    _trend_warnings = daily_trend_warnings(_daily, _yesterday)
+                except Exception:
+                    _trend_warnings = []
+
                 _heart_rate_display = (str(int(_hr)) + " BPM") if _hr else "-"
                 _hr_status, _hr_cls = heart_rate_status(_hr)
                 _heart_rate_status_text = _hr_status or ""
@@ -21473,6 +21560,52 @@ if st.session_state.mode == "chat":
                         '</div>'
                     )
                 snap_html += '</div></div>'
+                # Inject trend-warning chips just before the closing tile
+                # so they sit visually inside the Health Overview card.
+                if _trend_warnings:
+                    _warn_chips = ""
+                    for _w in _trend_warnings[:3]:
+                        _warn_chips += (
+                            '<div class="md-snap-warn-chip">'
+                            '<span class="material-symbols-rounded">warning</span>'
+                            '<span>' + ui_text(_w, 120) + '</span>'
+                            '</div>'
+                        )
+                    snap_html = snap_html.replace(
+                        '</div></div>',
+                        '<div class="md-snap-warns">' + _warn_chips + '</div></div></div>',
+                        1,
+                    )
+                st.markdown("""
+                <style>
+                .md-snap-warns {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.32rem;
+                    margin-top: 0.6rem;
+                    padding-top: 0.55rem;
+                    border-top: 1px dashed #fecaca;
+                }
+                .md-snap-warn-chip {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.4rem;
+                    padding: 0.42rem 0.6rem;
+                    background: #fef2f2;
+                    border: 1px solid #fecaca;
+                    border-radius: 10px;
+                    font-size: 0.78rem;
+                    color: #b91c1c;
+                    line-height: 1.35;
+                }
+                .md-snap-warn-chip .material-symbols-rounded {
+                    font-size: 1rem;
+                    color: #dc2626;
+                    font-variation-settings: 'FILL' 1;
+                    flex-shrink: 0;
+                }
+                </style>
+                """, unsafe_allow_html=True)
                 st.markdown(snap_html, unsafe_allow_html=True)
                 st.markdown('<div class="md-rail-link-btn">', unsafe_allow_html=True)
                 if st.button("See all health data →", key="home_overview_see_all", use_container_width=True):
