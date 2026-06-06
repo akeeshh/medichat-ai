@@ -25081,7 +25081,7 @@ elif st.session_state.mode == "appointments":
 
     # ── List ──────────────────────────────────────────────────────
     appts = list_appointments()
-    st.markdown('<div style="margin-top:1.3rem;font-size:0.78rem;font-weight:700;color:var(--md-text-1);text-transform:uppercase;letter-spacing:0.07em;">Your appointments</div>', unsafe_allow_html=True)
+    st.markdown('<div style="margin-top:1.6rem;margin-bottom:0.85rem;font-size:0.78rem;font-weight:700;color:var(--md-text-1);text-transform:uppercase;letter-spacing:0.07em;">Your appointments</div>', unsafe_allow_html=True)
     if not appts:
         st.markdown('<div class="md-rcard" style="text-align:center;color:var(--md-text-3);font-style:italic;padding:1.6rem;margin-top:0.4rem;">No appointments yet. Connect your calendar above, upload an .ics file, or add one manually.</div>', unsafe_allow_html=True)
     else:
