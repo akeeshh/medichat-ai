@@ -1431,7 +1431,17 @@ def sync_calendar_appointments(ics_bytes=None, ics_url=None, keywords=None, look
         if raw is None and ics_url:
             raw = _fetch_ics_url(ics_url)
     except Exception as e:
-        return (0, 0, 0, "Could not fetch calendar URL: " + str(e)[:160])
+        _msg = str(e)
+        # Friendlier hint when Google Calendar returns 404 for the
+        # `/public/basic.ics` URL, that endpoint only works if the
+        # calendar is explicitly shared publicly. The "Secret address
+        # in iCal format" works for private calendars.
+        if "404" in _msg and "calendar.google.com" in (ics_url or "") and "/public/" in (ics_url or ""):
+            return (0, 0, 0,
+                "Calendar not found (HTTP 404). Google Calendar only serves the /public/basic.ics URL "
+                "if the calendar is set to public. Use the 'Secret address in iCal format' instead: "
+                "Google Calendar > Settings > [your calendar] > Integrate calendar > Secret address.")
+        return (0, 0, 0, "Could not fetch calendar URL: " + _msg[:160])
     if not raw:
         return (0, 0, 0, "No calendar data to parse.")
     events = parse_ics_bytes(raw)
