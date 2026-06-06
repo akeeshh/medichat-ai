@@ -1191,6 +1191,8 @@ def add_medication(name, dose, frequency, time_of_day, notes=""):
         update_user_doc({"medications": current + [entry]})
     else:
         _ensure_guest_store()["medications"].append(entry)
+    try: list_medications.cache_clear()
+    except Exception: pass
     return True
 
 def delete_medication(med_id):
@@ -1200,6 +1202,8 @@ def delete_medication(med_id):
     else:
         store = _ensure_guest_store()
         store["medications"] = [m for m in store["medications"] if m.get("id") != med_id]
+    try: list_medications.cache_clear()
+    except Exception: pass
     return True
 
 # ── Appointments ─────────────────────────────────────────────────────
@@ -1254,6 +1258,8 @@ def add_appointment(title, date_iso, doctor, location, notes="", source="manual"
         update_user_doc({"appointments": current + [entry]})
     else:
         _ensure_guest_store()["appointments"].append(entry)
+    try: list_appointments.cache_clear()
+    except Exception: pass
     return True
 
 def delete_appointment(appt_id):
@@ -1263,6 +1269,8 @@ def delete_appointment(appt_id):
     else:
         store = _ensure_guest_store()
         store["appointments"] = [a for a in store["appointments"] if a.get("id") != appt_id]
+    try: list_appointments.cache_clear()
+    except Exception: pass
     return True
 
 # ── Calendar sync (ICS) ──────────────────────────────────────────────
@@ -1487,6 +1495,14 @@ def sync_calendar_appointments(ics_bytes=None, ics_url=None, keywords=None, look
         "last_updated": updated,
         "last_skipped": skipped,
     })
+    # The sync just wrote new appointments to Firestore. Without this,
+    # list_appointments() would return the cached (pre-sync) list for up
+    # to 1.5 s and the user would see "2 new" in the banner but the
+    # newly synced rows would not appear in the list below.
+    try:
+        list_appointments.cache_clear()
+    except Exception:
+        pass
     return (added, updated, skipped, err)
 
 # ── Allergies ────────────────────────────────────────────────────────
@@ -1651,6 +1667,8 @@ def add_health_record(name, file_type, size_bytes, summary="", raw_text="", pati
         update_user_doc({"health_records": current + [entry]})
     else:
         _ensure_guest_store()["health_records"].append(entry)
+    try: list_health_records.cache_clear()
+    except Exception: pass
     return True
 
 def delete_health_record(rec_id):
@@ -1660,6 +1678,8 @@ def delete_health_record(rec_id):
     else:
         store = _ensure_guest_store()
         store["health_records"] = [r for r in store["health_records"] if r.get("id") != rec_id]
+    try: list_health_records.cache_clear()
+    except Exception: pass
     return True
 
 # ── Daily Metrics (water, sleep) ─────────────────────────────────────
