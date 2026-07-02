@@ -281,9 +281,13 @@ st.markdown(
 
         /* Streamlit stacks columns vertically on narrow screens, which
            drops every card's X-delete button onto its own row BETWEEN
-           the tiles (Chats list, Health Records, Medications, Appts).
-           Any row that contains a delete button must stay horizontal:
-           card stretches, X pins to a fixed 44px column on the right. */
+           the tiles (Chats list, Health Records, Medications, Appts) and
+           makes the list spacing uneven. Forcing the flex row back proved
+           unreliable on iOS Safari, so instead we OVERLAY the X: the row
+           becomes a positioning context rendered as a plain block, the
+           card column flows at full width, and the delete column is
+           absolutely pinned to the card's top-right corner. Works no
+           matter how the columns stack. */
         [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-hist_del_']),
         [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-hr_del_']),
         [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_med_']),
@@ -291,53 +295,89 @@ st.markdown(
         [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_fh_']),
         [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_surg_']),
         [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_appt_']) {
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            align-items: center !important;
-            gap: 0.4rem !important;
+            position: relative !important;
+            display: block !important;
         }
-        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-hist_del_']) > [data-testid='stColumn'],
-        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-hr_del_']) > [data-testid='stColumn'],
-        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_med_']) > [data-testid='stColumn'],
-        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_allergy_']) > [data-testid='stColumn'],
-        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_fh_']) > [data-testid='stColumn'],
-        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_surg_']) > [data-testid='stColumn'],
-        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_appt_']) > [data-testid='stColumn'] {
-            width: auto !important;
-            min-width: 0 !important;
-            flex: 1 1 auto !important;
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock'] > [data-testid='stColumn']:has([class*='st-key-hist_del_']),
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock'] > [data-testid='stColumn']:has([class*='st-key-hr_del_']),
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock'] > [data-testid='stColumn']:has([class*='st-key-del_med_']),
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock'] > [data-testid='stColumn']:has([class*='st-key-del_allergy_']),
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock'] > [data-testid='stColumn']:has([class*='st-key-del_fh_']),
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock'] > [data-testid='stColumn']:has([class*='st-key-del_surg_']),
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock'] > [data-testid='stColumn']:has([class*='st-key-del_appt_']) {
+            position: absolute !important;
+            top: 8px !important;
+            right: 8px !important;
+            width: 36px !important;
+            min-width: 36px !important;
+            max-width: 36px !important;
+            flex: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            z-index: 5 !important;
         }
-        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-hist_del_']) > [data-testid='stColumn']:last-child,
-        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-hr_del_']) > [data-testid='stColumn']:last-child,
-        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_med_']) > [data-testid='stColumn']:last-child,
-        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_allergy_']) > [data-testid='stColumn']:last-child,
-        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_fh_']) > [data-testid='stColumn']:last-child,
-        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_surg_']) > [data-testid='stColumn']:last-child,
-        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_appt_']) > [data-testid='stColumn']:last-child {
-            flex: 0 0 44px !important;
+        /* The card column underneath spans the full row width. */
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-hist_del_']) > [data-testid='stColumn']:first-child,
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-hr_del_']) > [data-testid='stColumn']:first-child,
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_med_']) > [data-testid='stColumn']:first-child,
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_allergy_']) > [data-testid='stColumn']:first-child,
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_fh_']) > [data-testid='stColumn']:first-child,
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_surg_']) > [data-testid='stColumn']:first-child,
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_appt_']) > [data-testid='stColumn']:first-child {
+            width: 100% !important;
+            max-width: 100% !important;
         }
 
-        /* Compact brand header, shown ONLY on mobile (the sidebar that
-           normally carries the logo is hidden here). */
+        /* Brand header (welcome page only). Bigger and centered. */
         .md-mobile-brand {
             display: flex !important;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
-            padding: 0.3rem 0 0.55rem 0;
+            gap: 0.6rem;
+            padding: 0.5rem 0 0.8rem 0;
         }
         .md-mobile-brand img {
-            width: 30px;
-            height: 30px;
-            border-radius: 8px;
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
         }
         .md-mobile-brand-name {
-            font-size: 1.02rem;
+            font-size: 1.35rem;
             font-weight: 800;
             color: #144272;
             letter-spacing: -0.01em;
         }
         .md-mobile-brand-name span { color: #2176ae; }
+
+        /* Disclaimer under the composer: neat centered pill instead of
+           the ragged left-aligned wrap. */
+        .md-home-composer-note {
+            display: flex !important;
+            align-items: flex-start !important;
+            justify-content: center !important;
+            gap: 0.4rem !important;
+            text-align: center !important;
+            font-size: 0.72rem !important;
+            line-height: 1.5 !important;
+            padding: 0.55rem 0.9rem !important;
+            margin: 0.5rem auto 0.2rem auto !important;
+            max-width: 92% !important;
+        }
+        .md-home-composer-note .md-disclaimer-shield {
+            flex-shrink: 0 !important;
+            margin-top: 0.1rem !important;
+        }
+
+        /* Daily-tip carousel: the decorative illustration circle overlaps
+           the text/metric pill on narrow screens. Hide it and let the
+           text breathe. */
+        .md-tip-illust { display: none !important; }
+        .md-tip-slide { padding-right: 1rem !important; }
+        .md-tip-metric {
+            white-space: normal !important;
+            line-height: 1.4 !important;
+        }
     }
     @media (min-width: 769px) {
         .md-mobile-brand { display: none !important; }
@@ -16899,46 +16939,121 @@ try:
                 }
 
                 const TABS = [
-                    { mode: '',             icon: 'home',           label: 'Home'    },
-                    { mode: 'history',      icon: 'forum',          label: 'Chats'   },
-                    { mode: 'assessment',   icon: 'stethoscope',    label: 'Check'   },
-                    { mode: 'records',      icon: 'lab_profile',    label: 'Records' },
-                    { mode: 'appointments', icon: 'calendar_month', label: 'Appts'   },
+                    { mode: '',           icon: 'home',        label: 'Home'    },
+                    { mode: 'history',    icon: 'forum',       label: 'Chats'   },
+                    { mode: 'assessment', icon: 'stethoscope', label: 'Check'   },
+                    { mode: 'records',    icon: 'lab_profile', label: 'Records' },
                 ];
+                // Everything else from the desktop sidebar lives in the
+                // More sheet, so no destination is lost on mobile.
+                const MORE_ITEMS = [
+                    { mode: 'overview',     icon: 'monitoring',     label: 'Health Overview'     },
+                    { mode: 'rx_reader',    icon: 'prescriptions',  label: 'Prescription Reader' },
+                    { mode: 'medications',  icon: 'pill',           label: 'Medications'         },
+                    { mode: 'insights',     icon: 'auto_awesome',   label: 'AI Insights'         },
+                    { mode: 'appointments', icon: 'calendar_month', label: 'Appointments'        },
+                    { mode: 'help',         icon: 'help',           label: 'Help Center'         },
+                    { mode: 'privacy',      icon: 'verified_user',  label: 'Privacy & Terms'     },
+                ];
+                const MORE_MODES = MORE_ITEMS.map(function(m) { return m.mode; });
+
+                function tabHtml(icon, label, active) {
+                    return '<span class="material-symbols-rounded" style="font-size:22px;line-height:1;' +
+                        (active ? "font-variation-settings:'FILL' 1, 'wght' 500;" : '') + '">' + icon + '</span>' +
+                        '<span style="font-size:10px;font-weight:600;letter-spacing:0.02em;">' + label + '</span>';
+                }
+                const TAB_STYLE =
+                    'flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;' +
+                    'text-decoration:none;padding:5px 0 3px 0;border-radius:12px;' +
+                    'transition:color 0.15s ease;cursor:pointer;-webkit-tap-highlight-color:transparent;';
+
+                function toggleMoreSheet(show) {
+                    const sheet = doc.getElementById('md-mobile-moresheet');
+                    if (!sheet) return;
+                    const want = (typeof show === 'boolean') ? show : (sheet.style.display === 'none');
+                    sheet.style.display = want ? 'block' : 'none';
+                }
 
                 function buildTabBar() {
                     let bar = doc.getElementById('md-mobile-tabbar');
+                    let sheet = doc.getElementById('md-mobile-moresheet');
                     if (!isMobile()) {
                         if (bar) { bar.style.display = 'none'; }
+                        if (sheet) { sheet.style.display = 'none'; }
                         return;
+                    }
+                    const cur = currentMode();
+                    const sig = 'v2|' + cur;
+                    if (bar && bar.dataset.sig === sig) {
+                        bar.style.display = 'flex';
+                        return; // already built for this state, don't churn the DOM
                     }
                     if (!bar) {
                         bar = doc.createElement('div');
                         bar.id = 'md-mobile-tabbar';
                         doc.body.appendChild(bar);
                     }
+                    if (!sheet) {
+                        sheet = doc.createElement('div');
+                        sheet.id = 'md-mobile-moresheet';
+                        doc.body.appendChild(sheet);
+                        // Tapping anywhere outside the sheet closes it.
+                        doc.addEventListener('click', function(ev) {
+                            const s = doc.getElementById('md-mobile-moresheet');
+                            const b = doc.getElementById('md-mobile-tabbar');
+                            if (s && s.style.display !== 'none' &&
+                                !s.contains(ev.target) && !(b && b.contains(ev.target))) {
+                                s.style.display = 'none';
+                            }
+                        }, true);
+                    }
+                    bar.dataset.sig = sig;
                     bar.style.cssText =
                         'position:fixed;left:0;right:0;bottom:0;z-index:999990;display:flex;' +
                         'background:rgba(255,255,255,0.97);backdrop-filter:blur(14px);' +
                         '-webkit-backdrop-filter:blur(14px);border-top:1px solid #e2e8f0;' +
                         'box-shadow:0 -4px 18px rgba(15,23,42,0.07);' +
                         'padding:6px 4px calc(7px + env(safe-area-inset-bottom)) 4px;';
-                    const cur = currentMode();
                     bar.innerHTML = '';
                     TABS.forEach(function(t) {
                         const active = t.mode ? (cur === t.mode) : (cur === '' || cur === 'chat');
                         const a = doc.createElement('a');
                         a.href = hrefFor(t.mode);
-                        a.style.cssText =
-                            'flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;' +
-                            'text-decoration:none;padding:5px 0 3px 0;border-radius:12px;' +
-                            'transition:color 0.15s ease;' +
-                            (active ? 'color:#4f46e5;' : 'color:#64748b;');
-                        a.innerHTML =
-                            '<span class="material-symbols-rounded" style="font-size:22px;line-height:1;' +
-                            (active ? "font-variation-settings:'FILL' 1, 'wght' 500;" : '') + '">' + t.icon + '</span>' +
-                            '<span style="font-size:10px;font-weight:600;letter-spacing:0.02em;">' + t.label + '</span>';
+                        a.style.cssText = TAB_STYLE + (active ? 'color:#4f46e5;' : 'color:#64748b;');
+                        a.innerHTML = tabHtml(t.icon, t.label, active);
                         bar.appendChild(a);
+                    });
+                    // "More" toggle exposes every remaining destination.
+                    const moreActive = MORE_MODES.indexOf(cur) !== -1;
+                    const more = doc.createElement('div');
+                    more.style.cssText = TAB_STYLE + (moreActive ? 'color:#4f46e5;' : 'color:#64748b;');
+                    more.innerHTML = tabHtml('apps', 'More', moreActive);
+                    more.addEventListener('click', function(ev) {
+                        ev.stopPropagation();
+                        toggleMoreSheet();
+                    });
+                    bar.appendChild(more);
+
+                    // Sheet content (rebuilt together with the bar).
+                    sheet.style.cssText =
+                        'position:fixed;left:10px;right:10px;bottom:calc(64px + env(safe-area-inset-bottom));' +
+                        'z-index:999991;display:none;background:#ffffff;border:1px solid #e2e8f0;' +
+                        'border-radius:18px;box-shadow:0 12px 40px rgba(15,23,42,0.18);' +
+                        'padding:8px;max-height:60vh;overflow-y:auto;';
+                    sheet.innerHTML = '';
+                    MORE_ITEMS.forEach(function(m) {
+                        const active = cur === m.mode;
+                        const a = doc.createElement('a');
+                        a.href = hrefFor(m.mode);
+                        a.style.cssText =
+                            'display:flex;align-items:center;gap:12px;padding:12px 14px;' +
+                            'border-radius:12px;text-decoration:none;' +
+                            (active ? 'color:#4f46e5;background:#eef2ff;' : 'color:#334155;');
+                        a.innerHTML =
+                            '<span class="material-symbols-rounded" style="font-size:21px;line-height:1;' +
+                            (active ? "font-variation-settings:'FILL' 1;" : '') + '">' + m.icon + '</span>' +
+                            '<span style="font-size:14px;font-weight:600;">' + m.label + '</span>';
+                        sheet.appendChild(a);
                     });
                 }
 
@@ -16961,31 +17076,6 @@ try:
     )
 except Exception:
     pass
-
-# Mobile-only brand header. The sidebar (which carries the logo on
-# desktop) is hidden on phones, so without this the brand never appears
-# anywhere in the mobile app. Hidden at >768px via the CSS block at the
-# top of the file.
-try:
-    _mb_logo_uri = get_brand_logo_data_uri()
-    if _mb_logo_uri:
-        st.markdown(
-            '<div class="md-mobile-brand">'
-            '<img src="' + _mb_logo_uri + '" alt="MediChat AI"/>'
-            '<div class="md-mobile-brand-name">MediChat <span>AI</span></div>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            '<div class="md-mobile-brand">'
-            '<div class="md-mobile-brand-name">MediChat <span>AI</span></div>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-except Exception:
-    pass
-
 
 # ── Early session-restore (BEFORE the sidebar renders) ──────────────
 # The sidebar profile tile renders ~1900 lines later but its display
@@ -20742,6 +20832,22 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         'stethoscope'
         '</div>'
     )
+
+    # Mobile-only brand lockup above the welcome hero. The sidebar (which
+    # carries the logo on desktop) is hidden on phones, and the welcome
+    # page is the one place the brand must be unmissable. Hidden >768px
+    # via the CSS block at the top of the file.
+    try:
+        _mb_logo_uri = get_brand_logo_data_uri()
+        st.markdown(
+            '<div class="md-mobile-brand">'
+            + ('<img src="' + _mb_logo_uri + '" alt="MediChat AI"/>' if _mb_logo_uri else '')
+            + '<div class="md-mobile-brand-name">MediChat <span>AI</span></div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        pass
 
     # Welcome hero. Compact, no em-dashes, claims trimmed to what we can
     # honestly stand behind (no clinician co-creation claim).
