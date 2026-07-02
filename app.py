@@ -16882,6 +16882,21 @@ try:
 
                 function isMobile() { return win.innerWidth <= 768; }
 
+                // Stamp ?m=1 so the Python side can render purpose-built
+                // mobile layouts. Component iframes are sandboxed against
+                // navigating the parent, so the stamp runs as a script
+                // node injected into the PARENT document (parent can
+                // navigate itself freely). One reload on first mobile
+                // visit; the guard prevents reload loops.
+                try {
+                    if (!win.__medichatMStamp) {
+                        win.__medichatMStamp = true;
+                        const sc = doc.createElement('script');
+                        sc.textContent = "(function(){try{var p=new URLSearchParams(window.location.search);var hasM=p.get('m')==='1';var mob=window.innerWidth<=768;if(mob&&!hasM){p.set('m','1');window.location.replace(window.location.pathname+'?'+p.toString());}else if(!mob&&hasM&&window.innerWidth>820){p.delete('m');var q=p.toString();window.location.replace(window.location.pathname+(q?('?'+q):''));}}catch(e){}})();";
+                        doc.body.appendChild(sc);
+                    }
+                } catch (e) {}
+
                 function applyLayout() {
                     const sb = doc.querySelector("section[data-testid='stSidebar']");
                     if (sb) {
@@ -17013,7 +17028,7 @@ try:
                         'background:rgba(255,255,255,0.97);backdrop-filter:blur(14px);' +
                         '-webkit-backdrop-filter:blur(14px);border-top:1px solid #e2e8f0;' +
                         'box-shadow:0 -4px 18px rgba(15,23,42,0.07);' +
-                        'padding:6px 4px calc(7px + env(safe-area-inset-bottom)) 4px;';
+                        'padding:9px 6px calc(10px + env(safe-area-inset-bottom)) 6px;';
                     bar.innerHTML = '';
                     TABS.forEach(function(t) {
                         const active = t.mode ? (cur === t.mode) : (cur === '' || cur === 'chat');
@@ -17261,6 +17276,119 @@ st.markdown("""
     .md-rcard { padding: 0.85rem 1rem !important; }
     .md-form-intro { font-size: 1rem !important; }
     .md-form-sub { font-size: 0.76rem !important; }
+
+    /* ── I. Mobile visual language v3 ─────────────────────────── */
+    /* Soft indigo wash at the top of every page. */
+    .stApp { background: linear-gradient(180deg, #edf1fd 0%, #f6f8fc 260px) !important; }
+    /* Filled inputs, focus ring. */
+    .stTextInput input, .stNumberInput input {
+        background: #eef2f7 !important;
+        border: 1.5px solid transparent !important;
+        border-radius: 14px !important;
+    }
+    .stTextInput input:focus {
+        border-color: #a5b4fc !important;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+        background: #ffffff !important;
+    }
+    /* Card elevation replaces hairline borders. */
+    .md-rcard, .md-snap-card, .md-hist2-row-inner, .md-hist2-tile {
+        border: none !important;
+        box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06) !important;
+    }
+    .md-hist2-row-inner { border-radius: 18px !important; }
+    /* Chat: user messages in brand indigo, bot in floating white. */
+    .user-bubble {
+        background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+        color: #ffffff !important;
+        border: none !important;
+        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25) !important;
+    }
+    .user-bubble * { color: #ffffff !important; }
+    .bot-bubble {
+        background: #ffffff !important;
+        border: none !important;
+        box-shadow: 0 2px 12px rgba(15, 23, 42, 0.07) !important;
+    }
+
+    /* Quick actions: horizontal snap rail (overrides the 2x2 above;
+       later rule at equal specificity wins). */
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-qa_']):not(:has([data-testid='stHorizontalBlock'])) {
+        display: flex !important; flex-direction: row !important;
+        flex-wrap: nowrap !important; overflow-x: auto !important;
+        gap: 0.5rem !important;
+        scroll-snap-type: x mandatory !important;
+        padding: 0.1rem 0.1rem 0.45rem 0.1rem !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+    }
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-qa_']):not(:has([data-testid='stHorizontalBlock']))::-webkit-scrollbar { display: none !important; }
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-qa_']):not(:has([data-testid='stHorizontalBlock'])) > [data-testid='stColumn'] {
+        flex: 0 0 40% !important; width: 40% !important; min-width: 40% !important;
+        scroll-snap-align: start !important;
+    }
+
+    /* Mobile home hero (gradient card). */
+    .md-mgreet {
+        display: flex !important; flex-direction: row !important;
+        align-items: center !important; justify-content: flex-start !important;
+        text-align: left !important; gap: 0.85rem !important;
+        background: linear-gradient(135deg, #4f46e5 0%, #6d5ef1 55%, #8b5cf6 100%) !important;
+        border-radius: 22px !important; padding: 1.15rem 1.1rem !important;
+        box-shadow: 0 10px 26px rgba(79, 70, 229, 0.28) !important;
+        margin: 0.2rem 0 0.9rem 0 !important;
+    }
+    .md-mgreet-av {
+        width: 52px; height: 52px; border-radius: 16px;
+        background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.35);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-weight: 800; font-size: 1.3rem; flex-shrink: 0;
+    }
+    .md-mgreet-t { min-width: 0; }
+    .md-mgreet-date { font-size: 0.64rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.75); }
+    .md-mgreet-title { font-size: 1.26rem; font-weight: 800; color: #fff; line-height: 1.25; margin-top: 0.1rem; }
+    .md-mgreet-sub { font-size: 0.8rem; color: rgba(255,255,255,0.85); margin-top: 0.15rem; }
+
+    /* Chats page: compact stats strip. */
+    .md-mstat-strip {
+        display: flex !important; align-items: center !important;
+        justify-content: space-between !important;
+        background: #fff !important; border-radius: 18px !important;
+        padding: 0.85rem 0.6rem !important;
+        box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06) !important;
+        margin-bottom: 0.35rem !important;
+    }
+    .md-mstat { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; flex: 1; }
+    .md-mstat-val { font-size: 1.12rem; font-weight: 800; color: #0f172a; }
+    .md-mstat-lbl { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #94a3b8; }
+    .md-mstat-div { width: 1px; height: 26px; background: #e2e8f0; flex: 0 0 1px; }
+
+    /* Conversation: slim header. */
+    .md-mchat-head {
+        display: flex !important; align-items: center !important; gap: 0.7rem !important;
+        background: #fff !important; border-radius: 18px !important;
+        padding: 0.75rem 0.9rem !important;
+        box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06) !important;
+        margin-bottom: 0.6rem !important;
+    }
+    .md-mchat-ic {
+        width: 40px; height: 40px; border-radius: 13px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: #fff; display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .md-mchat-ic .material-symbols-rounded { font-size: 1.25rem; }
+    .md-mchat-t { min-width: 0; flex: 1; }
+    .md-mchat-title { font-size: 1.02rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.35rem; }
+    .md-mchat-shield { color: #16a34a !important; font-size: 1rem !important; }
+    .md-mchat-live {
+        margin-left: auto; display: inline-flex; align-items: center; gap: 0.3rem;
+        font-size: 0.66rem; font-weight: 700; color: #16a34a;
+        background: #f0fdf4; border: 1px solid #bbf7d0;
+        padding: 0.16rem 0.5rem; border-radius: 999px;
+    }
+    .md-mchat-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; }
+    .md-mchat-sub { font-size: 0.72rem; color: #64748b; margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -17593,6 +17721,7 @@ with st.sidebar:
                 # destroy the persisted session and a refresh on the new
                 # page would log the user out.
                 _preserved_s = st.query_params.get("s") if "s" in st.query_params else None
+                _preserved_m = st.query_params.get("m") if "m" in st.query_params else None
                 try:
                     st.query_params.clear()
                 except Exception:
@@ -17600,6 +17729,11 @@ with st.sidebar:
                 if _preserved_s:
                     try:
                         st.query_params["s"] = _preserved_s
+                    except Exception:
+                        pass
+                if _preserved_m:
+                    try:
+                        st.query_params["m"] = _preserved_m
                     except Exception:
                         pass
                 st.session_state.nav_clicked = True
@@ -19574,6 +19708,11 @@ L = LANGUAGES[st.session_state.selected_language]
 
 ADMIN_PASSWORD = _safe_secret("ADMIN_PASSWORD", os.environ.get("ADMIN_PASSWORD", "MediChatAdmin@2026"))
 _query_params = st.query_params
+# Server-side mobile mode. The mobile shell JS stamps ?m=1 on phone-sized
+# viewports (and removes it on desktop), letting Python render
+# purpose-built mobile layouts instead of restyled desktop ones. Every
+# nav path preserves the param, so the mode is stable across pages.
+IS_MOBILE = str(_query_params.get("m", "") or "").strip() == "1"
 _admin_requested = _query_params.get("admin", "") != ""
 _force_auth_requested = str(_query_params.get("force_auth", "") or "").strip().lower() in {"1", "true", "yes", "on"}
 _mode_from_url = str(_query_params.get("mode", "") or "").strip()
@@ -21591,15 +21730,35 @@ if st.session_state.mode == "chat":
             _tod = "night"
         _disp_name = (st.session_state.patient_name if st.session_state.patient_name and st.session_state.patient_name != "Guest" else "")
         _greet = "Good " + _tod + (", " + _disp_name if _disp_name else "") + " 👋"
-        st.markdown(
-            # Hidden page-identity marker for anti-flash CSS (body:has()).
-            '<div class="md-page-marker md-page-marker-home" style="display:none;"></div>'
-            '<div class="md-greet-wrap md-home-greet-wrap md-home-head-left">'
-            '<div class="md-greet">' + ui_text(_greet, 80) + '</div>'
-            '<div class="md-subgreet">How can I help you today?</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
+        if IS_MOBILE:
+            # Purpose-built mobile hero: gradient card with the user's
+            # avatar initial, greeting, and today's date. Carries the
+            # md-home-greet-wrap class so the existing anti-flash rules
+            # hide it during cross-page transitions.
+            _mg_initial = ui_text((_disp_name or "G")[:1].upper(), 2)
+            _mg_date = _local_now.strftime("%A, %d %B")
+            st.markdown(
+                '<div class="md-page-marker md-page-marker-home" style="display:none;"></div>'
+                '<div class="md-home-greet-wrap md-mgreet">'
+                '<div class="md-mgreet-av">' + _mg_initial + '</div>'
+                '<div class="md-mgreet-t">'
+                '<div class="md-mgreet-date">' + _mg_date + '</div>'
+                '<div class="md-mgreet-title">' + ui_text(_greet, 80) + '</div>'
+                '<div class="md-mgreet-sub">How can I help you today?</div>'
+                '</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                # Hidden page-identity marker for anti-flash CSS (body:has()).
+                '<div class="md-page-marker md-page-marker-home" style="display:none;"></div>'
+                '<div class="md-greet-wrap md-home-greet-wrap md-home-head-left">'
+                '<div class="md-greet">' + ui_text(_greet, 80) + '</div>'
+                '<div class="md-subgreet">How can I help you today?</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
 
         # ── Anti-flash for Home dashboard ─────────────────────────────
         # Mirror of the Recent Chats nuclear CSS - scoped to body:has
@@ -22308,7 +22467,24 @@ if st.session_state.mode == "chat":
             "New session" if _hero_msg_count == 0 else
             (str(_hero_msg_count) + " message" + ("" if _hero_msg_count == 1 else "s") + " so far")
         )
-        st.html(
+        if IS_MOBILE:
+            # Slim mobile chat header: icon, name + shield, live dot, and a
+            # single one-line trust strip. The desktop billboard hero is
+            # far too tall for a phone conversation view.
+            st.html(
+                '<div class="md-mchat-head">'
+                '<div class="md-mchat-ic"><span class="material-symbols-rounded">stethoscope</span></div>'
+                '<div class="md-mchat-t">'
+                '<div class="md-mchat-title">MediChat Ai '
+                '<span class="material-symbols-rounded md-mchat-shield">verified_user</span>'
+                '<span class="md-mchat-live"><span class="md-mchat-live-dot"></span>Online</span>'
+                '</div>'
+                '<div class="md-mchat-sub">Private · Evidence-grounded · ' + ui_escape(_hero_session_label) + '</div>'
+                '</div>'
+                '</div>'
+            )
+        else:
+          st.html(
             '<div class="md-chat-hero md-chat-hero-v2">'
             '<div class="md-chat-hero-left">'
             # Gradient icon tile with a clean stethoscope glyph + small
@@ -24706,7 +24882,23 @@ elif st.session_state.mode == "history":
                     '<div><div class="md-hist2-tile-val">' + str(_val) + '</div><div class="md-hist2-tile-lbl">' + _lbl + '</div></div>'
                     '</div>'
                 )
-            with st.container(key="hist2_stat_tiles"):
+            if IS_MOBILE:
+                # Mobile: one compact stats strip instead of four tiles.
+                # Carries md-hist2-tiles so the anti-flash rules still
+                # hide it during cross-page transitions.
+                st.html(
+                    '<div class="md-hist2-tiles md-mstat-strip">'
+                    '<div class="md-mstat"><span class="md-mstat-val">' + str(_total) + '</span><span class="md-mstat-lbl">All</span></div>'
+                    '<div class="md-mstat-div"></div>'
+                    '<div class="md-mstat"><span class="md-mstat-val">' + str(_week_count) + '</span><span class="md-mstat-lbl">7 days</span></div>'
+                    '<div class="md-mstat-div"></div>'
+                    '<div class="md-mstat"><span class="md-mstat-val">' + str(_month_count) + '</span><span class="md-mstat-lbl">30 days</span></div>'
+                    '<div class="md-mstat-div"></div>'
+                    '<div class="md-mstat"><span class="md-mstat-val">' + str(_avg_msgs) + '</span><span class="md-mstat-lbl">Avg msgs</span></div>'
+                    '</div>'
+                )
+            elif True:
+              with st.container(key="hist2_stat_tiles"):
                 _t1, _t2, _t3, _t4 = st.columns(4, gap="small")
                 with _t1:
                     st.html(_tile_html("all", "", "forum", _total, "All chats"))
