@@ -278,6 +278,69 @@ st.markdown(
             width: 100% !important;
             margin-left: 0 !important;
         }
+
+        /* Streamlit stacks columns vertically on narrow screens, which
+           drops every card's X-delete button onto its own row BETWEEN
+           the tiles (Chats list, Health Records, Medications, Appts).
+           Any row that contains a delete button must stay horizontal:
+           card stretches, X pins to a fixed 44px column on the right. */
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-hist_del_']),
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-hr_del_']),
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_med_']),
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_allergy_']),
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_fh_']),
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_surg_']),
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_appt_']) {
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            gap: 0.4rem !important;
+        }
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-hist_del_']) > [data-testid='stColumn'],
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-hr_del_']) > [data-testid='stColumn'],
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_med_']) > [data-testid='stColumn'],
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_allergy_']) > [data-testid='stColumn'],
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_fh_']) > [data-testid='stColumn'],
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_surg_']) > [data-testid='stColumn'],
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_appt_']) > [data-testid='stColumn'] {
+            width: auto !important;
+            min-width: 0 !important;
+            flex: 1 1 auto !important;
+        }
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-hist_del_']) > [data-testid='stColumn']:last-child,
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-hr_del_']) > [data-testid='stColumn']:last-child,
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_med_']) > [data-testid='stColumn']:last-child,
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_allergy_']) > [data-testid='stColumn']:last-child,
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_fh_']) > [data-testid='stColumn']:last-child,
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_surg_']) > [data-testid='stColumn']:last-child,
+        [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock']:has([class*='st-key-del_appt_']) > [data-testid='stColumn']:last-child {
+            flex: 0 0 44px !important;
+        }
+
+        /* Compact brand header, shown ONLY on mobile (the sidebar that
+           normally carries the logo is hidden here). */
+        .md-mobile-brand {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.3rem 0 0.55rem 0;
+        }
+        .md-mobile-brand img {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+        }
+        .md-mobile-brand-name {
+            font-size: 1.02rem;
+            font-weight: 800;
+            color: #144272;
+            letter-spacing: -0.01em;
+        }
+        .md-mobile-brand-name span { color: #2176ae; }
+    }
+    @media (min-width: 769px) {
+        .md-mobile-brand { display: none !important; }
     }
     </style>
     """,
@@ -11309,29 +11372,24 @@ body:not(:has(.md-page-marker-home)) .md-composer-glow {
     display: none !important;
 }
 
-/* Streamlit's default "running" state fades all elements to ~0.5 opacity
-   during reruns. That's what makes nav transitions look like a clumsy
-   half-loaded page mid-jump. Force full opacity so each rerun snaps in
-   clean instead of dimming the world first. */
+/* Stale-element handling: during slow reruns the OLD page's widgets stay
+   in the DOM marked data-stale until React reconciles them away. We used
+   to force them to full opacity (to avoid Streamlit's half-dimmed look),
+   but on slow connections that left the previous page fully visible under
+   the incoming one, the "watermark ghost" effect. Fade stale content down
+   fast instead so outgoing content visibly clears. The nav-click spinner
+   overlay (see the mobile/nav JS) already hides the main pane instantly
+   on navigation, so this only affects mid-page reruns. */
 [data-stale="true"],
-[data-testid="stAppViewContainer"][data-stale="true"],
-.stApp[data-stale="true"],
 .element-container[data-stale="true"],
 div[data-testid="stMarkdownContainer"][data-stale="true"] {
-    opacity: 1 !important;
+    opacity: 0.25 !important;
+    /* 600ms delay: fast in-page reruns (button clicks, form submits)
+       come back before the delay expires, so they never flicker. Only
+       genuinely slow transitions (page navs, LLM calls) fade the old
+       content out. */
+    transition: opacity 200ms ease-out 600ms !important;
     filter: none !important;
-    transition: none !important;
-}
-
-/* Subtle fade-in on the main content block so a nav click feels like a
-   smooth swap rather than a hard pop. Sidebar stays still (it doesn't
-   change between pages), only the main pane animates. */
-@keyframes md-page-fade-in {
-    from { opacity: 0; transform: translateY(3px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-[data-testid="stMain"] [data-testid="stMainBlockContainer"] {
-    animation: md-page-fade-in 90ms ease-out;
 }
 
 /* Help page action buttons / FAQ togglers. */
@@ -14360,6 +14418,10 @@ def markdown_to_html(text):
         if new_raw == raw:
             break
         raw = new_raw
+    # Orphaned list numbers: models sometimes emit "1.\n\n**Heading:**"
+    # which renders the bare "1." on its own line with the heading below
+    # it. Re-join the number with the content that follows it.
+    raw = re.sub(r"(^|\n)[ \t]*(\d{1,2})[\.)][ \t]*\n+[ \t]*(?=\*\*|\S)", r"\1\2. ", raw)
     raw = re.sub(r"\n{3,}", "\n\n", raw)
 
     try:
@@ -16897,6 +16959,30 @@ try:
         """,
         height=0,
     )
+except Exception:
+    pass
+
+# Mobile-only brand header. The sidebar (which carries the logo on
+# desktop) is hidden on phones, so without this the brand never appears
+# anywhere in the mobile app. Hidden at >768px via the CSS block at the
+# top of the file.
+try:
+    _mb_logo_uri = get_brand_logo_data_uri()
+    if _mb_logo_uri:
+        st.markdown(
+            '<div class="md-mobile-brand">'
+            '<img src="' + _mb_logo_uri + '" alt="MediChat AI"/>'
+            '<div class="md-mobile-brand-name">MediChat <span>AI</span></div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<div class="md-mobile-brand">'
+            '<div class="md-mobile-brand-name">MediChat <span>AI</span></div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
 except Exception:
     pass
 
