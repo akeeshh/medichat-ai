@@ -16758,6 +16758,149 @@ except Exception:
     pass
 
 
+# ── Mobile app shell (≤ 768px): hide sidebar + bottom tab bar ────────
+# Streamlit's sidebar is unusable as mobile navigation: it either overlays
+# the whole viewport or leaves a dead gutter. On phone-sized screens we
+# remove it entirely (JS-enforced INLINE styles - these reliably beat
+# Streamlit's own inline layout styles, unlike stylesheet rules) and give
+# the user a native-app-style fixed bottom tab bar instead. Navigation
+# goes through the existing ?mode= URL router, preserving the ?s session
+# token, so signed-in state survives every tab switch. Desktop (> 768px)
+# is completely untouched: every mutation is gated on isMobile() and
+# reverted on resize back to desktop widths.
+try:
+    import streamlit.components.v1 as _mobile_shell_components
+    _mobile_shell_components.html(
+        """
+        <script>
+        (function() {
+            try {
+                const win = window.parent;
+                const doc = win.document;
+
+                function isMobile() { return win.innerWidth <= 768; }
+
+                function applyLayout() {
+                    const sb = doc.querySelector("section[data-testid='stSidebar']");
+                    if (sb) {
+                        if (isMobile()) {
+                            sb.style.setProperty('display', 'none', 'important');
+                        } else {
+                            sb.style.removeProperty('display');
+                        }
+                    }
+                    doc.querySelectorAll(
+                        "[data-testid='stSidebarCollapsedControl']," +
+                        "[data-testid='stSidebarCollapseButton']," +
+                        "[data-testid='collapsedControl']"
+                    ).forEach(function(el) {
+                        if (isMobile()) {
+                            el.style.setProperty('display', 'none', 'important');
+                        } else {
+                            el.style.removeProperty('display');
+                        }
+                    });
+                    const main = doc.querySelector("section[data-testid='stMain']") || doc.querySelector('section.stMain');
+                    if (main) {
+                        if (isMobile()) {
+                            main.style.setProperty('margin-left', '0', 'important');
+                            main.style.setProperty('width', '100vw', 'important');
+                            main.style.setProperty('max-width', '100vw', 'important');
+                        } else {
+                            main.style.removeProperty('margin-left');
+                            main.style.removeProperty('width');
+                            main.style.removeProperty('max-width');
+                        }
+                    }
+                    const blk = doc.querySelector("[data-testid='stMainBlockContainer']");
+                    if (blk) {
+                        if (isMobile()) {
+                            blk.style.setProperty('padding', '0.8rem 0.9rem 96px 0.9rem', 'important');
+                            blk.style.setProperty('max-width', '100%', 'important');
+                        } else {
+                            blk.style.removeProperty('padding');
+                            blk.style.removeProperty('max-width');
+                        }
+                    }
+                }
+
+                function currentMode() {
+                    try { return new URLSearchParams(win.location.search).get('mode') || ''; }
+                    catch (e) { return ''; }
+                }
+                function hrefFor(mode) {
+                    const p = new URLSearchParams(win.location.search);
+                    if (mode) { p.set('mode', mode); } else { p.delete('mode'); }
+                    p.delete('conv');
+                    const q = p.toString();
+                    return win.location.pathname + (q ? ('?' + q) : '');
+                }
+
+                const TABS = [
+                    { mode: '',             icon: 'home',           label: 'Home'    },
+                    { mode: 'history',      icon: 'forum',          label: 'Chats'   },
+                    { mode: 'assessment',   icon: 'stethoscope',    label: 'Check'   },
+                    { mode: 'records',      icon: 'lab_profile',    label: 'Records' },
+                    { mode: 'appointments', icon: 'calendar_month', label: 'Appts'   },
+                ];
+
+                function buildTabBar() {
+                    let bar = doc.getElementById('md-mobile-tabbar');
+                    if (!isMobile()) {
+                        if (bar) { bar.style.display = 'none'; }
+                        return;
+                    }
+                    if (!bar) {
+                        bar = doc.createElement('div');
+                        bar.id = 'md-mobile-tabbar';
+                        doc.body.appendChild(bar);
+                    }
+                    bar.style.cssText =
+                        'position:fixed;left:0;right:0;bottom:0;z-index:999990;display:flex;' +
+                        'background:rgba(255,255,255,0.97);backdrop-filter:blur(14px);' +
+                        '-webkit-backdrop-filter:blur(14px);border-top:1px solid #e2e8f0;' +
+                        'box-shadow:0 -4px 18px rgba(15,23,42,0.07);' +
+                        'padding:6px 4px calc(7px + env(safe-area-inset-bottom)) 4px;';
+                    const cur = currentMode();
+                    bar.innerHTML = '';
+                    TABS.forEach(function(t) {
+                        const active = t.mode ? (cur === t.mode) : (cur === '' || cur === 'chat');
+                        const a = doc.createElement('a');
+                        a.href = hrefFor(t.mode);
+                        a.style.cssText =
+                            'flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;' +
+                            'text-decoration:none;padding:5px 0 3px 0;border-radius:12px;' +
+                            'transition:color 0.15s ease;' +
+                            (active ? 'color:#4f46e5;' : 'color:#64748b;');
+                        a.innerHTML =
+                            '<span class="material-symbols-rounded" style="font-size:22px;line-height:1;' +
+                            (active ? "font-variation-settings:'FILL' 1, 'wght' 500;" : '') + '">' + t.icon + '</span>' +
+                            '<span style="font-size:10px;font-weight:600;letter-spacing:0.02em;">' + t.label + '</span>';
+                        bar.appendChild(a);
+                    });
+                }
+
+                function tick() { applyLayout(); buildTabBar(); }
+                tick();
+                setTimeout(tick, 300);
+                setTimeout(tick, 1000);
+                // Interval survives for this script instance's lifetime;
+                // when Streamlit reruns and replaces this component iframe,
+                // the new instance takes over and the old timers die with
+                // the old iframe. Resize listener re-applies instantly on
+                // orientation change / window resize.
+                setInterval(tick, 1200);
+                win.addEventListener('resize', tick);
+            } catch (e) { console.error('[MediChat] mobile-shell setup failed:', e); }
+        })();
+        </script>
+        """,
+        height=0,
+    )
+except Exception:
+    pass
+
+
 # ── Early session-restore (BEFORE the sidebar renders) ──────────────
 # The sidebar profile tile renders ~1900 lines later but its display
 # depends on st.session_state.is_authenticated. Without this early-restore,
@@ -20135,6 +20278,39 @@ if (not _is_admin) and (not st.session_state.is_authenticated) and (not st.sessi
         color: #6366f1 !important;
         -webkit-text-fill-color: #6366f1 !important;
         font-size: 0.72rem !important;
+    }
+
+    /* Mobile: the v2 hero's 3-column grid (shield | text | shield) leaves
+       ~40px for the headline on a 375px phone, wrapping it one letter per
+       line. Stack to a single centered column and drop the side shields. */
+    @media (max-width: 768px) {
+        .md-auth-welcome-v2 {
+            grid-template-columns: 1fr !important;
+            padding: 1.1rem 1rem 1rem 1rem !important;
+            text-align: center !important;
+        }
+        .md-auth-welcome-v2 .md-auth-shield,
+        .md-auth-welcome-v2 .md-auth-shield.md-auth-shield-image,
+        .md-auth-welcome-v2 .md-auth-shield-alt {
+            display: none !important;
+        }
+        .md-auth-welcome-v2 .md-auth-welcome-title {
+            font-size: 1.55rem !important;
+            line-height: 1.2 !important;
+        }
+        .md-auth-welcome-v2 .md-auth-welcome-copy {
+            font-size: 0.8rem !important;
+            max-width: 100% !important;
+        }
+        .md-auth-welcome-v2 .md-auth-chip-row {
+            justify-content: center !important;
+            flex-wrap: wrap !important;
+        }
+        .md-auth-welcome-trust-strip {
+            flex-wrap: wrap !important;
+            justify-content: center !important;
+            gap: 0.4rem !important;
+        }
     }
 
     /* Trust strip, single line, divider-separated. */
