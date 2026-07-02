@@ -16964,7 +16964,7 @@ try:
                 }
                 const TAB_STYLE =
                     'flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;' +
-                    'text-decoration:none;padding:5px 0 3px 0;border-radius:12px;' +
+                    'text-decoration:none;padding:6px 0 4px 0;border-radius:14px;margin:0 3px;' +
                     'transition:color 0.15s ease;cursor:pointer;-webkit-tap-highlight-color:transparent;';
 
                 function toggleMoreSheet(show) {
@@ -17019,14 +17019,14 @@ try:
                         const active = t.mode ? (cur === t.mode) : (cur === '' || cur === 'chat');
                         const a = doc.createElement('a');
                         a.href = hrefFor(t.mode);
-                        a.style.cssText = TAB_STYLE + (active ? 'color:#4f46e5;' : 'color:#64748b;');
+                        a.style.cssText = TAB_STYLE + (active ? 'color:#4f46e5;background:#eef2ff;' : 'color:#64748b;');
                         a.innerHTML = tabHtml(t.icon, t.label, active);
                         bar.appendChild(a);
                     });
                     // "More" toggle exposes every remaining destination.
                     const moreActive = MORE_MODES.indexOf(cur) !== -1;
                     const more = doc.createElement('div');
-                    more.style.cssText = TAB_STYLE + (moreActive ? 'color:#4f46e5;' : 'color:#64748b;');
+                    more.style.cssText = TAB_STYLE + (moreActive ? 'color:#4f46e5;background:#eef2ff;' : 'color:#64748b;');
                     more.innerHTML = tabHtml('apps', 'More', moreActive);
                     more.addEventListener('click', function(ev) {
                         ev.stopPropagation();
@@ -17076,6 +17076,195 @@ try:
     )
 except Exception:
     pass
+
+# ── Mobile design system (≤768px) ────────────────────────────────────
+# A complete visual re-skin of every page for phones: consistent type
+# scale, 16px page gutter, 2-column tile grids, compact heroes, native
+# chat bubbles, 46px touch targets, and 16px inputs (stops iOS's
+# auto-zoom on focus). Injected AFTER the main global CSS so its rules
+# win the cascade; everything is scoped inside the media query, so
+# desktop (>768px) renders byte-identical.
+st.markdown("""
+<style>
+@media (max-width: 768px) {
+
+    /* ── A. Base ──────────────────────────────────────────────── */
+    .stApp, [data-testid='stAppViewContainer'] { overflow-x: hidden !important; }
+    [data-testid='stMainBlockContainer'] [data-testid='stVerticalBlock'] { gap: 0.65rem !important; }
+    /* 16px inputs: below 16px iOS Safari zooms the page on focus. */
+    .stTextInput input, .stTextArea textarea, .stNumberInput input,
+    [data-baseweb='select'] input, [data-baseweb='select'] div[value] {
+        font-size: 16px !important;
+    }
+    /* Full-width buttons get proper thumb-sized targets. Icon-only ×
+       delete buttons keep their compact 32px footprint. */
+    .stButton > button:not([class*='st-key']),
+    [data-testid='stFormSubmitButton'] > button {
+        min-height: 46px !important;
+        border-radius: 14px !important;
+        font-size: 0.95rem !important;
+    }
+    div[data-testid='stDialog'] > div {
+        width: calc(100vw - 20px) !important;
+        max-width: calc(100vw - 20px) !important;
+        border-radius: 20px !important;
+    }
+
+    /* ── B. Page heroes: compact banners, not desktop billboards ── */
+    .md-page-hero {
+        padding: 0.85rem 1rem !important;
+        border-radius: 16px !important;
+        gap: 0.7rem !important;
+        margin-bottom: 0.85rem !important;
+    }
+    .md-page-hero .md-page-hero-ic {
+        width: 40px !important; height: 40px !important;
+        border-radius: 12px !important; flex-shrink: 0 !important;
+    }
+    .md-page-hero .md-page-hero-ic .material-symbols-rounded { font-size: 1.25rem !important; }
+    .md-page-hero-title { font-size: 1.12rem !important; line-height: 1.25 !important; }
+    .md-page-hero-sub {
+        font-size: 0.76rem !important; line-height: 1.4 !important;
+        display: -webkit-box !important; -webkit-line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important; overflow: hidden !important;
+    }
+
+    /* ── C. Home ─────────────────────────────────────────────── */
+    .md-greet-wrap { margin-top: 0 !important; }
+    .md-greet { font-size: 1.45rem !important; line-height: 1.25 !important; }
+    .md-subgreet { font-size: 0.85rem !important; }
+    /* Quick actions + Smart Actions: 2×2 grids instead of a stack of
+       full-width rows. */
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-qa_']):not(:has([data-testid='stHorizontalBlock'])),
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-sa_']):not(:has([data-testid='stHorizontalBlock'])) {
+        display: flex !important; flex-direction: row !important;
+        flex-wrap: wrap !important; gap: 0.55rem !important;
+    }
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-qa_']):not(:has([data-testid='stHorizontalBlock'])) > [data-testid='stColumn'],
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-sa_']):not(:has([data-testid='stHorizontalBlock'])) > [data-testid='stColumn'] {
+        flex: 0 0 calc(50% - 0.3rem) !important;
+        width: calc(50% - 0.3rem) !important;
+        min-width: calc(50% - 0.3rem) !important;
+    }
+    [class*='st-key-qa_'] .stButton > button {
+        min-height: 64px !important;
+        border-radius: 16px !important;
+        font-size: 0.86rem !important;
+    }
+    [class*='st-key-sa_'] .stButton > button {
+        min-height: 96px !important;
+        border-radius: 18px !important;
+        font-size: 0.82rem !important;
+        padding: 0.7rem 0.6rem !important;
+    }
+    .md-smart-head { margin-top: 0.4rem !important; }
+    .md-smart-title { font-size: 1.02rem !important; }
+    .md-snap-card, .md-rcard { border-radius: 18px !important; }
+    .md-composer-glow { display: none !important; }
+
+    /* ── D. Chats page ────────────────────────────────────────── */
+    /* Stat tiles: 2×2 grid. */
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has(.md-hist2-tile):not(:has([data-testid='stHorizontalBlock'])) {
+        display: flex !important; flex-direction: row !important;
+        flex-wrap: wrap !important; gap: 0.55rem !important;
+    }
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has(.md-hist2-tile):not(:has([data-testid='stHorizontalBlock'])) > [data-testid='stColumn'] {
+        flex: 0 0 calc(50% - 0.3rem) !important;
+        width: calc(50% - 0.3rem) !important;
+        min-width: calc(50% - 0.3rem) !important;
+    }
+    .md-hist2-tile { padding: 0.8rem 0.9rem !important; border-radius: 16px !important; }
+    /* Toolbar: search + sort full width, the 4 filter chips 2×2. */
+    section.stMain [class*='st-key-hist_toolbar_row'] [data-testid='stHorizontalBlock'][data-testid] {
+        display: flex !important; flex-direction: row !important;
+        flex-wrap: wrap !important; gap: 0.45rem !important;
+    }
+    section.stMain [class*='st-key-hist_toolbar_row'] [data-testid='stHorizontalBlock'][data-testid] > [data-testid='stColumn'] {
+        flex: 0 0 calc(50% - 0.25rem) !important;
+        width: calc(50% - 0.25rem) !important;
+        min-width: calc(50% - 0.25rem) !important;
+    }
+    section.stMain [class*='st-key-hist_toolbar_row'] [data-testid='stHorizontalBlock'][data-testid] > [data-testid='stColumn']:has([class*='st-key-hist2_search']),
+    section.stMain [class*='st-key-hist_toolbar_row'] [data-testid='stHorizontalBlock'][data-testid] > [data-testid='stColumn']:has([class*='st-key-hist2_sort_box']) {
+        flex: 0 0 100% !important; width: 100% !important; min-width: 100% !important;
+    }
+    [class*='st-key-hist2_filter'] .stButton > button {
+        min-height: 40px !important; font-size: 0.82rem !important;
+        border-radius: 12px !important; padding: 0.3rem 0.4rem !important;
+        white-space: nowrap !important;
+    }
+    /* Chat row cards: tighter, one-line titles. */
+    .md-hist2-row-inner { padding: 0.75rem 0.9rem !important; border-radius: 16px !important; }
+    .md-hist2-row-title {
+        font-size: 0.92rem !important; line-height: 1.3 !important;
+        white-space: nowrap !important; overflow: hidden !important;
+        text-overflow: ellipsis !important; max-width: 82% !important;
+    }
+    .md-hist2-row-meta { font-size: 0.72rem !important; }
+
+    /* ── E. Chat conversation ─────────────────────────────────── */
+    .md-chat-hero {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.6rem !important;
+        padding: 0.85rem 1rem !important;
+        border-radius: 18px !important;
+    }
+    .md-chat-hero-ic { width: 42px !important; height: 42px !important; }
+    .md-chat-hero-title { font-size: 1.2rem !important; }
+    .md-chat-hero-sub {
+        font-size: 0.74rem !important;
+        white-space: nowrap !important; overflow: hidden !important;
+        text-overflow: ellipsis !important; max-width: 78vw !important;
+    }
+    .md-chat-hero-right {
+        flex-direction: row !important; flex-wrap: wrap !important;
+        gap: 0.35rem !important; margin-top: 0.1rem !important;
+    }
+    .md-chat-badge { font-size: 0.68rem !important; padding: 0.24rem 0.55rem !important; }
+    .user-bubble, .bot-bubble {
+        font-size: 0.92rem !important; line-height: 1.55 !important;
+        padding: 0.75rem 0.95rem !important; border-radius: 16px !important;
+    }
+    .user-wrap .user-stack, .bot-wrap .bot-stack { max-width: 86% !important; }
+    .av { width: 30px !important; height: 30px !important; }
+    .md-chat-img-wrap { max-width: 100% !important; }
+    .md-chat-img { max-width: 100% !important; }
+
+    /* ── F. Assessment (Symptoms Checker): 2-col quick-select ──── */
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-opt_']):not(:has([data-testid='stHorizontalBlock'])) {
+        display: flex !important; flex-direction: row !important;
+        flex-wrap: wrap !important; gap: 0.5rem !important;
+    }
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-opt_']):not(:has([data-testid='stHorizontalBlock'])) > [data-testid='stColumn'] {
+        flex: 0 0 calc(50% - 0.25rem) !important;
+        width: calc(50% - 0.25rem) !important;
+        min-width: calc(50% - 0.25rem) !important;
+    }
+    [class*='st-key-opt_'] .stButton > button {
+        min-height: 52px !important; font-size: 0.85rem !important;
+        border-radius: 14px !important; white-space: normal !important;
+    }
+
+    /* ── G. Paired action rows stay side-by-side ──────────────── */
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_vision_analyze']):not(:has([data-testid='stHorizontalBlock'])),
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_vision_analyze']):not(:has([data-testid='stHorizontalBlock'])) {
+        display: flex !important; flex-direction: row !important;
+        flex-wrap: nowrap !important; gap: 0.5rem !important;
+    }
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_vision_analyze']):not(:has([data-testid='stHorizontalBlock'])) > [data-testid='stColumn'],
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_vision_analyze']):not(:has([data-testid='stHorizontalBlock'])) > [data-testid='stColumn'] {
+        flex: 1 1 50% !important; width: 50% !important; min-width: 0 !important;
+    }
+
+    /* ── H. Lists / records / meds cards ─────────────────────── */
+    .md-rcard { padding: 0.85rem 1rem !important; }
+    .md-form-intro { font-size: 1rem !important; }
+    .md-form-sub { font-size: 0.76rem !important; }
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 # ── Early session-restore (BEFORE the sidebar renders) ──────────────
 # The sidebar profile tile renders ~1900 lines later but its display
