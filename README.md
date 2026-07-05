@@ -25,6 +25,9 @@ A solo project, designed and built end to end by **Ahkeeshan Sarvananthan**.
 - **Calendar Sync**: paste your Google, Apple or Outlook calendar ICS URL once and MediChat keeps your upcoming health appointments in sync automatically.
 - **Second Opinion**, an optional pass where a different frontier model reviews the first model's answer before it ships.
 - **PDF exports** (Conversation Export, Doctor Visit Summary, Patient Medical Record), each with a polished branded header, tinted chat bubbles, embedded images and page numbers. Timestamps use the viewer's local time.
+- **A true mobile app experience.** On phone-sized screens MediChat switches into a dedicated mobile mode with server-rendered mobile layouts: a gradient home hero with your avatar and the date, a bottom tab bar (Home, Chats, Check, Records) plus a More sheet covering every other destination, icon-only composer controls, indigo message bubbles, 2x2 tile grids, and thumb-sized touch targets throughout. Desktop renders its own full layout, untouched.
+- **Seamless navigation.** Every page change goes behind an opaque branded loading veil that lifts only when the next page has fully finished rendering, so you never see half-rendered or ghosting pages, on desktop or mobile.
+- **Consistent light theme on every device.** The design system is locked to light mode, so a phone in dark mode gets the same crisp interface instead of a broken auto-dark flip.
 
 ## Tech stack
 
@@ -43,8 +46,20 @@ A solo project, designed and built end to end by **Ahkeeshan Sarvananthan**.
 | PDF generation | fpdf2 with embedded brand logo and uploaded images |
 | PDF reading | pypdf |
 | Image preprocessing | Pillow (autocontrast, sharpness, 2048px max for handwriting) |
+| Mobile shell | Viewport-flagged mobile mode (`?m=1`) with server-rendered mobile layouts, bottom tab bar and More sheet |
+| Page transitions | Opaque navigation curtain driven by Streamlit's script-state signal, settle-detected reveal |
+| Theming | Locked light theme via `.streamlit/config.toml` (overrides OS dark mode) |
 | Language | Python 3.11+ |
 | Deployment | Streamlit Cloud |
+
+## Latest updates (July 2026)
+
+- Complete mobile redesign: dedicated mobile mode, bottom tab navigation, gradient home hero, compact stats strips, native messenger-style chat composer.
+- Navigation curtain for ghost-free page transitions on both desktop and mobile.
+- Locked light theme across all devices.
+- Prescription Reader hardening: multi-medication scripts, refusal and hallucination guards, live-upload priority.
+- Health Overview clinical thresholds tightened plus today-vs-yesterday trend warnings.
+- Security hardening: admin access now requires a configured secret, with no fallback in source.
 
 ## Run locally
 
@@ -64,6 +79,7 @@ OPENAI_API_KEY     = "sk-..."
 ANTHROPIC_API_KEY  = "sk-ant-..."
 GROQ_API_KEY       = "gsk_..."
 PROFILE_SALT       = "<random-32-byte-hex>"
+ADMIN_PASSWORD     = "<strong-password>"   # admin portal stays disabled if unset
 
 [firebase_service_account]
 # Paste your Firebase Admin SDK service account JSON here
