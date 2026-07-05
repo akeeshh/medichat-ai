@@ -763,6 +763,10 @@ def delete_conversation(email_hash, conv_id):
          .document(email_hash)
          .collection("conversations")
          .document(conv_id).delete())
+        try:
+            list_conversations.cache_clear()
+        except Exception:
+            pass
         return True
     except Exception as e:
         print("delete_conversation failed:", e)
@@ -16998,7 +17002,10 @@ try:
                         return;
                     }
                     const cur = currentMode();
-                    const sig = 'v2|' + cur;
+                    // Signature includes the whole query string: any change
+                    // (sign-in adds ?s=, mode changes, conv opens) rebuilds
+                    // the links so they always carry the live session token.
+                    const sig = 'v3|' + win.location.search;
                     if (bar && bar.dataset.sig === sig) {
                         bar.style.display = 'flex';
                         return; // already built for this state, don't churn the DOM
@@ -19759,7 +19766,11 @@ div.st-key-privacy_delete_account button [data-testid="stIconMaterial"] {
 
 L = LANGUAGES[st.session_state.selected_language]
 
-ADMIN_PASSWORD = _safe_secret("ADMIN_PASSWORD", os.environ.get("ADMIN_PASSWORD", "MediChatAdmin@2026"))
+# Admin portal password comes ONLY from secrets / env. No hardcoded
+# fallback: this file is public on GitHub, so a literal default would
+# hand the admin dashboard to anyone who reads the source. If unset,
+# admin login is disabled outright (empty input never matches).
+ADMIN_PASSWORD = _safe_secret("ADMIN_PASSWORD", os.environ.get("ADMIN_PASSWORD", ""))
 _query_params = st.query_params
 # Server-side mobile mode. The mobile shell JS stamps ?m=1 on phone-sized
 # viewports (and removes it on desktop), letting Python render
@@ -19945,7 +19956,7 @@ if _admin_requested and not st.session_state.admin_authenticated:
             admin_pw_input = st.text_input("Password", type="password", placeholder="Enter admin password", label_visibility="collapsed")
             login_btn = st.form_submit_button("Unlock Analytics", use_container_width=True)
         if login_btn:
-            if admin_pw_input == ADMIN_PASSWORD:
+            if ADMIN_PASSWORD and admin_pw_input == ADMIN_PASSWORD:
                 st.session_state.admin_authenticated = True
                 st.session_state.admin_attempt_failed = False
                 st.rerun()
@@ -26397,14 +26408,17 @@ elif st.session_state.mode == "rx_reader":
         st.session_state.pop("rx_pending_name", None)
 
     if rx_submit:
-        _rx_bytes = st.session_state.get("rx_pending_bytes")
-        # Fall back to the live widget value if we somehow didn't stash.
-        if not _rx_bytes and rx_img is not None:
+        # Live widget value first; the session-state stash only covers the
+        # rare rerun race where the uploader reports None at click time.
+        _rx_bytes = None
+        if rx_img is not None:
             try:
                 rx_img.seek(0)
                 _rx_bytes = rx_img.read()
             except Exception:
                 _rx_bytes = None
+        if not _rx_bytes:
+            _rx_bytes = st.session_state.get("rx_pending_bytes")
         if not _rx_bytes:
             st.error("Please upload a prescription image first.")
         else:
