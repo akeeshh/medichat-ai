@@ -5255,6 +5255,7 @@ st.markdown("""
     border: 1px solid var(--md-border);
     border-radius: var(--md-radius-lg);
     box-shadow: var(--md-shadow-sm);
+}
 .md-name-subtitle {
     color: var(--md-text-2);
     font-size: 0.9rem;
