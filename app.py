@@ -17332,15 +17332,32 @@ st.markdown("""
         border-radius: 14px !important; white-space: normal !important;
     }
 
-    /* ── G. Paired action rows stay side-by-side ──────────────── */
-    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_vision_analyze']):not(:has([data-testid='stHorizontalBlock'])),
-    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_vision_analyze']):not(:has([data-testid='stHorizontalBlock'])) {
-        display: flex !important; flex-direction: row !important;
+    /* ── G. Vision upload actions: stacked full-width buttons ──── */
+    /* The 50/50 row collapsed to letter-wide slivers inside the
+       uploader panel's flex context. Stack them instead: primary
+       Analyze on top, Cancel underneath, both full-width - the
+       native mobile action-sheet pattern. position:static guards
+       against any overlay rule bleeding in. */
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_vision_analyze']),
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_vision_analyze']) {
+        display: flex !important; flex-direction: column !important;
         flex-wrap: nowrap !important; gap: 0.5rem !important;
+        position: static !important;
     }
-    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_vision_analyze']):not(:has([data-testid='stHorizontalBlock'])) > [data-testid='stColumn'],
-    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_vision_analyze']):not(:has([data-testid='stHorizontalBlock'])) > [data-testid='stColumn'] {
-        flex: 1 1 50% !important; width: 50% !important; min-width: 0 !important;
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_vision_analyze']) > [data-testid='stColumn'],
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_vision_analyze']) > [data-testid='stColumn'] {
+        flex: 0 0 auto !important;
+        width: 100% !important; max-width: 100% !important;
+        min-width: 100% !important;
+        position: static !important;
+        margin: 0 !important;
+    }
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_vision_analyze']) button,
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_vision_analyze']) button {
+        width: 100% !important; max-width: 100% !important;
+        min-height: 48px !important;
+        border-radius: 14px !important;
+        white-space: nowrap !important;
     }
 
     /* ── H. Lists / records / meds cards ─────────────────────── */
