@@ -17427,17 +17427,20 @@ st.markdown("""
         margin-top: 0 !important;
     }
 
-    /* Tip carousel: indicators get their own bottom-centered strip so
-       they never sit on top of the metric pill. */
-    .md-tip-slide { padding-bottom: 1.7rem !important; }
+    /* Tip carousel: dots leave overlay positioning entirely and flow
+       as a normal centered row UNDER the slide content. Static flow
+       cannot clash with the pill, whatever the slide height is. */
     .md-tip-indicators {
         position: absolute !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        right: auto !important;
-        bottom: 0.55rem !important;
+        top: 1rem !important;
+        right: 1rem !important;
+        left: auto !important;
+        bottom: auto !important;
+        transform: none !important;
         display: flex !important;
         gap: 0.3rem !important;
+        margin: 0 !important;
+        width: auto !important;
     }
 }
 </style>
