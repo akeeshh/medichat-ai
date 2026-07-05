@@ -17516,18 +17516,23 @@ st.markdown("""
         padding: 0.15rem 0.6rem !important;
         margin: 0.35rem auto 0.15rem auto !important;
         max-width: 94% !important;
-        display: flex !important;
-        align-items: flex-start !important;
-        justify-content: center !important;
+        /* Block flow, not flex: the shield renders INLINE as part of
+           the first text line, so it always hugs the message instead
+           of floating detached at the row edge while the text centers
+           itself in the leftover space. */
+        display: block !important;
         text-align: center !important;
-        gap: 0.35rem !important;
     }
-    .md-home-composer-note .md-disclaimer-shield,
-    .md-chat-composer-note .md-chat-disclaimer-shield {
+    section.stMain .md-home-composer-note span.material-symbols-rounded.md-disclaimer-shield,
+    section.stMain .md-chat-composer-note span.material-symbols-rounded.md-chat-disclaimer-shield {
         color: #86bf9d !important;
-        font-size: 0.85rem !important;
-        flex-shrink: 0 !important;
-        margin-top: 0.05rem !important;
+        font-size: 0.8rem !important;
+        display: inline-block !important;
+        float: none !important;
+        position: static !important;
+        vertical-align: -2px !important;
+        margin: 0 0.25rem 0 0 !important;
+        line-height: 1 !important;
     }
 
     /* ── J. Layout compaction + component redesigns ───────────── */
