@@ -11427,12 +11427,11 @@ body:not(:has(.md-page-marker-home)) .md-composer-glow {
 [data-stale="true"],
 .element-container[data-stale="true"],
 div[data-testid="stMarkdownContainer"][data-stale="true"] {
-    opacity: 0.25 !important;
-    /* 600ms delay: fast in-page reruns (button clicks, form submits)
-       come back before the delay expires, so they never flicker. Only
-       genuinely slow transitions (page navs, LLM calls) fade the old
-       content out. */
-    transition: opacity 200ms ease-out 600ms !important;
+    /* Gentle dim only. Real page navigations are covered by the opaque
+       navigation curtain; this touches in-page reruns (streaming chat
+       replies, form saves) where the old content should stay readable. */
+    opacity: 0.65 !important;
+    transition: opacity 250ms ease-out 800ms !important;
     filter: none !important;
 }
 
@@ -16761,15 +16760,16 @@ except Exception:
     pass
 
 
-# ── Instant nav-click transition (snappy feel, hides rerun lag) ──────
-# Streamlit's full-page rerun takes ~500-1000ms during nav clicks. The
-# browser sees the OLD page until the new content arrives, which feels
-# laggy. This script listens for nav button clicks and INSTANTLY hides
-# the main content + shows a soft brand-color spinner so the user sees
-# immediate feedback. A MutationObserver clears the hidden state the
-# moment the new page DOM is reconciled in. Result: click → blank +
-# spinner → new page fades in. Same total time, but the click feels
-# responsive instead of frozen.
+# ── Navigation curtain (seamless page transitions, desktop + mobile) ──
+# Streamlit reruns re-render the whole 27k-line script; during that
+# window the OLD page sits in the DOM being progressively patched, which
+# reads as a "ghost page". The previous approach hid the main pane but
+# cleared on the FIRST DOM mutation, i.e. exactly when the ghost started.
+# This version raises a fully OPAQUE branded curtain on any
+# navigation-intent click and keeps it up until the rerun SETTLES
+# (no DOM mutations for 300ms), then fades it out over the finished
+# page. Mobile tab-bar links (full page reloads) get the same curtain,
+# which naturally persists until the browser commits the navigation.
 try:
     import streamlit.components.v1 as _navfx_components
     _navfx_components.html(
@@ -16779,82 +16779,112 @@ try:
             try {
                 const win = window.parent;
                 const doc = win.document;
-                if (win.__medichatNavTransitionV1) return;
-                win.__medichatNavTransitionV1 = true;
+                if (win.__medichatNavCurtainV2) return;
+                win.__medichatNavCurtainV2 = true;
 
-                const style = doc.createElement('style');
-                style.textContent = `
-                    body[data-medichat-navigating="true"] [data-testid="stMainBlockContainer"] {
-                        opacity: 0 !important;
-                        pointer-events: none !important;
-                        transition: none !important;
-                    }
-                    body[data-medichat-navigating="true"] [data-testid="stMain"]::after {
-                        content: '';
-                        position: fixed;
-                        top: 50%;
-                        left: calc(50% + 130px);
-                        width: 26px;
-                        height: 26px;
-                        margin: -13px 0 0 -13px;
-                        border-radius: 50%;
-                        border: 2.5px solid rgba(33, 118, 174, 0.18);
-                        border-top-color: #2176ae;
-                        animation: mdNavSpin 0.55s linear infinite;
-                        z-index: 99999;
-                        pointer-events: none;
-                    }
-                    @keyframes mdNavSpin { to { transform: rotate(360deg); } }
-                `;
-                doc.head.appendChild(style);
+                // ── Curtain element (parent DOM, above everything) ──
+                const curtain = doc.createElement('div');
+                curtain.id = 'md-nav-curtain';
+                curtain.style.cssText =
+                    'position:fixed;inset:0;z-index:2147483000;display:none;' +
+                    'background:#f6f8fc;opacity:1;transition:opacity 180ms ease-out;' +
+                    'align-items:center;justify-content:center;flex-direction:column;gap:14px;';
+                curtain.innerHTML =
+                    '<div style="width:34px;height:34px;border-radius:50%;' +
+                    'border:3px solid rgba(99,102,241,0.15);border-top-color:#6366f1;' +
+                    'animation:mdCurtainSpin 0.6s linear infinite;"></div>' +
+                    '<div style="font-family:Inter,system-ui,sans-serif;font-size:13px;' +
+                    'font-weight:700;color:#144272;letter-spacing:0.01em;">MediChat <span style="color:#2176ae;">AI</span></div>';
+                const kf = doc.createElement('style');
+                kf.textContent = '@keyframes mdCurtainSpin { to { transform: rotate(360deg); } }';
+                doc.head.appendChild(kf);
+                doc.body.appendChild(curtain);
 
-                let clearTimer = null;
-                function markNavigating() {
-                    doc.body.setAttribute('data-medichat-navigating', 'true');
-                    if (clearTimer) clearTimeout(clearTimer);
-                    // Safety: never leave the spinner up longer than 4s
-                    clearTimer = setTimeout(function() {
-                        doc.body.removeAttribute('data-medichat-navigating');
-                    }, 4000);
+                let shownAt = 0;
+                let settleTimer = null;
+                let failsafeTimer = null;
+                let noRerunTimer = null;
+                let active = false;
+
+                function reveal() {
+                    if (!active) return;
+                    active = false;
+                    if (settleTimer)  { clearTimeout(settleTimer);  settleTimer = null; }
+                    if (failsafeTimer){ clearTimeout(failsafeTimer);failsafeTimer = null; }
+                    if (noRerunTimer) { clearTimeout(noRerunTimer); noRerunTimer = null; }
+                    // Respect a minimum display time so fast reruns do not
+                    // strobe the curtain.
+                    const elapsed = Date.now() - shownAt;
+                    const wait = Math.max(0, 160 - elapsed);
+                    setTimeout(function() {
+                        curtain.style.opacity = '0';
+                        setTimeout(function() {
+                            curtain.style.display = 'none';
+                            curtain.style.opacity = '1';
+                        }, 190);
+                    }, wait);
                 }
-                function clearNavigating() {
-                    doc.body.removeAttribute('data-medichat-navigating');
-                    if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
+
+                function raise() {
+                    if (active) return;
+                    active = true;
+                    shownAt = Date.now();
+                    curtain.style.opacity = '1';
+                    curtain.style.display = 'flex';
+                    // If NO rerun mutation arrives shortly, the click was a
+                    // no-op (disabled button etc.) - drop the curtain.
+                    noRerunTimer = setTimeout(function() { reveal(); }, 1500);
+                    // Hard cap: never trap the user behind the curtain.
+                    failsafeTimer = setTimeout(function() { reveal(); }, 7000);
                 }
 
-                // Catch every sidebar nav button click + Smart Action cards
-                // + Recent Chats tiles + dashboard tiles. Anything that
-                // changes the page should feel instant.
-                doc.addEventListener('click', function(e) {
-                    const btn = e.target.closest(
-                        '[class*="st-key-nav_"], ' +
-                        '[class*="st-key-sa_"], ' +
-                        '[class*="st-key-qa_"], ' +
-                        '[class*="st-key-hist_open_"], ' +
-                        '[class*="st-key-hist_new_chat"], ' +
-                        '[class*="st-key-hist_back"]'
-                    );
-                    if (btn) markNavigating();
-                }, true);
-
-                // MutationObserver: when the main block container's children
-                // change (new page rendered), clear the navigating state on
-                // next frame so the new content reveals smoothly.
+                // Settle detection: every mutation during an active curtain
+                // pushes the reveal 300ms further out; when the rerun stops
+                // mutating the DOM for 300ms, the new page is fully in.
                 const obs = new MutationObserver(function() {
-                    if (doc.body.getAttribute('data-medichat-navigating') === 'true') {
-                        win.requestAnimationFrame(clearNavigating);
-                    }
+                    if (!active) return;
+                    if (noRerunTimer) { clearTimeout(noRerunTimer); noRerunTimer = null; }
+                    if (settleTimer) clearTimeout(settleTimer);
+                    settleTimer = setTimeout(function() { reveal(); }, 300);
                 });
                 function attach() {
                     const main = doc.querySelector('[data-testid="stMain"]');
                     if (main) {
                         obs.observe(main, { childList: true, subtree: true });
                     } else {
-                        setTimeout(attach, 100);
+                        setTimeout(attach, 120);
                     }
                 }
                 attach();
-            } catch (e) { console.error('[MediChat] nav-transition setup failed:', e); }
+
+                // Navigation-intent detection. Page-level transitions only;
+                // ordinary in-page buttons (send message, log water, filter
+                // chips) never raise the curtain.
+                const NAV_SELECTOR =
+                    '[class*="st-key-nav_"], ' +
+                    '[class*="st-key-sa_"], ' +
+                    '[class*="st-key-qa_"], ' +
+                    '[class*="st-key-hist_open_"], ' +
+                    '[class*="st-key-hist_new_chat"], ' +
+                    '[class*="st-key-hist_back"], ' +
+                    '[class*="st-key-home_overview_see_all"], ' +
+                    '[class*="st-key-home_vision_analyze"], ' +
+                    '#md-mobile-tabbar a, ' +
+                    '#md-mobile-moresheet a';
+                doc.addEventListener('click', function(e) {
+                    const hit = e.target.closest(NAV_SELECTOR);
+                    if (!hit) return;
+                    // Ignore the already-active tab (href nav to same URL).
+                    raise();
+                }, true);
+
+                // Full page reloads (mobile tab links): keep the curtain up
+                // through the unload; the fresh document boots clean.
+                win.addEventListener('pagehide', function() {
+                    if (settleTimer) clearTimeout(settleTimer);
+                    if (noRerunTimer) clearTimeout(noRerunTimer);
+                });
+            } catch (e) { console.error('[MediChat] nav-curtain setup failed:', e); }
         })();
         </script>
         """,
