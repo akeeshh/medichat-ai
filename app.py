@@ -17455,6 +17455,81 @@ st.markdown("""
     .md-mchat-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; }
     .md-mchat-sub { font-size: 0.72rem; color: #64748b; margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+    /* ── K. Composer action rows: icon-only circles ───────────── */
+    /* At 375px the Upload / Voice / Clear pills truncate ("Uploa").
+       Mobile composers use the native messenger pattern instead:
+       three icon-only circles left, spacer, round send right. Covers
+       both the home composer and the in-chat composer. */
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_upload_btn']),
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_upload_btn']) {
+        display: flex !important; flex-direction: row !important;
+        flex-wrap: nowrap !important; align-items: center !important;
+        gap: 0.45rem !important;
+    }
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_upload_btn']) > [data-testid='stColumn'],
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_upload_btn']) > [data-testid='stColumn'] {
+        flex: 0 0 auto !important; width: auto !important; min-width: 0 !important;
+    }
+    /* Spacer column (no button inside) absorbs the leftover width. */
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_upload_btn']) > [data-testid='stColumn']:not(:has(button)),
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_upload_btn']) > [data-testid='stColumn']:not(:has(button)) {
+        flex: 1 1 auto !important;
+    }
+    [class*='st-key-chat_upload_btn'] button, [class*='st-key-chat_voice_btn'] button,
+    [class*='st-key-chat_clear_btn'] button,
+    [class*='st-key-home_upload_btn'] button, [class*='st-key-home_voice_btn'] button {
+        width: 44px !important; min-width: 44px !important; max-width: 44px !important;
+        height: 44px !important; min-height: 44px !important;
+        border-radius: 50% !important; padding: 0 !important;
+        display: inline-flex !important; align-items: center !important;
+        justify-content: center !important; gap: 0 !important;
+    }
+    /* Hide the text label, keep the icon. */
+    [class*='st-key-chat_upload_btn'] button [data-testid='stMarkdownContainer'],
+    [class*='st-key-chat_voice_btn'] button [data-testid='stMarkdownContainer'],
+    [class*='st-key-chat_clear_btn'] button [data-testid='stMarkdownContainer'],
+    [class*='st-key-home_upload_btn'] button [data-testid='stMarkdownContainer'],
+    [class*='st-key-home_voice_btn'] button [data-testid='stMarkdownContainer'] {
+        display: none !important;
+    }
+    [class*='st-key-chat_upload_btn'] button [data-testid='stIconMaterial'],
+    [class*='st-key-chat_voice_btn'] button [data-testid='stIconMaterial'],
+    [class*='st-key-chat_clear_btn'] button [data-testid='stIconMaterial'],
+    [class*='st-key-home_upload_btn'] button [data-testid='stIconMaterial'],
+    [class*='st-key-home_voice_btn'] button [data-testid='stIconMaterial'] {
+        font-size: 1.25rem !important; margin: 0 !important;
+    }
+    [class*='st-key-chat_send_btn'] button, [class*='st-key-home_send_btn'] button {
+        width: 48px !important; min-width: 48px !important;
+        height: 48px !important; min-height: 48px !important;
+        border-radius: 50% !important; padding: 0 !important;
+    }
+
+    /* ── L. Disclaimers: quiet single caption, not a banner ───── */
+    .md-home-composer-note, .md-chat-composer-note {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: #94a3b8 !important;
+        font-size: 0.66rem !important;
+        line-height: 1.45 !important;
+        padding: 0.15rem 0.6rem !important;
+        margin: 0.35rem auto 0.15rem auto !important;
+        max-width: 94% !important;
+        display: flex !important;
+        align-items: flex-start !important;
+        justify-content: center !important;
+        text-align: center !important;
+        gap: 0.35rem !important;
+    }
+    .md-home-composer-note .md-disclaimer-shield,
+    .md-chat-composer-note .md-chat-disclaimer-shield {
+        color: #86bf9d !important;
+        font-size: 0.85rem !important;
+        flex-shrink: 0 !important;
+        margin-top: 0.05rem !important;
+    }
+
     /* ── J. Layout compaction + component redesigns ───────────── */
     /* Collapse invisible plumbing containers. Every st.markdown(<style>)
        block, zero-height component iframe, and hidden page marker still
