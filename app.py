@@ -16801,19 +16801,23 @@ try:
                 doc.body.appendChild(curtain);
 
                 let shownAt = 0;
-                let settleTimer = null;
-                let failsafeTimer = null;
-                let noRerunTimer = null;
                 let active = false;
+                let lastMut = 0;
+                let sawActivity = false;
+                let pollTimer = null;
+
+                function scriptRunning() {
+                    try {
+                        const app = doc.querySelector('.stApp');
+                        return app && app.getAttribute('data-test-script-state') === 'running';
+                    } catch (e) { return false; }
+                }
 
                 function reveal() {
                     if (!active) return;
                     active = false;
-                    if (settleTimer)  { clearTimeout(settleTimer);  settleTimer = null; }
-                    if (failsafeTimer){ clearTimeout(failsafeTimer);failsafeTimer = null; }
-                    if (noRerunTimer) { clearTimeout(noRerunTimer); noRerunTimer = null; }
-                    // Respect a minimum display time so fast reruns do not
-                    // strobe the curtain.
+                    sawActivity = false;
+                    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
                     const elapsed = Date.now() - shownAt;
                     const wait = Math.max(0, 160 - elapsed);
                     setTimeout(function() {
@@ -16828,34 +16832,48 @@ try:
                 function raise() {
                     if (active) return;
                     active = true;
+                    sawActivity = false;
                     shownAt = Date.now();
+                    lastMut = Date.now();
                     curtain.style.opacity = '1';
                     curtain.style.display = 'flex';
-                    // If NO rerun mutation arrives shortly, the click was a
-                    // no-op (disabled button etc.) - drop the curtain.
-                    noRerunTimer = setTimeout(function() { reveal(); }, 1500);
-                    // Hard cap: never trap the user behind the curtain.
-                    failsafeTimer = setTimeout(function() { reveal(); }, 7000);
+                    // Poll the authoritative signals every 100ms:
+                    //  - Streamlit stamps .stApp[data-test-script-state=running]
+                    //    for the WHOLE rerun (including server-side gaps where
+                    //    the DOM is momentarily quiet), so we never reveal
+                    //    between render bursts.
+                    //  - Body-level mutations confirm frames are still landing.
+                    // Reveal when the script is idle AND the DOM has been
+                    // quiet for 250ms. No-op release: if 1.6s pass with no
+                    // script run and no mutations, the click did nothing.
+                    // Hard cap 8s: the curtain can never trap the user.
+                    pollTimer = setInterval(function() {
+                        const now = Date.now();
+                        const running = scriptRunning();
+                        if (running || (now - lastMut) < 60) { sawActivity = true; }
+                        if (sawActivity && !running && (now - lastMut) >= 250) { reveal(); return; }
+                        if (!sawActivity && (now - shownAt) >= 1600) { reveal(); return; }
+                        if ((now - shownAt) >= 8000) { reveal(); }
+                    }, 100);
                 }
 
-                // Settle detection: every mutation during an active curtain
-                // pushes the reveal 300ms further out; when the rerun stops
-                // mutating the DOM for 300ms, the new page is fully in.
-                const obs = new MutationObserver(function() {
-                    if (!active) return;
-                    if (noRerunTimer) { clearTimeout(noRerunTimer); noRerunTimer = null; }
-                    if (settleTimer) clearTimeout(settleTimer);
-                    settleTimer = setTimeout(function() { reveal(); }, 300);
-                });
-                function attach() {
-                    const main = doc.querySelector('[data-testid="stMain"]');
-                    if (main) {
-                        obs.observe(main, { childList: true, subtree: true });
-                    } else {
-                        setTimeout(attach, 120);
+                // Body-level observer: doc.body is never replaced by
+                // Streamlit's reconciliation (unlike stMain, which is -
+                // that's what killed the previous version's observer
+                // mid-rerun and dropped the veil onto a half-rendered page).
+                const obs = new MutationObserver(function() { lastMut = Date.now(); });
+                obs.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-test-script-state', 'data-stale'] });
+
+                // Reload handoff: a tab-bar/More-sheet link click sets a
+                // sessionStorage flag before the browser unloads; the fresh
+                // document raises the curtain the moment this script boots,
+                // covering Streamlit's skeleton + progressive first render.
+                try {
+                    if (win.sessionStorage.getItem('mdCurtain') === '1') {
+                        win.sessionStorage.removeItem('mdCurtain');
+                        raise();
                     }
-                }
-                attach();
+                } catch (e) {}
 
                 // Navigation-intent detection. Page-level transitions only;
                 // ordinary in-page buttons (send message, log water, filter
@@ -16869,12 +16887,27 @@ try:
                     '[class*="st-key-hist_back"], ' +
                     '[class*="st-key-home_overview_see_all"], ' +
                     '[class*="st-key-home_vision_analyze"], ' +
+                    '[class*="st-key-chat_vision_analyze"], ' +
+                    '[class*="st-key-opt_"], ' +
+                    '[class*="st-key-ins_"], ' +
+                    '[class*="st-key-insights_"], ' +
+                    '[class*="st-key-footer_privacy_btn"], ' +
+                    '[class*="st-key-go_guest_btn"], ' +
+                    '[class*="st-key-assess_recovery_restart"], ' +
+                    '[data-testid="stForm"]:has([class*="st-key-si_"]) [data-testid="stFormSubmitButton"], ' +
+                    '[data-testid="stForm"]:has([class*="st-key-su_"]) [data-testid="stFormSubmitButton"], ' +
+                    '[class*="st-key-assessment_form_"] [data-testid="stFormSubmitButton"], ' +
+                    '.md-side-pc-signout, ' +
                     '#md-mobile-tabbar a, ' +
                     '#md-mobile-moresheet a';
                 doc.addEventListener('click', function(e) {
                     const hit = e.target.closest(NAV_SELECTOR);
                     if (!hit) return;
-                    // Ignore the already-active tab (href nav to same URL).
+                    // Anchor navigations reload the document: flag the next
+                    // document to raise its curtain immediately on boot.
+                    if (hit.tagName === 'A' || hit.closest('a')) {
+                        try { win.sessionStorage.setItem('mdCurtain', '1'); } catch (err) {}
+                    }
                     raise();
                 }, true);
 
