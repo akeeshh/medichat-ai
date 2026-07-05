@@ -306,11 +306,12 @@ st.markdown(
         [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock'] > [data-testid='stColumn']:has([class*='st-key-del_surg_']),
         [data-testid='stMainBlockContainer'] [data-testid='stHorizontalBlock'] > [data-testid='stColumn']:has([class*='st-key-del_appt_']) {
             position: absolute !important;
-            top: 8px !important;
-            right: 8px !important;
-            width: 36px !important;
-            min-width: 36px !important;
-            max-width: 36px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            right: 12px !important;
+            width: 32px !important;
+            min-width: 32px !important;
+            max-width: 32px !important;
             flex: none !important;
             margin: 0 !important;
             padding: 0 !important;
@@ -17533,6 +17534,43 @@ st.markdown("""
         vertical-align: -2px !important;
         margin: 0 0.25rem 0 0 !important;
         line-height: 1 !important;
+    }
+
+    /* Chat/record/med list rows: the X is a 30px circular ghost
+       button, vertically centered on the card's right edge; cards
+       reserve right padding so text never collides with it. */
+    [data-testid='stHorizontalBlock']:has([class*='st-key-hist_del_']) button,
+    [data-testid='stHorizontalBlock']:has([class*='st-key-hr_del_']) [class*='st-key-hr_del_'] button,
+    [data-testid='stHorizontalBlock']:has([class*='st-key-del_med_']) [class*='st-key-del_med_'] button,
+    [data-testid='stHorizontalBlock']:has([class*='st-key-del_allergy_']) [class*='st-key-del_allergy_'] button,
+    [data-testid='stHorizontalBlock']:has([class*='st-key-del_fh_']) [class*='st-key-del_fh_'] button,
+    [data-testid='stHorizontalBlock']:has([class*='st-key-del_surg_']) [class*='st-key-del_surg_'] button,
+    [data-testid='stHorizontalBlock']:has([class*='st-key-del_appt_']) [class*='st-key-del_appt_'] button {
+        width: 30px !important; min-width: 30px !important; max-width: 30px !important;
+        height: 30px !important; min-height: 30px !important; max-height: 30px !important;
+        border-radius: 50% !important;
+        background: #eef2f6 !important;
+        border: none !important;
+        color: #64748b !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: none !important;
+    }
+    [data-testid='stHorizontalBlock']:has([class*='st-key-hist_del_']) button [data-testid='stIconMaterial'] {
+        font-size: 0.95rem !important;
+        margin: 0 !important;
+        color: inherit !important;
+    }
+    .md-hist2-row-inner { padding-right: 3rem !important; }
+    [data-testid='stHorizontalBlock']:has([class*='st-key-hr_del_']) .md-rcard,
+    [data-testid='stHorizontalBlock']:has([class*='st-key-del_med_']) .md-rcard,
+    [data-testid='stHorizontalBlock']:has([class*='st-key-del_allergy_']) .md-rcard,
+    [data-testid='stHorizontalBlock']:has([class*='st-key-del_fh_']) .md-rcard,
+    [data-testid='stHorizontalBlock']:has([class*='st-key-del_surg_']) .md-rcard,
+    [data-testid='stHorizontalBlock']:has([class*='st-key-del_appt_']) .md-rcard {
+        padding-right: 2.9rem !important;
     }
 
     /* ── J. Layout compaction + component redesigns ───────────── */
