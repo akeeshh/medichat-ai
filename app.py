@@ -17311,21 +17311,16 @@ st.markdown("""
         box-shadow: 0 2px 12px rgba(15, 23, 42, 0.07) !important;
     }
 
-    /* Quick actions: horizontal snap rail (overrides the 2x2 above;
-       later rule at equal specificity wins). */
+    /* Quick actions: clean 2x2 grid, every tile fully visible. */
     section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-qa_']):not(:has([data-testid='stHorizontalBlock'])) {
         display: flex !important; flex-direction: row !important;
-        flex-wrap: nowrap !important; overflow-x: auto !important;
-        gap: 0.5rem !important;
-        scroll-snap-type: x mandatory !important;
-        padding: 0.1rem 0.1rem 0.45rem 0.1rem !important;
-        -webkit-overflow-scrolling: touch !important;
-        scrollbar-width: none !important;
+        flex-wrap: wrap !important; gap: 0.55rem !important;
+        overflow: visible !important;
     }
-    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-qa_']):not(:has([data-testid='stHorizontalBlock']))::-webkit-scrollbar { display: none !important; }
     section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-qa_']):not(:has([data-testid='stHorizontalBlock'])) > [data-testid='stColumn'] {
-        flex: 0 0 40% !important; width: 40% !important; min-width: 40% !important;
-        scroll-snap-align: start !important;
+        flex: 0 0 calc(50% - 0.3rem) !important;
+        width: calc(50% - 0.3rem) !important;
+        min-width: calc(50% - 0.3rem) !important;
     }
 
     /* Mobile home hero (gradient card). */
@@ -17389,6 +17384,61 @@ st.markdown("""
     }
     .md-mchat-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; }
     .md-mchat-sub { font-size: 0.72rem; color: #64748b; margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── J. Layout compaction + component redesigns ───────────── */
+    /* Collapse invisible plumbing containers. Every st.markdown(<style>)
+       block, zero-height component iframe, and hidden page marker still
+       occupies a flex-gap slot in the vertical block; a dozen of them
+       stack into ~150px of dead space above the first visible card.
+       (display:none on a container does NOT disable <style> tags inside
+       it; stylesheets apply regardless of rendering.) */
+    [data-testid='stElementContainer']:has(> iframe[height='0']),
+    [data-testid='stElementContainer']:has(.stMarkdown style),
+    [data-testid='stElementContainer']:has([data-testid='stMarkdownContainer'] > [class*='md-page-marker']:first-child:last-child) {
+        display: none !important;
+        margin: 0 !important;
+        height: 0 !important;
+    }
+    /* Also pull the whole dashboard up: trim the container's top pad. */
+    [data-testid='stMainBlockContainer'] { padding-top: 0.55rem !important; }
+
+    /* Disclaimer: proper trust card instead of floating grey text. */
+    .md-home-composer-note {
+        background: #ffffff !important;
+        border: 1px solid #e6f4ea !important;
+        border-radius: 14px !important;
+        box-shadow: 0 1px 6px rgba(15, 23, 42, 0.04) !important;
+        color: #475569 !important;
+        font-size: 0.72rem !important;
+        line-height: 1.5 !important;
+        padding: 0.6rem 0.85rem !important;
+        margin: 0.55rem auto 0.3rem auto !important;
+        max-width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        text-align: left !important;
+        gap: 0.55rem !important;
+    }
+    .md-home-composer-note .md-disclaimer-shield {
+        color: #16a34a !important;
+        font-size: 1.05rem !important;
+        flex-shrink: 0 !important;
+        margin-top: 0 !important;
+    }
+
+    /* Tip carousel: indicators get their own bottom-centered strip so
+       they never sit on top of the metric pill. */
+    .md-tip-slide { padding-bottom: 1.7rem !important; }
+    .md-tip-indicators {
+        position: absolute !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        right: auto !important;
+        bottom: 0.55rem !important;
+        display: flex !important;
+        gap: 0.3rem !important;
+    }
 }
 </style>
 """, unsafe_allow_html=True)
