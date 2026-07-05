@@ -17460,19 +17460,19 @@ st.markdown("""
        Mobile composers use the native messenger pattern instead:
        three icon-only circles left, spacer, round send right. Covers
        both the home composer and the in-chat composer. */
-    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_upload_btn']),
-    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_upload_btn']) {
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_upload_btn']):not(:has([data-testid='stHorizontalBlock'])),
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_upload_btn']):not(:has([data-testid='stHorizontalBlock'])) {
         display: flex !important; flex-direction: row !important;
         flex-wrap: nowrap !important; align-items: center !important;
         gap: 0.45rem !important;
     }
-    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_upload_btn']) > [data-testid='stColumn'],
-    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_upload_btn']) > [data-testid='stColumn'] {
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_upload_btn']):not(:has([data-testid='stHorizontalBlock'])) > [data-testid='stColumn'],
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_upload_btn']):not(:has([data-testid='stHorizontalBlock'])) > [data-testid='stColumn'] {
         flex: 0 0 auto !important; width: auto !important; min-width: 0 !important;
     }
     /* Spacer column (no button inside) absorbs the leftover width. */
-    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_upload_btn']) > [data-testid='stColumn']:not(:has(button)),
-    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_upload_btn']) > [data-testid='stColumn']:not(:has(button)) {
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-chat_upload_btn']):not(:has([data-testid='stHorizontalBlock'])) > [data-testid='stColumn']:not(:has(button)),
+    section.stMain [data-testid='stHorizontalBlock'][data-testid]:has([class*='st-key-home_upload_btn']):not(:has([data-testid='stHorizontalBlock'])) > [data-testid='stColumn']:not(:has(button)) {
         flex: 1 1 auto !important;
     }
     [class*='st-key-chat_upload_btn'] button, [class*='st-key-chat_voice_btn'] button,
